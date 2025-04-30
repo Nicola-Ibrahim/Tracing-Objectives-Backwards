@@ -1,0 +1,55 @@
+@startuml
+'----------------------------------------------------
+' Layout & Style
+'----------------------------------------------------
+top to bottom direction
+skinparam componentStyle rectangle
+skinparam roundcorner 20
+skinparam shadowing true
+skinparam backgroundColor #F0F0F0
+skinparam component {
+  BackgroundColor<<Encoder>> #ADD8E6
+  BackgroundColor<<Decoder>> #90EE90
+  BackgroundColor<<Decision>> #FFD700
+  BackgroundColor<<Action>> #FFB6C1
+  BorderColor #333333
+  FontSize 12
+  FontName Arial
+}
+
+'----------------------------------------------------
+' Components
+'----------------------------------------------------
+component "User Request" as A
+
+component "Conditions\n– Distance = 12 km\n– Time Wt = 0.7\n– Energy Wt = 0.3" as B
+
+component "VAE Encoder" as C <<Encoder>>
+component "Physics-Constrained\nDecoder" as E <<Decoder>>
+
+component "Latent Space\n+ Conditions" as D
+component "Control Profile" as F
+component "Digital Twin\nValidation" as G
+
+component "Feasible?" as H <<Decision>>
+
+component "Deploy to Monocap" as I <<Action>>
+component "Latent Space\nAdjustment" as J <<Action>>
+
+'----------------------------------------------------
+' Connections
+'----------------------------------------------------
+A --> B
+B --> C
+C --> D
+D --> E
+E --> F
+F --> G
+G --> H
+
+H --> I : Yes
+H --> J : No
+
+J --> E : “Adjust & Retry”
+
+@enduml

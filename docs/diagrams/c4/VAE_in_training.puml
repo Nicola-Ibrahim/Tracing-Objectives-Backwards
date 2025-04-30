@@ -1,0 +1,41 @@
+@startuml
+' CVAE Training Pipeline (No Interpolation)
+top to bottom direction
+skinparam componentStyle rectangle
+skinparam roundcorner 15
+skinparam backgroundColor #FAFAFA
+skinparam component {
+  BorderColor #333333; FontSize 12; FontName Arial
+  BackgroundColor<<Data>>      #FFDAB9
+  BackgroundColor<<Encoder>>   #ADD8E6
+  BackgroundColor<<Sampling>>  #FDEBD0
+  BackgroundColor<<Latent>>    #F9E79F
+  BackgroundColor<<Decoder>>   #ABEBC6
+  BackgroundColor<<Loss>>      #F5B7B1
+  BackgroundColor<<Optimizer>> #D5F5E3
+}
+
+' Components
+component "Input Data\n– Fronts (5,10,15,20 km)\n– Decision Vars\n– Objectives (time,energy,distance)" as DATA <<Data>>
+component "CVAE Encoder\nqₙ(z|x,c) → μ,σ"                              as ENC  <<Encoder>>
+component "Sampling\nz = μ + σ·ε"                                        as SAMP <<Sampling>>
+component "Latent Space Z"                                               as LAT  <<Latent>>
+component "CVAE Decoder\npₙ(x̂|z,c)"                                      as DEC  <<Decoder>>
+component "Reconstruction Loss\nℓ_rec = ‖x − x̂‖²"                       as L_REC <<Loss>>
+component "KL Divergence Loss\nℓ_KL = D_KL(q‖p)"                         as L_KL  <<Loss>>
+component "Total Loss\nℓ = ℓ_rec + β·ℓ_KL"                                as L_TOT <<Loss>>
+component "Optimizer\n(Adam + β-VAE tuning)"                            as OPT   <<Optimizer>>
+
+' Data Flow & Training Loop
+DATA --> ENC       : encode x & c
+ENC  --> SAMP      : sample z
+SAMP --> LAT       : latent representation
+LAT  --> DEC       : decode to x̂
+DEC  --> L_REC     : compute reconstruction loss
+ENC  --> L_KL      : compute KL divergence
+L_REC --> L_TOT    : +
+L_KL  --> L_TOT    : β·
+L_TOT --> OPT      : update θ,ϕ
+OPT  -[#FF0000,dashed]-> ENC : backpropagate gradients
+OPT  -[#FF0000,dashed]-> DEC : backpropagate gradients
+@enduml
