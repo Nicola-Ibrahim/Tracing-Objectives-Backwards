@@ -9,9 +9,11 @@ skinparam shadowing true
 skinparam backgroundColor #F0F0F0
 skinparam component {
   BackgroundColor<<Encoder>> #ADD8E6
+  BackgroundColor<<Latent>> #F9E79F
   BackgroundColor<<Decoder>> #90EE90
   BackgroundColor<<Decision>> #FFD700
   BackgroundColor<<Action>> #FFB6C1
+  BackgroundColor<<Validation>> #D7BDE2
   BorderColor #333333
   FontSize 12
   FontName Arial
@@ -20,36 +22,38 @@ skinparam component {
 '----------------------------------------------------
 ' Components
 '----------------------------------------------------
-component "User Request" as A
+component "User Request:\nInitiate Drive" as A
 
-component "Conditions\n– Distance = 12 km\n– Time Wt = 0.7\n– Energy Wt = 0.3" as B
+component "Input Conditions e.g.: \n- Distance = 12 km\n- Time Weight = 0.7\n- Energy Weight = 0.3" as B <<Latent>>
 
-component "VAE Encoder" as C <<Encoder>>
-component "Physics-Constrained\nDecoder" as E <<Decoder>>
+component "Conditional VAE Encoder\n(Extract z from Fronts, c)" as C <<Encoder>>
 
-component "Latent Space\n+ Conditions" as D
-component "Control Profile" as F
-component "Digital Twin\nValidation" as G
+component "Latent Vector z +\nCondition Vector c" as D <<Latent>>
 
-component "Feasible?" as H <<Decision>>
+component "Physics-Constrained Decoder\n(Generates Control u(t)|z,c)" as E <<Decoder>>
 
-component "Deploy to Monocap" as I <<Action>>
-component "Latent Space\nAdjustment" as J <<Action>>
+component "Control Profile u(t)\n(Planned Trajectory)" as F <<Action>>
+
+component "Digital Twin Validator\n(Evaluate Feasibility in Sim)" as G <<Validation>>
+
+component "Feasibility Check" as H <<Decision>>
+
+component "Send to Monocap\n(Deploy u(t))" as I <<Action>>
+
+component "Latent Space Adjustment\n(Retry via z′ or Interpolation)" as J <<Action>>
 
 '----------------------------------------------------
 ' Connections
 '----------------------------------------------------
-A --> B
-B --> C
-C --> D
-D --> E
-E --> F
-F --> G
-G --> H
-
-H --> I : Yes
-H --> J : No
-
-J --> E : “Adjust & Retry”
+A --> B : Specify distance & preferences
+B --> C : feed conditions
+C --> D : encode z
+D --> E : decode z, c
+E --> F : generate u(t)
+F --> G : validate trajectory
+G --> H : feasible?
+H --> I : Yes → Deploy
+H --> J : No → Adjust
+J --> E : Retry decode with z′
 
 @enduml
