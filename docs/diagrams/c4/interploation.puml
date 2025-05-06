@@ -1,0 +1,15 @@
+@startuml
+top to bottom direction
+component "Test Condition c\n(14 km, 0.8, 0.2)" as C
+component "Search Anchors\n{z₁,z₂,…}"              as S
+component "Latent Interpolation\nz* = α·z₁+(1–α)·z₂" as I
+component "Decoder\nu(t)=Dec(z*,c)"              as D
+component "Digital Twin\nValidate u(t)"          as V
+component "Monocap Execute"                     as M
+
+C --> S : find nearest zᵢ by c
+S --> I : blend latent z*
+I --> D : decode with c
+D --> V : simulate & check
+V --> M : deploy if valid
+@enduml
