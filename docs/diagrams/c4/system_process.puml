@@ -7,51 +7,52 @@ skinparam componentStyle rectangle
 skinparam roundcorner 20
 skinparam shadowing true
 skinparam backgroundColor #F0F0F0
+
 skinparam component {
-  BackgroundColor<<Encoder>> #ADD8E6
-  BackgroundColor<<Latent>> #F9E79F
-  BackgroundColor<<Decoder>> #90EE90
-  BackgroundColor<<Decision>> #FFD700
-  BackgroundColor<<Action>> #FFB6C1
-  BackgroundColor<<Validation>> #D7BDE2
   BorderColor #333333
   FontSize 12
   FontName Arial
+  BackgroundColor<<Input>> #D6EAF8
+  BackgroundColor<<Encoder>> #AED6F1
+  BackgroundColor<<Latent>> #F9E79F
+  BackgroundColor<<Decoder>> #A9DFBF
+  BackgroundColor<<Validation>> #D7BDE2
+  BackgroundColor<<Decision>> #FAD7A0
+  BackgroundColor<<Action>> #F5B7B1
 }
 
 '----------------------------------------------------
-' Components
+' Main Components
 '----------------------------------------------------
-component "User Request:\nInitiate Drive" as A
+component "User Input:\nRequest + Conditions\n(e.g., Distance = 12 km,\nTime Wt = 0.7, Energy Wt = 0.3)" as B <<Input>>
 
-component "Input Conditions e.g.: \n- Distance = 12 km\n- Time Weight = 0.7\n- Energy Weight = 0.3" as B <<Latent>>
+'----------------------------------------------------
+' Grouped: Conditional VAE
+'----------------------------------------------------
+package "Conditional Variational Autoencoder (CVAE)" {
+  component "Encoder\n(Extract z from Fronts, c)" as C <<Encoder>>
+  component "Latent Vector z +\nCondition Vector c" as D <<Latent>>
+  component "Decoder\n(Generate Control u(t) | z, c)" as E <<Decoder>>
+}
 
-component "Conditional VAE Encoder\n(Extract z from Fronts, c)" as C <<Encoder>>
-
-component "Latent Vector z +\nCondition Vector c" as D <<Latent>>
-
-component "Physics-Constrained Decoder\n(Generates Control u(t)|z,c)" as E <<Decoder>>
-
+'----------------------------------------------------
+' Remaining Components
+'----------------------------------------------------
 component "Control Profile u(t)\n(Planned Trajectory)" as F <<Action>>
-
 component "Digital Twin Validator\n(Evaluate Feasibility in Sim)" as G <<Validation>>
-
 component "Feasibility Check" as H <<Decision>>
-
 component "Send to Monocap\n(Deploy u(t))" as I <<Action>>
-
 component "Latent Space Adjustment\n(Retry via z′ or Interpolation)" as J <<Action>>
 
 '----------------------------------------------------
 ' Connections
 '----------------------------------------------------
-A --> B : Specify distance & preferences
-B --> C : feed conditions
-C --> D : encode z
-D --> E : decode z, c
-E --> F : generate u(t)
-F --> G : validate trajectory
-G --> H : feasible?
+B --> C : Feed conditions & context
+C --> D : Encode z
+D --> E : Decode using z & c
+E --> F : Generate u(t)
+F --> G : Validate trajectory
+G --> H : Feasible?
 H --> I : Yes → Deploy
 H --> J : No → Adjust
 J --> E : Retry decode with z′
