@@ -1,15 +1,15 @@
 import pickle
 from pathlib import Path
 
-from .base import ResultArchiver
+from .base import BaseResultArchiver
 
 
-class PickleArchiver(ResultArchiver):
+class PickleResultArchiver(BaseResultArchiver):
     """
     Archiver that saves the data in a pickle file.
     """
 
-    def __init__(self, output_dir: Path = Path("data/raw")):
+    def __init__(self, output_dir: Path):
         self.output_dir = output_dir
 
     def save(self, data: dict) -> Path:
