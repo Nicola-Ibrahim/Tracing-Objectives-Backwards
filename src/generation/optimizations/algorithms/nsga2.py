@@ -9,7 +9,7 @@ from .configs import NSGAIIConfig
 class NSGAII(BaseOptimizationAlgorithm):
     """Wrapper class for NSGA-II algorithm with proper initialization"""
 
-    def __call__(self, config: NSGAIIConfig) -> NSGA2:
+    def __new__(self, config: NSGAIIConfig) -> NSGA2:
         return NSGA2(
             pop_size=config.population_size,
             crossover=SBX(prob=config.crossover_prob, eta=config.crossover_eta),

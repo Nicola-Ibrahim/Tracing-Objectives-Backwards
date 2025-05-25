@@ -1,8 +1,14 @@
-from typing import Any, Protocol
+from abc import ABC, abstractmethod
+from typing import Any
+
+from pymoo.config import Config
+
+Config.warnings["not_compiled"] = False
 
 
-class BaseOptimizationAlgorithm(Protocol):
-    def __call__(self, config: Any) -> Any:
+class BaseOptimizationAlgorithm(ABC):
+    @abstractmethod
+    def __new__(self, config: Any) -> Any:
         """
         This method should be implemented by subclasses to create and configure
         the optimization algorithm instance.

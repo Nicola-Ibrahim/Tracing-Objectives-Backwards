@@ -1,11 +1,11 @@
-from ...optimizations.result_handlers import OptimizationResultHandler
+from ...optimizations.result_handlers import OptimizationResult
 from .base import BaseResultProcessor
 
 
 class OptimizationResultProcessor(BaseResultProcessor):
     """
     Processes optimization results for electric vehicle control problems.
-    Maintains compatibility with the OptimizationResultHandler structure while
+    Maintains compatibility with the OptimizationResult structure while
     providing domain-specific key naming.
     """
 
@@ -14,11 +14,11 @@ class OptimizationResultProcessor(BaseResultProcessor):
         Initialize with optimization results.
 
         Args:
-            result: OptimizationResultHandler container with solution data
+            result: OptimizationResult container with solution data
         """
         self.result = None
 
-    def process(self, result: OptimizationResultHandler) -> None:
+    def process(self, result: OptimizationResult) -> None:
         """
         Process the optimization results to ensure they are ready for extraction.
         This method is a placeholder for any pre-processing steps if needed.
@@ -86,7 +86,7 @@ class OptimizationResultProcessor(BaseResultProcessor):
         }
 
     def get_constraint_summary(self) -> dict:
-        """Get constraint analysis using new OptimizationResultHandler method"""
+        """Get constraint analysis using new OptimizationResult method"""
         summary = self.result.constraint_violation_summary()
         return {
             "total_violations": summary["total_violations"],

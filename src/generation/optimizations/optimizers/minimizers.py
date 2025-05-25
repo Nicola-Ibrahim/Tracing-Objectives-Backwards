@@ -1,15 +1,15 @@
 from pymoo.optimize import minimize
 
 from ..algorithms.base import BaseOptimizationAlgorithm
-from ..problems.base import Problem
-from ..result_handlers import OptimizationResultHandler
+from ..problems.base import BaseProblem
+from ..result_handlers import OptimizationResult
 from .optim_config import MinimizerConfig
 
 
 class Minimizer:
     def __init__(
         self,
-        problem: Problem,
+        problem: BaseProblem,
         algorithm: BaseOptimizationAlgorithm,
         config: MinimizerConfig,
     ):
@@ -17,12 +17,12 @@ class Minimizer:
         self.algorithm = algorithm
         self.config = config
 
-    def run(self) -> OptimizationResultHandler:
+    def run(self) -> OptimizationResult:
         result = minimize(
             problem=self.problem,
             algorithm=self.algorithm,
-            **self.config.__dict__,  # Unpack the config dataclass
+            **self.config.model_dump(),
         )
-        return OptimizationResultHandler(
+        return OptimizationResult(
             X=result.X, F=result.F, G=result.G, CV=result.CV, history=result.history
         )

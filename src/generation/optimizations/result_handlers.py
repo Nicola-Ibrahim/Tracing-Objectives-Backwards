@@ -6,7 +6,7 @@ from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 
 @dataclass
-class OptimizationResultHandler:
+class OptimizationResult:
     """
     A comprehensive container for multi-objective optimization results.
 

@@ -7,9 +7,9 @@ from .algorithms import NSGAII
 from .algorithms.nsga2 import NSGAIIConfig
 from .optimizers.minimizers import Minimizer
 from .optimizers.optim_config import MinimizerConfig
-from .problems.electric_vehicle import EVControlProblem
-from .problems.specs import ProblemSpec
-from .problems.vehicle import Vehicle
+from .problems.ev.electric_vehicle import EVControlProblem
+from .problems.ev.specs import ProblemSpec
+from .problems.ev.vehicle import Vehicle
 
 
 class OptimizationFacade:
@@ -21,13 +21,14 @@ class OptimizationFacade:
         self,
         algorithm_config: NSGAIIConfig,
         problem_spec: ProblemSpec,
+        vehicle: Vehicle,
         opt_config: MinimizerConfig,
     ) -> Path:
         # Configure algorithm
         algorithm = NSGAII(config=algorithm_config)
 
         # Setup problem
-        problem = EVControlProblem(spec=problem_spec)
+        problem = EVControlProblem(spec=problem_spec, vehicle=Vehicle)
 
         # Execute optimization
         optimizer = Minimizer(problem=problem, algorithm=algorithm, config=opt_config)
