@@ -2,8 +2,10 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 
+from .base import BaseInterpolator
 
-class LinearInterpolator:
+
+class LinearInterpolator(BaseInterpolator):
     def __init__(self, decision_vectors: NDArray, alphas: NDArray):
         """
         Initialize interpolator with specific solutions and their alpha positions.
@@ -17,15 +19,18 @@ class LinearInterpolator:
         self.alphas = alphas[sort_idx]
         self.decision_vectors = decision_vectors[sort_idx]
 
-        self.interpolator = interp1d(
-            self.alphas,
-            self.decision_vectors,
+        self.inter = None
+
+    def fit(self) -> None:
+        self.inter = interp1d(
+            self.decision_vectors[:, 0],
+            self.decision_vectors[:, 1],
             axis=0,
             kind="linear",
             bounds_error=False,
             fill_value=(self.decision_vectors[0], self.decision_vectors[-1]),
         )
 
-    def __call__(self, alpha: float) -> NDArray:
+    def interpolate(self, alpha: float) -> NDArray:
         """Get interpolated solution for alpha ∈ [min_alpha, max_alpha]"""
-        return self.interpolator(alpha)
+        return self.inter(alpha)

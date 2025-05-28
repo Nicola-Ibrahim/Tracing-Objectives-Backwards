@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from analyzing.analyzer import ObjectivePreferences, ParetoPreferenceAnalyzer
-from interpolations.geodesic import GeodesicInterpolator
-from interpolations.linear import LinearInterpolator
-from interpolations.nn import NNInterpolator
+from analyzing.interpolators.linear import LinearInterpolator 
 from utils.data import load_pareto_data, normalize_to_hypercube
 
+from analyzing.similarities import cosine_similarity
 
 def main():
     # Load saved data
@@ -15,8 +14,10 @@ def main():
     pareto_set = loaded_data.pareto_set
     pareto_front = loaded_data.pareto_front
     problem_name = loaded_data.problem_name
-    metadata = loaded_data.metadata  # If neede
+    metadata = loaded_data.metadata  
 
+
+    # ! check the normalization validity becuase the data has negative values
     pareto_set_normalized = normalize_to_hypercube(pareto_set)
     pareto_front_normalized = normalize_to_hypercube(pareto_front)
 
@@ -41,7 +42,7 @@ def main():
     print(f"Interpolation position: α={interpolation_alpha:.2f}")
 
     # Generate interpolated solution
-    interpolator = LinearInterpolator(pareto_set)
+    interpolator = LinearInterpolator (decision_vectors=pareto_set, alphas=)
     optimized_solution = interpolator(interpolation_alpha)
     print(f"Optimized solution: {optimized_solution}")
 
@@ -50,7 +51,7 @@ def main():
     # print(f"Maximum alignment score: {np.max(alignment_scores):.2f}")
 
     # # --- Geodesic Interpolation ---
-    # geodesic_interp = GeodesicInterpolator(pareto_set)
+    # geodesic_interp = GeodesicInterpolator (pareto_set)
     # geodesic_solution = geodesic_interp(alpha)
     # print(f"Geodesic Interpolation (α={alpha}):", geodesic_solution)
 
