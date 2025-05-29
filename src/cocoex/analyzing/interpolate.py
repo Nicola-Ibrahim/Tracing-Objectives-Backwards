@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from analyzing.interpolators.linear import LinearInterpolator
-from analyzing.similarities import cosine_similarity
-
-from cocoex.analyzing.recommender import ObjectivePreferences, ParetoAnalyzer
-from cocoex.utils.data_manager import ParetoDataManager, normalize_to_hypercube
+from interpolators.linear import LinearInterpolator
+from recommender import ObjectivePreferences, ParetoAnalyzer
+from similarities import cosine_similarity
+from utils.data_manager import ParetoDataManager, normalize_to_hypercube
 
 
 def main():
