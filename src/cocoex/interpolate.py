@@ -1,50 +1,54 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from analyzing.analyzer import ObjectivePreferences, ParetoPreferenceAnalyzer
-from analyzing.interpolators.linear import LinearInterpolator 
-from utils.data import load_pareto_data, normalize_to_hypercube
-
+from analyzing.interpolators.linear import LinearInterpolator
 from analyzing.similarities import cosine_similarity
+
+from cocoex.analyzing.recommender import ObjectivePreferences, ParetoAnalyzer
+from cocoex.utils.data_manager import ParetoDataManager, normalize_to_hypercube
+
 
 def main():
     # Load saved data
-    loaded_data = load_pareto_data(verbose=True)
+    manager = ParetoDataManager()
+
+    raw_data = manager.load(
+        filename="pareto_data.npz", normalize=normalize_to_hypercube
+    )
 
     # Access individual components
-    pareto_set = loaded_data.pareto_set
-    pareto_front = loaded_data.pareto_front
-    problem_name = loaded_data.problem_name
-    metadata = loaded_data.metadata  
+    pareto_set = raw_data.pareto_set
+    pareto_front = raw_data.pareto_front
 
-
+    print(pareto_set)
     # ! check the normalization validity becuase the data has negative values
-    pareto_set_normalized = normalize_to_hypercube(pareto_set)
-    pareto_front_normalized = normalize_to_hypercube(pareto_front)
 
-    # Initialize analyzer with Pareto-optimal solutions
-    analyzer = ParetoPreferenceAnalyzer(
-        objective_vectors=pareto_front,
-        decision_vectors=pareto_set,
-        normalized_objectives=pareto_front_normalized,
-    )
+    # # Create and fit the interpolator
+    # interpolator = LinearInterpolator()
+    # interpolator.fit(solutions=pareto_set_normalized, pareto=pareto_front_normalized)
 
-    # Define user's desired objective trade-off (e.g., 70% weight on first objective)
-    user_preference = ObjectivePreferences(time_weight=0.8, energy_weight=0.2)
+    # # Initialize analyzer with Pareto-optimal solutions
+    # analyzer = ParetoAnalyzer(
+    #     solutions=pareto_set_normalized,
+    #     front=pareto_front_normalized,
+    #     interpolator=interpolator,
+    #     similarity_metric=cosine_similarity,
+    #     sort_by_obj=0,  # Sort by first objective (e.g., time)
+    # )
 
-    # Find best matching solutions
-    candidate_indices = analyzer.find_optimal_candidates_idx(
-        user_preference, num_candidates=2
-    )
-    print(f"Top candidate solutions at indices: {candidate_indices}")
+    # # Define user's desired objective trade-off (e.g., 70% weight on first objective)
+    # user_preference = ObjectivePreferences(time_weight=0.8, energy_weight=0.2)
+
+    # # Find best matching solutions
+    # candidate_indices = analyzer.recommend_from_top(user_preference, k=2)
+    # print(f"Top candidate solutions at indices: {candidate_indices}")
 
     # Calculate interpolation position
-    interpolation_alpha = analyzer.calculate_interpolation_parameter(user_preference)
-    print(f"Interpolation position: α={interpolation_alpha:.2f}")
+    # interpolation_alpha = analyzer.calculate_interpolation_parameter(user_preference)
+    # print(f"Interpolation position: α={interpolation_alpha:.2f}")
 
-    # Generate interpolated solution
-    interpolator = LinearInterpolator (decision_vectors=pareto_set, alphas=)
-    optimized_solution = interpolator(interpolation_alpha)
-    print(f"Optimized solution: {optimized_solution}")
+    # # Generate interpolated solution
+    # optimized_solution = interpolator(interpolation_alpha)
+    # print(f"Optimized solution: {optimized_solution}")
 
     # # Verify preference alignment
     # alignment_scores = analyzer.calculate_cosine_similarity(user_preference)

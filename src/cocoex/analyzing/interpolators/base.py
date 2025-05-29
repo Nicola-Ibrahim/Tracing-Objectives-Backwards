@@ -3,43 +3,45 @@ from abc import ABC, abstractmethod
 import numpy as np
 from numpy.typing import NDArray
 
+from ..preference import ObjectivePreferences
+
 
 class BaseInterpolator(ABC):
     """
-    Base class for all interpolators.
+    Abstract interface for interpolators that recommend decision vectors based on preferences.
     """
 
-    def __init__(self, positions: NDArray[np.float_], solutions: NDArray[np.float_]):
+    @abstractmethod
+    def fit(
+        self,
+        decision_vectors: NDArray[np.float64],
+        objective_vectors: NDArray[np.float64],
+    ) -> None:
         """
-        Initialize the base interpolator.
+        Fit the interpolator with decision and objective vectors.
         """
         pass
 
     @abstractmethod
-    def fit(self, *args, **kwargs):
+    def recommend(self, preferences: ObjectivePreferences) -> NDArray[np.float64]:
         """
-        Fit the interpolator to the provided data.
+        Recommend a decision vector based on user preferences.
+        """
+        pass
 
-        Args:
-            *args: Positional arguments for fitting.
-            **kwargs: Keyword arguments for fitting.
-        Returns:
-            None
-        Raises:
-            NotImplementedError: If the method is not implemented in a subclass.
-        """
-        raise NotImplementedError("This method should be overridden by subclasses.")
+
+class PreferenceDrivenInterpolator(BaseInterpolator):
+    """
+    Base class for preference-driven interpolators that use user-defined
+    objective weights to determine the best interpolation parameter.
+    This class extends the BaseInterpolator with methods to compute
+    the preferred parameter coordinate based on similarity scores.
+    """
 
     @abstractmethod
-    def interpolate(self, x):
-        """
-        Interpolate the value at x.
-
-        Args:
-            x: The input value to interpolate.
-        Returns:
-            Interpolated value.
-        Raises:
-            NotImplementedError: If the method is not implemented in a subclass.
-        """
-        raise NotImplementedError("This method should be overridden by subclasses.")
+    def select_parameter_position(
+        self,
+        parameter_positions: NDArray[np.float64],
+        similarity_scores: NDArray[np.float64],
+    ) -> float:
+        pass
