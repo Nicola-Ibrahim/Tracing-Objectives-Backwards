@@ -8,71 +8,128 @@ from .base import BaseInterpolator
 
 class LinearInterpolator(BaseInterpolator):
     """
-    Linear interpolator that recommends a decision vector based on preference-weighted similarity to objective vectors.
-    Assumes parameterized data and uses linear interpolation along the front.
+    Interpolator that recommends a candidate solution by performing linear interpolation
+    over a set of Pareto-optimal solutions, weighted by similarity to user preferences.
     """
 
     def __init__(self, similarity_metric: SimilarityMetric):
         self.similarity_metric = similarity_metric
-        self.param_coords: NDArray[np.float64] = np.array([])
-        self.decision_vectors: NDArray[np.float64] = np.array([])
-        self.objective_vectors: NDArray[np.float64] = np.array([])
+
+        # Initialized after fitting
+        self.front_positions: NDArray[np.float64] = np.array(
+            []
+        )  # 1D parameter values (e.g., linspace) to interpolate along the Pareto front
+        self.candidate_solutions: NDArray[np.float64] = np.array(
+            []
+        )  # Decision vectors (inputs)
+        self.corresponding_objectives: NDArray[np.float64] = np.array(
+            []
+        )  # Objective vectors (outputs)
 
     def fit(
         self,
-        decision_vectors: NDArray[np.float64],
+        candidate_solutions: NDArray[np.float64],
         objective_vectors: NDArray[np.float64],
     ) -> None:
-        if len(decision_vectors) != len(objective_vectors):
+        """
+        Store and preprocess the candidate solutions and their corresponding objective vectors.
+
+        Args:
+            candidate_solutions: Array of decision vectors.
+            objective_vectors: Array of corresponding objective vectors.
+        """
+        if len(candidate_solutions) != len(objective_vectors):
             raise ValueError(
-                "Decision and objective vectors must have the same length."
+                "Candidate solutions and objective vectors must have the same number of entries."
             )
 
-        # Sort by the first objective to establish a consistent order
-        sorted_idx = np.argsort(objective_vectors[:, 0])
-        self.decision_vectors = decision_vectors[sorted_idx]
-        self.objective_vectors = objective_vectors[sorted_idx]
+        # Sort by the first objective to ensure a consistent traversal order
+        sorted_indices = np.argsort(objective_vectors[:, 0])
+        self.candidate_solutions = candidate_solutions[sorted_indices]
+        self.corresponding_objectives = objective_vectors[sorted_indices]
 
-        if len(decision_vectors) == 1:
-            self.param_coords = np.array([0.5])
+        # Generate interpolation parameters along the front (from 0.0 to 1.0)
+        num_points = len(candidate_solutions)
+        if num_points == 1:
+            self.front_positions = np.array(
+                [0.5]
+            )  # Arbitrary mid-value for single point
         else:
-            self.param_coords = np.linspace(0.0, 1.0, len(decision_vectors))
+            self.front_positions = np.linspace(0.0, 1.0, num_points)
 
     def recommend(self, preferences: ObjectivePreferences) -> NDArray[np.float64]:
-        if len(self.param_coords) == 0:
-            raise ValueError("Interpolator has not been fitted.")
+        """
+        Recommend a candidate solution based on weighted preferences over objectives.
 
-        weights = np.array([preferences.time_weight, preferences.energy_weight])
-        similarity_scores = self.similarity_metric(self.objective_vectors, weights)
+        Args:
+            preferences: Preference weights (e.g., time and energy).
+
+        Returns:
+            A recommended decision vector interpolated from the Pareto front.
+        """
+        if len(self.front_positions) == 0:
+            raise ValueError("Interpolator has not been fitted with any data.")
+
+        # Convert preferences to a vector of weights
+        preference_weights = np.array(
+            [preferences.time_weight, preferences.energy_weight]
+        )
+
+        # Compute similarity scores between each objective vector and the preferences
+        similarity_scores = self.similarity_metric(
+            self.corresponding_objectives, preference_weights
+        )
         total_similarity = np.sum(similarity_scores)
 
+        # If all similarities are zero, default to midpoint interpolation
         if abs(total_similarity) < 1e-12:
-            alpha = float(np.mean(self.param_coords))
+            interpolation_position = float(np.mean(self.front_positions))
         else:
-            alpha = float(
-                np.dot(self.param_coords, similarity_scores) / total_similarity
+            # Use similarity-weighted average to determine the interpolation position
+            interpolation_position = float(
+                np.dot(self.front_positions, similarity_scores) / total_similarity
             )
 
-        return self._interpolate(alpha)
+        # Return interpolated decision vector based on the computed position
+        return self._interpolate_at(interpolation_position)
 
-    def _interpolate(self, query_coord: float) -> NDArray[np.float64]:
-        if len(self.param_coords) == 1:
-            return self.decision_vectors[0]
+    def _interpolate_at(self, position: float) -> NDArray[np.float64]:
+        """
+        Perform linear interpolation between two candidate solutions based on a given position.
 
-        idx = np.searchsorted(self.param_coords, query_coord)
+        Args:
+            position: Float in [0, 1] indicating where to interpolate along the front.
+
+        Returns:
+            Interpolated candidate solution (decision vector).
+        """
+        if len(self.front_positions) == 1:
+            return self.candidate_solutions[0]  # Only one candidate — return as is
+
+        # Locate the first front position greater than or equal to the target
+        idx = np.searchsorted(self.front_positions, position)
 
         if idx == 0:
-            return self.decision_vectors[0]
-        if idx == len(self.param_coords):
-            return self.decision_vectors[-1]
+            return self.candidate_solutions[0]  # Position before first entry
+        if idx == len(self.front_positions):
+            return self.candidate_solutions[-1]  # Position beyond last entry
 
-        s0, s1 = self.param_coords[idx - 1], self.param_coords[idx]
-        v0, v1 = self.decision_vectors[idx - 1], self.decision_vectors[idx]
+        # Extract bounding points and corresponding front positions
+        lower_pos, upper_pos = self.front_positions[idx - 1], self.front_positions[idx]
+        lower_sol, upper_sol = (
+            self.candidate_solutions[idx - 1],
+            self.candidate_solutions[idx],
+        )
 
-        if s1 <= s0:
-            return v0 if query_coord - s0 < s1 - query_coord else v1
+        # Handle potential numerical edge case (e.g., duplicate front positions)
+        if upper_pos <= lower_pos:
+            return (
+                lower_sol if position - lower_pos < upper_pos - position else upper_sol
+            )
 
-        t = (query_coord - s0) / (s1 - s0)
+        # Calculate interpolation factor between 0 and 1
+        t = (position - lower_pos) / (upper_pos - lower_pos)
         t = np.clip(t, 0.0, 1.0)
 
-        return (1 - t) * v0 + t * v1
+        # Return interpolated solution
+        return (1 - t) * lower_sol + t * upper_sol

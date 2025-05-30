@@ -8,24 +8,35 @@ from ..preference import ObjectivePreferences
 
 class BaseInterpolator(ABC):
     """
-    Abstract interface for interpolators that recommend decision vectors based on preferences.
+    Abstract base class for interpolators that recommend candidate solutions
+    based on user preferences over objective values.
     """
 
     @abstractmethod
     def fit(
         self,
-        decision_vectors: NDArray[np.float64],
-        objective_vectors: NDArray[np.float64],
+        candidate_solutions: NDArray[np.float64],
+        objective_front: NDArray[np.float64],
     ) -> None:
         """
-        Fit the interpolator with decision and objective vectors.
+        Fit the interpolator with candidate solutions and their corresponding objective vectors.
+
+        Args:
+            candidate_solutions (NDArray): Array of decision vectors.
+            objective_front (NDArray): Array of corresponding objective vectors.
         """
         pass
 
     @abstractmethod
     def recommend(self, preferences: ObjectivePreferences) -> NDArray[np.float64]:
         """
-        Recommend a decision vector based on user preferences.
+        Recommend a candidate solution based on user-defined preferences.
+
+        Args:
+            preferences (ObjectivePreferences): Preference weights over objectives.
+
+        Returns:
+            NDArray: A single recommended decision vector.
         """
         pass
 
