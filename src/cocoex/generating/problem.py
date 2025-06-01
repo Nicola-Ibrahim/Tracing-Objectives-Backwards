@@ -4,18 +4,16 @@ import cocoex
 def get_problem():
     """Initialize the bbob-biobj F1 (Sphere/Sphere) problem."""
     suite = cocoex.Suite(
-        "bbob-biobj",
-        "",
-        "year: 2016 function_indices:1 dimensions:2 instance_indices:1",
+        "bbob-biobj",  # suite_name
+        "",  # suite_instance
+        "year: 2016 dimensions:2 instance_indices:1 function_indices:26",  # suite_options
     )
     problem = suite.get_problem(0)
     return problem
 
 
-def get_problem_parameters(problem):
-    """Extract problem parameters (dimension, bounds)."""
-    return {
-        "dim": problem.dimension,
-        "lower_bounds": problem.lower_bounds,
-        "upper_bounds": problem.upper_bounds,
-    }
+# suite = cocoex.Suite("bbob-biobj", "", "")
+# observer = cocoex.Observer("bbob-biobj", "result_folder:doctest")
+# for fun in suite:
+#     print("Problem name:", fun.name)
+#     print("Problem ID:", fun.id)

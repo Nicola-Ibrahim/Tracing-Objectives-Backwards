@@ -58,7 +58,6 @@ def find_optima(
             bounds=bounds,
             method=opt_method,
         )
-
         if not res.success:
             raise RuntimeError(f"Optimization failed for f{obj_index+1}: {res.message}")
         return res.x

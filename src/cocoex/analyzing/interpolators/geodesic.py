@@ -22,5 +22,5 @@ class GeodesicInterpolator(BaseInterpolator):
             return
         self.inter = geometric_slerp(self.start_point, self.end_point, t_values)
 
-     def interpolate(self, x):
+    def interpolate(self, x):
         return self.inter()

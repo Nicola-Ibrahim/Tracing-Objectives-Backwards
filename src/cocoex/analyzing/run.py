@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from interpolators.linear import LinearInterpolator
 from recommender import ObjectivePreferences, ParetoAnalyzer
-from similarities import cosine_similarity
+from cocoex.utils.similarities import cosine_similarity
 from utils.data_manager import ParetoDataManager, normalize_to_hypercube
 
 

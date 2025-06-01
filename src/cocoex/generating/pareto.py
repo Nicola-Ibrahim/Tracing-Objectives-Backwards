@@ -5,7 +5,9 @@ from numpy.typing import NDArray
 
 
 def generate_pareto_set(
-    x_opt1: NDArray[np.float64], x_opt2: NDArray[np.float64], num_points: int = 100
+    f1_optimal: NDArray[np.float64],
+    f2_optimal: NDArray[np.float64],
+    num_points: int = 100,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """
     Generate a Pareto set by linear interpolation between two optimal solutions.
@@ -14,8 +16,8 @@ def generate_pareto_set(
     the straight line connecting the individual optima of each objective.
 
     Args:
-        x_opt1: Optimal solution for first objective (shape: [n_dimensions,])
-        x_opt2: Optimal solution for second objective (shape: [n_dimensions,])
+        f1_optimal: Optimal solution for first objective (shape: [n_dimensions,])
+        f2_optimal: Optimal solution for second objective (shape: [n_dimensions,])
         num_points: Number of points to generate along the Pareto set
 
     Returns:
@@ -35,13 +37,13 @@ def generate_pareto_set(
                [0.5, 0.5],
                [0. , 0. ]])
     """
-    if x_opt1.shape != x_opt2.shape:
+    if f1_optimal.shape != f2_optimal.shape:
         raise ValueError(
-            f"Dimension mismatch between x_opt1 {x_opt1.shape} and x_opt2 {x_opt2.shape}"
+            f"Dimension mismatch between f1_optimal {f1_optimal.shape} and f2_optimal {f2_optimal.shape}"
         )
 
     alpha = np.linspace(0, 1, num_points)
-    pareto_set = np.array([a * x_opt1 + (1 - a) * x_opt2 for a in alpha])
+    pareto_set = np.array([a * f1_optimal + (1 - a) * f2_optimal for a in alpha])
     return alpha, pareto_set
 
 
