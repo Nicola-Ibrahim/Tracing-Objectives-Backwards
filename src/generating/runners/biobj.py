@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import Self
 
-from ...utils.archivers.base import BaseParetoArchiver
-from ...utils.archivers.models import ParetoDataModel
-from ...utils.archivers.npz import ParetoNPzArchiver
+from utils.archivers.base import BaseParetoArchiver
+from utils.archivers.models import ParetoDataModel
+from utils.archivers.npz import ParetoNPzArchiver
+
 from ..algorithms.config import AlgorithmConfig
 from ..algorithms.nsga2 import NSGAII
 from ..optimizers.config import OptimizerConfig
@@ -61,7 +62,7 @@ class OptimizationRunner:
         self.optimizer_config = OptimizerConfig(
             generations=16,
             seed=42,
-            save_history=True,
+            save_history=False,  # Avoids deepcopy of problem object
             verbose=False,
             pf=True,
         )
@@ -79,13 +80,14 @@ class OptimizationRunner:
 
         # Setup problem
         problem = COCOBiObjectiveProblem(
-            problem=self.coco_problem, spec=self.problem_config
+            problem=self.coco_problem, config=self.problem_config
         )
 
         # Execute optimization
         optimizer = Minimizer(
             problem=problem, algorithm=algorithm, config=self.optimizer_config
         )
+
         result = optimizer.run()
 
         data = ParetoDataModel(

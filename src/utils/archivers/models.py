@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_validator
 
 
 class ParetoDataModel(BaseModel):
-    """Dataclass for storing Pareto front/set data with metadata."""
+    """Pydantic model for storing Pareto front/set data with metadata."""
 
     pareto_set: np.ndarray
     pareto_front: np.ndarray
@@ -18,19 +18,19 @@ class ParetoDataModel(BaseModel):
         return len(self.pareto_set)
 
     @field_validator("pareto_front", "pareto_set", mode="before")
-    @classmethod
     def validate_array(cls, v):
         if not isinstance(v, np.ndarray):
             raise TypeError(f"Expected np.ndarray, got {type(v)}")
         return v
 
     @field_validator("pareto_front", mode="after")
-    @classmethod
     def check_dimensions_match(cls, v, info):
-        values = info.data
-        pareto_set = values.get("pareto_set")
+        pareto_set = info.data.get("pareto_set")
         if pareto_set is not None and pareto_set.shape[0] != v.shape[0]:
             raise ValueError(
                 "pareto_front and pareto_set must have the same number of rows"
             )
         return v
+
+    class Config:
+        arbitrary_types_allowed = True  # ✅ Allow np.ndarray, etc.

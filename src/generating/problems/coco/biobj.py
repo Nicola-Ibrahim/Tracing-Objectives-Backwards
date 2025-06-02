@@ -31,7 +31,7 @@ class COCOBiObjectiveProblem(BaseProblem):
 
     """
 
-    def __init__(self, problem: COCOProblem, spec: ProblemConfig):
+    def __init__(self, problem: COCOProblem, config: ProblemConfig):
         """
         Initialize the BiObjectiveProblem with a COCO problem instance.
         Args:
@@ -42,11 +42,11 @@ class COCOBiObjectiveProblem(BaseProblem):
         self.coco_problem = problem
 
         super().__init__(
-            n_var=spec.n_var,
-            n_obj=spec.n_obj,
-            n_constr=spec.n_constr,
-            xl=np.array([spec.xl] * spec.n_var),
-            xu=np.array([spec.xu] * spec.n_var),
+            n_var=config.n_var,
+            n_obj=config.n_obj,
+            n_constr=config.n_constr,
+            xl=np.array(config.xl),
+            xu=np.array(config.xu),
         )
 
     def _evaluate(self, X: np.ndarray, out: dict, *args, **kwargs) -> None:

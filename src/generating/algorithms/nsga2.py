@@ -3,13 +3,13 @@ from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PolynomialMutation
 
 from .base import BaseOptimizationAlgorithm
-from .config import NSGAIIConfig
+from .config import AlgorithmConfig
 
 
 class NSGAII(BaseOptimizationAlgorithm):
     """Wrapper class for NSGA-II algorithm with proper initialization"""
 
-    def __new__(self, config: NSGAIIConfig) -> NSGA2:
+    def __new__(self, config: AlgorithmConfig) -> NSGA2:
         return NSGA2(
             pop_size=config.population_size,
             crossover=SBX(prob=config.crossover_prob, eta=config.crossover_eta),

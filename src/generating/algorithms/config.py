@@ -22,9 +22,9 @@ class AlgorithmConfig(BaseModel):
         20.0, gt=0, description="Distribution index for mutation"
     )
 
-    @model_validator
+    @model_validator(mode="after")  # 👈 Required fix
     def check_probabilities(cls, values):
-        cp, mp = values.get("crossover_prob"), values.get("mutation_prob")
+        cp, mp = values.crossover_prob, values.mutation_prob
         if cp is None or mp is None:
             raise ValueError("Probabilities must not be None.")
         return values

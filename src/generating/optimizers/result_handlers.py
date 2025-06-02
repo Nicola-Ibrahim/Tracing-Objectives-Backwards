@@ -25,6 +25,11 @@ class OptimizationResult:
     CV: np.ndarray
     history: Optional[List] = None
 
+    def __post_init__(self):
+        """Ensure CV is 1D for proper boolean indexing"""
+        if self.CV.ndim > 1:
+            self.CV = self.CV.squeeze()
+
     @property
     def is_feasible(self) -> np.ndarray:
         """Boolean mask indicating feasibility of each solution."""
