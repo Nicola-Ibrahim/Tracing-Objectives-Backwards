@@ -1,25 +1,31 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from interpolators.linear import LinearInterpolator
-from recommender import ObjectivePreferences, ParetoAnalyzer
+import os
+import sys
 
-from deprecated.utils.similarities import cosine_similarity
-from utils.archivers.npz import ParetoDataManager, normalize_to_hypercube
+import numpy as np
+
+from ..utils.archivers.npz import ParetoNPzArchiver
+from ..utils.preprocessing.normalizers import normalize_to_hypercube
+from ..utils.preprocessing.similarities import cosine_similarity
+from .interpolators.linear import LinearInterpolator
+from .recommender import ObjectivePreferences, ParetoRecommender
+from .visualization import plot_pareto_visualizations
 
 
 def main():
     # Load saved data
-    manager = ParetoDataManager()
+    archiver = ParetoNPzArchiver()
 
-    raw_data = manager.load(
-        filename="pareto_data.npz", normalize=normalize_to_hypercube
-    )
+    raw_data = archiver.load(filename="pareto_data.npz")
 
     # Access individual components
     pareto_set = raw_data.pareto_set
     pareto_front = raw_data.pareto_front
 
-    print(pareto_set)
+    plot_pareto_visualizations(
+        pareto_set,
+        pareto_front,
+    )
+
     # ! check the normalization validity becuase the data has negative values
 
     # # Create and fit the interpolator
@@ -27,7 +33,7 @@ def main():
     # interpolator.fit(solutions=pareto_set_normalized, pareto=pareto_front_normalized)
 
     # # Initialize analyzer with Pareto-optimal solutions
-    # analyzer = ParetoAnalyzer(
+    # analyzer = ParetoRecommender(
     #     solutions=pareto_set_normalized,
     #     front=pareto_front_normalized,
     #     interpolator=interpolator,
@@ -95,4 +101,5 @@ def main():
 
 
 if __name__ == "__main__":
+    # Emulate Django’s trick of adding project root
     main()

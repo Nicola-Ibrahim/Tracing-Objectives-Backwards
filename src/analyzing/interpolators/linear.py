@@ -3,8 +3,8 @@ from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
+from ...utils.preprocessing.similarities import SimilarityMetric
 from ..preference import ObjectivePreferences
-from ...utils.similarities import SimilarityMetric
 from .base import BaseInterpolator
 
 

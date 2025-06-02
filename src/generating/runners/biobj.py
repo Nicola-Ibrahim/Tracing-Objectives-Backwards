@@ -1,10 +1,9 @@
 from pathlib import Path
 from typing import Self
 
-from utils.archivers.base import BaseParetoArchiver
-from utils.archivers.models import ParetoDataModel
-from utils.archivers.npz import ParetoNPzArchiver
-
+from ...utils.archivers.base import BaseParetoArchiver
+from ...utils.archivers.models import ParetoDataModel
+from ...utils.archivers.npz import ParetoNPzArchiver
 from ..algorithms.config import AlgorithmConfig
 from ..algorithms.nsga2 import NSGAII
 from ..optimizers.config import OptimizerConfig

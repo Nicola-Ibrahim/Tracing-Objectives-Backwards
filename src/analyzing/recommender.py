@@ -1,8 +1,9 @@
 import numpy as np
-from interpolators.base import BaseInterpolator
 from numpy.typing import NDArray
-from preference import ObjectivePreferences
-from deprecated.utils.similarities import SimilarityMetric
+
+from ..utils.preprocessing.similarities import SimilarityMetric
+from .interpolators.base import BaseInterpolator
+from .preference import ObjectivePreferences
 
 
 class ParetoRecommender:
