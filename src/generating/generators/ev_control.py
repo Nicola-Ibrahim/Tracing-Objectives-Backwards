@@ -13,12 +13,19 @@ from ..problems.ev.vehicle import Vehicle
 from ..result.processors import BaseResultProcessor, OptimizationResultProcessor
 
 
-class OptimizationFacade:
+class ParetoDataGenerating:
+    """
+    Facade for generating Pareto optimization data for electric vehicle control problems.
+    This class encapsulates the configuration and execution of the optimization process,
+    allowing for easy setup and execution of multi-objective optimization tasks.
+    It uses NSGA-II algorithm and processes results using a specified archiver and processor.
+    """
+
     def __init__(self, archiver: BaseParetoArchiver, processor: BaseResultProcessor):
         self.archiver = archiver
         self.processor = processor
 
-    def run_optimization(
+    def generate(
         self,
         algorithm_config: AlgorithmConfig,
         problem_spec: ProblemConfig,

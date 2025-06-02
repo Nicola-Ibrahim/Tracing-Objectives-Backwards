@@ -12,12 +12,26 @@ def get_problem(
     instance_indices: int = 1,
     dimensions: int = 2,
 ) -> COCOProblem:
-    """Initialize the bbob-biobj F1 (Sphere/Sphere) problem."""
-    suite = cocoex.Suite(
-        f"{problem_name}",  # suite_name
-        "",  # suite_instance
-        f"year: 2016 dimensions:{dimensions} instance_indices:{instance_indices} function_indices:{function_indices}",  # suite_options
+    """Initialize a COCO BBOB-BIOBJ problem with specified configuration."""
+
+    # Validate function index for bbob-biobj
+    if problem_name == "bbob-biobj" and not (1 <= function_indices <= 55):
+        raise ValueError(
+            f"`function_indices` must be between 1 and 55 for suite '{problem_name}', got {function_indices}."
+        )
+
+    suite_options = (
+        f"dimensions:{dimensions} "
+        f"instance_indices:{instance_indices} "
+        f"function_indices:{function_indices}"
     )
+
+    suite = cocoex.Suite(
+        problem_name,  # suite_name
+        "",  # suite_instance
+        suite_options,  # suite_options (must only use valid keys!)
+    )
+
     problem = suite.get_problem(0)
     return problem
 

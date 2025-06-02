@@ -12,15 +12,21 @@ from ..problems.coco.biobj import COCOBiObjectiveProblem, get_problem
 from ..problems.coco.config import ProblemConfig
 
 
-class OptimizationRunner:
+class ParetoDataGenerating:
     """
-    Unified endpoint for running multi-objective optimizations.
-    Implements the Command Pattern to encapsulate optimization execution.
+    Facade for generating bi-objective optimization data using COCO problems.
+    This class encapsulates the configuration and execution of the optimization process,
+    allowing for easy setup and execution of bi-objective optimization tasks.
     """
 
-    def __init__(self):
+    def __init__(self, pareto_problem_id: int = 1):
+        """
+        Initialize the ParetoDataGenerating instance with default configurations.
+        Args:
+            pareto_problem_id (int): Identifier for the specific bi-objective problem to be used.
+        """
         self.archiver: BaseParetoArchiver = ParetoNPzArchiver()
-        self.coco_problem = get_problem()
+        self.coco_problem = get_problem(function_indices=pareto_problem_id)
         self.algorithm_config = None
         self.problem_config = None
         self.optimizer_config = None
@@ -67,7 +73,7 @@ class OptimizationRunner:
         )
         return self
 
-    def run(self) -> Path:
+    def generate(self) -> Path:
         """Execute the optimization with configured parameters"""
         if not all([self.algorithm_config, self.problem_config, self.optimizer_config]):
             raise RuntimeError(
