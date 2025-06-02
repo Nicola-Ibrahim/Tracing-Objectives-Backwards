@@ -1,0 +1,22 @@
+from abc import ABC, abstractmethod
+from pathlib import Path
+
+from .models import ParetoDataModel
+
+
+class BaseParetoArchiver(ABC):
+    def __init__(self, base_path: str | Path = "data/raw"):
+        """
+        Initialize Pareto data manager.
+
+        Args:
+            base_path: Base directory for data operations
+            default_normalization_fn: Default normalization function
+        """
+        self.base_path = Path(base_path)
+
+    @abstractmethod
+    def save(self, data: ParetoDataModel, filename: str) -> Path: ...
+
+    @abstractmethod
+    def load(self, filename: str) -> dict: ...
