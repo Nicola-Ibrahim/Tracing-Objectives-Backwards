@@ -28,7 +28,7 @@ def normalize_to_hypercube(
     return (data - min_vals) / ranges
 
 
-def normalize_to_unit_vector(self, weights: NDArray[np.float64]) -> NDArray[np.float64]:
+def normalize_to_unit_vector(weights: NDArray[np.float64]) -> NDArray[np.float64]:
     """Convert weights to unit vector (L2 normalization)"""
     l2_norm = np.linalg.norm(weights)
     if l2_norm < 1e-10:  # Handle zero vector case

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Self
 
 from ...utils.archivers.base import BaseParetoArchiver
 from ...utils.archivers.models import ParetoDataModel
@@ -41,7 +40,7 @@ class ParetoDataGenerating:
         generations: int = 50,
         crossover_rate: float = 0.9,
         mutation_rate: float = 0.1,
-    ) -> Self:
+    ) -> None:
         """Builder method for algorithm configuration"""
         self.algorithm_config = AlgorithmConfig(
             population_size=population_size,
@@ -51,7 +50,7 @@ class ParetoDataGenerating:
         )
         return self
 
-    def configure_problem(self) -> Self:
+    def configure_problem(self) -> None:
         """Builder method for problem configuration"""
         self.problem_config = ProblemConfig(
             n_var=2,
@@ -62,7 +61,7 @@ class ParetoDataGenerating:
         )
         return self
 
-    def configure_optimizer(self) -> Self:
+    def configure_optimizer(self) -> None:
         """Builder method for optimizer configuration"""
         self.optimizer_config = OptimizerConfig(
             generations=16,

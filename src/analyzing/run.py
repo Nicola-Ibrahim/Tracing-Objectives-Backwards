@@ -1,8 +1,6 @@
-import os
-import sys
-
 import numpy as np
 
+from ..utils.archivers.models import ParetoDataModel
 from ..utils.archivers.npz import ParetoNPzArchiver
 from ..utils.preprocessing.normalizers import normalize_to_hypercube
 from ..utils.preprocessing.similarities import cosine_similarity
@@ -15,7 +13,7 @@ def main():
     # Load saved data
     archiver = ParetoNPzArchiver()
 
-    raw_data = archiver.load(filename="pareto_data.npz")
+    raw_data: ParetoDataModel = archiver.load(filename="pareto_data.npz")
 
     # Access individual components
     pareto_set = raw_data.pareto_set
