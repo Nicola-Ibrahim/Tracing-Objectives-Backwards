@@ -3,7 +3,7 @@ from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from ...utils.preprocessing.similarities import SimilarityMetric
+from ...utils.preprocessing.similarities import SimilarityMethod
 from ..preference import ObjectivePreferences
 from .base import BaseInterpolator
 
@@ -14,12 +14,12 @@ class LinearInterpolator(BaseInterpolator):
     of the fitted data specified during the recommendation call.
     """
 
-    def __init__(self, similarity_metric: SimilarityMetric) -> None:
+    def __init__(self, similarity_metric: SimilarityMethod) -> None:
         """
         Initialize the LinearInterpolator.
 
         Args:
-            similarity_metric (SimilarityMetric): Metric used to compare objective vectors.
+            similarity_metric (SimilarityMethod): Metric used to compare objective vectors.
         """
         self.similarity_metric = similarity_metric
         # Stores the full dataset the interpolator was fitted on
@@ -71,7 +71,6 @@ class LinearInterpolator(BaseInterpolator):
     def generate(
         self,
         user_preferences: ObjectivePreferences,
-        active_region_indices: Sequence[int] | None = None,
     ) -> NDArray[np.float64]:
         """
         Generates a recommended decision vector by finding a target parameter
@@ -80,9 +79,6 @@ class LinearInterpolator(BaseInterpolator):
 
         Args:
             user_preferences (ObjectivePreferences): User's preferences defining the target in objective space.
-            active_region_indices (Sequence[int] | None): Optional. Indices of solutions (from the *original input
-                                                      order to fit()*) that define the active region of interest.
-                                                      If None, the interpolator uses its entire fitted dataset.
 
         Returns:
             NDArray[np.float64]: The interpolated decision vector.
@@ -98,6 +94,12 @@ class LinearInterpolator(BaseInterpolator):
             or self._initial_sort_indices is None
         ):
             raise RuntimeError("Interpolator has not been fitted.")
+
+        # active_region_indices (Sequence[int] | None): Optional. Indices of solutions (from the *original input
+        #   order to fit()*) that define the active region of interest.
+        #   If None, the interpolator uses its entire fitted dataset.
+
+        active_region_indices = None
 
         # Determine the subset of data to operate on
         if active_region_indices is None:

@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from sklearn.metrics.pairwise import cosine_similarity as sk_cosine_similarity
 
-SimilarityMetric = Callable[[NDArray, NDArray], NDArray]
+SimilarityMethod = Callable[[NDArray, NDArray], NDArray]
 
 
 def cosine_similarity(
@@ -24,8 +24,8 @@ def cosine_similarity(
     Returns:
         similarities: shape (n_samples,)
     """
-    # Check input dimensions
 
+    # Check input dimensions
     n_samples, n_features = array.shape
     if vector.shape[0] != n_features:
         raise ValueError(

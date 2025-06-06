@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ..utils.preprocessing.similarities import SimilarityMetric
+from ..utils.preprocessing.similarities import SimilarityMethod
 from .interpolators.base import BaseInterpolator
 from .preference import ObjectivePreferences
 
@@ -18,7 +18,7 @@ class ParetoRecommender:
         candidate_solutions: NDArray[np.float32],
         objective_front: NDArray[np.float32],
         interpolator: BaseInterpolator,
-        similarity_metric: SimilarityMetric,
+        similarity_metric: SimilarityMethod,
     ) -> None:
         if len(candidate_solutions) != len(objective_front):
             raise ValueError(

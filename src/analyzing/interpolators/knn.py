@@ -3,8 +3,8 @@ from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
+from ...utils.preprocessing.similarities import SimilarityMethod
 from ..preference import ObjectivePreferences
-from ...utils.similarities import SimilarityMetric
 from .base import BaseInterpolator
 
 
@@ -15,12 +15,12 @@ class KNearestNeighborInterpolator(BaseInterpolator):
     of their decision vectors.
     """
 
-    def __init__(self, similarity_metric: SimilarityMetric, k: int = 3) -> None:
+    def __init__(self, similarity_metric: SimilarityMethod, k: int = 3) -> None:
         """
         Initialize the KNearestNeighborInterpolator.
 
         Args:
-            similarity_metric (SimilarityMetric): Similarity metric used to compare objective vectors.
+            similarity_metric (SimilarityMethod): Similarity metric used to compare objective vectors.
             k (int): Number of nearest neighbors to use for interpolation.
         """
         self.similarity_metric = similarity_metric

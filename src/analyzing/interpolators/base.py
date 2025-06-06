@@ -38,7 +38,7 @@ class BaseInterpolator(ABC):
         active_region_indices: Sequence[int] | None = None,
     ) -> NDArray[np.float64]:
         """
-        Generates a recommendation based on user preferences and optionally a set of active region indices.
+        Generates a new interpolated point based on user preferences and optionally a set of active region indices.
         If active_region_indices is provided, the recommendation is generated
         only from the solutions corresponding to those indices.
 

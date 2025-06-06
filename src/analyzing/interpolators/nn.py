@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 from numpy.typing import NDArray
 
+from ...utils.similarities import SimilarityMethod
 from ..preference import ObjectivePreferences
-from ...utils.similarities import SimilarityMetric
 from .base import BaseInterpolator
 
 
@@ -131,7 +131,7 @@ class NeuralNetworkInterpolator(BaseInterpolator):
     def __init__(
         self,
         decoder: Decoder,
-        similarity_metric: SimilarityMetric,
+        similarity_metric: SimilarityMethod,
         epochs: int = 1000,
         learning_rate: float = 0.001,
     ) -> None:

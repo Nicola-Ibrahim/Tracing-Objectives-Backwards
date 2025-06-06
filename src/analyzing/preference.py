@@ -28,10 +28,3 @@ class ObjectivePreferences(BaseModel):
         if not np.isclose(v + time_weight, 1.0, atol=0.001):
             raise ValueError("Weights must sum to 1.0 ± 0.001")
         return v
-
-    @field_validator("time_weight", "energy_weight")
-    def validate_non_negative(cls, v: float) -> float:
-        """Ensure weights are non-negative"""
-        if v < 0:
-            raise ValueError("Weights must be non-negative")
-        return v
