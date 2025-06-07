@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ...utils.preprocessing.similarities import SimilarityMethod
-from ..preference import ObjectivePreferences
+from ..domain.preference import ObjectivePreferences
 from .base import BaseInterpolator
 
 
@@ -29,6 +29,8 @@ class LinearInterpolator(BaseInterpolator):
         # _initial_sort_indices maps from original input order to internal sorted order
         self._initial_sort_indices: NDArray[np.int_] | None = None
 
+        super().__init__()
+
     def fit(
         self,
         candidate_solutions: NDArray[np.float64],
@@ -45,12 +47,8 @@ class LinearInterpolator(BaseInterpolator):
         Raises:
             ValueError: If lengths of inputs do not match or are empty.
         """
-        if candidate_solutions.shape[0] != objective_front.shape[0]:
-            raise ValueError(
-                "Candidate solutions and objective front must be of the same length."
-            )
-        if candidate_solutions.shape[0] == 0:
-            raise ValueError("Input data cannot be empty for fitting the interpolator.")
+
+        super().fit()
 
         # Store the original sort order to maintain mapping from input indices
         self._initial_sort_indices = np.argsort(objective_front[:, 0])

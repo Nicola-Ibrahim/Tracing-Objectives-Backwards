@@ -4,7 +4,7 @@ import torch.nn as nn
 from numpy.typing import NDArray
 
 from ...utils.similarities import SimilarityMethod
-from ..preference import ObjectivePreferences
+from ..domain.preference import ObjectivePreferences
 from .base import BaseInterpolator
 
 

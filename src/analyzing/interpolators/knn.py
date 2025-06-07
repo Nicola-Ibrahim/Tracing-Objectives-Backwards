@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ...utils.preprocessing.similarities import SimilarityMethod
-from ..preference import ObjectivePreferences
+from ..domain.preference import ObjectivePreferences
 from .base import BaseInterpolator
 
 
