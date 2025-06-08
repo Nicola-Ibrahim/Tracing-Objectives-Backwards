@@ -1,7 +1,8 @@
 from ..domain.model import InterpolatorModel
+from ..domain.preference import ObjectivePreferences
 
 
-def main():
+def validate():
     # Load interpolator with metadata
     loaded = InterpolatorModel.load_from_file("rbf_local")
     print(loaded.model_type)
@@ -28,4 +29,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    validate()
