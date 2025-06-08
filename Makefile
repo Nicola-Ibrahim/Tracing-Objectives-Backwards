@@ -15,7 +15,6 @@ UV := uv run
 UVX := uvx
 
 .PHONY: $(COMMANDS)  # Declare all commands as PHONY
-
 list:  # List all commands and their descriptions
 	@echo "$(YELLOW)===========================$(RESET)"
 	@echo "$(YELLOW)      Available Commands    $(RESET)"
@@ -28,15 +27,18 @@ list:  # List all commands and their descriptions
 	done
 	@echo "$(YELLOW)===========================$(RESET)"
 
+.PHONY: generate
 generate:  # Generate synthetic data
 	@echo "Generating data..."
 	$(UV) python -m src.generating.run --problem-id 5
 	@echo "Data generation complete."
 
+.PHONY: analyze
 analyze: # Analyze data
 	@echo "Analyzing data..."
 	$(UV) python -m src.analyzing.run
 	@echo "Data analysis complete."
 
+.PHONY: run
 run: generate analyze  # Run both generate and analyze
 	@echo "Running both generate and analyze tasks..."
