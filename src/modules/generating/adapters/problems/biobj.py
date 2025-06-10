@@ -43,7 +43,7 @@ class BiObjProblemConfig(BaseModel):
     """
 
     problem_id: int = Field(
-        1, ge=55, description="The problem indices in the coco framework"
+        5, ge=1, description="The problem indices in the coco framework"
     )
 
     n_var: int = Field(

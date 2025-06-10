@@ -20,7 +20,7 @@ class OptimizerType(str, Enum):
 
 class ApplicationProblemConfig(BaseModel):
     id: int = Field(
-        55,
+        5,
         ge=1,
         description="The problem ID used within the COCO framework. Must be >= 55.",
         example=55,

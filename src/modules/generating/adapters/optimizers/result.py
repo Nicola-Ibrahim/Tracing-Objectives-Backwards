@@ -119,7 +119,7 @@ class OptimizationResult:
         return NonDominatedSorting().do(self.objectives)
 
 
-class OptimizationResultProcessor(BaseResultProcessor):
+class OptimizationResultProcessor:
     """
     Processes optimization results for electric vehicle control problems.
     Maintains compatibility with the OptimizationResult structure while

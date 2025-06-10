@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 
 from ....generating.domain.entities.pareto_data import ParetoDataModel
-from ...config import ROOT_PATH
 from .base import BaseParetoArchiver
 
 
@@ -28,7 +27,7 @@ class ParetoNPzArchiver(BaseParetoArchiver):
         """
 
         # Ensure directory exists
-        save_path = ROOT_PATH / filename
+        save_path = self.base_path / filename
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Save as compressed numpy archive
@@ -53,7 +52,7 @@ class ParetoNPzArchiver(BaseParetoArchiver):
         Raises:
             FileNotFoundError: If the specified file does not exist
         """
-        load_path = ROOT_PATH / filename
+        load_path = self.base_path / filename
         if not load_path.exists():
             raise FileNotFoundError(f"No Pareto data found at {load_path}")
 

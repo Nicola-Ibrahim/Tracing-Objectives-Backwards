@@ -42,11 +42,11 @@ class GenerateBiobjParetoDataHandler:
         data = ParetoDataModel(
             pareto_set=result.pareto_set,
             pareto_front=result.pareto_front,
-            problem_name=problem.name,
+            problem_name=command.algorithm_config.type,
             metadata={
-                "algorithm": command.algorithm_config.name,
+                "algorithm": command.algorithm_config.model_dump(),
                 "optimizer": command.optimizer_config.model_dump(),
-                "problem": problem.config.model_dump(),
+                "problem": command.problem_config.model_dump(),
             },
         )
 
