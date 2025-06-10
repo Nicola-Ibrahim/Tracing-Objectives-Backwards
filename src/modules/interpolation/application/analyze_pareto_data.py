@@ -1,4 +1,4 @@
-from ...shared.adapters.archivers.models import ParetoDataModel
+from ...generating.domain.entities.pareto_data import ParetoDataModel
 from ...shared.adapters.archivers.npz import ParetoNPzArchiver
 from ..adapters.visualization import plot_pareto_visualizations
 

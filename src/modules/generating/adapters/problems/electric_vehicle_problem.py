@@ -1,13 +1,36 @@
 from typing import Any
 
 import numpy as np
+from pydantic import BaseModel, Field
 
-from .base import EVProblem
-from .config import ProblemConfig
-from .vehicle import Vehicle
+from ...domain.interfaces.problem import BaseProblem
+from ...domain.value_objects.vehicle import Vehicle
 
 
-class EVControlProblem(EVProblem):
+class ElectricalVehicleProblemConfig(BaseModel):
+    """
+    Problem specification for optimization algorithms.
+    Contains the target distance for the mission and the vehicle configuration.
+    """
+
+    target_distance_km: float = Field(
+        ..., ge=0.0, description="Mission distance in kilometers"
+    )
+
+    n_var: int = Field(
+        ...,
+        ge=1,
+        description="Number of decision variables in the optimization problem",
+    )
+    n_obj: int = Field(..., ge=1, description="Number of objectives to optimize")
+    n_constr: int = Field(
+        0, ge=0, description="Number of constraints in the optimization problem"
+    )
+    xl: float = Field(..., description="Lower bounds for decision variables")
+    xu: float = Field(..., description="Upper bounds for decision variables")
+
+
+class EVControlProblem(BaseProblem):
     """
     Multi-objective optimization problem for electric vehicle motion control.
     Inherits from EVProblem to implement specific evaluation logic while
@@ -16,25 +39,26 @@ class EVControlProblem(EVProblem):
     Implements the _evaluate() method required by pymoo's Problem class.
     """
 
-    def __init__(self, spec: ProblemConfig, vehicle: Vehicle):
+    def __init__(self, config: ElectricalVehicleProblemConfig, vehicle: Vehicle):
         """
         Initialize motion control problem with complete specification.
 
         Args:
-            spec: Contains vehicle configuration and mission parameters
+            config: Contains vehicle configuration and mission parameters
         """
-        super().__init__(
-            spec=spec,
-            vehicle=vehicle,
-            n_var=spec.n_var,
-            n_obj=spec.n_obj,
-            n_constr=spec.n_constr,
-            xl=np.array([spec.xl] * spec.n_var),
-            xu=np.array([spec.xu] * spec.n_var),
-        )
+
+        self.vehicle = vehicle
 
         # Problem-specific setup
-        self.target_distance_m = spec.target_distance_km * 1000
+        self.target_distance_m = config.target_distance_km * 1000
+
+        super().__init__(
+            n_var=config.n_var,
+            n_obj=config.n_obj,
+            n_constr=config.n_constr,
+            xl=np.array([config.xl] * config.n_var),
+            xu=np.array([config.xu] * config.n_var),
+        )
 
     def _clamp_velocity(self, velocity: float) -> float:
         """Enforce vehicle speed limits using configured maximum."""

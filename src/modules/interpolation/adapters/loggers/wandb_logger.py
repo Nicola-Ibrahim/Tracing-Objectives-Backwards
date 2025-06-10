@@ -5,7 +5,7 @@ from typing import Any
 
 import wandb
 
-from ...domain.ports.logger import BaseLogger
+from ...domain.interfaces.logger import BaseLogger
 
 
 class WandbLogger(BaseLogger):

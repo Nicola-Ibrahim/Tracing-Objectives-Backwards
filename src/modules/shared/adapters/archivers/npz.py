@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import numpy as np
 
+from ....generating.domain.entities.pareto_data import ParetoDataModel
 from ...config import ROOT_PATH
 from .base import BaseParetoArchiver
-from .models import ParetoDataModel
 
 
 class ParetoNPzArchiver(BaseParetoArchiver):
@@ -12,7 +14,7 @@ class ParetoNPzArchiver(BaseParetoArchiver):
     It provides methods to save and load Pareto sets and fronts with optional normalization.
     """
 
-    def save(self, data: ParetoDataModel, filename: str = "pareto_data.npz") -> None:
+    def save(self, data: ParetoDataModel, filename: str = "pareto_data.npz") -> Path:
         """
         Save Pareto set/front data with metadata in numpy format.
 
@@ -37,6 +39,8 @@ class ParetoNPzArchiver(BaseParetoArchiver):
             problem_name=data.problem_name,
             metadata=data.metadata if data.metadata else {},
         )
+
+        return save_path
 
     def load(self, filename: str = "pareto_data.npz") -> ParetoDataModel:
         """

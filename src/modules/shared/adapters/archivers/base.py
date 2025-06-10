@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from .models import ParetoDataModel
+from ....generating.domain.entities.pareto_data import ParetoDataModel
 
 
 class BaseParetoArchiver(ABC):

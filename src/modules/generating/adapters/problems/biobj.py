@@ -1,12 +1,12 @@
 import cocoex
 import numpy as np
 from cocoex import Problem as COCOProblem
+from pydantic import BaseModel, Field
 
-from ..base import BaseProblem
-from .config import ProblemConfig
+from ...domain.interfaces.problem import BaseProblem
 
 
-def get_problem(
+def get_coco_problem(
     problem_name: str = "bbob-biobj",
     function_indices: int = 1,
     instance_indices: int = 1,
@@ -36,6 +36,34 @@ def get_problem(
     return problem
 
 
+class BiObjProblemConfig(BaseModel):
+    """
+    Problem specification for optimization algorithms.
+    Contains the target distance for the mission and the vehicle configuration.
+    """
+
+    problem_id: int = Field(
+        1, ge=55, description="The problem indices in the coco framework"
+    )
+
+    n_var: int = Field(
+        ...,
+        ge=1,
+        description="Number of decision variables in the optimization problem",
+    )
+
+    n_obj: int = Field(
+        2, ge=2, description="Number of objectives in the optimization problem"
+    )
+
+    n_constr: int = Field(
+        0, ge=0, description="Number of constraints in the optimization problem"
+    )
+
+    xl: list[float] = Field(..., description="Lower bounds for decision variables")
+    xu: list[float] = Field(..., description="Upper bounds for decision variables")
+
+
 class COCOBiObjectiveProblem(BaseProblem):
     """
     Adapter for COCO bi-objective problems to pymoo's Problem interface.
@@ -45,7 +73,7 @@ class COCOBiObjectiveProblem(BaseProblem):
 
     """
 
-    def __init__(self, problem: COCOProblem, config: ProblemConfig):
+    def __init__(self, problem: COCOProblem, config: BiObjProblemConfig):
         """
         Initialize the BiObjectiveProblem with a COCO problem instance.
         Args:

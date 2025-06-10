@@ -6,7 +6,7 @@ from pymoo.config import Config
 Config.warnings["not_compiled"] = False
 
 
-class BaseOptimizationAlgorithm(ABC):
+class BaseAlgorithm(ABC):
     @abstractmethod
     def __new__(self, config: Any) -> Any:
         """

@@ -2,12 +2,12 @@ from typing import Any
 
 from sklearn.model_selection import train_test_split
 
-from ...shared.adapters.archivers.models import ParetoDataModel
+from ...generating.domain.entities.pareto_data import ParetoDataModel
 from ...shared.adapters.archivers.npz import ParetoNPzArchiver
 from ..adapters.visualization import plot_pareto_visualizations
 from ..domain.entities.interpolation_model import InterpolatorModel
-from ..domain.ports.interpolator import BaseInterpolator
-from ..domain.ports.logger import BaseLogger
+from ..domain.interfaces.interpolator import BaseInterpolator
+from ..domain.interfaces.logger import BaseLogger
 from ..domain.services.metrics import ValidationMetricMethod
 from ..domain.services.normalizers import HypercubeNormalizer
 

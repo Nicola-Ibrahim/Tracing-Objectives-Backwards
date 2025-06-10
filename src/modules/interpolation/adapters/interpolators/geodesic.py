@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import geometric_slerp
 
 from ...domain.entities.objectives_preference import ObjectivePreferences
-from ...domain.ports.interpolator import BaseInterpolator
+from ...domain.interfaces.interpolator import BaseInterpolator
 from ...domain.services.similarities import SimilarityMethod
 
 

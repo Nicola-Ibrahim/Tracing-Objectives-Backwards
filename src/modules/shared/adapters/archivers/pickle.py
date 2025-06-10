@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import BaseParetoArchiver
-from .models import ParetoDataModel
+from ....generating.domain.entities.pareto_data import ParetoDataModel
 
 
 class ParetoPickleArchiver(BaseParetoArchiver):

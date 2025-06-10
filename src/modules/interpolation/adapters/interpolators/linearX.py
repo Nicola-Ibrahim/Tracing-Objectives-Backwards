@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 from ...utils.preprocessing.similarities import SimilarityMethod
 from ...modules.interpolation.domain.models.preference import ObjectivePreferences
-from ...domain.ports.interpolator import BaseInterpolator
+from ...domain.interfaces.interpolator import BaseInterpolator
 
 
 class LocalXInterpolator(BaseInterpolator):

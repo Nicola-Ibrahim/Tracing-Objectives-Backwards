@@ -1,7 +1,11 @@
 from pydantic import BaseModel, Field, field_validator
+from pymoo.optimize import minimize
+
+from ...domain.interfaces.optimizer import BaseOptimizer
+from .result import OptimizationResult
 
 
-class OptimizerConfig(BaseModel):
+class MinimizerConfig(BaseModel):
     generations: int = Field(
         ..., gt=0, description="Number of generations must be > 0"
     )  # Number of generations for the optimization
@@ -20,3 +24,15 @@ class OptimizerConfig(BaseModel):
         if v > 1_000_000:
             raise ValueError("Too many generations, may exhaust memory")
         return v
+
+
+class Minimizer(BaseOptimizer):
+    def run(self) -> OptimizationResult:
+        result = minimize(
+            problem=self.problem,
+            algorithm=self.algorithm,
+            **self.config.model_dump(),
+        )
+        return OptimizationResult(
+            X=result.X, F=result.F, G=result.G, CV=result.CV, history=result.history
+        )

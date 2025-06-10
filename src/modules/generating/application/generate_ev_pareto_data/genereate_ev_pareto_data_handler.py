@@ -1,9 +1,9 @@
 from dataclasses import asdict
 from pathlib import Path
 
-from ...utils.archivers.base import BaseParetoArchiver
-from ...utils.archivers.pickle import ParetoPickleArchiver
-from ..algorithms.config import AlgorithmConfig
+from ....shared.adapters.archivers.base import BaseParetoArchiver
+from ....shared.adapters.archivers.pickle import ParetoPickleArchiver
+from ..algorithms.config import NSGA2Config
 from ..algorithms.nsga2 import NSGAII
 from ..optimizers.config import OptimizerConfig
 from ..optimizers.minimize import Minimizer
@@ -13,7 +13,7 @@ from ..problems.ev.vehicle import Vehicle
 from ..result.processors import BaseResultProcessor, OptimizationResultProcessor
 
 
-class ParetoDataGenerating:
+class ElectricalVechicleParetoGenerating:
     """
     Facade for generating Pareto optimization data for electric vehicle control problems.
     This class encapsulates the configuration and execution of the optimization process,
@@ -27,7 +27,7 @@ class ParetoDataGenerating:
 
     def generate(
         self,
-        algorithm_config: AlgorithmConfig,
+        algorithm_config: NSGA2Config,
         problem_spec: ProblemConfig,
         vehicle: Vehicle,
         opt_config: OptimizerConfig,
@@ -73,7 +73,7 @@ def run_optimization():
         xu=vehicle.max_acceleration,
     )
 
-    algorithm_config = AlgorithmConfig(
+    algorithm_config = NSGA2Config(
         population_size=200,
         crossover_prob=0.9,
         crossover_eta=15.0,

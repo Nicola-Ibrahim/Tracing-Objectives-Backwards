@@ -1,7 +1,12 @@
 from pydantic import BaseModel, Field, model_validator
+from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.operators.crossover.sbx import SBX
+from pymoo.operators.mutation.pm import PolynomialMutation
+
+from ...domain.interfaces.algorithm import BaseAlgorithm
 
 
-class AlgorithmConfig(BaseModel):
+class NSGA2Config(BaseModel):
     """
     Pydantic model for NSGA-II algorithm configuration.
 
@@ -28,3 +33,17 @@ class AlgorithmConfig(BaseModel):
         if cp is None or mp is None:
             raise ValueError("Probabilities must not be None.")
         return values
+
+
+class NSGAII(BaseAlgorithm):
+    """Wrapper class for NSGA-II algorithm with proper initialization"""
+
+    def __new__(self, config: NSGA2Config) -> NSGA2:
+        return NSGA2(
+            pop_size=config.population_size,
+            crossover=SBX(prob=config.crossover_prob, eta=config.crossover_eta),
+            mutation=PolynomialMutation(
+                prob=config.mutation_prob, eta=config.mutation_eta
+            ),
+            eliminate_duplicates=True,
+        )
