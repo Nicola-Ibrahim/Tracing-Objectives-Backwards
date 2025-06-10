@@ -30,13 +30,13 @@ list:  # List all commands and their descriptions
 .PHONY: generate
 generate:  # Generate synthetic data
 	@echo "Generating data..."
-	$(UV) python -m src.generating.run --problem-id 5
+	$(UV) python -m src.modules.generating.cli.make_pareto --problem-id 5
 	@echo "Data generation complete."
 
 .PHONY: analyze
 analyze: # Analyze data
 	@echo "Analyzing data..."
-	$(UV) python -m src.analyzing.run
+	$(UV) python -m src.modules.interpolation.cli.analyze
 	@echo "Data analysis complete."
 
 .PHONY: run

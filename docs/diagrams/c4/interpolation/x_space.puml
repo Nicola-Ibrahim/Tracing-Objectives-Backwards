@@ -1,0 +1,42 @@
+@startuml
+' Interpolation-Based Inverse Design
+top to bottom direction
+skinparam componentStyle rectangle
+skinparam roundcorner 15
+skinparam backgroundColor #FAFAFA
+skinparam component {
+  BorderColor #333333; FontSize 12; FontName Arial
+  BackgroundColor<<Data>>      #FFDAB9
+  BackgroundColor<<Model>>     #ADD8E6
+  BackgroundColor<<Process>>   #FDEBD0
+  BackgroundColor<<Interpolation>> #ABEBC6
+  BackgroundColor<<Loss>>      #F5B7B1
+  BackgroundColor<<Output>>    #E8DAEF
+}
+
+' Components
+component "Known Solutions\n(X_i, Y_i)" as KNOWN <<Data>>
+component "Target Objective\nY* = [0.7, 0.3]" as TARGET <<Data>>
+component "Forward Model\nf: X → Y\n(e.g., RBF, GP)" as MODEL <<Model>>
+component "k-Nearest Neighbors\nin Y-space" as KNN <<Process>>
+component "X Neighbors\n(X₁, X₂, ..., Xₖ)" as X_NEIGH <<Data>>
+component "Local Interpolator\nin X-space" as INTERP <<Interpolation>>
+component "Loss Function\nL(X) = ||f(X) - Y*||²" as LOSS <<Loss>>
+component "Optimal Solution\nX*" as SOLUTION <<Output>>
+
+' Data Flow
+KNOWN --> MODEL : Train
+TARGET --> KNN : Find neighbors
+KNOWN --> KNN : (Y-space data)
+KNN --> X_NEIGH : Retrieve\ncorresponding X
+X_NEIGH --> INTERP : Fit local\ninterpolator
+MODEL --> LOSS : f(X) prediction
+TARGET --> LOSS : Target Y*
+INTERP --> LOSS : Search space
+LOSS --> SOLUTION : Minimize loss
+
+' Validation (optional)
+component "Validation\nf(X*)" as VALID <<Process>>
+SOLUTION --> VALID : Evaluate
+VALID --> "Compare with\nY*" as COMPARE <<Process>>
+@enduml
