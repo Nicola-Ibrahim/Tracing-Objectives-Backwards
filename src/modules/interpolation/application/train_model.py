@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 
 from ...generating.domain.entities.pareto_data import ParetoDataModel
 from ...shared.adapters.archivers.npz import ParetoNPzArchiver
-from ..adapters.visualization import plot_pareto_visualizations
+from ...analyzing.adapters.plotters.plotly import plot_pareto_visualizations
 from ..domain.entities.interpolation_model import InterpolatorModel
 from ..domain.interfaces.interpolator import BaseInterpolator
 from ..domain.interfaces.logger import BaseLogger

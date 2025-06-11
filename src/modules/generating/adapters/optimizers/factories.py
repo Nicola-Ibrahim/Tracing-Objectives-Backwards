@@ -1,6 +1,6 @@
-from ...domain.interfaces.algorithm import BaseAlgorithm
-from ...domain.interfaces.optimizer import BaseOptimizer
-from ...domain.interfaces.problem import BaseProblem
+from ...domain.interfaces.base_algorithm import BaseAlgorithm
+from ...domain.interfaces.base_optimizer import BaseOptimizer
+from ...domain.interfaces.base_problem import BaseProblem
 from .minimizer import Minimizer, MinimizerConfig
 
 

@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from ...adapters.optimizers.result import OptimizationResult
-from ...domain.interfaces.problem import BaseProblem
-from .algorithm import BaseAlgorithm
+from .base_algorithm import BaseAlgorithm
+from .base_problem import BaseProblem
 
 
 class BaseOptimizer(ABC):

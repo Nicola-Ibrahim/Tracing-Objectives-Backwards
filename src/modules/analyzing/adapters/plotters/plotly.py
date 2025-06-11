@@ -1,5 +1,51 @@
 import plotly.graph_objects as go
+from analyzing.domain.services.base_plotter import BaseParetoPlotter
 from plotly.subplots import make_subplots
+
+
+class PlotlyParetoPlotter(BaseParetoPlotter):
+    def plot(self, pareto_set, pareto_front):
+        fig = make_subplots(
+            rows=1,
+            cols=2,
+            subplot_titles=[
+                "Pareto Set (Decision Space)",
+                "True Pareto Front (Objective Space)",
+            ],
+            horizontal_spacing=0.1,
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=pareto_set[:, 0],
+                y=pareto_set[:, 1],
+                mode="markers",
+                name="Pareto Set",
+                marker=dict(color="blue", size=6),
+            ),
+            row=1,
+            col=1,
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=pareto_front[:, 0],
+                y=pareto_front[:, 1],
+                mode="markers",
+                name="Pareto Front",
+                marker=dict(color="green", size=6),
+            ),
+            row=1,
+            col=2,
+        )
+
+        fig.update_layout(
+            height=500,
+            width=1000,
+            title_text="Pareto Optimization Visualization",
+            showlegend=True,
+        )
+        fig.show()
 
 
 def plot_pareto_visualizations(pareto_set, pareto_front):

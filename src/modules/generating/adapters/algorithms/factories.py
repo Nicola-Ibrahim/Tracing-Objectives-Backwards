@@ -1,4 +1,4 @@
-from ...domain.interfaces.algorithm import BaseAlgorithm
+from ...domain.interfaces.base_algorithm import BaseAlgorithm
 from .nsga2 import NSGAII, NSGA2Config
 
 

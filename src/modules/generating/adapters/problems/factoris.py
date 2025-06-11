@@ -1,4 +1,4 @@
-from ...domain.interfaces.problem import BaseProblem
+from ...domain.interfaces.base_problem import BaseProblem
 from .biobj import BiObjProblemConfig, COCOBiObjectiveProblem, get_coco_problem
 
 
