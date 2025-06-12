@@ -17,13 +17,6 @@ class ParetoNPzArchiver(BaseParetoArchiver):
         """
         Save Pareto set/front data with metadata in numpy format.
 
-        Args:
-            pareto_set: Array of decision vectors (n_solutions, n_dim)
-            pareto_front: Array of objective vectors (n_solutions, n_obj)
-            problem_name: Identifier for the optimization problem
-            filename: Target filename for saving
-            metadata: Additional metadata to store
-            validate: Verify set/front dimension consistency
         """
 
         # Ensure directory exists

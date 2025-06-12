@@ -1,18 +1,18 @@
 import click
 
-from ...shared.adapters.archivers.npz import ParetoNPzArchiver
-from ..infrastructure.algorithms import AlgorithmFactory
-from ..infrastructure.optimizers import OptimizerFactory
-from ..infrastructure.problems import ProblemFactory
-from ..application.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
+from ....shared.infrastructure.archivers.npz import ParetoNPzArchiver
+from ...application.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
     GenerateBiobjParetoDataHandler,
 )
-from ..application.generate_biobj_pareto_data.generate_pareto_command import (
+from ...application.generate_biobj_pareto_data.generate_pareto_command import (
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
     ApplicationProblemConfig,
     GenerateParetoCommand,
 )
+from ..algorithms import AlgorithmFactory
+from ..optimizers import OptimizerFactory
+from ..problems import ProblemFactory
 
 
 @click.command()

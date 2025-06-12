@@ -1,6 +1,6 @@
 from ...generating.domain.entities.pareto_data import ParetoDataModel
-from ...shared.adapters.archivers.npz import ParetoNPzArchiver
-from ...analyzing.infrastructure.plotters.plotly import plot_pareto_visualizations
+from ...shared.infrastructure.archivers.npz import ParetoNPzArchiver
+from ...analyzing.infrastructure.visualizers.plotly import plot_pareto_visualizations
 
 
 def analyze_pareto_data():

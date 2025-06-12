@@ -1,8 +1,8 @@
 from dataclasses import asdict
 from pathlib import Path
 
-from ....shared.adapters.archivers.base import BaseParetoArchiver
-from ....shared.adapters.archivers.pickle import ParetoPickleArchiver
+from ....shared.infrastructure.archivers.base import BaseParetoArchiver
+from ....shared.infrastructure.archivers.pickle import ParetoPickleArchiver
 from ..algorithms.config import NSGA2Config
 from ..algorithms.nsga2 import NSGAII
 from ..optimizers.config import OptimizerConfig

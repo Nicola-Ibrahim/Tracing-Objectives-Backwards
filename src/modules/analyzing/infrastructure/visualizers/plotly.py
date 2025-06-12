@@ -2,10 +2,10 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ...domain.interfaces.base_plotter import BaseParetoPlotter
+from ...domain.interfaces.base_visualizer import BaseParetoVisualizer
 
 
-class PlotlyParetoVisualizer(BaseParetoPlotter):
+class PlotlyParetoVisualizer(BaseParetoVisualizer):
     def plot(self, pareto_set: np.ndarray, pareto_front: np.ndarray) -> None:
         fig = make_subplots(
             rows=1,

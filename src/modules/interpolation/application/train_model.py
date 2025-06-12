@@ -3,8 +3,8 @@ from typing import Any
 from sklearn.model_selection import train_test_split
 
 from ...generating.domain.entities.pareto_data import ParetoDataModel
-from ...shared.adapters.archivers.npz import ParetoNPzArchiver
-from ...analyzing.infrastructure.plotters.plotly import plot_pareto_visualizations
+from ...shared.infrastructure.archivers.npz import ParetoNPzArchiver
+from ...analyzing.infrastructure.visualizers.plotly import plot_pareto_visualizations
 from ..domain.entities.interpolation_model import InterpolatorModel
 from ..domain.interfaces.interpolator import BaseInterpolator
 from ..domain.interfaces.logger import BaseLogger

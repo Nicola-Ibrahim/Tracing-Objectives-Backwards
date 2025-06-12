@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ....shared.adapters.archivers.base import BaseParetoArchiver
+from ....shared.infrastructure.archivers.base import BaseParetoArchiver
 from ...infrastructure.algorithms import AlgorithmFactory
 from ...infrastructure.optimizers import OptimizerFactory
 from ...infrastructure.problems import ProblemFactory
