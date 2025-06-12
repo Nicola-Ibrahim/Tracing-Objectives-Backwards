@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ...adapters.optimizers.result import OptimizationResult
+from ...infrastructure.optimizers.result import OptimizationResult
 from .base_algorithm import BaseAlgorithm
 from .base_problem import BaseProblem
 

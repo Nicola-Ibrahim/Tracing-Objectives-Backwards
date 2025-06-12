@@ -1,5 +1,5 @@
-from ..adapters.interpolators.linear import LinearInterpolator
-from ..adapters.loggers.wandb_logger import WandbLogger
+from ..infrastructure.interpolators.linear import LinearInterpolator
+from ..infrastructure.loggers.wandb_logger import WandbLogger
 from ..application.train_model import train_model
 from ..domain.services.metrics import mean_squared_error
 from ..domain.services.similarities import cosine_similarity

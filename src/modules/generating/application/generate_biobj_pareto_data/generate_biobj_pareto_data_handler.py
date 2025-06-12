@@ -1,9 +1,9 @@
 from pathlib import Path
 
 from ....shared.adapters.archivers.base import BaseParetoArchiver
-from ...adapters.algorithms import AlgorithmFactory
-from ...adapters.optimizers import OptimizerFactory
-from ...adapters.problems import ProblemFactory
+from ...infrastructure.algorithms import AlgorithmFactory
+from ...infrastructure.optimizers import OptimizerFactory
+from ...infrastructure.problems import ProblemFactory
 from ...domain.entities.pareto_data import ParetoDataModel
 from .generate_pareto_command import GenerateParetoCommand
 

@@ -1,9 +1,9 @@
 import click
 
 from ...shared.adapters.archivers.npz import ParetoNPzArchiver
-from ..adapters.algorithms import AlgorithmFactory
-from ..adapters.optimizers import OptimizerFactory
-from ..adapters.problems import ProblemFactory
+from ..infrastructure.algorithms import AlgorithmFactory
+from ..infrastructure.optimizers import OptimizerFactory
+from ..infrastructure.problems import ProblemFactory
 from ..application.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
     GenerateBiobjParetoDataHandler,
 )

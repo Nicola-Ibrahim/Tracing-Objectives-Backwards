@@ -1,7 +1,7 @@
 import click
 
 from ...shared.adapters.archivers.npz import ParetoNPzArchiver
-from ..adapters.plotters.plotly import PlotlyParetoPlotter
+from ..infrastructure.plotters.plotly import PlotlyParetoPlotter
 from ..application.analyzing_biobj_data.analyzing_biobj_data_command import (
     AnalyzeBiobjDataCommand,
 )
