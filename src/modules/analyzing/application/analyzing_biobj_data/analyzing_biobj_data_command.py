@@ -2,5 +2,5 @@ from pydantic import BaseModel
 
 
 class AnalyzeBiobjDataCommand(BaseModel):
-    results_path: str
-    output_path: str = "plots/"
+    filename: str = "pareto_data"
+    plot_folder_name: str = "figures"

@@ -7,18 +7,11 @@ from ...application.analyzing_biobj_data.analyzing_biobj_data_command import (
 from ...application.analyzing_biobj_data.analyzing_biobj_data_handler import (
     AnalyzeBiobjDataHandler,
 )
-from ..visualizers.plotly import PlotlyParetoVisualizer
+from ...infrastructure.visualizers.plotly import PlotlyParetoVisualizer
 
 
-@click.command()
-@click.option("--results-path", required=True, help="Path to generated results.")
-@click.option(
-    "--output-path", required=False, default="plots/", help="Where to save plots."
-)
-def analyze_data(results_path: str, output_path: str):
-    command = AnalyzeBiobjDataCommand(
-        results_path=results_path, output_path=output_path
-    )
+def analyze_data():
+    command = AnalyzeBiobjDataCommand()
     handler = AnalyzeBiobjDataHandler(ParetoNPzArchiver(), PlotlyParetoVisualizer())
     handler.execute(command)
 

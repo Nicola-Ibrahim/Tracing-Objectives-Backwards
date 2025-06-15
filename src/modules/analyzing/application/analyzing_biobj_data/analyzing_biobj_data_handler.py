@@ -8,6 +8,8 @@ class AnalyzeBiobjDataHandler:
         self._archiver = archiver
         self._visualizer = visualizer
 
-    def execute(self, command: AnalyzeBiobjDataCommand):
-        results = self._archiver.load(command.results_path)
-        self._visualizer.plot(results, command.output_path)
+    def execute(self, command: AnalyzeBiobjDataCommand) -> None:
+        result = self._archiver.load(filename=command.filename)
+        self._visualizer.plot(
+            pareto_set=result.pareto_set, pareto_front=result.pareto_front
+        )

@@ -34,7 +34,7 @@ class ParetoNPzArchiver(BaseParetoArchiver):
 
         return save_path
 
-    def load(self, filename: str = "pareto_data.npz") -> ParetoDataModel:
+    def load(self, filename: str = "pareto_data") -> ParetoDataModel:
         """
         Load Pareto set/front data from numpy archive.
 
@@ -45,7 +45,8 @@ class ParetoNPzArchiver(BaseParetoArchiver):
         Raises:
             FileNotFoundError: If the specified file does not exist
         """
-        load_path = self.base_path / filename
+        load_path = self.base_path / f"{filename}.npz"
+
         if not load_path.exists():
             raise FileNotFoundError(f"No Pareto data found at {load_path}")
 

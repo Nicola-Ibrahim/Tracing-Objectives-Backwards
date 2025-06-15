@@ -10,9 +10,9 @@ from ...application.generate_biobj_pareto_data.generate_pareto_command import (
     ApplicationProblemConfig,
     GenerateParetoCommand,
 )
-from ..algorithms import AlgorithmFactory
-from ..optimizers import OptimizerFactory
-from ..problems import ProblemFactory
+from ...infrastructure.algorithms import AlgorithmFactory
+from ...infrastructure.optimizers import OptimizerFactory
+from ...infrastructure.problems import ProblemFactory
 
 
 @click.command()
