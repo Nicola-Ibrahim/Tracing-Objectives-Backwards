@@ -2,8 +2,8 @@ import pickle
 from pathlib import Path
 from typing import Any
 
-from .base import BaseParetoArchiver
-from ....generating.domain.entities.pareto_data import ParetoDataModel
+from ...domain.entities.pareto_data import ParetoDataModel
+from ...domain.interfaces.base_archiver import BaseParetoArchiver
 
 
 class ParetoPickleArchiver(BaseParetoArchiver):

@@ -3,9 +3,9 @@ from .biobj import BiObjProblemConfig, COCOBiObjectiveProblem, get_coco_problem
 
 
 class ProblemFactory:
-    def create(self, config_dict: dict) -> BaseProblem:
-        problem_type = config_dict["type"]
-        problem_id = config_dict["id"]
+    def create(self, config: dict) -> BaseProblem:
+        problem_type = config["type"]
+        problem_id = config["id"]
 
         if problem_type == "biobj":
             coco_problem = get_coco_problem("bbob-biobj", function_indices=problem_id)

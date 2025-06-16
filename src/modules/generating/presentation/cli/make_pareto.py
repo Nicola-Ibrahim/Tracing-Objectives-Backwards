@@ -1,8 +1,7 @@
 import click
 
-from ....shared.infrastructure.archivers.npz import ParetoNPzArchiver
 from ...application.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
-    GenerateBiobjParetoDataHandler,
+    GenerateBiobjParetoDataCommandHandler,
 )
 from ...application.generate_biobj_pareto_data.generate_pareto_command import (
     ApplicationAlgorithmConfig,
@@ -10,7 +9,9 @@ from ...application.generate_biobj_pareto_data.generate_pareto_command import (
     ApplicationProblemConfig,
     GenerateParetoCommand,
 )
+from ...domain.services.pareto_generation_service import ParetoGenerationService
 from ...infrastructure.algorithms import AlgorithmFactory
+from ...infrastructure.archivers.npz import ParetoNPzArchiver
 from ...infrastructure.optimizers import OptimizerFactory
 from ...infrastructure.problems import ProblemFactory
 
@@ -28,11 +29,13 @@ def generate_data(problem_id: int):
     )
 
     # 2. Setup dependencies (could later be moved to a container or bootstrap file)
-    handler = GenerateBiobjParetoDataHandler(
-        problem_factory=ProblemFactory(),
-        algorithm_factory=AlgorithmFactory(),
-        optimizer_factory=OptimizerFactory(),
-        archiver=ParetoNPzArchiver(),
+    handler = GenerateBiobjParetoDataCommandHandler(
+        ParetoGenerationService(
+            problem_factory=ProblemFactory(),
+            algorithm_factory=AlgorithmFactory(),
+            optimizer_factory=OptimizerFactory(),
+            archiver=ParetoNPzArchiver(),
+        )
     )
 
     # 3. Execute

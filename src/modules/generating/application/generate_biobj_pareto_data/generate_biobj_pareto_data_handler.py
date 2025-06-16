@@ -1,54 +1,39 @@
 from pathlib import Path
 
-from ....shared.infrastructure.archivers.base import BaseParetoArchiver
-from ...infrastructure.algorithms import AlgorithmFactory
-from ...infrastructure.optimizers import OptimizerFactory
-from ...infrastructure.problems import ProblemFactory
-from ...domain.entities.pareto_data import ParetoDataModel
+from ...domain.services.pareto_generation_service import ParetoGenerationService
 from .generate_pareto_command import GenerateParetoCommand
 
 
-class GenerateBiobjParetoDataHandler:
-    def __init__(
-        self,
-        problem_factory: ProblemFactory,
-        algorithm_factory: AlgorithmFactory,
-        optimizer_factory: OptimizerFactory,
-        archiver: BaseParetoArchiver,
-    ):
-        self._problem_factory = problem_factory
-        self._algorithm_factory = algorithm_factory
-        self._optimizer_factory = optimizer_factory
-        self._archiver = archiver
+class GenerateBiobjParetoDataCommandHandler:
+    """
+    Command handler for generating biobjective Pareto data.
+    This handler now delegates the core generation logic to ParetoGenerationService,
+    acting as an orchestrator for a specific command.
+    """
+
+    def __init__(self, pareto_generation_service: ParetoGenerationService):
+        """
+        Initializes the command handler with a ParetoGenerationService instance.
+
+        Args:
+            pareto_generation_service: The service responsible for generating Pareto data.
+        """
+        self._pareto_generation_service = pareto_generation_service
 
     def execute(self, command: GenerateParetoCommand) -> Path:
-        # Create domain objects
-        problem = self._problem_factory.create(command.problem_config.model_dump())
-        algorithm = self._algorithm_factory.create(
-            command.algorithm_config.model_dump()
+        """
+        Executes the command by invoking the ParetoGenerationService.
+
+        Args:
+            command: The command object containing all necessary configurations.
+
+        Returns:
+            Path: The file path where the generated Pareto data is saved.
+        """
+        # The handler extracts the raw configuration data from the command
+        # and passes it directly to the service.
+        return self._pareto_generation_service.generate_pareto_data(
+            problem_config=command.problem_config.model_dump(),
+            algorithm_config=command.algorithm_config.model_dump(),
+            optimizer_config=command.optimizer_config.model_dump(),
         )
-
-        # Create optimizer runner with dependencies
-        optimizer = self._optimizer_factory.create(
-            problem=problem,
-            algorithm=algorithm,
-            config=command.optimizer_config.model_dump(),
-        )
-
-        # Execute optimization
-        result = optimizer.run()
-
-        # Build data model
-        data = ParetoDataModel(
-            pareto_set=result.pareto_set,
-            pareto_front=result.pareto_front,
-            problem_name=command.algorithm_config.type,
-            metadata={
-                "algorithm": command.algorithm_config.model_dump(),
-                "optimizer": command.optimizer_config.model_dump(),
-                "problem": command.problem_config.model_dump(),
-            },
-        )
-
-        # Save results
-        return self._archiver.save(data)
