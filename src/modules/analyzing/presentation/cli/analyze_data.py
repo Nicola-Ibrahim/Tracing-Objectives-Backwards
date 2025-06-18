@@ -1,10 +1,10 @@
-from ....generating.domain.services.pareto_generation_service import (
+from ....optimization_solutions.domain.services.pareto_generation_service import (
     ParetoGenerationService,
 )
-from ....generating.infrastructure.algorithms import AlgorithmFactory
-from ....generating.infrastructure.archivers.npz import ParetoNPzArchiver
-from ....generating.infrastructure.optimizers import OptimizerFactory
-from ....generating.infrastructure.problems import ProblemFactory
+from ....optimization_solutions.infrastructure.algorithms import AlgorithmFactory
+from ....optimization_solutions.infrastructure.archivers.npz import ParetoNPzArchiver
+from ....optimization_solutions.infrastructure.optimizers import OptimizerFactory
+from ....optimization_solutions.infrastructure.problems import ProblemFactory
 from ...application.analyzing_biobj_data.analyzing_biobj_data_command import (
     AnalyzeBiobjDataCommand,
 )

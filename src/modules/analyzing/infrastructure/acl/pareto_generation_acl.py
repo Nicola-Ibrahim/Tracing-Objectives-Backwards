@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
-from ....generating.domain.entities.pareto_data import ParetoDataModel
-from ....generating.domain.services.pareto_generation_service import (
+from ....optimization_solutions.domain.entities.pareto_data import ParetoDataModel
+from ....optimization_solutions.domain.services.pareto_generation_service import (
     ParetoGenerationService,
 )
 
@@ -15,11 +15,11 @@ class AnalysisResultDTO:
     tailored for the Analyzing Bounded Context.
     """
 
-    id: Union[Path, str]
-    solutions: List[List[float]]
-    objectives: List[List[float]]
+    id: Path | str
+    solutions: list[list[float]]
+    objectives: list[list[float]]
     problem_type: str
-    original_metadata: Dict[str, Any]
+    original_metadata: dict[str, Any]
 
 
 class GenerationDataACL:
@@ -44,7 +44,7 @@ class GenerationDataACL:
         self._pareto_service = pareto_generation_service
 
     def get_pareto_analysis_data(
-        self, data_identifier: Union[Path, str]
+        self, data_identifier: Path | str
     ) -> AnalysisResultDTO:
         """
         Retrieves Pareto data and transforms it into a format
