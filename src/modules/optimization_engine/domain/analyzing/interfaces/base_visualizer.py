@@ -9,6 +9,7 @@ from .....shared.config import ROOT_PATH
 class BaseParetoVisualizer(ABC):
     def __init__(self, save_path: Path | None = None):
         self.save_path = save_path or ROOT_PATH / "reports/figures"
+        self.save_path.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
     def plot(self, pareto_set: np.ndarray, pareto_front: np.ndarray) -> None:
