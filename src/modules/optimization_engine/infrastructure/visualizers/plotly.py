@@ -46,48 +46,57 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
         # Setup subplot layout with improved organization
         fig = make_subplots(
-            rows=3,
+            rows=4,
             cols=3,
             specs=[
+                # Row 1: Core visualizations
                 [{"type": "scatter"}, {"type": "scatter"}, {"type": "parcoords"}],
+                # Row 2: Normalized spaces and x1-x2 interpolation
                 [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
-                [
-                    {"type": "scatter"},
-                    {"type": "scatter"},
-                    {"type": "scatter"},
-                ],  # Three separate plots for f1 relationships
+                # Row 3: f1 relationships
+                [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
+                # Row 4: f2 relationships and 3D visualizations
+                [{"type": "scatter"}, {"type": "scatter3d"}, {"type": "scatter3d"}],
             ],
             subplot_titles=[
+                # Row 1
                 "Decision Space ($x_1$ vs $x_2$)",
                 "Objective Space ($f_1$ vs $f_2$)",
                 "Parallel Coordinates",
+                # Row 2
                 "Normalized Decision Space",
                 "Normalized Objective Space",
                 "$x_1$ vs $x_2$ (Interpolations)",
+                # Row 3
                 "$f_1$ vs $f_2$ (Interpolations)",
                 "$f_1$ vs $x_1$ (Interpolations)",
                 "$f_1$ vs $x_2$ (Interpolations)",
+                # Row 4
+                "$f_2$ vs $x_1$ (Interpolations)",
+                "3D: $f_1$, $f_2$, $x_1$",
+                "3D: $f_1$, $f_2$, $x_2$",
             ],
             horizontal_spacing=0.08,
-            vertical_spacing=0.12,
+            vertical_spacing=0.1,
             column_widths=[0.3, 0.3, 0.4],
+            row_heights=[0.2, 0.2, 0.2, 0.4],  # More space for 3D plots
         )
 
         # Update overall layout with dedicated legend space
         fig.update_layout(
             title=dict(
-                text="Pareto Optimization Analysis Dashboard",
+                text="Enhanced Pareto Optimization Dashboard",
                 x=0.5,
                 font=dict(size=24, color="#2c3e50"),
             ),
-            height=1600,
-            width=1600,
+            height=2000,  # Increased height for 3D plots
+            width=1800,
             showlegend=True,
             template="plotly_white",
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.12,
+                y=-0.1,
                 xanchor="center",
                 x=0.5,
                 title=dict(text="Interpolation Methods", font=dict(size=14)),
@@ -101,15 +110,17 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         self._add_normalized_spaces(fig)
         self._add_parallel_coordinates(fig)
         self._add_x1_x2_interpolation(fig)
-        self._add_f1_relationships(fig)  # Now with three separate plots
+        self._add_f1_relationships(fig)  # Includes f1 vs f2, f1 vs x1, f1 vs x2
+        self._add_f2_relationships(fig)  # New f2 relationships
+        self._add_3d_visualizations(fig)  # New 3D plots
 
         # Save and Show
         if self.save_path:
             self.save_path.mkdir(parents=True, exist_ok=True)
             fig.write_image(
                 file=self.save_path / "enhanced_pareto_dashboard.png",
-                width=1600,
-                height=1600,
+                width=1800,
+                height=2000,
                 scale=2,
                 engine="kaleido",
             )
@@ -136,7 +147,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
     def _add_description(self, fig, row, col, text):
         """Add description text annotation below a subplot using paper coordinates."""
         # Calculate positions based on grid layout
-        row_positions = {1: 0.92, 2: 0.62, 3: 0.32}
+        row_positions = {1: 0.92, 2: 0.72, 3: 0.52, 4: 0.32}
         col_positions = {1: 0.15, 2: 0.5, 3: 0.85}
 
         fig.add_annotation(
@@ -432,7 +443,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
     def _add_f1_relationships(self, fig: go.Figure):
         """
         Add f₁ relationships with f₂, x₁, x₂ using different interpolation methods.
-        Now with three separate plots in row 3
+        Now in Row 3
         """
         data = self._f1_rel_data
 
@@ -476,7 +487,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                     showlegend=False,
                 ),
                 row=3,
-                col=i + 1,
+                col=col,
             )
 
             current_norm_y_for_spline = {
@@ -539,16 +550,16 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                                 showlegend=show_in_legend,
                             ),
                             row=3,
-                            col=i + 1,
+                            col=col,
                         )
                     except ValueError:
                         continue
 
             self._set_axis_limits(
-                fig, 3, i + 1, np.array([0, 1]), np.array([0, 1]), padding=0.01
+                fig, 3, col, np.array([0, 1]), np.array([0, 1]), padding=0.01
             )
-            fig.update_xaxes(title_text="Normalized $f_1$", row=3, col=i + 1)
-            fig.update_yaxes(title_text=f"Normalized {label}", row=3, col=i + 1)
+            fig.update_xaxes(title_text="Normalized $f_1$", row=3, col=col)
+            fig.update_yaxes(title_text=f"Normalized {label}", row=3, col=col)
 
             description_suffix = ""
             if not can_interpolate_pchip_linear:
@@ -561,7 +572,227 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             self._add_description(
                 fig,
                 3,
-                i + 1,
+                col,
                 f"Relationship between f₁ and {label} with interpolation models"
                 + description_suffix,
             )
+
+    def _add_f2_relationships(self, fig: go.Figure):
+        """
+        Add f₂ relationships with x₁ and x₂ using different interpolation methods.
+        Now in row 4, column 1
+        """
+        data = self._f1_rel_data
+        norm_f2_all = data["norm_f2_all"]
+        norm_x1_all = data["norm_x1_all"]
+        norm_x2_all = data["norm_x2_all"]
+
+        # For f2 relationships, we need to create sorted unique f2 values
+        sorted_indices = np.argsort(norm_f2_all)
+        norm_f2_sorted = norm_f2_all[sorted_indices]
+        norm_x1_sorted = norm_x1_all[sorted_indices]
+        norm_x2_sorted = norm_x2_all[sorted_indices]
+
+        # Get unique f2 values for interpolation
+        norm_f2_unique, unique_indices = np.unique(norm_f2_sorted, return_index=True)
+        norm_x1_for_spline = norm_x1_sorted[unique_indices]
+        norm_x2_for_spline = norm_x2_sorted[unique_indices]
+
+        can_interpolate_pchip_linear = len(norm_f2_unique) > 1
+        can_interpolate_quadratic = len(norm_f2_unique) > 2
+        can_interpolate_cubic_spline = len(norm_f2_unique) > 3
+
+        plot_configs = [
+            (norm_x1_all, "$x_1$", "#f39c12", 1),  # Orange
+            (norm_x2_all, "$x_2$", "#16a085", 1),  # Teal
+        ]
+
+        # Create subplot for the relationships
+        for i, (norm_y_all_points, label, scatter_color, col) in enumerate(
+            plot_configs
+        ):
+            # Add scatter points
+            fig.add_trace(
+                go.Scatter(
+                    x=norm_f2_all,
+                    y=norm_y_all_points,
+                    mode="markers",
+                    marker=dict(
+                        color=scatter_color,
+                        size=6,
+                        opacity=0.7,
+                        line=dict(width=1, color="#2c3e50"),
+                    ),
+                    name=f"{label} Data",
+                    showlegend=False,
+                ),
+                row=4,
+                col=col,
+            )
+
+            current_norm_y_for_spline = {
+                "$x_1$": norm_x1_for_spline,
+                "$x_2$": norm_x2_for_spline,
+            }.get(label)
+
+            f2_interp_norm = np.linspace(0, 1, 100)
+
+            for interp_name in ["Pchip", "Cubic Spline", "Linear", "Quadratic"]:
+                interp_func = None
+                interpolation_possible = False
+
+                if interp_name == "Pchip" and can_interpolate_pchip_linear:
+                    interp_func = PchipInterpolator(
+                        norm_f2_unique, current_norm_y_for_spline
+                    )
+                    interpolation_possible = True
+                elif interp_name == "Cubic Spline" and can_interpolate_cubic_spline:
+                    interp_func = CubicSpline(norm_f2_unique, current_norm_y_for_spline)
+                    interpolation_possible = True
+                elif interp_name == "Linear" and can_interpolate_pchip_linear:
+                    interp_func = interp1d(
+                        norm_f2_unique,
+                        current_norm_y_for_spline,
+                        kind="linear",
+                        fill_value="extrapolate",
+                    )
+                    interpolation_possible = True
+                elif interp_name == "Quadratic" and can_interpolate_quadratic:
+                    interp_func = interp1d(
+                        norm_f2_unique,
+                        current_norm_y_for_spline,
+                        kind="quadratic",
+                        fill_value="extrapolate",
+                    )
+                    interpolation_possible = True
+
+                if interpolation_possible and interp_func:
+                    try:
+                        y_interp_norm = interp_func(f2_interp_norm)
+                        # Control legend appearance - only show once per method
+                        show_in_legend = interp_name not in self._seen_interp_methods
+                        if show_in_legend:
+                            self._seen_interp_methods.add(interp_name)
+
+                        fig.add_trace(
+                            go.Scatter(
+                                x=f2_interp_norm,
+                                y=y_interp_norm,
+                                mode="lines",
+                                line=dict(
+                                    color=self._interp_colors[interp_name],
+                                    width=2.5,
+                                    dash="solid" if interp_name == "Pchip" else "dash",
+                                ),
+                                name=interp_name,
+                                legendgroup=interp_name,
+                                showlegend=show_in_legend,
+                            ),
+                            row=4,
+                            col=col,
+                        )
+                    except ValueError:
+                        continue
+
+            fig.update_xaxes(title_text="Normalized $f_2$", row=4, col=col)
+            fig.update_yaxes(title_text=f"Normalized {label}", row=4, col=col)
+
+            description_suffix = ""
+            if not can_interpolate_pchip_linear:
+                description_suffix = " (Not enough data for interpolation)"
+            elif not can_interpolate_quadratic:
+                description_suffix = " (Not enough data for quadratic/cubic splines)"
+            elif not can_interpolate_cubic_spline:
+                description_suffix = " (Not enough data for cubic splines)"
+
+            self._add_description(
+                fig,
+                4,
+                col,
+                f"Relationship between f₂ and {label} with interpolation models"
+                + description_suffix,
+            )
+
+        # Set axis limits after both traces are added
+        x_data = norm_f2_all
+        y_data = np.concatenate([norm_x1_all, norm_x2_all])
+        self._set_axis_limits(
+            fig, 4, 1, np.array([0, 1]), np.array([0, 1]), padding=0.01
+        )
+
+    def _add_3d_visualizations(self, fig: go.Figure):
+        """
+        Add 3D visualizations for (f1, f2, x1) and (f1, f2, x2)
+        """
+        # Retrieve normalized data
+        norm_f1_all = self._f1_rel_data["norm_f1_all"]
+        norm_f2_all = self._f1_rel_data["norm_f2_all"]
+        norm_x1_all = self._f1_rel_data["norm_x1_all"]
+        norm_x2_all = self._f1_rel_data["norm_x2_all"]
+
+        # Create color scale for the 3D plots
+        colorscale = "Viridis"
+
+        # 3D: f1, f2, x1 (Row 4, Col 2)
+        fig.add_trace(
+            go.Scatter3d(
+                x=norm_f1_all,
+                y=norm_f2_all,
+                z=norm_x1_all,
+                mode="markers",
+                marker=dict(
+                    size=5,
+                    color=norm_x1_all,
+                    colorscale=colorscale,
+                    opacity=0.8,
+                    colorbar=dict(title="x₁", thickness=20),
+                ),
+                name="f1-f2-x1",
+            ),
+            row=4,
+            col=2,
+        )
+
+        # 3D: f1, f2, x2 (Row 4, Col 3)
+        fig.add_trace(
+            go.Scatter3d(
+                x=norm_f1_all,
+                y=norm_f2_all,
+                z=norm_x2_all,
+                mode="markers",
+                marker=dict(
+                    size=5,
+                    color=norm_x2_all,
+                    colorscale=colorscale,
+                    opacity=0.8,
+                    colorbar=dict(title="x₂", thickness=20),
+                ),
+                name="f1-f2-x2",
+            ),
+            row=4,
+            col=3,
+        )
+
+        # Update scene properties
+        fig.update_scenes(
+            row=4,
+            col=2,
+            xaxis_title_text="Normalized $f_1$",
+            yaxis_title_text="Normalized $f_2$",
+            zaxis_title_text="Normalized $x_1$",
+        )
+        fig.update_scenes(
+            row=4,
+            col=3,
+            xaxis_title_text="Normalized $f_1$",
+            yaxis_title_text="Normalized $f_2$",
+            zaxis_title_text="Normalized $x_2$",
+        )
+
+        # Add descriptions
+        self._add_description(
+            fig, 4, 2, "3D visualization of relationships between f₁, f₂ and x₁"
+        )
+        self._add_description(
+            fig, 4, 3, "3D visualization of relationships between f₁, f₂ and x₂"
+        )
