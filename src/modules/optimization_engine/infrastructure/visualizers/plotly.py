@@ -9,18 +9,23 @@ from ...domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
 
 
 class PlotlyParetoVisualizer(BaseParetoVisualizer):
-    """Dashboard for visualizing Pareto set and front using Plotly."""
+    """Enhanced dashboard for visualizing Pareto set and front with dedicated legends."""
 
     def __init__(self, save_path: Path | None = None):
         super().__init__(save_path)
-        # These will now be populated by the 'plot' method with pre-prepared data
         self._f1_rel_data: dict | None = None
         self._x1_x2_interp_data: dict | None = None
+        self._seen_interp_methods = set()
+        self._interp_colors = {
+            "Pchip": "#E64A19",  # Deep orange
+            "Cubic Spline": "#1976D2",  # Blue
+            "Linear": "#43A047",  # Green
+            "Quadratic": "#7B1FA2",  # Purple
+        }
 
     def plot(self, f1_rel_data: dict, x1_x2_interp_data: dict) -> None:
         """
-        Generate an interactive dashboard with multiple Pareto visualizations
-        using pre-prepared data dictionaries.
+        Generate an interactive dashboard with enhanced visualization and dedicated legends.
         """
         self._f1_rel_data = f1_rel_data
         self._x1_x2_interp_data = x1_x2_interp_data
@@ -39,59 +44,75 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             ]
         )
 
-        # 2. Setup subplot layout
+        # Setup subplot layout with improved organization
         fig = make_subplots(
-            rows=4,
+            rows=3,
             cols=3,
             specs=[
+                [{"type": "scatter"}, {"type": "scatter"}, {"type": "parcoords"}],
                 [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
-                [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
-                [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
-                [{"type": "parcoords", "colspan": 2}, None, {"type": "scatter"}],
+                [
+                    {"type": "scatter"},
+                    {"type": "scatter"},
+                    {"type": "scatter"},
+                ],  # Three separate plots for f1 relationships
             ],
             subplot_titles=[
                 "Decision Space ($x_1$ vs $x_2$)",
                 "Objective Space ($f_1$ vs $f_2$)",
-                "Decision vs Objective",
+                "Parallel Coordinates",
                 "Normalized Decision Space",
                 "Normalized Objective Space",
-                "Normalized Decision vs Objective",
-                "$f_1$ vs $f_2$ (Normalized Interpolations)",
-                "$f_1$ vs $x_1$ (Normalized Interpolations)",
-                "$f_1$ vs $x_2$ (Normalized Interpolations)",
-                "Parallel Coordinates",
-                "Interpolation between $x_1$ and $x_2$ (Normalized Interpolations)",
+                "$x_1$ vs $x_2$ (Interpolations)",
+                "$f_1$ vs $f_2$ (Interpolations)",
+                "$f_1$ vs $x_1$ (Interpolations)",
+                "$f_1$ vs $x_2$ (Interpolations)",
             ],
-            horizontal_spacing=0.05,
-            vertical_spacing=0.07,
+            horizontal_spacing=0.08,
+            vertical_spacing=0.12,
+            column_widths=[0.3, 0.3, 0.4],
         )
 
-        # 3. Update overall layout
+        # Update overall layout with dedicated legend space
         fig.update_layout(
-            title_text="Pareto Optimization Analysis Dashboard",
-            height=1800,
+            title=dict(
+                text="Pareto Optimization Analysis Dashboard",
+                x=0.5,
+                font=dict(size=24, color="#2c3e50"),
+            ),
+            height=1600,
             width=1600,
             showlegend=True,
             template="plotly_white",
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.12,
+                xanchor="center",
+                x=0.5,
+                title=dict(text="Interpolation Methods", font=dict(size=14)),
+            ),
+            margin=dict(t=100, b=100, l=50, r=50),
+            font=dict(family="Arial", size=12, color="#2c3e50"),
         )
 
-        # 4. Add plots using prepared data
+        # Add plots using prepared data
         self._add_decision_objective_spaces(fig, pareto_set_orig, pareto_front_orig)
-        # These methods now directly use the 'norm_all' data from _f1_rel_data and _x1_x2_interp_data
         self._add_normalized_spaces(fig)
-        self._add_f1_relationships(fig)
         self._add_parallel_coordinates(fig)
         self._add_x1_x2_interpolation(fig)
+        self._add_f1_relationships(fig)  # Now with three separate plots
 
-        # 5. Save and Show
-        self.save_path.mkdir(parents=True, exist_ok=True)
-        fig.write_image(
-            file=self.save_path / "pareto_dashboard.png",
-            width=1600,
-            height=1800,
-            scale=2,
-            engine="kaleido",
-        )
+        # Save and Show
+        if self.save_path:
+            self.save_path.mkdir(parents=True, exist_ok=True)
+            fig.write_image(
+                file=self.save_path / "enhanced_pareto_dashboard.png",
+                width=1600,
+                height=1600,
+                scale=2,
+                engine="kaleido",
+            )
         fig.show()
 
     def _set_axis_limits(self, fig, row, col, x_data, y_data, padding=0.05):
@@ -113,19 +134,19 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         )
 
     def _add_description(self, fig, row, col, text):
-        """Add description text annotation below a subplot."""
-        axis_num = col + (row - 1) * 3
-        xref = "x domain" if axis_num == 1 else f"x{axis_num} domain"
-        yref = "y domain" if axis_num == 1 else f"y{axis_num} domain"
+        """Add description text annotation below a subplot using paper coordinates."""
+        # Calculate positions based on grid layout
+        row_positions = {1: 0.92, 2: 0.62, 3: 0.32}
+        col_positions = {1: 0.15, 2: 0.5, 3: 0.85}
 
         fig.add_annotation(
-            text=text,
-            x=0.5,
-            y=-0.20,
-            xref=xref,
-            yref=yref,
+            text=f"<i>{text}</i>",
+            x=col_positions.get(col, 0.5),
+            y=row_positions.get(row, 0),
+            xref="paper",
+            yref="paper",
             showarrow=False,
-            font=dict(size=11, color="grey"),
+            font=dict(size=11, color="#7f8c8d"),
             align="center",
         )
 
@@ -133,16 +154,20 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         self, fig: go.Figure, pareto_set_orig: np.ndarray, pareto_front_orig: np.ndarray
     ):
         """Visualize Pareto set and front in original space."""
-        markers = dict(size=6, opacity=0.7)
-
-        # Decision space
+        # Decision space (Row 1, Col 1)
         fig.add_trace(
             go.Scatter(
                 x=pareto_set_orig[:, 0],
                 y=pareto_set_orig[:, 1],
                 mode="markers",
-                marker={**markers, "color": "blue"},
+                marker=dict(
+                    size=7,
+                    opacity=0.8,
+                    color="#3498db",  # Blue
+                    line=dict(width=1, color="#2c3e50"),
+                ),
                 name="Pareto Set",
+                showlegend=True,
             ),
             row=1,
             col=1,
@@ -151,17 +176,26 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig.update_xaxes(title_text="$x_1$", row=1, col=1)
         fig.update_yaxes(title_text="$x_2$", row=1, col=1)
         self._add_description(
-            fig, 1, 1, "Shows the Pareto set in the original decision variable space."
+            fig,
+            1,
+            1,
+            "Original decision variables showing trade-offs between solutions",
         )
 
-        # Objective space
+        # Objective space (Row 1, Col 2)
         fig.add_trace(
             go.Scatter(
                 x=pareto_front_orig[:, 0],
                 y=pareto_front_orig[:, 1],
                 mode="markers",
-                marker={**markers, "color": "green"},
+                marker=dict(
+                    size=7,
+                    opacity=0.8,
+                    color="#2ecc71",  # Green
+                    line=dict(width=1, color="#2c3e50"),
+                ),
                 name="Pareto Front",
+                showlegend=True,
             ),
             row=1,
             col=2,
@@ -172,65 +206,31 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig.update_xaxes(title_text="$f_1$", row=1, col=2)
         fig.update_yaxes(title_text="$f_2$", row=1, col=2)
         self._add_description(
-            fig,
-            1,
-            2,
-            "Shows the Pareto front in the original objective function space.",
-        )
-
-        # Decision vs Objective
-        fig.add_trace(
-            go.Scatter(
-                x=pareto_set_orig[:, 0],
-                y=pareto_front_orig[:, 0],
-                mode="markers",
-                marker={**markers, "color": "purple"},
-                name="x₁ vs f₁",
-            ),
-            row=1,
-            col=3,
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=pareto_set_orig[:, 1],
-                y=pareto_front_orig[:, 1],
-                mode="markers",
-                marker={**markers, "color": "orange"},
-                name="x₂ vs f₂",
-            ),
-            row=1,
-            col=3,
-        )
-        combined_x = np.concatenate([pareto_set_orig[:, 0], pareto_set_orig[:, 1]])
-        combined_y = np.concatenate([pareto_front_orig[:, 0], pareto_front_orig[:, 1]])
-        self._set_axis_limits(fig, 1, 3, combined_x, combined_y)
-        fig.update_xaxes(title_text="Decision variables ($x$)", row=1, col=3)
-        fig.update_yaxes(title_text="Objective values ($f$)", row=1, col=3)
-        self._add_description(
-            fig,
-            1,
-            3,
-            "Relationship between decision variables and their corresponding objectives.",
+            fig, 1, 2, "Objective space visualization of Pareto optimal solutions"
         )
 
     def _add_normalized_spaces(self, fig: go.Figure):
-        """Visualize normalized decision and objective spaces using pre-prepared normalized data."""
-        # Retrieve normalized data from the prepared data dictionaries
+        """Visualize normalized decision and objective spaces."""
+        # Retrieve normalized data
         norm_x1_all = self._f1_rel_data["norm_x1_all"]
         norm_x2_all = self._f1_rel_data["norm_x2_all"]
         norm_f1_all = self._f1_rel_data["norm_f1_all"]
         norm_f2_all = self._f1_rel_data["norm_f2_all"]
 
-        markers = dict(size=6, opacity=0.7)
-
-        # Normalized Decision Space
+        # Normalized Decision Space (Row 2, Col 1)
         fig.add_trace(
             go.Scatter(
                 x=norm_x1_all,
                 y=norm_x2_all,
                 mode="markers",
-                marker={**markers, "color": "blue"},
+                marker=dict(
+                    size=6,
+                    opacity=0.7,
+                    color="#3498db",  # Blue
+                    symbol="diamond",
+                ),
                 name="Norm Pareto Set",
+                showlegend=True,
             ),
             row=2,
             col=1,
@@ -239,20 +239,23 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig.update_xaxes(title_text="Norm $x_1$", row=2, col=1)
         fig.update_yaxes(title_text="Norm $x_2$", row=2, col=1)
         self._add_description(
-            fig,
-            2,
-            1,
-            "Normalized decision space showing scaled decision variables between 0 and 1.",
+            fig, 2, 1, "Decision variables scaled to [0,1] for comparative analysis"
         )
 
-        # Normalized Objective Space
+        # Normalized Objective Space (Row 2, Col 2)
         fig.add_trace(
             go.Scatter(
                 x=norm_f1_all,
                 y=norm_f2_all,
                 mode="markers",
-                marker={**markers, "color": "green"},
+                marker=dict(
+                    size=6,
+                    opacity=0.7,
+                    color="#2ecc71",  # Green
+                    symbol="diamond",
+                ),
                 name="Norm Pareto Front",
+                showlegend=True,
             ),
             row=2,
             col=2,
@@ -264,48 +267,172 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             fig,
             2,
             2,
-            "Normalized objective space showing scaled objective values between 0 and 1.",
+            "Objective functions normalized for fair comparison across solutions",
         )
 
-        # Combined Normalized Decision vs Objective
+    def _add_parallel_coordinates(self, fig: go.Figure):
+        """Add parallel coordinates plot for combined variables."""
+        norm_x1_all = self._f1_rel_data["norm_x1_all"]
+        norm_x2_all = self._f1_rel_data["norm_x2_all"]
+        norm_f1_all = self._f1_rel_data["norm_f1_all"]
+        norm_f2_all = self._f1_rel_data["norm_f2_all"]
+
+        data = np.hstack(
+            (
+                norm_x1_all.reshape(-1, 1),
+                norm_x2_all.reshape(-1, 1),
+                norm_f1_all.reshape(-1, 1),
+                norm_f2_all.reshape(-1, 1),
+            )
+        )
+
+        dims = [
+            dict(label="x₁", values=data[:, 0]),
+            dict(label="x₂", values=data[:, 1]),
+            dict(label="f₁", values=data[:, 2]),
+            dict(label="f₂", values=data[:, 3]),
+        ]
+
+        fig.add_trace(
+            go.Parcoords(
+                line=dict(
+                    color=data[:, 2],
+                    colorscale="Viridis",
+                    showscale=True,
+                    cmin=0,
+                    cmax=1,
+                    colorbar=dict(
+                        title="f₁", thickness=15, len=0.5, yanchor="middle", y=0.5
+                    ),
+                ),
+                dimensions=dims,
+            ),
+            row=1,
+            col=3,
+        )
+        self._add_description(
+            fig,
+            1,
+            3,
+            "Multivariate analysis showing relationships across all dimensions",
+        )
+
+    def _add_x1_x2_interpolation(self, fig: go.Figure):
+        """
+        Add a plot showing the interpolation between x1 and x2.
+        """
+        data = self._x1_x2_interp_data
+        norm_x1_all = data["norm_x1_all"]
+        norm_x2_all = data["norm_x2_all"]
+        norm_x1_unique = data["norm_x1_unique_for_spline"]
+        norm_x2_for_unique_x1 = data["norm_x2_for_spline"]
+
+        can_interpolate_pchip_linear = len(norm_x1_unique) > 1
+        can_interpolate_quadratic = len(norm_x1_unique) > 2
+        can_interpolate_cubic_spline = len(norm_x1_unique) > 3
+
+        # Add scatter points
         fig.add_trace(
             go.Scatter(
                 x=norm_x1_all,
-                y=norm_f1_all,
+                y=norm_x2_all,
                 mode="markers",
-                marker={**markers, "color": "purple"},
-                name="Norm x₁ vs f₁",
+                marker=dict(
+                    color="#9b59b6",  # Purple
+                    size=7,
+                    opacity=0.7,
+                    line=dict(width=1, color="#2c3e50"),
+                ),
+                name="Data Points",
+                showlegend=False,
             ),
             row=2,
             col=3,
         )
-        fig.add_trace(
-            go.Scatter(
-                x=norm_x2_all,
-                y=norm_f2_all,
-                mode="markers",
-                marker={**markers, "color": "orange"},
-                name="Norm x₂ vs f₂",
-            ),
-            row=2,
-            col=3,
+
+        x1_interp_norm = np.linspace(0, 1, 100)
+
+        for interp_name in ["Pchip", "Cubic Spline", "Linear", "Quadratic"]:
+            interp_func = None
+            interpolation_possible = False
+
+            if interp_name == "Pchip" and can_interpolate_pchip_linear:
+                interp_func = PchipInterpolator(norm_x1_unique, norm_x2_for_unique_x1)
+                interpolation_possible = True
+            elif interp_name == "Cubic Spline" and can_interpolate_cubic_spline:
+                interp_func = CubicSpline(norm_x1_unique, norm_x2_for_unique_x1)
+                interpolation_possible = True
+            elif interp_name == "Linear" and can_interpolate_pchip_linear:
+                interp_func = interp1d(
+                    norm_x1_unique,
+                    norm_x2_for_unique_x1,
+                    kind="linear",
+                    fill_value="extrapolate",
+                )
+                interpolation_possible = True
+            elif interp_name == "Quadratic" and can_interpolate_quadratic:
+                interp_func = interp1d(
+                    norm_x1_unique,
+                    norm_x2_for_unique_x1,
+                    kind="quadratic",
+                    fill_value="extrapolate",
+                )
+                interpolation_possible = True
+
+            if interpolation_possible and interp_func:
+                try:
+                    x2_interp_norm = interp_func(x1_interp_norm)
+                    # Control legend appearance
+                    show_in_legend = interp_name not in self._seen_interp_methods
+                    if show_in_legend:
+                        self._seen_interp_methods.add(interp_name)
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=x1_interp_norm,
+                            y=x2_interp_norm,
+                            mode="lines",
+                            line=dict(
+                                color=self._interp_colors[interp_name],
+                                width=3,
+                                dash="solid" if interp_name == "Pchip" else "dash",
+                            ),
+                            name=interp_name,
+                            legendgroup=interp_name,
+                            showlegend=show_in_legend,
+                        ),
+                        row=2,
+                        col=3,
+                    )
+                except ValueError:
+                    continue
+
+        self._set_axis_limits(
+            fig, 2, 3, np.array([0, 1]), np.array([0, 1]), padding=0.01
         )
-        combined_x = np.concatenate([norm_x1_all, norm_x2_all])
-        combined_y = np.concatenate([norm_f1_all, norm_f2_all])
-        self._set_axis_limits(fig, 2, 3, combined_x, combined_y)
-        fig.update_xaxes(title_text="Normalized $x$", row=2, col=3)
-        fig.update_yaxes(title_text="Normalized $f$", row=2, col=3)
+        fig.update_xaxes(title_text="Normalized $x_1$", row=2, col=3)
+        fig.update_yaxes(title_text="Normalized $x_2$", row=2, col=3)
+
+        description_suffix = ""
+        if not can_interpolate_pchip_linear:
+            description_suffix = " (Not enough data for interpolation)"
+        elif not can_interpolate_quadratic:
+            description_suffix = " (Not enough data for quadratic/cubic splines)"
+        elif not can_interpolate_cubic_spline:
+            description_suffix = " (Not enough data for cubic splines)"
+
         self._add_description(
             fig,
             2,
             3,
-            "Normalized relationship between decision variables and objectives.",
+            "Relationship between decision variables with interpolation models"
+            + description_suffix,
         )
 
     def _add_f1_relationships(self, fig: go.Figure):
         """
         Add f₁ relationships with f₂, x₁, x₂ using different interpolation methods.
-        Both scatter points and interpolation lines are in normalized space.
+        Now with three separate plots in row 3
         """
         data = self._f1_rel_data
 
@@ -319,55 +446,48 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         norm_x1_for_spline = data["norm_x1_for_spline"]
         norm_x2_for_spline = data["norm_x2_for_spline"]
 
-        interpolation_methods = [
-            ("Pchip", "red", "solid"),
-            ("Cubic Spline", "blue", "dash"),
-            ("Linear", "green", "dot"),
-            ("Quadratic", "purple", "dashdot"),
+        plot_configs = [
+            (norm_f2_all, "$f_2$", "#e74c3c", 1),  # Red
+            (norm_x1_all, "$x_1$", "#f39c12", 2),  # Orange
+            (norm_x2_all, "$x_2$", "#16a085", 3),  # Teal
         ]
 
-        # Check if enough unique points exist for higher-order interpolations
-        can_interpolate_pchip_linear = (
-            len(norm_f1_unique) > 1
-        )  # Needs at least 2 points
-        can_interpolate_quadratic = len(norm_f1_unique) > 2  # Needs at least 3 points
-        can_interpolate_cubic_spline = (
-            len(norm_f1_unique) > 3
-        )  # Needs at least 4 points
+        can_interpolate_pchip_linear = len(norm_f1_unique) > 1
+        can_interpolate_quadratic = len(norm_f1_unique) > 2
+        can_interpolate_cubic_spline = len(norm_f1_unique) > 3
 
-        for i, (norm_y_all_points, label, scatter_color) in enumerate(
-            [
-                (norm_f2_all, "$f_2$", "purple"),
-                (norm_x1_all, "$x_1$", "orange"),
-                (norm_x2_all, "$x_2$", "brown"),
-            ]
+        # Create three separate subplots for the relationships
+        for i, (norm_y_all_points, label, scatter_color, col) in enumerate(
+            plot_configs
         ):
-            # Plot normalized data points for scatter
+            # Add scatter points to each subplot
             fig.add_trace(
                 go.Scatter(
                     x=norm_f1_all,
                     y=norm_y_all_points,
                     mode="markers",
-                    marker=dict(color=scatter_color, size=6, opacity=0.7),
-                    name=f"Normalized Data Points {label}",
+                    marker=dict(
+                        color=scatter_color,
+                        size=6,
+                        opacity=0.7,
+                        line=dict(width=1, color="#2c3e50"),
+                    ),
+                    name=f"{label} Data",
                     showlegend=False,
                 ),
                 row=3,
                 col=i + 1,
             )
 
-            # Dynamically get the correct y-values for the spline based on current label
             current_norm_y_for_spline = {
                 "$f_2$": norm_f2_for_spline,
                 "$x_1$": norm_x1_for_spline,
                 "$x_2$": norm_x2_for_spline,
             }.get(label)
 
-            # Generate points for the interpolated curve in normalized space (0 to 1)
             f1_interp_norm = np.linspace(0, 1, 100)
 
-            # Add each interpolation method
-            for interp_name, line_color, line_dash in interpolation_methods:
+            for interp_name in ["Pchip", "Cubic Spline", "Linear", "Quadratic"]:
                 interp_func = None
                 interpolation_possible = False
 
@@ -399,26 +519,31 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                 if interpolation_possible and interp_func:
                     try:
                         y_interp_norm = interp_func(f1_interp_norm)
+                        # Control legend appearance - only show once per method
+                        show_in_legend = interp_name not in self._seen_interp_methods
+                        if show_in_legend:
+                            self._seen_interp_methods.add(interp_name)
+
                         fig.add_trace(
                             go.Scatter(
                                 x=f1_interp_norm,
                                 y=y_interp_norm,
                                 mode="lines",
-                                line=dict(color=line_color, dash=line_dash, width=2),
-                                name=f"{interp_name} Interpolation {label}",
-                                showlegend=(
-                                    i == 0
-                                ),  # Only show legend for the first column to avoid redundancy
+                                line=dict(
+                                    color=self._interp_colors[interp_name],
+                                    width=2.5,
+                                    dash="solid" if interp_name == "Pchip" else "dash",
+                                ),
+                                name=interp_name,
+                                legendgroup=interp_name,
+                                showlegend=show_in_legend,
                             ),
                             row=3,
                             col=i + 1,
                         )
-                    except ValueError as e:
-                        # Catch potential errors if extrapolation fails or data is ill-conditioned
-                        print(f"Skipping {interp_name} for {label} due to error: {e}")
-                        pass
+                    except ValueError:
+                        continue
 
-            # Set axis limits to [0, 1] for normalized plots
             self._set_axis_limits(
                 fig, 3, i + 1, np.array([0, 1]), np.array([0, 1]), padding=0.01
             )
@@ -427,170 +552,16 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
             description_suffix = ""
             if not can_interpolate_pchip_linear:
-                description_suffix = " (Not enough data for interpolation.)"
+                description_suffix = " (Not enough data for interpolation)"
             elif not can_interpolate_quadratic:
-                description_suffix = " (Not enough data for quadratic/cubic splines.)"
+                description_suffix = " (Not enough data for quadratic/cubic splines)"
             elif not can_interpolate_cubic_spline:
-                description_suffix = " (Not enough data for cubic splines.)"
+                description_suffix = " (Not enough data for cubic splines)"
 
             self._add_description(
                 fig,
                 3,
                 i + 1,
-                f"Shows normalized {label} vs $f_1$ with various interpolation methods."
+                f"Relationship between f₁ and {label} with interpolation models"
                 + description_suffix,
             )
-
-    def _add_parallel_coordinates(self, fig: go.Figure):
-        """Add parallel coordinates plot for combined variables using pre-prepared normalized data."""
-        # Retrieve normalized data from the prepared data dictionaries
-        norm_x1_all = self._f1_rel_data["norm_x1_all"]
-        norm_x2_all = self._f1_rel_data["norm_x2_all"]
-        norm_f1_all = self._f1_rel_data["norm_f1_all"]
-        norm_f2_all = self._f1_rel_data["norm_f2_all"]
-
-        data = np.hstack(
-            (
-                norm_x1_all.reshape(-1, 1),
-                norm_x2_all.reshape(-1, 1),
-                norm_f1_all.reshape(-1, 1),
-                norm_f2_all.reshape(-1, 1),
-            )
-        )
-
-        dims = [
-            dict(label="x1", values=data[:, 0]),
-            dict(label="x2", values=data[:, 1]),
-            dict(label="f1", values=data[:, 2]),
-            dict(label="f2", values=data[:, 3]),
-        ]
-
-        fig.add_trace(
-            go.Parcoords(
-                line=dict(
-                    color=data[:, 2],
-                    colorscale="Viridis",
-                    showscale=False,  # Color by normalized f1
-                ),
-                dimensions=dims,
-            ),
-            row=4,
-            col=1,
-        )
-        self._add_description(
-            fig,
-            4,
-            1,
-            "Parallel coordinates showing all decision variables and objectives to visualize trade-offs.",
-        )
-
-    def _add_x1_x2_interpolation(self, fig: go.Figure):
-        """
-        Add a plot showing the interpolation between x1 and x2 using different interpolation methods.
-        Both scatter points and interpolation lines are in normalized space.
-        """
-        data = self._x1_x2_interp_data
-
-        norm_x1_all = data["norm_x1_all"]
-        norm_x2_all = data["norm_x2_all"]
-
-        norm_x1_unique = data["norm_x1_unique_for_spline"]
-        norm_x2_for_unique_x1 = data["norm_x2_for_spline"]
-
-        interpolation_methods = [
-            ("Pchip", "red", "solid"),
-            ("Cubic Spline", "blue", "dash"),
-            ("Linear", "green", "dot"),
-            ("Quadratic", "purple", "dashdot"),
-        ]
-
-        can_interpolate_pchip_linear = len(norm_x1_unique) > 1
-        can_interpolate_quadratic = len(norm_x1_unique) > 2
-        can_interpolate_cubic_spline = len(norm_x1_unique) > 3
-
-        # Plot normalized data points for scatter
-        fig.add_trace(
-            go.Scatter(
-                x=norm_x1_all,
-                y=norm_x2_all,
-                mode="markers",
-                marker=dict(color="darkcyan", size=6, opacity=0.7),
-                name="Normalized Data Points ($x_1$ vs $x_2$)",
-                showlegend=False,
-            ),
-            row=4,
-            col=3,
-        )
-
-        # Generate points for the interpolated curve in normalized space (0 to 1)
-        x1_interp_norm = np.linspace(0, 1, 100)
-
-        # Add each interpolation method
-        for interp_name, line_color, line_dash in interpolation_methods:
-            interp_func = None
-            interpolation_possible = False
-
-            if interp_name == "Pchip" and can_interpolate_pchip_linear:
-                interp_func = PchipInterpolator(norm_x1_unique, norm_x2_for_unique_x1)
-                interpolation_possible = True
-            elif interp_name == "Cubic Spline" and can_interpolate_cubic_spline:
-                interp_func = CubicSpline(norm_x1_unique, norm_x2_for_unique_x1)
-                interpolation_possible = True
-            elif interp_name == "Linear" and can_interpolate_pchip_linear:
-                interp_func = interp1d(
-                    norm_x1_unique,
-                    norm_x2_for_unique_x1,
-                    kind="linear",
-                    fill_value="extrapolate",
-                )
-                interpolation_possible = True
-            elif interp_name == "Quadratic" and can_interpolate_quadratic:
-                interp_func = interp1d(
-                    norm_x1_unique,
-                    norm_x2_for_unique_x1,
-                    kind="quadratic",
-                    fill_value="extrapolate",
-                )
-                interpolation_possible = True
-
-            if interpolation_possible and interp_func:
-                try:
-                    x2_interp_norm = interp_func(x1_interp_norm)
-                    fig.add_trace(
-                        go.Scatter(
-                            x=x1_interp_norm,
-                            y=x2_interp_norm,
-                            mode="lines",
-                            line=dict(color=line_color, dash=line_dash, width=2),
-                            name=f"{interp_name} Interpolation ($x_1$ vs $x_2$)",
-                            showlegend=True,
-                        ),
-                        row=4,
-                        col=3,
-                    )
-                except ValueError as e:
-                    print(f"Skipping {interp_name} for x1 vs x2 due to error: {e}")
-                    pass
-
-        self._set_axis_limits(
-            fig, 4, 3, np.array([0, 1]), np.array([0, 1]), padding=0.01
-        )
-
-        fig.update_xaxes(title_text="Normalized $x_1$", row=4, col=3)
-        fig.update_yaxes(title_text="Normalized $x_2$", row=4, col=3)
-
-        description_suffix = ""
-        if not can_interpolate_pchip_linear:
-            description_suffix = " (Not enough data for interpolation.)"
-        elif not can_interpolate_quadratic:
-            description_suffix = " (Not enough data for quadratic/cubic splines.)"
-        elif not can_interpolate_cubic_spline:
-            description_suffix = " (Not enough data for cubic splines.)"
-
-        self._add_description(
-            fig,
-            4,
-            3,
-            "Visualizes the relationship and various interpolation methods between normalized decision variables $x_1$ and $x_2$."
-            + description_suffix,
-        )

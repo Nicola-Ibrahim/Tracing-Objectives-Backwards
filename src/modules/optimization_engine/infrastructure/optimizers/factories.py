@@ -1,6 +1,6 @@
-from ...domain.paretos.interfaces.base_algorithm import BaseAlgorithm
-from ...domain.paretos.interfaces.base_optimizer import BaseOptimizer
-from ...domain.paretos.interfaces.base_problem import BaseProblem
+from ...domain.generation.interfaces.base_algorithm import BaseAlgorithm
+from ...domain.generation.interfaces.base_optimizer import BaseOptimizer
+from ...domain.generation.interfaces.base_problem import BaseProblem
 from .minimizer import Minimizer, MinimizerConfig
 
 

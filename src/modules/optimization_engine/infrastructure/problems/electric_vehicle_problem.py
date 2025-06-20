@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
-from ...domain.paretos.interfaces.base_problem import BaseProblem
+from ...domain.generation.interfaces.base_problem import BaseProblem
 
 
 class Vehicle(BaseModel):

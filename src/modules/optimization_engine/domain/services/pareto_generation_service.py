@@ -4,8 +4,8 @@ from typing import Any
 from ...infrastructure.algorithms import AlgorithmFactory
 from ...infrastructure.optimizers import OptimizerFactory
 from ...infrastructure.problems import ProblemFactory
-from ..paretos.entities.pareto_data import ParetoDataModel
-from ..paretos.interfaces.base_archiver import BaseParetoArchiver
+from ..generation.entities.pareto_data import ParetoDataModel
+from ..generation.interfaces.base_archiver import BaseParetoArchiver
 
 
 class ParetoGenerationService:

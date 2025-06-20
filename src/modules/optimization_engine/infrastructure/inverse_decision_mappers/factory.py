@@ -4,9 +4,9 @@ from ...domain.interpolation.entities.interpolator_type import (
     InterpolatorType,
 )
 from ...domain.interpolation.interfaces.base_interpolator import BaseInterpolator
-from .geodesic import GeodesicInterpolator
-from .knn import KNearestNeighborInterpolator
-from .linear import LinearInterpolator
+from .splines.geodesic import GeodesicInterpolator
+from .ml.knn import KNearestNeighborInterpolator
+from .splines.linear import LinearInterpolator
 from .nn import NeuralNetworkInterpolator
 
 

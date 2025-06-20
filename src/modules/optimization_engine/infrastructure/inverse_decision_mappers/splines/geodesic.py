@@ -1,9 +1,9 @@
 import numpy as np
 from scipy.spatial import geometric_slerp
 
-from ...domain.entities.objectives_preference import ObjectivePreferences
-from ...domain.interfaces.base_interpolator import BaseInterpolator
-from ..similarities import SimilarityMethod
+from ....domain import ObjectivePreferences
+from ....domain import BaseInterpolator
+from ...similarities import SimilarityMethod
 
 
 class GeodesicInterpolator(BaseInterpolator):

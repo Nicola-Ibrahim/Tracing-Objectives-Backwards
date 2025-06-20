@@ -4,9 +4,9 @@ from ....domain.interpolation.interfaces.base_normalizer import BaseNormalizer
 from ....domain.interpolation.interfaces.base_repository import (
     BaseTrainedModelRepository,
 )
-from ....domain.paretos.interfaces.base_archiver import BaseParetoArchiver
+from ....domain.generation.interfaces.base_archiver import BaseParetoArchiver
 from ....domain.services.training_service import TrainingService
-from ....infrastructure.interpolators.factory import InterpolatorFactory
+from ....infrastructure.inverse_decision_mappers.factory import InterpolatorFactory
 from .train_interpolator_command import TrainInterpolatorCommand
 
 

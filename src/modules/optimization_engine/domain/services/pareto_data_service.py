@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
-from ..paretos.interfaces.base_archiver import BaseParetoArchiver
+from ..generation.interfaces.base_archiver import BaseParetoArchiver
 
 
 class ParetoDataService:

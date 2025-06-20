@@ -5,7 +5,7 @@ from ....domain.interpolation.interfaces.base_normalizer import BaseNormalizer
 from ....domain.interpolation.interfaces.base_repository import (
     BaseTrainedModelRepository,
 )
-from ....domain.paretos.interfaces.base_archiver import BaseParetoArchiver
+from ....domain.generation.interfaces.base_archiver import BaseParetoArchiver
 from .guided_mode_generate_decision_command import GuidedModeGenerateDecisionCommand
 
 

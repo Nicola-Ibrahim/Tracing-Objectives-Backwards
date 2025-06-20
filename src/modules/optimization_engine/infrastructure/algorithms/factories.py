@@ -1,4 +1,4 @@
-from ...domain.paretos.interfaces.base_algorithm import BaseAlgorithm
+from ...domain.generation.interfaces.base_algorithm import BaseAlgorithm
 from .nsga2 import NSGAII, NSGA2Config
 
 

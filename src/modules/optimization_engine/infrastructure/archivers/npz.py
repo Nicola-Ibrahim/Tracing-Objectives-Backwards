@@ -2,8 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from ...domain.paretos.entities.pareto_data import ParetoDataModel
-from ...domain.paretos.interfaces.base_archiver import BaseParetoArchiver
+from ...domain.generation.entities.pareto_data import ParetoDataModel
+from ...domain.generation.interfaces.base_archiver import BaseParetoArchiver
 
 
 class ParetoNPzArchiver(BaseParetoArchiver):

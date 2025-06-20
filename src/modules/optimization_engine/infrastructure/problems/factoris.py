@@ -1,4 +1,4 @@
-from ...domain.paretos.interfaces.base_problem import BaseProblem
+from ...domain.generation.interfaces.base_problem import BaseProblem
 from .biobj import BiObjProblemConfig, COCOBiObjectiveProblem, get_coco_problem
 
 

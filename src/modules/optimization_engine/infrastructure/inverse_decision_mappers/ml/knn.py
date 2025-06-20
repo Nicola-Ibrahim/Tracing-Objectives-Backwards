@@ -3,9 +3,9 @@ from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from ...domain.entities.objectives_preference import ObjectivePreferences
-from ...domain.interfaces.base_interpolator import BaseInterpolator
-from ..similarities import SimilarityMethod
+from ....domain import ObjectivePreferences
+from ....domain import BaseInterpolator
+from ...similarities import SimilarityMethod
 
 
 class KNearestNeighborInterpolator(BaseInterpolator):
