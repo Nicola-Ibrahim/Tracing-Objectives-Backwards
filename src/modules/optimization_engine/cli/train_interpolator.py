@@ -1,8 +1,8 @@
-from ....interpolation.application import train_interpolator_handler
-from ...infrastructure.interpolators.linear import LinearInterpolator
-from ...infrastructure.loggers.wandb_logger import WandbLogger
-from ...infrastructure.metrics import mean_squared_error
-from ...infrastructure.similarities import cosine_similarity
+from ..application.interpolation.train_model import train_interpolator_handler
+from ..infrastructure.interpolators.linear import LinearInterpolator
+from ..infrastructure.loggers.wandb_logger import WandbLogger
+from ..infrastructure.metrics import mean_squared_error
+from ..infrastructure.similarities import cosine_similarity
 
 # --- IMPORTANT: You will need to import your concrete interpolator implementations here ---
 # Example:
