@@ -9,95 +9,180 @@ from .mapper import ParetoVisualizationDTO
 
 
 class PlotlyParetoVisualizer(BaseParetoVisualizer):
-    """Dashboard for visualizing Pareto set and front with precomputed interpolations."""
+    """
+    Dashboard for visualizing Pareto set and front with precomputed interpolations.
+
+    This class orchestrates the creation of a comprehensive Plotly dashboard
+    to display multi-objective optimization results, including decision space,
+    objective space, parallel coordinates, normalized spaces, and
+    various interpolation visualizations.
+    """
+
+    # --- Configuration Constants ---
+    _INTERPOLATION_COLORS = {
+        "Pchip": "#07FF03",
+        "Cubic Spline": "#CD05F9",
+        "Linear": "#43A047",
+        "Quadratic": "#7B1FA2",
+        "RBF": "#F30B0B",
+        "Nearest Neighbor": "#F57C00",
+        "Linear ND": "#FFEA07",
+    }
+
+    _SUBPLOT_LAYOUT = {
+        "rows": 5,
+        "cols": 3,
+        "specs": [
+            [{"type": "scatter"}, {"type": "scatter"}, {"type": "parcoords"}],  # Row 1
+            [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],  # Row 2
+            [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],  # Row 3
+            [
+                {"type": "scatter"},
+                {"type": "scatter"},
+                None,
+            ],  # Row 4 (f2_vs_x1, f2_vs_x2) - NO PLOT AT COL 3
+            [{"type": "scatter3d"}, {"type": "scatter3d"}, None],  # Row 5
+        ],
+        "subplot_titles": [
+            "Decision Space ($x_1$ vs $x_2$)",
+            "Objective Space ($f_1$ vs $f_2$)",
+            "Parallel Coordinates",
+            "Normalized Decision Space",
+            "Normalized Objective Space",
+            "$x_1$ vs $x_2$ (Interpolations)",
+            "$f_1$ vs $f_2$ (Interpolations)",
+            "$f_1$ vs $x_1$ (Interpolations)",
+            "$f_1$ vs $x_2$ (Interpolations)",
+            "$f_2$ vs $x_1$ (Interpolations)",  # This is at (4,1)
+            "$f_2$ vs $x_2$ (Interpolations)",  # This is at (4,2)
+            None,  # This is (4,3)
+            "3D: $f_1$, $f_2$, $x_1$",
+            "3D: $f_1$, $f_2$, $x_2$",
+            None,
+        ],
+        "horizontal_spacing": 0.08,
+        "vertical_spacing": 0.1,
+        "column_widths": [0.3, 0.3, 0.4],
+        "row_heights": [0.15, 0.15, 0.15, 0.15, 0.4],
+    }
+
+    _FIGURE_LAYOUT_CONFIG = {
+        "title_text": "Enhanced Pareto Optimization Dashboard",
+        "title_x": 0.5,
+        "title_font_size": 24,
+        "height": 2200,
+        "width": 1800,
+        "showlegend": True,
+        "template": "plotly_white",
+        "legend_orientation": "h",
+        "legend_yanchor": "bottom",
+        "legend_y": -0.12,
+        "legend_xanchor": "center",
+        "legend_x": 0.5,
+        "legend_title_text": "Interpolation Methods",
+        "legend_title_font_size": 14,
+        "margin_t": 100,
+        "margin_b": 100,
+        "margin_l": 50,
+        "margin_r": 50,
+        "font_family": "Arial",
+        "font_size": 12,
+    }
+
+    _DESCRIPTION_POSITIONS = {
+        "row": {1: 0.92, 2: 0.72, 3: 0.52, 4: 0.32, 5: 0.12},
+        "col": {1: 0.15, 2: 0.5, 3: 0.85},
+    }
 
     def __init__(self, save_path: Path | None = None):
+        """
+        Initializes the PlotlyParetoVisualizer.
+
+        Args:
+            save_path (Path | None): Optional path to save the generated plots.
+        """
         super().__init__(save_path)
-        self.visualizatio_dto: ParetoVisualizationDTO | None = None
-        self.interpolation_colors = {
-            "Pchip": "#07FF03",
-            "Cubic Spline": "#CD05F9",
-            "Linear": "#43A047",
-            "Quadratic": "#7B1FA2",
-            "RBF": "#F30B0B",
-            "Nearest Neighbor": "#F57C00",
-            "Linear ND": "#FFEA07",
-        }
 
     def plot(self, dto: ParetoVisualizationDTO) -> None:
-        self.visualizatio_dto = dto
+        """
+        Generates and displays a comprehensive Pareto optimization dashboard.
+
+        Args:
+            dto (ParetoVisualizationDTO): Data Transfer Object containing all
+                                          pre-processed data for visualization.
+        """
         fig = self._create_figure_layout()
-        self._add_core_visualizations(fig)
-        self._add_parallel_coordinates(fig)
-        self._add_normalized_spaces(fig)
-        self._add_parallel_coordinates(fig)
-        self._add_interpolation_visualizations(fig)
-        self._add_3d_visualizations(fig)
+
+        # Add different sections of the visualization
+        self._add_core_visualizations(fig, dto)
+        self._add_parallel_coordinates(fig, dto)
+        self._add_normalized_spaces(fig, dto)
+        self._add_interpolation_visualizations(fig, dto)
+        self._add_3d_visualizations(fig, dto)
+
         fig.show()
+        # TODO: Add logic to save the figure if self.save_path is not None
 
     def _create_figure_layout(self) -> go.Figure:
-        """Create and configure the figure layout"""
-        fig = make_subplots(
-            rows=5,
-            cols=3,
-            specs=[
-                [{"type": "scatter"}, {"type": "scatter"}, {"type": "parcoords"}],
-                [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
-                [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
-                [{"type": "scatter"}, {"type": "scatter"}, None],
-                [{"type": "scatter3d"}, {"type": "scatter3d"}, None],
-            ],
-            subplot_titles=[
-                "Decision Space ($x_1$ vs $x_2$)",
-                "Objective Space ($f_1$ vs $f_2$)",
-                "Parallel Coordinates",
-                "Normalized Decision Space",
-                "Normalized Objective Space",
-                "$x_1$ vs $x_2$ (Interpolations)",
-                "$f_1$ vs $f_2$ (Interpolations)",
-                "$f_1$ vs $x_1$ (Interpolations)",
-                "$f_1$ vs $x_2$ (Interpolations)",
-                "$f_2$ vs $x_1$ (Interpolations)",
-                "$f_2$ vs $x_2$ (Interpolations)",
-                None,
-                "3D: $f_1$, $f_2$, $x_1$",
-                "3D: $f_1$, $f_2$, $x_2$",
-                None,
-            ],
-            horizontal_spacing=0.08,
-            vertical_spacing=0.1,
-            column_widths=[0.3, 0.3, 0.4],
-            row_heights=[0.15, 0.15, 0.15, 0.15, 0.4],
-        )
+        """
+        Creates and configures the main figure layout for the dashboard.
+
+        Returns:
+            go.Figure: The configured Plotly figure object.
+        """
+        fig = make_subplots(**self._SUBPLOT_LAYOUT)
 
         fig.update_layout(
             title=dict(
-                text="Enhanced Pareto Optimization Dashboard", x=0.5, font=dict(size=24)
+                text=self._FIGURE_LAYOUT_CONFIG["title_text"],
+                x=self._FIGURE_LAYOUT_CONFIG["title_x"],
+                font=dict(size=self._FIGURE_LAYOUT_CONFIG["title_font_size"]),
             ),
-            height=2200,
-            width=1800,
-            showlegend=True,
-            template="plotly_white",
+            height=self._FIGURE_LAYOUT_CONFIG["height"],
+            width=self._FIGURE_LAYOUT_CONFIG["width"],
+            showlegend=self._FIGURE_LAYOUT_CONFIG["showlegend"],
+            template=self._FIGURE_LAYOUT_CONFIG["template"],
             legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=-0.12,
-                xanchor="center",
-                x=0.5,
-                title=dict(text="Interpolation Methods", font=dict(size=14)),
+                orientation=self._FIGURE_LAYOUT_CONFIG["legend_orientation"],
+                yanchor=self._FIGURE_LAYOUT_CONFIG["legend_yanchor"],
+                y=self._FIGURE_LAYOUT_CONFIG["legend_y"],
+                xanchor=self._FIGURE_LAYOUT_CONFIG["legend_xanchor"],
+                x=self._FIGURE_LAYOUT_CONFIG["legend_x"],
+                title=dict(
+                    text=self._FIGURE_LAYOUT_CONFIG["legend_title_text"],
+                    font=dict(
+                        size=self._FIGURE_LAYOUT_CONFIG["legend_title_font_size"]
+                    ),
+                ),
             ),
-            margin=dict(t=100, b=100, l=50, r=50),
-            font=dict(family="Arial", size=12),
+            margin=dict(
+                t=self._FIGURE_LAYOUT_CONFIG["margin_t"],
+                b=self._FIGURE_LAYOUT_CONFIG["margin_b"],
+                l=self._FIGURE_LAYOUT_CONFIG["margin_l"],
+                r=self._FIGURE_LAYOUT_CONFIG["margin_r"],
+            ),
+            font=dict(
+                family=self._FIGURE_LAYOUT_CONFIG["font_family"],
+                size=self._FIGURE_LAYOUT_CONFIG["font_size"],
+            ),
         )
         return fig
 
-    def _add_core_visualizations(self, fig: go.Figure) -> None:
-        """Add decision space and objective space visualizations"""
+    def _add_core_visualizations(
+        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    ) -> None:
+        """
+        Adds the core decision space and objective space scatter plots.
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            dto (ParetoVisualizationDTO): The DTO containing the data.
+        """
         # Decision space
         self._add_scatter_plot(
             fig,
-            x=self.visualizatio_dto.pareto_set[:, 0],
-            y=self.visualizatio_dto.pareto_set[:, 1],
+            x=dto.pareto_set[:, 0],
+            y=dto.pareto_set[:, 1],
             row=1,
             col=1,
             name="Pareto Set",
@@ -110,8 +195,8 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         # Objective space
         self._add_scatter_plot(
             fig,
-            x=self.visualizatio_dto.pareto_front[:, 0],
-            y=self.visualizatio_dto.pareto_front[:, 1],
+            x=dto.pareto_front[:, 0],
+            y=dto.pareto_front[:, 1],
             row=1,
             col=2,
             name="Pareto Front",
@@ -137,7 +222,24 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         symbol: str = "circle",
         showlegend: bool = True,
     ) -> None:
-        """Helper to add standardized scatter plots"""
+        """
+        Helper method to add standardized scatter plots to the figure.
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            x (np.ndarray): X-axis data.
+            y (np.ndarray): Y-axis data.
+            row (int): Subplot row.
+            col (int): Subplot column.
+            name (str): Trace name for legend.
+            color (str): Marker color.
+            title_x (str): X-axis title.
+            title_y (str): Y-axis title.
+            description (str): Text description for the subplot.
+            marker_size (int): Size of the markers.
+            symbol (str): Marker symbol.
+            showlegend (bool): Whether to show this trace in the legend.
+        """
         fig.add_trace(
             go.Scatter(
                 x=x,
@@ -155,10 +257,17 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig.update_yaxes(title_text=title_y, row=row, col=col)
         self._add_description(fig, row, col, description)
 
-    def _add_normalized_spaces(self, fig: go.Figure) -> None:
-        """Add normalized decision and objective spaces"""
-        # Normalized Decision Space
-        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
+    def _add_normalized_spaces(
+        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    ) -> None:
+        """
+        Adds normalized decision and objective space scatter plots.
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            dto (ParetoVisualizationDTO): The DTO containing the data.
+        """
+        norm_x1, norm_x2 = dto.normalized_decision_space
         self._add_scatter_plot(
             fig,
             x=norm_x1,
@@ -174,8 +283,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             symbol="diamond",
         )
 
-        # Normalized Objective Space
-        norm_f1, norm_f2 = self.visualizatio_dto.normalized_objective_space
+        norm_f1, norm_f2 = dto.normalized_objective_space
         self._add_scatter_plot(
             fig,
             x=norm_f1,
@@ -191,16 +299,22 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             symbol="diamond",
         )
 
-    def _add_parallel_coordinates(self, fig: go.Figure) -> None:
-        """Add parallel coordinates plot for multivariate analysis"""
+    def _add_parallel_coordinates(
+        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    ) -> None:
+        """
+        Adds a parallel coordinates plot for multivariate analysis.
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            dto (ParetoVisualizationDTO): The DTO containing the data.
+        """
         fig.add_trace(
             go.Parcoords(
                 line=dict(
-                    color=self.visualizatio_dto.parallel_coordinates_data[
-                        :, 2
-                    ],  # Using f1 for coloring
+                    color=dto.parallel_coordinates_data[:, 2],  # Using f1 for coloring
                     colorscale="Viridis",
-                    showscale=True,
+                    showscale=False,
                     cmin=0,
                     cmax=1,
                     colorbar=dict(
@@ -208,22 +322,10 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                     ),
                 ),
                 dimensions=[
-                    dict(
-                        label="x₁",
-                        values=self.visualizatio_dto.parallel_coordinates_data[:, 0],
-                    ),
-                    dict(
-                        label="x₂",
-                        values=self.visualizatio_dto.parallel_coordinates_data[:, 1],
-                    ),
-                    dict(
-                        label="f₁",
-                        values=self.visualizatio_dto.parallel_coordinates_data[:, 2],
-                    ),
-                    dict(
-                        label="f₂",
-                        values=self.visualizatio_dto.parallel_coordinates_data[:, 3],
-                    ),
+                    dict(label="x₁", values=dto.parallel_coordinates_data[:, 0]),
+                    dict(label="x₂", values=dto.parallel_coordinates_data[:, 1]),
+                    dict(label="f₁", values=dto.parallel_coordinates_data[:, 2]),
+                    dict(label="f₂", values=dto.parallel_coordinates_data[:, 3]),
                 ],
             ),
             row=1,
@@ -231,21 +333,48 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         )
         self._add_description(fig, 1, 3, "Multivariate analysis across all dimensions")
 
-    def _add_interpolation_visualizations(self, fig: go.Figure) -> None:
-        """Add all interpolation-related visualizations"""
-        self._add_x1_x2_interpolation(fig)
-        self._add_f1_relationships(fig)
-        self._add_f2_relationships(fig)
+    def _add_interpolation_visualizations(
+        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    ) -> None:
+        """
+        Adds all interpolation-related visualizations.
 
-    def _add_x1_x2_interpolation(self, fig: go.Figure) -> None:
-        """Visualize interpolation between x1 and x2"""
-        x1, x2 = (
-            self.visualizatio_dto.x1_x2_relationship["x1"],
-            self.visualizatio_dto.x1_x2_relationship["x2"],
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            dto (ParetoVisualizationDTO): The DTO containing the data.
+        """
+        self._add_x1_x2_interpolation(fig, dto)
+        self._add_f_relationships(
+            fig,
+            dto.f1_relationships,
+            dto.normalized_decision_space,
+            dto.normalized_objective_space,
+            "f1",
         )
-        interpolations = self.visualizatio_dto.x1_x2_relationship["interpolations"]
+        self._add_f_relationships(
+            fig,
+            dto.f2_relationships,
+            dto.normalized_decision_space,
+            dto.normalized_objective_space,
+            "f2",
+        )
 
-        # Add data points
+    def _add_x1_x2_interpolation(
+        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    ) -> None:
+        """
+        Visualizes interpolation between x1 and x2.
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            dto (ParetoVisualizationDTO): The DTO containing the data.
+        """
+        x1, x2 = (
+            dto.x1_x2_relationship["x1"],
+            dto.x1_x2_relationship["x2"],
+        )
+        interpolations = dto.x1_x2_relationship["interpolations"]
+
         self._add_scatter_plot(
             fig,
             x=x1,
@@ -260,7 +389,6 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             showlegend=False,
         )
 
-        # Add interpolation lines
         for method_name, (x_grid, y_grid) in interpolations.items():
             fig.add_trace(
                 go.Scatter(
@@ -268,7 +396,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                     y=y_grid,
                     mode="lines",
                     line=dict(
-                        color=self.interpolation_colors[method_name],
+                        color=self._INTERPOLATION_COLORS[method_name],
                         width=3,
                         dash="solid" if method_name == "Pchip" else "dash",
                     ),
@@ -280,91 +408,97 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                 col=3,
             )
 
-    def _add_f1_relationships(self, fig: go.Figure) -> None:
-        """Visualize relationships with f1 using DTO data"""
-        # Extract necessary data from DTO
-        norm_f1 = self.visualizatio_dto.f1_relationships["norm_f1"]
-        interpolations = {
-            "f1_vs_f2": self.visualizatio_dto.f1_relationships["f1_vs_f2"],
-            "f1_vs_x1": self.visualizatio_dto.f1_relationships["f1_vs_x1"],
-            "f1_vs_x2": self.visualizatio_dto.f1_relationships["f1_vs_x2"],
-        }
-        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
-        _, norm_f2 = self.visualizatio_dto.normalized_objective_space
+    def _add_f_relationships(
+        self,
+        fig: go.Figure,
+        f_relationships_data: dict,
+        normalized_decision_space: tuple[np.ndarray, np.ndarray],
+        normalized_objective_space: tuple[np.ndarray, np.ndarray],
+        f_label_prefix: str,  # "f1" or "f2"
+    ) -> None:
+        """
+        Helper to visualize relationships for a given objective function (f1 or f2).
 
-        # f1 vs f2
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            f_relationships_data (dict): The dictionary from DTO (e.g., dto.f1_relationships).
+            normalized_decision_space (tuple[np.ndarray, np.ndarray]): Normalized x1 and x2.
+            normalized_objective_space (tuple[np.ndarray, np.ndarray]): Normalized f1 and f2.
+            f_label_prefix (str): "f1" or "f2" to denote which objective is being plotted against.
+        """
+        norm_f_primary = f_relationships_data[f"norm_{f_label_prefix}"]
+        norm_x1, norm_x2 = normalized_decision_space
+        norm_f1, norm_f2 = normalized_objective_space
+
+        # Determine target objective and its label based on f_label_prefix
+        if f_label_prefix == "f1":
+            norm_f_target = norm_f2
+            target_f_label_str = "$f_2$"
+            dto_key_f_vs_f = "f1_vs_f2"  # Key as it appears in the DTO
+        else:  # f_label_prefix == "f2"
+            norm_f_target = norm_f1  # Although f2_relationships in DTO doesn't currently have f2_vs_f1, keeping consistent.
+            target_f_label_str = "$f_1$"
+            dto_key_f_vs_f = (
+                "f2_vs_f1"  # Key as it would appear in the DTO if provided.
+            )
+
+        # Base row for plotting f1 or f2 relationships
+        base_row = 3 if f_label_prefix == "f1" else 4
+
+        # Dynamically set columns based on f_label_prefix and subplot titles
+        # f1 relationships will use (row 3, col 1, 2, 3)
+        # f2 relationships will use (row 4, col 1, 2) (as col 3 is None)
+        col_f_vs_f = 1
+        col_f_vs_x1 = (
+            2 if f_label_prefix == "f1" else 1
+        )  # f1_vs_x1 -> (3,2); f2_vs_x1 -> (4,1)
+        col_f_vs_x2 = (
+            3 if f_label_prefix == "f1" else 2
+        )  # f1_vs_x2 -> (3,3); f2_vs_x2 -> (4,2)
+
+        # f_primary vs f_target (e.g., f1 vs f2, or f2 vs f1 if available)
+        if (
+            dto_key_f_vs_f in f_relationships_data
+        ):  # Only plot if the data exists in DTO
+            self._add_relationship_plot(
+                fig,
+                x_data=norm_f_primary,
+                y_data=norm_f_target,
+                interpolations=f_relationships_data[dto_key_f_vs_f],
+                row=base_row,
+                col=col_f_vs_f,
+                x_label_title=f"Normalized ${f_label_prefix}$",
+                y_label_title=f"Normalized {target_f_label_str}",
+                color="#3498db",
+                description=f"Relationship between ${f_label_prefix}$ and {target_f_label_str}",
+            )
+
+        # f_primary vs x1
         self._add_relationship_plot(
             fig,
-            x_data=norm_f1,
-            y_data=norm_f2,
-            interpolations=interpolations["f1_vs_f2"],
-            row=3,
-            col=1,
-            y_label="$f_2$",
-            color="#3498db",
-            description="Relationship between f₁ and $f_2$",
-        )
-
-        # f1 vs x1
-        self._add_relationship_plot(
-            fig,
-            x_data=norm_f1,
+            x_data=norm_f_primary,
             y_data=norm_x1,
-            interpolations=interpolations["f1_vs_x1"],
-            row=3,
-            col=2,
-            y_label="$x_1$",
+            interpolations=f_relationships_data[f"{f_label_prefix}_vs_x1"],
+            row=base_row,
+            col=col_f_vs_x1,
+            x_label_title=f"Normalized ${f_label_prefix}$",
+            y_label_title="Normalized $x_1$",
             color="#3498db",
-            description="Relationship between f₁ and $x_1$",
+            description=f"Relationship between ${f_label_prefix}$ and $x_1$",
         )
 
-        # f1 vs x2
+        # f_primary vs x2
         self._add_relationship_plot(
             fig,
-            x_data=norm_f1,
+            x_data=norm_f_primary,
             y_data=norm_x2,
-            interpolations=interpolations["f1_vs_x2"],
-            row=3,
-            col=3,
-            y_label="$x_2$",
+            interpolations=f_relationships_data[f"{f_label_prefix}_vs_x2"],
+            row=base_row,
+            col=col_f_vs_x2,
+            x_label_title=f"Normalized ${f_label_prefix}$",
+            y_label_title="Normalized $x_2$",
             color="#3498db",
-            description="Relationship between f₁ and $x_2$",
-        )
-
-    def _add_f2_relationships(self, fig: go.Figure) -> None:
-        """Visualize relationships with f2 using DTO data"""
-        # Extract necessary data from DTO
-        norm_f2 = self.visualizatio_dto.f2_relationships["norm_f2"]
-        interpolations = {
-            "f2_vs_x1": self.visualizatio_dto.f2_relationships["f2_vs_x1"],
-            "f2_vs_x2": self.visualizatio_dto.f2_relationships["f2_vs_x2"],
-        }
-        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
-
-        # f2 vs x1
-        self._add_relationship_plot(
-            fig,
-            x_data=norm_f2,
-            y_data=norm_x1,
-            interpolations=interpolations["f2_vs_x1"],
-            row=4,
-            col=1,
-            y_label="$x_1$",
-            color="#3498db",
-            description="Relationship between f₂ and $x_1$",
-        )
-
-        # f2 vs x2
-        self._add_relationship_plot(
-            fig,
-            x_data=norm_f2,
-            y_data=norm_x2,
-            interpolations=interpolations["f2_vs_x2"],
-            row=4,
-            col=2,
-            y_label="$x_2$",
-            color="#3498db",
-            description="Relationship between f₂ and $x_2$",
+            description=f"Relationship between ${f_label_prefix}$ and $x_2$",
         )
 
     def _add_relationship_plot(
@@ -375,25 +509,38 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         interpolations: dict,
         row: int,
         col: int,
-        y_label: str,
+        x_label_title: str,
+        y_label_title: str,
         color: str,
         description: str,
     ) -> None:
-        """Helper to add standardized relationship plots"""
-        # Add data points
+        """
+        Helper method to add standardized relationship plots (scatter with interpolations).
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            x_data (np.ndarray): X-axis data for scatter points.
+            y_data (np.ndarray): Y-axis data for scatter points.
+            interpolations (dict): Dictionary of interpolation methods and their (x_grid, y_grid) data.
+            row (int): Subplot row.
+            col (int): Subplot column.
+            x_label_title (str): X-axis title for the subplot.
+            y_label_title (str): Y-axis title for the subplot.
+            color (str): Marker color for data points.
+            description (str): Text description for the subplot.
+        """
         fig.add_trace(
             go.Scatter(
                 x=x_data,
                 y=y_data,
                 mode="markers",
                 marker=dict(size=6, opacity=0.7, color=color),
-                showlegend=False,
+                showlegend=False,  # Data points often don't need their own legend entry here
             ),
             row=row,
             col=col,
         )
 
-        # Add interpolation lines
         for method_name, (x_grid, y_grid) in interpolations.items():
             fig.add_trace(
                 go.Scatter(
@@ -401,38 +548,41 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                     y=y_grid,
                     mode="lines",
                     line=dict(
-                        color=self.interpolation_colors[method_name],
+                        color=self._INTERPOLATION_COLORS[method_name],
                         width=2.5,
                         dash="solid" if method_name == "Pchip" else "dash",
                     ),
                     name=method_name,
-                    legendgroup=method_name,
-                    showlegend=False,
+                    legendgroup=method_name,  # Group for single legend entry across subplots
+                    showlegend=False,  # Only show legend in the main legend area
                 ),
                 row=row,
                 col=col,
             )
 
         self._set_axis_limits(
-            fig, row, col, np.array([0, 1]), np.array([0, 1]), padding=0.01
-        )
-        fig.update_xaxes(
-            title_text="Normalized $f_1$" if "f1" in y_label else "Normalized $f_2$",
-            row=row,
-            col=col,
-        )
-        fig.update_yaxes(title_text=f"Normalized {y_label}", row=row, col=col)
+            fig, row, col, x_data, y_data, padding=0.01
+        )  # Changed from [0,1] to actual data range for better fit
+        fig.update_xaxes(title_text=x_label_title, row=row, col=col)
+        fig.update_yaxes(title_text=y_label_title, row=row, col=col)
         self._add_description(fig, row, col, description)
 
-    def _add_3d_visualizations(self, fig: go.Figure) -> None:
-        """Add 3D visualizations of relationships using DTO data"""
-        # Get data from DTO
-        mv_data = self.visualizatio_dto.multivariate_interpolations
-        norm_f1, norm_f2 = self.visualizatio_dto.normalized_objective_space
-        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
+    def _add_3d_visualizations(
+        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    ) -> None:
+        """
+        Adds 3D visualizations of relationships using DTO data.
 
-        # Track which legend items we've added
-        added_legend_items = set()
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            dto (ParetoVisualizationDTO): The DTO containing the data.
+        """
+        mv_data = dto.multivariate_interpolations
+        norm_f1, norm_f2 = dto.normalized_objective_space
+        norm_x1, norm_x2 = dto.normalized_decision_space
+
+        # Track which legend items we've added in 3D plots to avoid duplication
+        added_legend_items_3d = set()
 
         # f1, f2, x1
         self._add_3d_relationship(
@@ -445,7 +595,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             col=1,
             z_title="x_1",
             description="3D: $f_1$, $f_2$ and $x_1$ with interpolation",
-            added_legend_items=added_legend_items,
+            added_legend_items=added_legend_items_3d,
         )
 
         # f1, f2, x2
@@ -459,7 +609,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             col=2,
             z_title="x_2",
             description="3D: $f_1$, $f_2$ and $x_2$ with interpolation",
-            added_legend_items=added_legend_items,
+            added_legend_items=added_legend_items_3d,
         )
 
     def _add_3d_relationship(
@@ -473,11 +623,25 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         col: int,
         z_title: str,
         description: str,
-        added_legend_items: set,  # Add this parameter to track created legend items
+        added_legend_items: set,
     ) -> None:
-        """Add 3D surface plot for multivariate relationships"""
-        # Add original points (only show legend for first plot)
-        show_legend = "Original Points" not in added_legend_items
+        """
+        Adds a 3D surface plot for multivariate relationships with original points.
+
+        Args:
+            fig (go.Figure): The Plotly figure to add traces to.
+            surface_data (dict): Dictionary of surface interpolation data (X_grid, Y_grid, Z_grid).
+            x (np.ndarray): X-axis data for original points.
+            y (np.ndarray): Y-axis data for original points.
+            z (np.ndarray): Z-axis data for original points.
+            row (int): Subplot row.
+            col (int): Subplot column.
+            z_title (str): Z-axis title.
+            description (str): Text description for the subplot.
+            added_legend_items (set): Set to track legend items already added for 3D plots
+                                      to prevent duplicates in the main legend.
+        """
+        show_legend_points = "Original Points (3D)" not in added_legend_items
         fig.add_trace(
             go.Scatter3d(
                 x=x,
@@ -486,51 +650,53 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                 mode="markers",
                 marker=dict(size=5, opacity=0.8, color="#1f77b4"),
                 name="Original Points",
-                legendgroup="points",
-                showlegend=show_legend,
+                legendgroup="original_3d_points",
+                showlegend=show_legend_points,
             ),
             row=row,
             col=col,
         )
-        if show_legend:
-            added_legend_items.add("Original Points")
+        if show_legend_points:
+            added_legend_items.add("Original Points (3D)")
 
-        # Add interpolation surfaces
         for method_name, (X_grid, Y_grid, Z_grid) in surface_data.items():
-            if method_name in ["Nearest Neighbor", "Linear ND"]:
-                # Only create legend item once per method
-                show_in_legend = method_name not in added_legend_items
+            # Only create legend item once per method name for 3D surfaces
+            show_in_legend = method_name not in added_legend_items
 
-                # Add the actual surface
-                fig.add_trace(
-                    go.Surface(
-                        x=X_grid,
-                        y=Y_grid,
-                        z=Z_grid,
-                        colorscale="Viridis",
-                        opacity=0.7,
-                        name=method_name,
-                        showlegend=show_in_legend,
-                        showscale=True,
-                        colorbar=dict(title=f"Norm {z_title}"),
-                        legendgroup=method_name,
-                    ),
-                    row=row,
-                    col=col,
-                )
+            fig.add_trace(
+                go.Surface(
+                    x=X_grid,
+                    y=Y_grid,
+                    z=Z_grid,
+                    colorscale="Viridis",
+                    opacity=0.7,
+                    name=method_name,
+                    showlegend=show_in_legend,
+                    showscale=False,
+                    colorbar=dict(
+                        title=f"Norm {z_title}",
+                        thickness=15,
+                        len=0.5,
+                        x=1.05 + 0.5 * (col - 1),
+                        y=0.5,
+                    ),  # Adjusted position
+                    legendgroup=method_name,
+                ),
+                row=row,
+                col=col,
+            )
+            if show_in_legend:
+                added_legend_items.add(method_name)
 
-                if show_in_legend:
-                    added_legend_items.add(method_name)
-
-        # Update scene settings
         fig.update_scenes(
             row=row,
             col=col,
-            xaxis_title_text="Normalized $f_1$",
-            yaxis_title_text="Normalized $f_2$",
-            zaxis_title_text=f"Normalized ${z_title}$",
+            xaxis_title_text="f₁",
+            yaxis_title_text="f₂",
+            zaxis_title_text=f"{z_title.replace('_', ' ')}",
             aspectmode="cube",
         )
+
         self._add_description(fig, row, col, description)
 
     def _set_axis_limits(
@@ -542,11 +708,23 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         y_data: np.ndarray,
         padding: float = 0.05,
     ) -> None:
-        """Set axis limits with padding"""
+        """
+        Sets axis limits with padding based on the data range.
+
+        Args:
+            fig (go.Figure): The Plotly figure.
+            row (int): Subplot row.
+            col (int): Subplot column.
+            x_data (np.ndarray): Data used to determine x-axis range.
+            y_data (np.ndarray): Data used to determine y-axis range.
+            padding (float): Percentage of data range to add as padding.
+        """
         x_min, x_max = np.min(x_data), np.max(x_data)
         y_min, y_max = np.min(y_data), np.max(y_data)
-        x_range = x_max - x_min
-        y_range = y_max - y_min
+
+        # Handle cases where min == max (e.g., all points are the same)
+        x_range = x_max - x_min if x_max != x_min else 1.0
+        y_range = y_max - y_min if y_max != y_min else 1.0
 
         fig.update_xaxes(
             range=[x_min - padding * x_range, x_max + padding * x_range],
@@ -560,35 +738,25 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         )
 
     def _add_description(self, fig: go.Figure, row: int, col: int, text: str) -> None:
-        """Add description text below subplot"""
-        row_positions = {1: 0.92, 2: 0.72, 3: 0.52, 4: 0.32, 5: 0.12}
-        col_positions = {1: 0.15, 2: 0.5, 3: 0.85}
+        """
+        Adds a description text annotation below a subplot.
+
+        Args:
+            fig (go.Figure): The Plotly figure.
+            row (int): Subplot row.
+            col (int): Subplot column.
+            text (str): The description text to add.
+        """
+        row_pos = self._DESCRIPTION_POSITIONS["row"].get(row, 0)
+        col_pos = self._DESCRIPTION_POSITIONS["col"].get(col, 0)
 
         fig.add_annotation(
             text=f"<i>{text}</i>",
-            x=col_positions.get(col, 0.5),
-            y=row_positions.get(row, 0),
+            x=col_pos,
+            y=row_pos,
             xref="paper",
             yref="paper",
             showarrow=False,
             font=dict(size=11, color="#7f8c8d"),
             align="center",
         )
-
-    def _get_interpolation_description(
-        self, relationship: str, unique_points: list
-    ) -> str:
-        """Generate description with interpolation status"""
-        return f"Relationship between {relationship}" + self._get_interpolation_suffix(
-            len(unique_points)
-        )
-
-    def _get_interpolation_suffix(self, num_points: int) -> str:
-        """Generate status suffix based on available points"""
-        if num_points < 2:
-            return " (Not enough data for interpolation)"
-        if num_points < 3:
-            return " (Not enough data for quadratic/cubic splines)"
-        if num_points < 4:
-            return " (Not enough data for cubic splines)"
-        return ""
