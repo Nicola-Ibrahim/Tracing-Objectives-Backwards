@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ...domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
+from .mapper import ParetoVisualizationDTO
 
 
 class PlotlyParetoVisualizer(BaseParetoVisualizer):
@@ -12,55 +13,27 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
     def __init__(self, save_path: Path | None = None):
         super().__init__(save_path)
-        self.f1_data: dict | None = None
-        self.interp_data: dict | None = None
+        self.visualizatio_dto: ParetoVisualizationDTO | None = None
         self.interpolation_colors = {
-            "Pchip": "#07FF03",  # Deep orange
-            "Cubic Spline": "#CD05F9",  # Blue
-            "Linear": "#43A047",  # Green
-            "Quadratic": "#7B1FA2",  # Purple
-            "RBF": "#F30B0B",  # Yellow
-            "Nearest Neighbor": "#F57C00",  # Orange
-            "Linear ND": "#FFEA07",  # Light blue
+            "Pchip": "#07FF03",
+            "Cubic Spline": "#CD05F9",
+            "Linear": "#43A047",
+            "Quadratic": "#7B1FA2",
+            "RBF": "#F30B0B",
+            "Nearest Neighbor": "#F57C00",
+            "Linear ND": "#FFEA07",
         }
 
-    def plot(self, f1_data: dict, interp_data: dict) -> None:
-        self.f1_data = f1_data
-        self.interp_data = interp_data
-
-        # Prepare original data for visualization
-        pareto_set = self._prepare_pareto_set(f1_data)
-        pareto_front = self._prepare_pareto_front(f1_data)
-
-        # Create figure with appropriate layout
+    def plot(self, dto: ParetoVisualizationDTO) -> None:
+        self.visualizatio_dto = dto
         fig = self._create_figure_layout()
-
-        # Add all visualization components
-        self._add_core_visualizations(fig, pareto_set, pareto_front)
+        self._add_core_visualizations(fig)
+        self._add_parallel_coordinates(fig)
         self._add_normalized_spaces(fig)
         self._add_parallel_coordinates(fig)
         self._add_interpolation_visualizations(fig)
         self._add_3d_visualizations(fig)
-
         fig.show()
-
-    def _prepare_pareto_set(self, data: dict) -> np.ndarray:
-        """Combine decision variables into a 2D array"""
-        return np.hstack(
-            [
-                data["x1_orig"].reshape(-1, 1),
-                data["x2_orig"].reshape(-1, 1),
-            ]
-        )
-
-    def _prepare_pareto_front(self, data: dict) -> np.ndarray:
-        """Combine objective functions into a 2D array"""
-        return np.hstack(
-            [
-                data["f1_orig"].reshape(-1, 1),
-                data["f2_orig"].reshape(-1, 1),
-            ]
-        )
 
     def _create_figure_layout(self) -> go.Figure:
         """Create and configure the figure layout"""
@@ -118,15 +91,13 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         )
         return fig
 
-    def _add_core_visualizations(
-        self, fig: go.Figure, pareto_set: np.ndarray, pareto_front: np.ndarray
-    ) -> None:
+    def _add_core_visualizations(self, fig: go.Figure) -> None:
         """Add decision space and objective space visualizations"""
         # Decision space
         self._add_scatter_plot(
             fig,
-            x=pareto_set[:, 0],
-            y=pareto_set[:, 1],
+            x=self.visualizatio_dto.pareto_set[:, 0],
+            y=self.visualizatio_dto.pareto_set[:, 1],
             row=1,
             col=1,
             name="Pareto Set",
@@ -139,8 +110,8 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         # Objective space
         self._add_scatter_plot(
             fig,
-            x=pareto_front[:, 0],
-            y=pareto_front[:, 1],
+            x=self.visualizatio_dto.pareto_front[:, 0],
+            y=self.visualizatio_dto.pareto_front[:, 1],
             row=1,
             col=2,
             name="Pareto Front",
@@ -149,9 +120,6 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             title_y="$f_2$",
             description="Objective space visualization of Pareto optimal solutions",
         )
-
-        # Parallel coordinates
-        self._add_parallel_coordinates(fig)
 
     def _add_scatter_plot(
         self,
@@ -190,10 +158,11 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
     def _add_normalized_spaces(self, fig: go.Figure) -> None:
         """Add normalized decision and objective spaces"""
         # Normalized Decision Space
+        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
         self._add_scatter_plot(
             fig,
-            x=self.f1_data["norm_x1"],
-            y=self.f1_data["norm_x2"],
+            x=norm_x1,
+            y=norm_x2,
             row=2,
             col=1,
             name="Norm Pareto Set",
@@ -206,10 +175,11 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         )
 
         # Normalized Objective Space
+        norm_f1, norm_f2 = self.visualizatio_dto.normalized_objective_space
         self._add_scatter_plot(
             fig,
-            x=self.f1_data["norm_f1"],
-            y=self.f1_data["norm_f2"],
+            x=norm_f1,
+            y=norm_f2,
             row=2,
             col=2,
             name="Norm Pareto Front",
@@ -223,26 +193,12 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
     def _add_parallel_coordinates(self, fig: go.Figure) -> None:
         """Add parallel coordinates plot for multivariate analysis"""
-        norm_data = np.hstack(
-            (
-                self.f1_data["norm_x1"].reshape(-1, 1),
-                self.f1_data["norm_x2"].reshape(-1, 1),
-                self.f1_data["norm_f1"].reshape(-1, 1),
-                self.f1_data["norm_f2"].reshape(-1, 1),
-            )
-        )
-
-        dimensions = [
-            dict(label="x₁", values=norm_data[:, 0]),
-            dict(label="x₂", values=norm_data[:, 1]),
-            dict(label="f₁", values=norm_data[:, 2]),
-            dict(label="f₂", values=norm_data[:, 3]),
-        ]
-
         fig.add_trace(
             go.Parcoords(
                 line=dict(
-                    color=norm_data[:, 2],
+                    color=self.visualizatio_dto.parallel_coordinates_data[
+                        :, 2
+                    ],  # Using f1 for coloring
                     colorscale="Viridis",
                     showscale=True,
                     cmin=0,
@@ -251,7 +207,24 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                         title="f₁", thickness=15, len=0.5, yanchor="middle", y=0.5
                     ),
                 ),
-                dimensions=dimensions,
+                dimensions=[
+                    dict(
+                        label="x₁",
+                        values=self.visualizatio_dto.parallel_coordinates_data[:, 0],
+                    ),
+                    dict(
+                        label="x₂",
+                        values=self.visualizatio_dto.parallel_coordinates_data[:, 1],
+                    ),
+                    dict(
+                        label="f₁",
+                        values=self.visualizatio_dto.parallel_coordinates_data[:, 2],
+                    ),
+                    dict(
+                        label="f₂",
+                        values=self.visualizatio_dto.parallel_coordinates_data[:, 3],
+                    ),
+                ],
             ),
             row=1,
             col=3,
@@ -266,24 +239,24 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
     def _add_x1_x2_interpolation(self, fig: go.Figure) -> None:
         """Visualize interpolation between x1 and x2"""
-        norm_x1 = self.interp_data["norm_x1"]
-        norm_x2 = self.interp_data["norm_x2"]
-        interpolations = self.interp_data["interpolations"]["x1_vs_x2"]
+        x1, x2 = (
+            self.visualizatio_dto.x1_x2_relationship["x1"],
+            self.visualizatio_dto.x1_x2_relationship["x2"],
+        )
+        interpolations = self.visualizatio_dto.x1_x2_relationship["interpolations"]
 
         # Add data points
         self._add_scatter_plot(
             fig,
-            x=norm_x1,
-            y=norm_x2,
+            x=x1,
+            y=x2,
             row=2,
             col=3,
             name="Data Points",
             color="#3498db",
             title_x="Normalized $x_1$",
             title_y="Normalized $x_2$",
-            description=self._get_interpolation_description(
-                "decision variables", self.interp_data.get("norm_x1_unique", [])
-            ),
+            description="Relationship between decision variables",
             showlegend=False,
         )
 
@@ -308,85 +281,90 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             )
 
     def _add_f1_relationships(self, fig: go.Figure) -> None:
-        """Visualize relationships with f1"""
-        norm_f1 = self.f1_data["norm_f1"]
-        interpolations = self.f1_data["interpolations"]
-        num_points = len(self.f1_data.get("norm_f1_unique", []))
+        """Visualize relationships with f1 using DTO data"""
+        # Extract necessary data from DTO
+        norm_f1 = self.visualizatio_dto.f1_relationships["norm_f1"]
+        interpolations = {
+            "f1_vs_f2": self.visualizatio_dto.f1_relationships["f1_vs_f2"],
+            "f1_vs_x1": self.visualizatio_dto.f1_relationships["f1_vs_x1"],
+            "f1_vs_x2": self.visualizatio_dto.f1_relationships["f1_vs_x2"],
+        }
+        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
+        _, norm_f2 = self.visualizatio_dto.normalized_objective_space
 
         # f1 vs f2
         self._add_relationship_plot(
             fig,
             x_data=norm_f1,
-            y_data=self.f1_data["norm_f2"],
+            y_data=norm_f2,
             interpolations=interpolations["f1_vs_f2"],
             row=3,
             col=1,
             y_label="$f_2$",
             color="#3498db",
-            description=f"Relationship between f₁ and $f_2${
-                self._get_interpolation_suffix(num_points)}",
+            description="Relationship between f₁ and $f_2$",
         )
 
         # f1 vs x1
         self._add_relationship_plot(
             fig,
             x_data=norm_f1,
-            y_data=self.f1_data["norm_x1"],
+            y_data=norm_x1,
             interpolations=interpolations["f1_vs_x1"],
             row=3,
             col=2,
             y_label="$x_1$",
             color="#3498db",
-            description=f"Relationship between f₁ and $x_1${
-                self._get_interpolation_suffix(num_points)}",
+            description="Relationship between f₁ and $x_1$",
         )
 
         # f1 vs x2
         self._add_relationship_plot(
             fig,
             x_data=norm_f1,
-            y_data=self.f1_data["norm_x2"],
+            y_data=norm_x2,
             interpolations=interpolations["f1_vs_x2"],
             row=3,
             col=3,
             y_label="$x_2$",
             color="#3498db",
-            description=f"Relationship between f₁ and $x_2${
-                self._get_interpolation_suffix(num_points)}",
+            description="Relationship between f₁ and $x_2$",
         )
 
     def _add_f2_relationships(self, fig: go.Figure) -> None:
-        """Visualize relationships with f2"""
-        norm_f2 = self.interp_data["norm_f2"]
-        interpolations = self.interp_data["interpolations"]
-        num_points = len(self.interp_data.get("norm_f2_unique", []))
+        """Visualize relationships with f2 using DTO data"""
+        # Extract necessary data from DTO
+        norm_f2 = self.visualizatio_dto.f2_relationships["norm_f2"]
+        interpolations = {
+            "f2_vs_x1": self.visualizatio_dto.f2_relationships["f2_vs_x1"],
+            "f2_vs_x2": self.visualizatio_dto.f2_relationships["f2_vs_x2"],
+        }
+        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
 
         # f2 vs x1
         self._add_relationship_plot(
             fig,
             x_data=norm_f2,
-            y_data=self.interp_data["norm_x1"],
+            y_data=norm_x1,
             interpolations=interpolations["f2_vs_x1"],
             row=4,
             col=1,
             y_label="$x_1$",
             color="#3498db",
-            description=f"Relationship between f₂ and $x_1${
-                self._get_interpolation_suffix(num_points)}",
+            description="Relationship between f₂ and $x_1$",
         )
 
         # f2 vs x2
         self._add_relationship_plot(
             fig,
             x_data=norm_f2,
-            y_data=self.interp_data["norm_x2"],
+            y_data=norm_x2,
             interpolations=interpolations["f2_vs_x2"],
             row=4,
             col=2,
             y_label="$x_2$",
             color="#3498db",
-            description=f"Relationship between f₂ and $x_2${
-                self._get_interpolation_suffix(num_points)}",
+            description="Relationship between f₂ and $x_2$",
         )
 
     def _add_relationship_plot(
@@ -447,13 +425,11 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         self._add_description(fig, row, col, description)
 
     def _add_3d_visualizations(self, fig: go.Figure) -> None:
-        """Add 3D visualizations of relationships"""
-        # Check if multivariate data exists
-        if "multivariate_interpolations" not in self.interp_data:
-            return
-
-        # Get multivariate interpolation data
-        mv_data = self.interp_data["multivariate_interpolations"]
+        """Add 3D visualizations of relationships using DTO data"""
+        # Get data from DTO
+        mv_data = self.visualizatio_dto.multivariate_interpolations
+        norm_f1, norm_f2 = self.visualizatio_dto.normalized_objective_space
+        norm_x1, norm_x2 = self.visualizatio_dto.normalized_decision_space
 
         # Track which legend items we've added
         added_legend_items = set()
@@ -462,28 +438,28 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         self._add_3d_relationship(
             fig,
             surface_data=mv_data["f1f2_vs_x1"],
-            x=self.f1_data["norm_f1"],
-            y=self.f1_data["norm_f2"],
-            z=self.f1_data["norm_x1"],
+            x=norm_f1,
+            y=norm_f2,
+            z=norm_x1,
             row=5,
             col=1,
             z_title="x_1",
             description="3D: $f_1$, $f_2$ and $x_1$ with interpolation",
-            added_legend_items=added_legend_items,  # Pass the tracker
+            added_legend_items=added_legend_items,
         )
 
         # f1, f2, x2
         self._add_3d_relationship(
             fig,
             surface_data=mv_data["f1f2_vs_x2"],
-            x=self.f1_data["norm_f1"],
-            y=self.f1_data["norm_f2"],
-            z=self.f1_data["norm_x2"],
+            x=norm_f1,
+            y=norm_f2,
+            z=norm_x2,
             row=5,
             col=2,
             z_title="x_2",
             description="3D: $f_1$, $f_2$ and $x_2$ with interpolation",
-            added_legend_items=added_legend_items,  # Pass the same tracker
+            added_legend_items=added_legend_items,
         )
 
     def _add_3d_relationship(

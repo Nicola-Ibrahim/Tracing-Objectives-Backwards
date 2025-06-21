@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-
-import numpy as np
+from typing import Any
 
 from .....shared.config import ROOT_PATH
 
@@ -12,6 +11,6 @@ class BaseParetoVisualizer(ABC):
         self.save_path.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
-    def plot(self, pareto_set: np.ndarray, pareto_front: np.ndarray) -> None:
+    def plot(self, data: Any) -> None:
         """Visualize the Pareto set and front."""
         pass

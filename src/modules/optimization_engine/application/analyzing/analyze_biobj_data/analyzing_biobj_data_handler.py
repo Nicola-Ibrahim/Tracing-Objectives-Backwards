@@ -1,5 +1,6 @@
 from ....domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
 from ....domain.services.pareto_data_service import ParetoDataService
+from ....infrastructure.visualizers.mapper import ParetoVisualizationMapper
 from .analyzing_biobj_data_command import AnalyzeBiobjDataCommand
 
 
@@ -13,6 +14,7 @@ class AnalyzeBiobjDataCommandHandler:
         self,
         pareto_data_service: ParetoDataService,
         visualizer: BaseParetoVisualizer,
+        pareto_data_mapper: ParetoVisualizationMapper,
     ):
         """
         Initializes the command handler with a dedicated analysis data service and a visualizer.
@@ -23,6 +25,7 @@ class AnalyzeBiobjDataCommandHandler:
         """
         self._pareto_data_service = pareto_data_service
         self._visualizer = visualizer
+        self._pareto_data_mapper = pareto_data_mapper
 
     def execute(self, command: AnalyzeBiobjDataCommand) -> None:
         """
@@ -38,7 +41,8 @@ class AnalyzeBiobjDataCommandHandler:
             data_identifier=command.filename
         )
 
-        self._visualizer.plot(
-            f1_data=f1_data,
-            interp_data=interp_data,
-        )
+        # Map the raw data to a structured DTO
+        dto = self._pareto_data_mapper.map_to_dto(f1_data, interp_data)
+
+        # Visualize the data using the provided visualizer
+        self._visualizer.plot(dto=dto)
