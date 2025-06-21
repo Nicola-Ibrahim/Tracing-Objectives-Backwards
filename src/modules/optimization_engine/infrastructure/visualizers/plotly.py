@@ -30,7 +30,11 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
     }
 
     # Define subplot configuration in a more structured way
-    # (row, col): {type, title, description, x_label, y_label, z_label (for 3D)}
+    # (row, col): {type, title, description, x_label, y_label, z_label (for 3D), data_key,
+    #              data_mapping: {x: 'dto_attr_for_x', y: 'dto_attr_for_y', z: 'dto_attr_for_z', ...},
+    #              interpolation_key: 'dto_attr_for_interpolations' (optional for scatter)
+    #              surface_key: 'dto_attr_for_surface_data' (optional for 3D)
+    #             }
     _SUBPLOT_CONFIG = {
         (1, 1): {
             "type": "scatter",
@@ -38,6 +42,13 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Original decision variables showing trade-offs",
             "x_label": "$x_1$",
             "y_label": "$x_2$",
+            "data_key": "pareto_set",
+            "data_mapping": {"x": 0, "y": 1},  # Index in the numpy array
+            "name": "Pareto Set",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 7,
+            "showlegend": True,
         },
         (1, 2): {
             "type": "scatter",
@@ -45,11 +56,25 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Objective space visualization of Pareto optimal solutions",
             "x_label": "$f_1$",
             "y_label": "$f_2$",
+            "data_key": "pareto_front",
+            "data_mapping": {"x": 0, "y": 1},
+            "name": "Pareto Front",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 7,
+            "showlegend": True,
         },
         (1, 3): {
             "type": "parcoords",
             "title": "Parallel Coordinates",
             "description": "Multivariate analysis across all dimensions",
+            "data_key": "parallel_coordinates_data",
+            "dimensions_labels": [
+                "x₁",
+                "x₂",
+                "f₁",
+                "f₂",
+            ],  # Order corresponds to data_key columns
         },
         (2, 1): {
             "type": "scatter",
@@ -57,6 +82,13 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Decision variables scaled to [0,1]",
             "x_label": "Norm $x_1$",
             "y_label": "Norm $x_2$",
+            "data_key": "normalized_decision_space",
+            "data_mapping": {"x": 0, "y": 1},
+            "name": "Norm Pareto Set",
+            "color": "#3498db",
+            "symbol": "diamond",
+            "marker_size": 6,
+            "showlegend": True,
         },
         (2, 2): {
             "type": "scatter",
@@ -64,6 +96,13 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Objective functions normalized for comparison",
             "x_label": "Norm $f_1$",
             "y_label": "Norm $f_2$",
+            "data_key": "normalized_objective_space",
+            "data_mapping": {"x": 0, "y": 1},
+            "name": "Norm Pareto Front",
+            "color": "#3498db",
+            "symbol": "diamond",
+            "marker_size": 6,
+            "showlegend": True,
         },
         (2, 3): {
             "type": "scatter",
@@ -71,6 +110,14 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between decision variables",
             "x_label": "Normalized $x_1$",
             "y_label": "Normalized $x_2$",
+            "data_key": "x1_x2_relationship",
+            "data_mapping": {"x": "x1", "y": "x2"},  # Key in the dict
+            "interpolation_key": "interpolations",
+            "name": "Data Points",  # For the initial scatter points
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 6,
+            "showlegend": False,
         },
         (3, 1): {
             "type": "scatter",
@@ -78,6 +125,17 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_1$ and $f_2$",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $f_2$",
+            "data_key": "f1_relationships",
+            "data_mapping": {
+                "x": "norm_f1",
+                "y": lambda dto: dto.normalized_objective_space[1],
+            },  # Special mapping for f2
+            "interpolation_key": "f1_vs_f2",
+            "name": "Data Points",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 6,
+            "showlegend": False,
         },
         (3, 2): {
             "type": "scatter",
@@ -85,6 +143,17 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_1$ and $x_1$",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $x_1$",
+            "data_key": "f1_relationships",
+            "data_mapping": {
+                "x": "norm_f1",
+                "y": lambda dto: dto.normalized_decision_space[0],
+            },
+            "interpolation_key": "f1_vs_x1",
+            "name": "Data Points",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 6,
+            "showlegend": False,
         },
         (3, 3): {
             "type": "scatter",
@@ -92,6 +161,17 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_1$ and $x_2$",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $x_2$",
+            "data_key": "f1_relationships",
+            "data_mapping": {
+                "x": "norm_f1",
+                "y": lambda dto: dto.normalized_decision_space[1],
+            },
+            "interpolation_key": "f1_vs_x2",
+            "name": "Data Points",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 6,
+            "showlegend": False,
         },
         (4, 1): {
             "type": "scatter",
@@ -99,6 +179,17 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_2$ and $x_1$",
             "x_label": "Normalized $f_2$",
             "y_label": "Normalized $x_1$",
+            "data_key": "f2_relationships",
+            "data_mapping": {
+                "x": "norm_f2",
+                "y": lambda dto: dto.normalized_decision_space[0],
+            },
+            "interpolation_key": "f2_vs_x1",
+            "name": "Data Points",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 6,
+            "showlegend": False,
         },
         (4, 2): {
             "type": "scatter",
@@ -106,22 +197,49 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_2$ and $x_2$",
             "x_label": "Normalized $f_2$",
             "y_label": "Normalized $x_2$",
+            "data_key": "f2_relationships",
+            "data_mapping": {
+                "x": "norm_f2",
+                "y": lambda dto: dto.normalized_decision_space[1],
+            },
+            "interpolation_key": "f2_vs_x2",
+            "name": "Data Points",
+            "color": "#3498db",
+            "symbol": "circle",
+            "marker_size": 6,
+            "showlegend": False,
         },
         (5, 1): {
             "type": "scatter3d",
             "title": "3D: $f_1$, $f_2$, $x_1$",
             "description": "3D: $f_1$, $f_2$ and $x_1$ with interpolation",
-            "x_label": "Normalized $f_1$",
-            "y_label": "Normalized $f_2$",
-            "z_label": "Normalized $x_1$",
+            "x_label": "$f_1$",
+            "y_label": "$f_2$",
+            "z_label": "$x_1$",
+            "data_key": "normalized_objective_space",  # For original points (f1, f2)
+            "data_mapping": {"x": 0, "y": 1},
+            "z_data_key": "normalized_decision_space",  # For original z points (x1)
+            "z_data_mapping": 0,
+            "surface_key": "f1f2_vs_x1",
+            "name": "Original Points",
+            "color": "#1f77b4",
+            "marker_size": 5,
         },
         (5, 2): {
             "type": "scatter3d",
             "title": "3D: $f_1$, $f_2$, $x_2$",
             "description": "3D: $f_1$, $f_2$ and $x_2$ with interpolation",
-            "x_label": "Normalized $f_1$",
-            "y_label": "Normalized $f_2$",
-            "z_label": "Normalized $x_2$",
+            "x_label": "$f_1$",
+            "y_label": "$f_2$",
+            "z_label": "$x_2$",
+            "data_key": "normalized_objective_space",  # For original points (f1, f2)
+            "data_mapping": {"x": 0, "y": 1},
+            "z_data_key": "normalized_decision_space",  # For original z points (x2)
+            "z_data_mapping": 1,
+            "surface_key": "f1f2_vs_x2",
+            "name": "Original Points",
+            "color": "#1f77b4",
+            "marker_size": 5,
         },
     }
 
@@ -161,8 +279,8 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             save_path (Path | None): Optional path to save the generated plots.
         """
         super().__init__(save_path)
-        # Set to keep track of added legend items to avoid duplicates in 3D plots
-        self._added_3d_legend_items = set()
+        # Set to keep track of added legend items to avoid duplicates across subplots
+        self._added_legend_items = set()
 
     def plot(self, dto: ParetoVisualizationDTO) -> None:
         """
@@ -173,20 +291,9 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                                           pre-processed data for visualization.
         """
         fig = self._create_figure_layout()
-
-        # Add different sections of the visualization
-        self._add_core_visualizations(fig, dto)
-        self._add_parallel_coordinates(fig, dto)
-        self._add_normalized_spaces(fig, dto)
-        self._add_interpolation_visualizations(fig, dto)
-        self._add_3d_visualizations(fig, dto)
+        self._add_all_subplots_from_config(fig, dto)
 
         fig.show()
-        if self.save_path:
-            # Ensure the directory exists
-            self.save_path.parent.mkdir(parents=True, exist_ok=True)
-            fig.write_html(str(self.save_path))
-            print(f"Dashboard saved to: {self.save_path}")
 
     def _create_figure_layout(self) -> go.Figure:
         """
@@ -195,16 +302,14 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         Returns:
             go.Figure: The configured Plotly figure object.
         """
-        # Dynamically create specs and subplot_titles from _SUBPLOT_CONFIG
         rows = max(r for r, c in self._SUBPLOT_CONFIG.keys())
         cols = max(c for r, c in self._SUBPLOT_CONFIG.keys())
 
-        # Initialize specs and titles with None for all potential cells
         specs = [[None for _ in range(cols)] for _ in range(rows)]
         subplot_titles = [None] * (rows * cols)
 
         for (r, c), config in self._SUBPLOT_CONFIG.items():
-            if 1 <= r <= rows and 1 <= c <= cols:  # Ensure indices are within bounds
+            if 1 <= r <= rows and 1 <= c <= cols:
                 specs[r - 1][c - 1] = {"type": config["type"]}
                 subplot_titles[(r - 1) * cols + (c - 1)] = config["title"]
 
@@ -215,9 +320,12 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             subplot_titles=subplot_titles,
             horizontal_spacing=0.08,
             vertical_spacing=0.1,
-            # These can also be made dynamic if needed, but for now fixed as per original
-            column_widths=[0.3, 0.3, 0.4],
-            row_heights=[0.15, 0.15, 0.15, 0.15, 0.4],
+            column_widths=[
+                0.3,
+                0.3,
+                0.4,
+            ],  # These can be dynamic too based on config if needed
+            row_heights=[0.15, 0.15, 0.15, 0.15, 0.4],  # Can also be dynamic
         )
 
         fig.update_layout(
@@ -256,318 +364,246 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         )
         return fig
 
-    def _add_core_visualizations(
+    def _add_all_subplots_from_config(
         self, fig: go.Figure, dto: ParetoVisualizationDTO
     ) -> None:
         """
-        Adds the core decision space and objective space scatter plots.
+        Iterates through _SUBPLOT_CONFIG and adds traces dynamically.
         """
-        # Decision space
-        self._add_scatter_with_description(
-            fig,
-            x=dto.pareto_set[:, 0],
-            y=dto.pareto_set[:, 1],
-            row=1,
-            col=1,
-            name="Pareto Set",
-            color="#3498db",
-            marker_size=7,
-            symbol="circle",
-            showlegend=True,
-        )
+        for (row, col), config in self._SUBPLOT_CONFIG.items():
+            plot_type = config.get("type")
+            description = config.get("description", "")
 
-        # Objective space
-        self._add_scatter_with_description(
-            fig,
-            x=dto.pareto_front[:, 0],
-            y=dto.pareto_front[:, 1],
-            row=1,
-            col=2,
-            name="Pareto Front",
-            color="#3498db",
-            marker_size=7,
-            symbol="circle",
-            showlegend=True,
-        )
+            # Retrieve data based on data_key and data_mapping
+            data_source = getattr(dto, config.get("data_key"), None)
 
-    def _add_scatter_with_description(
+            if (
+                data_source is None and plot_type != "parcoords"
+            ):  # Parcoords might not need an explicit data_source if dimensions are direct
+                print(
+                    f"Warning: Missing data for subplot ({row}, {col}) with data_key '{config.get('data_key')}'. Skipping."
+                )
+                continue
+
+            if plot_type == "scatter":
+                x_data = self._get_data_from_mapping(
+                    data_source, config.get("data_mapping", {}).get("x"), dto
+                )
+                y_data = self._get_data_from_mapping(
+                    data_source, config.get("data_mapping", {}).get("y"), dto
+                )
+
+                if (
+                    x_data is None
+                    or y_data is None
+                    or x_data.size == 0
+                    or y_data.size == 0
+                ):
+                    print(
+                        f"Warning: Insufficient x or y data for scatter plot at ({row}, {col}). Skipping."
+                    )
+                    continue
+
+                self._add_scatter_plot(fig, row, col, x_data, y_data, config)
+
+                # Add interpolations if configured
+                if "interpolation_key" in config:
+                    interpolations = self._get_data_from_mapping(
+                        data_source, config["interpolation_key"], dto
+                    )
+                    if interpolations:
+                        self._add_interpolation_traces(fig, row, col, interpolations)
+
+            elif plot_type == "parcoords":
+                # For parcoords, data_key should directly provide the full array
+                parcoords_data = getattr(dto, config.get("data_key"), None)
+                if parcoords_data is None:
+                    print(
+                        f"Warning: Missing data for parcoords plot at ({row}, {col}). Skipping."
+                    )
+                    continue
+                self._add_parcoords_plot(fig, row, col, parcoords_data, config)
+
+            elif plot_type == "scatter3d":
+                x_data = self._get_data_from_mapping(
+                    data_source, config.get("data_mapping", {}).get("x"), dto
+                )
+                y_data = self._get_data_from_mapping(
+                    data_source, config.get("data_mapping", {}).get("y"), dto
+                )
+
+                z_data_source = getattr(dto, config.get("z_data_key"), None)
+                z_data = self._get_data_from_mapping(
+                    z_data_source, config.get("z_data_mapping"), dto
+                )
+
+                if (
+                    x_data is None
+                    or y_data is None
+                    or z_data is None
+                    or x_data.size == 0
+                    or y_data.size == 0
+                    or z_data.size == 0
+                ):
+                    print(
+                        f"Warning: Insufficient x, y, or z data for 3D scatter plot at ({row}, {col}). Skipping."
+                    )
+                    continue
+
+                self._add_scatter3d_plot(fig, row, col, x_data, y_data, z_data, config)
+
+                # Add surface interpolations if configured
+                if "surface_key" in config:
+                    surface_data = self._get_data_from_mapping(
+                        getattr(dto, "multivariate_interpolations", {}),
+                        config["surface_key"],
+                        dto,
+                    )
+                    if surface_data:
+                        self._add_3d_surface_traces(fig, row, col, surface_data)
+            else:
+                print(
+                    f"Warning: Unsupported plot type '{plot_type}' for subplot ({row}, {col})."
+                )
+                continue
+
+            # Add description for all plots
+            self._add_description(fig, row, col, description)
+
+    def _get_data_from_mapping(
+        self, data_source: any, mapping_key: any, dto: ParetoVisualizationDTO
+    ) -> np.ndarray | None:
+        """
+        Helper to retrieve data from DTO based on the mapping key.
+        Mapping key can be an integer (for numpy array index), a string (for dict key),
+        or a callable (lambda function).
+        """
+        if data_source is None:
+            return None
+
+        if isinstance(mapping_key, int):
+            if isinstance(data_source, (np.ndarray, list, tuple)):
+                try:
+                    # If data_source is a numpy array and mapping_key is an integer,
+                    # assume it's an index for columns (e.g., data_source[:, 0])
+                    if isinstance(data_source, np.ndarray) and data_source.ndim > 1:
+                        return data_source[:, mapping_key]
+                    # If data_source is a tuple/list of arrays, use direct indexing
+                    else:
+                        return data_source[mapping_key]
+                except (IndexError, TypeError):
+                    print(
+                        f"Error: Invalid index {mapping_key} for data source type {type(data_source)}."
+                    )
+                    return None
+            else:
+                print(
+                    f"Error: Integer index {mapping_key} not supported for data source type {type(data_source)}."
+                )
+                return None
+        elif isinstance(mapping_key, str):
+            if isinstance(data_source, dict):
+                return data_source.get(mapping_key)
+            else:  # If data_source is an object, try getattr
+                return getattr(data_source, mapping_key, None)
+        elif callable(mapping_key):
+            try:
+                return mapping_key(dto)  # Pass the full DTO for more complex mappings
+            except Exception as e:
+                print(f"Error executing callable data mapping: {e}")
+                return None
+        return None
+
+    def _add_scatter_plot(
         self,
         fig: go.Figure,
-        x: np.ndarray,
-        y: np.ndarray,
         row: int,
         col: int,
-        name: str,
-        color: str,
-        marker_size: int = 7,
-        symbol: str = "circle",
-        showlegend: bool = True,
+        x: np.ndarray,
+        y: np.ndarray,
+        config: dict,
     ) -> None:
         """
-        Helper method to add standardized scatter plots to the figure,
-        including axis titles and descriptions based on _SUBPLOT_CONFIG.
+        Adds a single scatter plot based on config.
         """
-        subplot_info = self._SUBPLOT_CONFIG.get((row, col))
-        if not subplot_info:
-            print(f"Warning: No subplot configuration found for ({row}, {col})")
-            return
-
         fig.add_trace(
             go.Scatter(
                 x=x,
                 y=y,
                 mode="markers",
-                marker=dict(size=marker_size, opacity=0.8, color=color, symbol=symbol),
-                name=name,
-                showlegend=showlegend,
+                marker=dict(
+                    size=config.get("marker_size", 7),
+                    opacity=0.8,
+                    color=config.get("color", "#3498db"),
+                    symbol=config.get("symbol", "circle"),
+                ),
+                name=config.get("name", "Data Points"),
+                showlegend=config.get("showlegend", True),
             ),
             row=row,
             col=col,
         )
         self._set_axis_limits(fig, row, col, x, y)
-        fig.update_xaxes(title_text=subplot_info["x_label"], row=row, col=col)
-        fig.update_yaxes(title_text=subplot_info["y_label"], row=row, col=col)
-        self._add_description(fig, row, col, subplot_info["description"])
+        fig.update_xaxes(title_text=config["x_label"], row=row, col=col)
+        fig.update_yaxes(title_text=config["y_label"], row=row, col=col)
 
-    def _add_normalized_spaces(
-        self, fig: go.Figure, dto: ParetoVisualizationDTO
+    def _add_parcoords_plot(
+        self,
+        fig: go.Figure,
+        row: int,
+        col: int,
+        data: np.ndarray,
+        config: dict,
     ) -> None:
         """
-        Adds normalized decision and objective space scatter plots.
+        Adds a parallel coordinates plot based on config.
         """
-        norm_x1, norm_x2 = dto.normalized_decision_space
-        self._add_scatter_with_description(
-            fig,
-            x=norm_x1,
-            y=norm_x2,
-            row=2,
-            col=1,
-            name="Norm Pareto Set",
-            color="#3498db",
-            marker_size=6,
-            symbol="diamond",
-            showlegend=True,
-        )
-
-        norm_f1, norm_f2 = dto.normalized_objective_space
-        self._add_scatter_with_description(
-            fig,
-            x=norm_f1,
-            y=norm_f2,
-            row=2,
-            col=2,
-            name="Norm Pareto Front",
-            color="#3498db",
-            marker_size=6,
-            symbol="diamond",
-            showlegend=True,
-        )
-
-    def _add_parallel_coordinates(
-        self, fig: go.Figure, dto: ParetoVisualizationDTO
-    ) -> None:
-        """
-        Adds a parallel coordinates plot for multivariate analysis.
-        """
-        subplot_info = self._SUBPLOT_CONFIG.get((1, 3))
-        if not subplot_info:
-            print(f"Warning: No subplot configuration found for (1, 3)")
-            return
+        dimensions_labels = config.get("dimensions_labels", [])
+        dimensions = []
+        for i, label in enumerate(dimensions_labels):
+            if i < data.shape[1]:
+                dimensions.append(dict(label=label, values=data[:, i]))
+            else:
+                print(
+                    f"Warning: Label '{label}' specified for dimension {i} but data has only {data.shape[1]} columns."
+                )
 
         fig.add_trace(
             go.Parcoords(
                 line=dict(
-                    color=dto.parallel_coordinates_data[:, 2],  # Using f1 for coloring
+                    color=data[:, 2]
+                    if data.shape[1] > 2
+                    else data[
+                        :, 0
+                    ],  # Use third column for color if available, else first
                     colorscale="Viridis",
-                    showscale=False,  # Color scale is added as a separate annotation if needed
-                    cmin=np.min(dto.parallel_coordinates_data[:, 2]),
-                    cmax=np.max(dto.parallel_coordinates_data[:, 2]),
+                    showscale=False,
+                    cmin=np.min(data[:, 2])
+                    if data.shape[1] > 2
+                    else np.min(data[:, 0]),
+                    cmax=np.max(data[:, 2])
+                    if data.shape[1] > 2
+                    else np.max(data[:, 0]),
                 ),
-                dimensions=[
-                    dict(label="x₁", values=dto.parallel_coordinates_data[:, 0]),
-                    dict(label="x₂", values=dto.parallel_coordinates_data[:, 1]),
-                    dict(label="f₁", values=dto.parallel_coordinates_data[:, 2]),
-                    dict(label="f₂", values=dto.parallel_coordinates_data[:, 3]),
-                ],
-            ),
-            row=1,
-            col=3,
-        )
-        self._add_description(fig, 1, 3, subplot_info["description"])
-
-    def _add_interpolation_visualizations(
-        self, fig: go.Figure, dto: ParetoVisualizationDTO
-    ) -> None:
-        """
-        Adds all interpolation-related visualizations.
-        """
-        self._add_x1_x2_interpolation(fig, dto)
-        self._add_f_relationships(fig, dto, "f1")
-        self._add_f_relationships(fig, dto, "f2")
-
-    def _add_x1_x2_interpolation(
-        self, fig: go.Figure, dto: ParetoVisualizationDTO
-    ) -> None:
-        """
-        Visualizes interpolation between x1 and x2.
-        """
-        subplot_info = self._SUBPLOT_CONFIG.get((2, 3))
-        if not subplot_info:
-            print(f"Warning: No subplot configuration found for (2, 3)")
-            return
-
-        x1_data = dto.x1_x2_relationship.get("x1")
-        x2_data = dto.x1_x2_relationship.get("x2")
-        interpolations = dto.x1_x2_relationship.get("interpolations", {})
-
-        if x1_data is None or x2_data is None:
-            print("Warning: Missing x1 or x2 data for x1_x2_interpolation.")
-            return
-
-        # Add data points
-        fig.add_trace(
-            go.Scatter(
-                x=x1_data,
-                y=x2_data,
-                mode="markers",
-                marker=dict(size=6, opacity=0.7, color="#3498db"),
-                name="Data Points",
-                showlegend=False,
-            ),
-            row=2,
-            col=3,
-        )
-
-        # Add interpolation lines
-        for method_name, (x_grid, y_grid) in interpolations.items():
-            fig.add_trace(
-                go.Scatter(
-                    x=x_grid,
-                    y=y_grid,
-                    mode="lines",
-                    line=dict(
-                        color=self._INTERPOLATION_COLORS.get(method_name, "#000000"),
-                        width=3,
-                        dash="solid" if method_name == "Pchip" else "dash",
-                    ),
-                    name=method_name,
-                    legendgroup=method_name,
-                    showlegend=True,  # Show legend for interpolation methods
-                ),
-                row=2,
-                col=3,
-            )
-
-        self._set_axis_limits(fig, 2, 3, x1_data, x2_data)
-        fig.update_xaxes(title_text=subplot_info["x_label"], row=2, col=3)
-        fig.update_yaxes(title_text=subplot_info["y_label"], row=2, col=3)
-        self._add_description(fig, 2, 3, subplot_info["description"])
-
-    def _add_f_relationships(
-        self, fig: go.Figure, dto: ParetoVisualizationDTO, f_prefix: str
-    ) -> None:
-        """
-        Helper to visualize relationships for a given objective function (f1 or f2).
-        Args:
-            fig (go.Figure): The Plotly figure to add traces to.
-            dto (ParetoVisualizationDTO): The DTO containing the data.
-            f_prefix (str): "f1" or "f2" to denote which objective is being plotted against.
-        """
-        f_relationships_data = (
-            dto.f1_relationships if f_prefix == "f1" else dto.f2_relationships
-        )
-        norm_f_primary = f_relationships_data.get(f"norm_{f_prefix}")
-        if norm_f_primary is None:
-            print(f"Warning: Missing normalized {f_prefix} data.")
-            return
-
-        norm_x1, norm_x2 = dto.normalized_decision_space
-        norm_f1, norm_f2 = dto.normalized_objective_space
-
-        # Determine target objective and its label based on f_prefix
-        if f_prefix == "f1":
-            norm_f_target = norm_f2
-            target_f_label_str = "$f_2$"
-            dto_key_f_vs_f = "f1_vs_f2"
-        else:  # f_prefix == "f2"
-            norm_f_target = norm_f1
-            target_f_label_str = "$f_1$"
-            dto_key_f_vs_f = "f2_vs_f1"
-
-        # Base row for plotting f1 or f2 relationships
-        base_row = 3 if f_prefix == "f1" else 4
-
-        # f_primary vs f_target (e.g., f1 vs f2, or f2 vs f1 if available)
-        # Only plot if the data exists in DTO and the corresponding subplot is defined
-        if dto_key_f_vs_f in f_relationships_data and self._SUBPLOT_CONFIG.get(
-            (base_row, 1)
-        ):
-            self._add_relationship_plot(
-                fig,
-                x_data=norm_f_primary,
-                y_data=norm_f_target,
-                interpolations=f_relationships_data[dto_key_f_vs_f],
-                row=base_row,
-                col=1,
-            )
-
-        # f_primary vs x1
-        if f"{f_prefix}_vs_x1" in f_relationships_data:
-            col_f_vs_x1 = 2 if f_prefix == "f1" else 1
-            self._add_relationship_plot(
-                fig,
-                x_data=norm_f_primary,
-                y_data=norm_x1,
-                interpolations=f_relationships_data[f"{f_prefix}_vs_x1"],
-                row=base_row,
-                col=col_f_vs_x1,
-            )
-
-        # f_primary vs x2
-        if f"{f_prefix}_vs_x2" in f_relationships_data:
-            col_f_vs_x2 = 3 if f_prefix == "f1" else 2
-            self._add_relationship_plot(
-                fig,
-                x_data=norm_f_primary,
-                y_data=norm_x2,
-                interpolations=f_relationships_data[f"{f_prefix}_vs_x2"],
-                row=base_row,
-                col=col_f_vs_x2,
-            )
-
-    def _add_relationship_plot(
-        self,
-        fig: go.Figure,
-        x_data: np.ndarray,
-        y_data: np.ndarray,
-        interpolations: dict,
-        row: int,
-        col: int,
-    ) -> None:
-        """
-        Helper method to add standardized relationship plots (scatter with interpolations),
-        fetching titles and descriptions from _SUBPLOT_CONFIG.
-        """
-        subplot_info = self._SUBPLOT_CONFIG.get((row, col))
-        if not subplot_info:
-            print(f"Warning: No subplot configuration found for ({row}, {col})")
-            return
-
-        # Add data points
-        fig.add_trace(
-            go.Scatter(
-                x=x_data,
-                y=y_data,
-                mode="markers",
-                marker=dict(size=6, opacity=0.7, color="#3498db"),
-                showlegend=False,  # Data points often don't need their own legend entry here
+                dimensions=dimensions,
             ),
             row=row,
             col=col,
         )
 
-        # Add interpolation lines
+    def _add_interpolation_traces(
+        self,
+        fig: go.Figure,
+        row: int,
+        col: int,
+        interpolations: dict,
+    ) -> None:
+        """
+        Adds interpolation lines for a scatter plot.
+        """
         for method_name, (x_grid, y_grid) in interpolations.items():
+            # Check if this interpolation method has already been added to the legend
+            show_legend_item = method_name not in self._added_legend_items
             fig.add_trace(
                 go.Scatter(
                     x=x_grid,
@@ -579,94 +615,74 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                         dash="solid" if method_name == "Pchip" else "dash",
                     ),
                     name=method_name,
-                    legendgroup=method_name,  # Group for single legend entry across subplots
-                    showlegend=False,  # Only show legend in the main legend area (handled by _add_x1_x2_interpolation for first instance)
+                    legendgroup=method_name,
+                    showlegend=show_legend_item,
                 ),
                 row=row,
                 col=col,
             )
+            if show_legend_item:
+                self._added_legend_items.add(method_name)
 
-        self._set_axis_limits(fig, row, col, x_data, y_data, padding=0.01)
-        fig.update_xaxes(title_text=subplot_info["x_label"], row=row, col=col)
-        fig.update_yaxes(title_text=subplot_info["y_label"], row=row, col=col)
-        self._add_description(fig, row, col, subplot_info["description"])
-
-    def _add_3d_visualizations(
-        self, fig: go.Figure, dto: ParetoVisualizationDTO
-    ) -> None:
-        """
-        Adds 3D visualizations of relationships using DTO data.
-        """
-        mv_data = dto.multivariate_interpolations
-        norm_f1, norm_f2 = dto.normalized_objective_space
-        norm_x1, norm_x2 = dto.normalized_decision_space
-
-        # f1, f2, x1
-        if "f1f2_vs_x1" in mv_data:
-            self._add_3d_relationship(
-                fig,
-                surface_data=mv_data["f1f2_vs_x1"],
-                x=norm_f1,
-                y=norm_f2,
-                z=norm_x1,
-                row=5,
-                col=1,
-            )
-
-        # f1, f2, x2
-        if "f1f2_vs_x2" in mv_data:
-            self._add_3d_relationship(
-                fig,
-                surface_data=mv_data["f1f2_vs_x2"],
-                x=norm_f1,
-                y=norm_f2,
-                z=norm_x2,
-                row=5,
-                col=2,
-            )
-
-    def _add_3d_relationship(
+    def _add_scatter3d_plot(
         self,
         fig: go.Figure,
-        surface_data: dict,
+        row: int,
+        col: int,
         x: np.ndarray,
         y: np.ndarray,
         z: np.ndarray,
-        row: int,
-        col: int,
+        config: dict,
     ) -> None:
         """
-        Adds a 3D surface plot for multivariate relationships with original points,
-        fetching titles and descriptions from _SUBPLOT_CONFIG.
+        Adds a 3D scatter plot.
         """
-        subplot_info = self._SUBPLOT_CONFIG.get((row, col))
-        if not subplot_info:
-            print(f"Warning: No subplot configuration found for ({row}, {col})")
-            return
+        show_legend_points = (
+            config.get("name", "Original Points") not in self._added_legend_items
+        )
 
-        # Add original data points
-        show_legend_points = "Original Points (3D)" not in self._added_3d_legend_items
         fig.add_trace(
             go.Scatter3d(
                 x=x,
                 y=y,
                 z=z,
                 mode="markers",
-                marker=dict(size=5, opacity=0.8, color="#1f77b4"),
-                name="Original Points",
-                legendgroup="original_3d_points",
+                marker=dict(
+                    size=config.get("marker_size", 5),
+                    opacity=0.8,
+                    color=config.get("color", "#1f77b4"),
+                ),
+                name=config.get("name", "Original Points"),
+                legendgroup="original_3d_points",  # Group all 3D original points
                 showlegend=show_legend_points,
             ),
             row=row,
             col=col,
         )
         if show_legend_points:
-            self._added_3d_legend_items.add("Original Points (3D)")
+            self._added_legend_items.add(config.get("name", "Original Points"))
 
-        # Add surface interpolations
+        fig.update_scenes(
+            xaxis_title_text=config["x_label"],
+            yaxis_title_text=config["y_label"],
+            zaxis_title_text=config["z_label"],
+            aspectmode="cube",
+            row=row,
+            col=col,
+        )
+
+    def _add_3d_surface_traces(
+        self,
+        fig: go.Figure,
+        row: int,
+        col: int,
+        surface_data: dict,
+    ) -> None:
+        """
+        Adds 3D surface interpolations.
+        """
         for method_name, (X_grid, Y_grid, Z_grid) in surface_data.items():
-            # Only create legend item once per method name for 3D surfaces
-            show_in_legend = method_name not in self._added_3d_legend_items
+            show_in_legend = method_name not in self._added_legend_items
 
             fig.add_trace(
                 go.Surface(
@@ -677,25 +693,14 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                     opacity=0.7,
                     name=method_name,
                     showlegend=show_in_legend,
-                    showscale=False,  # Managed by shared colorbar if desired, or per-plot if needed
+                    showscale=False,
                     legendgroup=method_name,
                 ),
                 row=row,
                 col=col,
             )
             if show_in_legend:
-                self._added_3d_legend_items.add(method_name)
-
-        # Update 3D scene (axis titles)
-        fig.update_scenes(
-            xaxis_title_text=subplot_info["x_label"],
-            yaxis_title_text=subplot_info["y_label"],
-            zaxis_title_text=subplot_info["z_label"],
-            aspectmode="cube",
-            row=row,
-            col=col,
-        )
-        self._add_description(fig, row, col, subplot_info["description"])
+                self._added_legend_items.add(method_name)
 
     def _set_axis_limits(
         self,
@@ -709,14 +714,12 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         """
         Sets axis limits with padding based on the data range.
         """
-        # Ensure data is not empty to avoid errors
         if x_data.size == 0 or y_data.size == 0:
             return
 
         x_min, x_max = np.min(x_data), np.max(x_data)
         y_min, y_max = np.min(y_data), np.max(y_data)
 
-        # Handle cases where min == max (e.g., all points are the same)
         x_range = x_max - x_min if x_max != x_min else 1.0
         y_range = y_max - y_min if y_max != y_min else 1.0
 
