@@ -37,12 +37,12 @@ class AnalyzeBiobjDataCommandHandler:
         Args:
             command: The command containing the identifier for the data to analyze.
         """
-        f1_data, interp_data = self._pareto_data_service.provide_visualization_data(
+        dataset = self._pareto_data_service.prepare_dataset(
             data_identifier=command.filename
         )
 
         # Map the raw data to a structured DTO
-        dto = self._pareto_data_mapper.map_to_dto(f1_data, interp_data)
+        dto = self._pareto_data_mapper.map_to_dto(dataset)
 
         # Visualize the data using the provided visualizer
         self._visualizer.plot(dto=dto)

@@ -510,7 +510,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                         colorscale="Viridis",
                         opacity=0.7,
                         name=method_name,
-                        showlegend=show_in_legend,  # Show in legend only once
+                        showlegend=show_in_legend,
                         showscale=True,
                         colorbar=dict(title=f"Norm {z_title}"),
                         legendgroup=method_name,

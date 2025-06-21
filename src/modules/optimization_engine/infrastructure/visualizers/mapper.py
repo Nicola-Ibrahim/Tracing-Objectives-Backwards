@@ -1,9 +1,11 @@
-from typing import Any, Dict, NamedTuple, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
 
-class ParetoVisualizationDTO(NamedTuple):
+@dataclass
+class ParetoVisualizationDTO:
     """
     Data Transfer Object for Pareto visualization data.
     Provides a strict interface for the visualizer with validated data structure.
@@ -11,96 +13,93 @@ class ParetoVisualizationDTO(NamedTuple):
 
     pareto_set: np.ndarray
     pareto_front: np.ndarray
-    normalized_decision_space: Tuple[np.ndarray, np.ndarray]
-    normalized_objective_space: Tuple[np.ndarray, np.ndarray]
+    normalized_decision_space: tuple[np.ndarray, np.ndarray]
+    normalized_objective_space: tuple[np.ndarray, np.ndarray]
     parallel_coordinates_data: np.ndarray
-    f1_relationships: Dict[str, Any]
-    f2_relationships: Dict[str, Any]
-    x1_x2_relationship: Dict[str, Any]
-    multivariate_interpolations: Dict[str, Any]
+    f1_relationships: dict[str, np.ndarray]
+    f2_relationships: dict[str, np.ndarray]
+    x1_x2_relationship: dict[str, np.ndarray]
+    multivariate_interpolations: dict[str, np.ndarray]
 
 
 class ParetoVisualizationMapper:
     """
-    Maps raw data from ParetoDataService to a structured DTO suitable for visualization.
+    Maps ParetoDataset to a structured DTO suitable for visualization.
     Performs data validation and transformation.
     """
 
-    def __init__(self):
+    def map_to_dto(self, dataset: Any) -> ParetoVisualizationDTO:
         """
-        Initializes the mapper.
-        No specific initialization required, but can be extended in the future.
+        Transform dataset into visualization DTO
         """
-        pass
-
-    def map_to_dto(self, f1_data: dict, interp_data: dict) -> ParetoVisualizationDTO:
-        """
-        Transform raw service data into visualization DTO
-        """
-        ParetoVisualizationMapper._validate_data(f1_data, interp_data)
+        self._validate_dataset(dataset)
 
         return ParetoVisualizationDTO(
-            pareto_set=np.hstack(
-                [f1_data["x1_orig"].reshape(-1, 1), f1_data["x2_orig"].reshape(-1, 1)]
+            pareto_set=dataset.pareto_set,
+            pareto_front=dataset.pareto_front,
+            normalized_decision_space=(
+                dataset.normalized["x1"],
+                dataset.normalized["x2"],
             ),
-            pareto_front=np.hstack(
-                [f1_data["f1_orig"].reshape(-1, 1), f1_data["f2_orig"].reshape(-1, 1)]
+            normalized_objective_space=(
+                dataset.normalized["f1"],
+                dataset.normalized["f2"],
             ),
-            normalized_decision_space=(f1_data["norm_x1"], f1_data["norm_x2"]),
-            normalized_objective_space=(f1_data["norm_f1"], f1_data["norm_f2"]),
             parallel_coordinates_data=np.hstack(
                 [
-                    f1_data["norm_x1"].reshape(-1, 1),
-                    f1_data["norm_x2"].reshape(-1, 1),
-                    f1_data["norm_f1"].reshape(-1, 1),
-                    f1_data["norm_f2"].reshape(-1, 1),
+                    dataset.normalized["x1"].reshape(-1, 1),
+                    dataset.normalized["x2"].reshape(-1, 1),
+                    dataset.normalized["f1"].reshape(-1, 1),
+                    dataset.normalized["f2"].reshape(-1, 1),
                 ]
             ),
             f1_relationships={
-                "f1_vs_f2": f1_data["interpolations"]["f1_vs_f2"],
-                "f1_vs_x1": f1_data["interpolations"]["f1_vs_x1"],
-                "f1_vs_x2": f1_data["interpolations"]["f1_vs_x2"],
-                "norm_f1": f1_data["norm_f1"],
+                "f1_vs_f2": dataset.interpolations_1d["f1_vs_f2"],
+                "f1_vs_x1": dataset.interpolations_1d["f1_vs_x1"],
+                "f1_vs_x2": dataset.interpolations_1d["f1_vs_x2"],
+                "norm_f1": dataset.normalized["f1"],
             },
             f2_relationships={
-                "f2_vs_x1": interp_data["interpolations"]["f2_vs_x1"],
-                "f2_vs_x2": interp_data["interpolations"]["f2_vs_x2"],
-                "norm_f2": interp_data["norm_f2"],
+                "f2_vs_x1": dataset.interpolations_1d["f2_vs_x1"],
+                "f2_vs_x2": dataset.interpolations_1d["f2_vs_x2"],
+                "norm_f2": dataset.normalized["f2"],
             },
             x1_x2_relationship={
-                "x1": interp_data["norm_x1"],
-                "x2": interp_data["norm_x2"],
-                "interpolations": interp_data["interpolations"]["x1_vs_x2"],
+                "x1": dataset.normalized["x1"],
+                "x2": dataset.normalized["x2"],
+                "interpolations": dataset.interpolations_1d["x1_vs_x2"],
             },
-            multivariate_interpolations=interp_data["multivariate_interpolations"],
+            multivariate_interpolations=dataset.interpolations_2d,
         )
 
-    @staticmethod
-    def _validate_data(f1_data: dict, interp_data: dict):
-        """Validate required keys exist in the source data"""
-        required_f1_keys = {
-            "f1_orig",
-            "f2_orig",
-            "x1_orig",
-            "x2_orig",
-            "norm_f1",
-            "norm_f2",
-            "norm_x1",
-            "norm_x2",
-            "interpolations",
-        }
-        required_interp_keys = {
-            "x1_orig",
-            "x2_orig",
-            "f2_orig",
-            "norm_x1",
-            "norm_x2",
-            "norm_f2",
-            "interpolations",
-            "multivariate_interpolations",
-        }
+    def _validate_dataset(self, dataset: Any):
+        """Validate required data exists in the dataset"""
+        # Validate core data
+        if dataset.pareto_set is None:
+            raise ValueError("Missing pareto_set in dataset")
+        if dataset.pareto_front is None:
+            raise ValueError("Missing pareto_front in dataset")
 
-        if missing := required_f1_keys - f1_data.keys():
-            raise ValueError(f"Missing keys in f1_data: {missing}")
-        if missing := required_interp_keys - interp_data.keys():
-            raise ValueError(f"Missing keys in interp_data: {missing}")
+        # Validate normalized data
+        for key in ["f1", "f2", "x1", "x2"]:
+            if dataset.normalized[key] is None:
+                raise ValueError(f"Missing normalized {key} in dataset")
+
+        # Validate 1D interpolations
+        required_1d_keys = [
+            "f1_vs_f2",
+            "f1_vs_x1",
+            "f1_vs_x2",
+            "x1_vs_x2",
+            "f2_vs_x1",
+            "f2_vs_x2",
+        ]
+        for key in required_1d_keys:
+            if key not in dataset.interpolations_1d:
+                raise ValueError(f"Missing interpolation key: {key}")
+
+        # Validate 2D interpolations
+        required_2d_keys = ["f1f2_vs_x1", "f1f2_vs_x2"]
+        for key in required_2d_keys:
+            if key not in dataset.interpolations_2d:
+                raise ValueError(f"Missing multivariate interpolation key: {key}")

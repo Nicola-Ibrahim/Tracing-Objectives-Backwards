@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -14,13 +15,58 @@ from sklearn.preprocessing import MinMaxScaler
 from ..generation.interfaces.base_archiver import BaseParetoArchiver
 
 
-class ParetoDataService:
+@dataclass
+class ParetoDataset:
     """
-    Application Service responsible for orchestrating the retrieval of raw Pareto data,
-    its preparation, and interpolation computation for visualization.
+    Container for all Pareto optimization data in various representations:
+    - Original values
+    - Normalized values
+    - Computed interpolations
     """
 
-    # Define interpolation methods with their minimum required points
+    # Core Pareto data
+    pareto_set: np.ndarray = None
+    pareto_front: np.ndarray = None
+
+    # Original values
+    original: dict[str, np.ndarray] = field(
+        default_factory=lambda: {"f1": None, "f2": None, "x1": None, "x2": None}
+    )
+
+    # Normalized values (0-1 range)
+    normalized: dict[str, np.ndarray] = field(
+        default_factory=lambda: {"f1": None, "f2": None, "x1": None, "x2": None}
+    )
+
+    # 1D interpolations: (x_grid, y_grid) tuples
+    interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = field(
+        default_factory=lambda: {
+            "f1_vs_f2": {},
+            "f1_vs_x1": {},
+            "f1_vs_x2": {},
+            "x1_vs_x2": {},
+            "f2_vs_x1": {},
+            "f2_vs_x2": {},
+        }
+    )
+
+    # 2D multivariate interpolations: (X_grid, Y_grid, Z_grid) tuples
+    interpolations_2d: dict[
+        str, dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
+    ] = field(
+        default_factory=lambda: {
+            "f1f2_vs_x1": {},
+            "f1f2_vs_x2": {},
+        }
+    )
+
+
+class ParetoDataService:
+    """
+    Service for preparing Pareto optimization data in various representations.
+    Focuses on data transformation without visualization-specific logic.
+    """
+
     INTERPOLATION_METHODS_1D = {
         "Pchip": {"min_points": 2, "function": PchipInterpolator},
         "Cubic Spline": {"min_points": 4, "function": CubicSpline},
@@ -51,86 +97,103 @@ class ParetoDataService:
     def __init__(self, archiver: BaseParetoArchiver):
         self.archiver = archiver
 
-    def provide_visualization_data(
-        self, data_identifier: str | Path
-    ) -> tuple[dict, dict]:
+    def prepare_dataset(self, data_identifier: str | Path) -> ParetoDataset:
+        """Prepare complete Pareto dataset with original, normalized, and interpolated data"""
+        # Load and validate Pareto data
         loaded_result = self.archiver.load(data_identifier)
-
         if not hasattr(loaded_result, "pareto_set") or not hasattr(
             loaded_result, "pareto_front"
         ):
             raise ValueError("Archiver did not return valid Pareto data")
 
-        pareto_set = loaded_result.pareto_set
-        pareto_front = loaded_result.pareto_front
+        # Initialize dataset container
+        dataset = ParetoDataset()
+        dataset.pareto_set = loaded_result.pareto_set
+        dataset.pareto_front = loaded_result.pareto_front
 
-        # Normalize all data once
-        norm_data = self._normalize_all_data(pareto_set, pareto_front)
+        # Extract and store original values
+        dataset.original["f1"] = dataset.pareto_front[:, 0]
+        dataset.original["f2"] = dataset.pareto_front[:, 1]
+        dataset.original["x1"] = dataset.pareto_set[:, 0]
+        dataset.original["x2"] = dataset.pareto_set[:, 1]
 
-        # Prepare data and compute interpolations
-        f1_rel_data = self._prepare_f1_relationships_data(norm_data)
-        interp_data = self._prepare_interpolation_data(norm_data)
+        # Compute and store normalized values
+        dataset.normalized["f1"] = self._normalize_array(dataset.original["f1"])
+        dataset.normalized["f2"] = self._normalize_array(dataset.original["f2"])
+        dataset.normalized["x1"] = self._normalize_array(dataset.original["x1"])
+        dataset.normalized["x2"] = self._normalize_array(dataset.original["x2"])
 
-        # Add multivariate interpolations to interp_data
-        interp_data["multivariate_interpolations"] = self._prepare_multivariate_data(
-            norm_data
-        )
+        # Compute all interpolations
+        self._compute_all_1d_interpolations(dataset)
+        self._compute_all_2d_interpolations(dataset)
 
-        return f1_rel_data, interp_data
-
-    def _normalize_all_data(self, pareto_set, pareto_front):
-        """Normalize all data and return in a dictionary"""
-        f1_orig = pareto_front[:, 0]
-        f2_orig = pareto_front[:, 1]
-        x1_orig = pareto_set[:, 0]
-        x2_orig = pareto_set[:, 1]
-
-        return {
-            "f1_orig": f1_orig,
-            "f2_orig": f2_orig,
-            "x1_orig": x1_orig,
-            "x2_orig": x2_orig,
-            "norm_f1": self._normalize_array(f1_orig),
-            "norm_f2": self._normalize_array(f2_orig),
-            "norm_x1": self._normalize_array(x1_orig),
-            "norm_x2": self._normalize_array(x2_orig),
-        }
+        return dataset
 
     def _normalize_array(self, data_array: np.ndarray) -> np.ndarray:
+        """Normalize array to [0, 1] range using Min-Max scaling"""
         scaler = MinMaxScaler()
-        reshaped_data = (
-            data_array.reshape(-1, 1) if data_array.ndim == 1 else data_array
-        )
+        reshaped_data = data_array.reshape(-1, 1)
         normalized_data = scaler.fit_transform(reshaped_data)
-        return normalized_data.flatten() if data_array.ndim == 1 else normalized_data
+        return normalized_data.flatten()
 
-    def _compute_1d_interpolations(
-        self, x_unique, y_unique, x_range=(0, 1), num_points=100
-    ):
-        """Compute 1D interpolations for all methods that have enough points"""
+    def _compute_all_1d_interpolations(self, dataset: ParetoDataset):
+        """Compute all 1D interpolation relationships"""
+        norm = dataset.normalized
+
+        # Get unique points for stable interpolation
+        unique_f1, f1_idx = np.unique(norm["f1"], return_index=True)
+        unique_x1, x1_idx = np.unique(norm["x1"], return_index=True)
+
+        # For f2 relationships, sort by f2
+        f2_sorted_idx = np.argsort(norm["f2"])
+        norm_f2_sorted = norm["f2"][f2_sorted_idx]
+        unique_f2, f2_idx = np.unique(norm_f2_sorted, return_index=True)
+
+        # Compute all 1D relationships
+        dataset.interpolations_1d["f1_vs_f2"] = self._compute_1d_interpolation(
+            unique_f1, norm["f2"][f1_idx]
+        )
+        dataset.interpolations_1d["f1_vs_x1"] = self._compute_1d_interpolation(
+            unique_f1, norm["x1"][f1_idx]
+        )
+        dataset.interpolations_1d["f1_vs_x2"] = self._compute_1d_interpolation(
+            unique_f1, norm["x2"][f1_idx]
+        )
+        dataset.interpolations_1d["x1_vs_x2"] = self._compute_1d_interpolation(
+            unique_x1, norm["x2"][x1_idx]
+        )
+        dataset.interpolations_1d["f2_vs_x1"] = self._compute_1d_interpolation(
+            unique_f2, norm["x1"][f2_sorted_idx][f2_idx]
+        )
+        dataset.interpolations_1d["f2_vs_x2"] = self._compute_1d_interpolation(
+            unique_f2, norm["x2"][f2_sorted_idx][f2_idx]
+        )
+
+    def _compute_1d_interpolation(self, x: np.ndarray, y: np.ndarray) -> dict:
+        """Compute 1D interpolations for a relationship"""
         interpolations = {}
-        x_grid = np.linspace(x_range[0], x_range[1], num_points)
+        x_grid = np.linspace(0, 1, 100)
 
         for method_name, method_info in self.INTERPOLATION_METHODS_1D.items():
-            if len(x_unique) < method_info["min_points"]:
+            if len(x) < method_info["min_points"]:
                 continue  # Skip if not enough points
 
             try:
-                # Prepare input data according to method requirements
+                # Prepare input based on method requirements
                 if method_info.get("requires_2d", False):
-                    x_prepared = x_unique.reshape(-1, 1)
-                else:
-                    x_prepared = x_unique
-
-                # Create interpolation function
-                interp_func = method_info["function"](x_prepared, y_unique)
-
-                # Evaluate interpolation
-                if method_info.get("requires_2d", False):
+                    x_prepared = x.reshape(-1, 1)
                     eval_points = x_grid.reshape(-1, 1)
-                    y_grid = interp_func(eval_points).flatten()
                 else:
-                    y_grid = interp_func(x_grid)
+                    x_prepared = x
+                    eval_points = x_grid
+
+                # Create and evaluate interpolation
+                interp_func = method_info["function"](x_prepared, y)
+                y_grid = interp_func(eval_points)
+
+                # Flatten if needed
+                if hasattr(y_grid, "flatten"):
+                    y_grid = y_grid.flatten()
 
                 interpolations[method_name] = (x_grid, y_grid)
             except Exception as e:
@@ -139,15 +202,25 @@ class ParetoDataService:
 
         return interpolations
 
-    def _compute_2d_interpolations(
-        self, X, y, x_range=(0, 1), y_range=(0, 1), grid_size=20
-    ):
+    def _compute_all_2d_interpolations(self, dataset: ParetoDataset):
+        """Compute all 2D multivariate interpolations"""
+        # Prepare input matrix [f1, f2]
+        X_input = np.column_stack((dataset.normalized["f1"], dataset.normalized["f2"]))
+
+        # Compute relationships
+        dataset.interpolations_2d["f1f2_vs_x1"] = self._compute_2d_interpolation(
+            X_input, dataset.normalized["x1"]
+        )
+        dataset.interpolations_2d["f1f2_vs_x2"] = self._compute_2d_interpolation(
+            X_input, dataset.normalized["x2"]
+        )
+
+    def _compute_2d_interpolation(self, X: np.ndarray, y: np.ndarray) -> dict:
         """Compute 2D interpolations for multivariate relationships"""
         interpolations = {}
-
-        # Create grid for evaluation
-        x_grid = np.linspace(x_range[0], x_range[1], grid_size)
-        y_grid = np.linspace(y_range[0], y_range[1], grid_size)
+        grid_size = 20
+        x_grid = np.linspace(0, 1, grid_size)
+        y_grid = np.linspace(0, 1, grid_size)
         X_grid, Y_grid = np.meshgrid(x_grid, y_grid)
         grid_points = np.column_stack((X_grid.ravel(), Y_grid.ravel()))
 
@@ -156,19 +229,16 @@ class ParetoDataService:
                 continue  # Skip if not enough points
 
             try:
-                # Add jitter if specified to prevent Qhull errors
+                # Add jitter if needed for stability
                 if method_info.get("add_jitter", False):
                     jitter = np.random.normal(0, 1e-10, size=X.shape)
                     X_prepared = X + jitter
                 else:
                     X_prepared = X
 
-                # Create interpolation function
+                # Create and evaluate interpolation
                 interp_func = method_info["function"](X_prepared, y)
-
-                # Evaluate interpolation on grid
-                Z_grid = interp_func(grid_points)
-                Z_grid = Z_grid.reshape(X_grid.shape)
+                Z_grid = interp_func(grid_points).reshape(X_grid.shape)
 
                 interpolations[method_name] = (X_grid, Y_grid, Z_grid)
             except Exception as e:
@@ -176,96 +246,3 @@ class ParetoDataService:
                 continue
 
         return interpolations
-
-    def _prepare_f1_relationships_data(self, norm_data: dict) -> dict:
-        # Extract normalized data
-        norm_f1 = norm_data["norm_f1"]
-        norm_f2 = norm_data["norm_f2"]
-        norm_x1 = norm_data["norm_x1"]
-        norm_x2 = norm_data["norm_x2"]
-
-        # Get unique f1 points
-        unique_norm_f1, unique_idx = np.unique(norm_f1, return_index=True)
-        norm_f1_unique = norm_f1[unique_idx]
-        norm_f2_unique = norm_f2[unique_idx]
-        norm_x1_unique = norm_x1[unique_idx]
-        norm_x2_unique = norm_x2[unique_idx]
-
-        # Compute interpolations for f1 relationships
-        f1_vs_f2 = self._compute_1d_interpolations(norm_f1_unique, norm_f2_unique)
-        f1_vs_x1 = self._compute_1d_interpolations(norm_f1_unique, norm_x1_unique)
-        f1_vs_x2 = self._compute_1d_interpolations(norm_f1_unique, norm_x2_unique)
-
-        return {
-            "f1_orig": norm_data["f1_orig"],
-            "f2_orig": norm_data["f2_orig"],
-            "x1_orig": norm_data["x1_orig"],
-            "x2_orig": norm_data["x2_orig"],
-            "norm_f1": norm_f1,
-            "norm_f2": norm_f2,
-            "norm_x1": norm_x1,
-            "norm_x2": norm_x2,
-            "interpolations": {
-                "f1_vs_f2": f1_vs_f2,
-                "f1_vs_x1": f1_vs_x1,
-                "f1_vs_x2": f1_vs_x2,
-            },
-        }
-
-    def _prepare_interpolation_data(self, norm_data: dict) -> dict:
-        # Extract normalized data
-        norm_x1 = norm_data["norm_x1"]
-        norm_x2 = norm_data["norm_x2"]
-        norm_f2 = norm_data["norm_f2"]
-
-        # Prepare x1 vs x2 interpolation data
-        unique_norm_x1, unique_idx = np.unique(norm_x1, return_index=True)
-        norm_x2_unique = norm_x2[unique_idx]
-        x1_vs_x2 = self._compute_1d_interpolations(unique_norm_x1, norm_x2_unique)
-
-        # Prepare f2 relationships data
-        sorted_idx = np.argsort(norm_f2)
-        norm_f2_sorted = norm_f2[sorted_idx]
-        norm_x1_sorted = norm_x1[sorted_idx]
-        norm_x2_sorted = norm_x2[sorted_idx]
-
-        norm_f2_unique, unique_idx = np.unique(norm_f2_sorted, return_index=True)
-        norm_x1_unique = norm_x1_sorted[unique_idx]
-        norm_x2_unique = norm_x2_sorted[unique_idx]
-
-        # Compute interpolations for f2 relationships
-        f2_vs_x1 = self._compute_1d_interpolations(norm_f2_unique, norm_x1_unique)
-        f2_vs_x2 = self._compute_1d_interpolations(norm_f2_unique, norm_x2_unique)
-
-        return {
-            "x1_orig": norm_data["x1_orig"],
-            "x2_orig": norm_data["x2_orig"],
-            "f2_orig": norm_data["f2_orig"],
-            "norm_x1": norm_x1,
-            "norm_x2": norm_x2,
-            "norm_f2": norm_f2,
-            "interpolations": {
-                "x1_vs_x2": x1_vs_x2,
-                "f2_vs_x1": f2_vs_x1,
-                "f2_vs_x2": f2_vs_x2,
-            },
-        }
-
-    def _prepare_multivariate_data(self, norm_data: dict) -> dict:
-        """Prepare multivariate interpolation data for (f1,f2) vs (x1,x2)"""
-        # Create input matrix [f1, f2] for all points
-        X_input = np.column_stack((norm_data["norm_f1"], norm_data["norm_f2"]))
-
-        # Compute multivariate interpolations
-        f1f2_vs_x1 = self._compute_2d_interpolations(X_input, norm_data["norm_x1"])
-        f1f2_vs_x2 = self._compute_2d_interpolations(X_input, norm_data["norm_x2"])
-
-        return {
-            "f1f2_vs_x1": f1f2_vs_x1,
-            "f1f2_vs_x2": f1f2_vs_x2,
-            "input_matrix": X_input,
-            "norm_f1": norm_data["norm_f1"],
-            "norm_f2": norm_data["norm_f2"],
-            "norm_x1": norm_data["norm_x1"],
-            "norm_x2": norm_data["norm_x2"],
-        }
