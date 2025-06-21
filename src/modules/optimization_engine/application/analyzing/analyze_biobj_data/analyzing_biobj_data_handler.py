@@ -34,11 +34,11 @@ class AnalyzeBiobjDataCommandHandler:
         Args:
             command: The command containing the identifier for the data to analyze.
         """
-        f1_rel_data, interp_data = self._pareto_data_service.provide_visualization_data(
+        f1_data, interp_data = self._pareto_data_service.provide_visualization_data(
             data_identifier=command.filename
         )
 
         self._visualizer.plot(
-            f1_rel_data=f1_rel_data,
+            f1_data=f1_data,
             interp_data=interp_data,
         )
