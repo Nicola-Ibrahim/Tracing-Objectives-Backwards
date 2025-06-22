@@ -19,12 +19,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
     various interpolation visualizations.
     """
 
-    # --- Configuration Constants (now fully integrated or removed if not needed) ---
-    # _INTERPOLATION_COLORS is moved into _SUBPLOT_CONFIG where needed.
-    # If you still want a global constant for other uses, keep it, but it's
-    # not strictly needed by the visualizer if embedded in subplots.
-
-    _INTERPOLATION_COLORS_MAP = {  # Kept for easy reference within the config below
+    _INTERPOLATION_COLORS = {
         "Pchip": "#07FF03",
         "Cubic Spline": "#CD05F9",
         "Linear": "#43A047",
@@ -34,13 +29,6 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         "Linear ND": "#FFEA07",
     }
 
-    # Define subplot configuration in a more structured way
-    # (row, col): {type, title, description, x_label, y_label, z_label (for 3D), data_key,
-    #              data_mapping: {x: 'dto_attr_for_x', y: 'dto_attr_for_y', z: 'dto_attr_for_z', ...},
-    #              interpolation_key: 'dto_attr_for_interpolations' (optional for scatter)
-    #              surface_key: 'dto_attr_for_surface_data' (optional for 3D)
-    #              interpolation_colors: dict (new field for relevant plots)
-    #             }
     _SUBPLOT_CONFIG = {
         (1, 1): {
             "type": "scatter",
@@ -49,7 +37,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "x_label": "$x_1$",
             "y_label": "$x_2$",
             "data_key": "pareto_set",
-            "data_mapping": {"x": 0, "y": 1},  # Index in the numpy array
+            "data_mapping": {"x": 0, "y": 1},
             "name": "Pareto Set",
             "color": "#3498db",
             "symbol": "circle",
@@ -75,12 +63,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "title": "Parallel Coordinates",
             "description": "Multivariate analysis across all dimensions",
             "data_key": "parallel_coordinates_data",
-            "dimensions_labels": [
-                "x₁",
-                "x₂",
-                "f₁",
-                "f₂",
-            ],  # Order corresponds to data_key columns
+            "dimensions_labels": ["x₁", "x₂", "f₁", "f₂"],
         },
         (2, 1): {
             "type": "scatter",
@@ -88,8 +71,8 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Decision variables scaled to [0,1]",
             "x_label": "Norm $x_1$",
             "y_label": "Norm $x_2$",
-            "data_key": "normalized_decision_space",  # This data_key points to tuple of arrays
-            "data_mapping": {"x": 0, "y": 1},  # Use index as before for tuples (x1, x2)
+            "x_data_key": "norm_x1",
+            "y_data_key": "norm_x2",
             "name": "Norm Pareto Set",
             "color": "#3498db",
             "symbol": "diamond",
@@ -102,8 +85,8 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Objective functions normalized for comparison",
             "x_label": "Norm $f_1$",
             "y_label": "Norm $f_2$",
-            "data_key": "normalized_objective_space",  # This data_key points to tuple of arrays
-            "data_mapping": {"x": 0, "y": 1},  # Use index as before for tuples (f1, f2)
+            "x_data_key": "norm_f1",
+            "y_data_key": "norm_f2",
             "name": "Norm Pareto Front",
             "color": "#3498db",
             "symbol": "diamond",
@@ -116,18 +99,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between decision variables",
             "x_label": "Normalized $x_1$",
             "y_label": "Normalized $x_2$",
-            "data_key": "x1_x2_relationship",  # The relationship dict now includes 'x1' and 'x2' directly
-            "data_mapping": {
-                "x": "x1",
-                "y": "x2",
-            },  # Key in the x1_x2_relationship dict
-            "interpolation_key": "interpolations",
+            "x_data_key": "norm_x1",
+            "y_data_key": "norm_x2",
+            "interpolation_source_key": "interpolations_1d",  # Points to the top-level dict in DTO
+            "interpolation_relationship_key": "x1_vs_x2",  # Points to the specific relationship dict
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,  # Embed colors
         },
         (3, 1): {
             "type": "scatter",
@@ -135,18 +115,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_1$ and $f_2$",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $f_2$",
-            "data_key": "f1_relationships",
-            "data_mapping": {
-                "x": "norm_f1",
-                "y": "norm_f2",
-            },
-            "interpolation_key": "f1_vs_f2",
+            "x_data_key": "norm_f1",
+            "y_data_key": "norm_f2",
+            "interpolation_source_key": "interpolations_1d",
+            "interpolation_relationship_key": "f1_vs_f2",
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
         (3, 2): {
             "type": "scatter",
@@ -154,18 +131,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_1$ and $x_1$",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $x_1$",
-            "data_key": "f1_relationships",
-            "data_mapping": {
-                "x": "norm_f1",
-                "y": "norm_x1",
-            },
-            "interpolation_key": "f1_vs_x1",
+            "x_data_key": "norm_f1",
+            "y_data_key": "norm_x1",
+            "interpolation_source_key": "interpolations_1d",
+            "interpolation_relationship_key": "f1_vs_x1",
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
         (3, 3): {
             "type": "scatter",
@@ -173,18 +147,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_1$ and $x_2$",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $x_2$",
-            "data_key": "f1_relationships",
-            "data_mapping": {
-                "x": "norm_f1",
-                "y": "norm_x2",
-            },
-            "interpolation_key": "f1_vs_x2",
+            "x_data_key": "norm_f1",
+            "y_data_key": "norm_x2",
+            "interpolation_source_key": "interpolations_1d",
+            "interpolation_relationship_key": "f1_vs_x2",
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
         (4, 1): {
             "type": "scatter",
@@ -192,18 +163,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_2$ and $x_1$",
             "x_label": "Normalized $f_2$",
             "y_label": "Normalized $x_1$",
-            "data_key": "f2_relationships",
-            "data_mapping": {
-                "x": "norm_f2",
-                "y": "norm_x1",
-            },
-            "interpolation_key": "f2_vs_x1",
+            "x_data_key": "norm_f2",
+            "y_data_key": "norm_x1",
+            "interpolation_source_key": "interpolations_1d",
+            "interpolation_relationship_key": "f2_vs_x1",
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
         (4, 2): {
             "type": "scatter",
@@ -211,18 +179,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "description": "Relationship between $f_2$ and $x_2$",
             "x_label": "Normalized $f_2$",
             "y_label": "Normalized $x_2$",
-            "data_key": "f2_relationships",
-            "data_mapping": {
-                "x": "norm_f2",
-                "y": "norm_x2",
-            },
-            "interpolation_key": "f2_vs_x2",
+            "x_data_key": "norm_f2",
+            "y_data_key": "norm_x2",
+            "interpolation_source_key": "interpolations_1d",
+            "interpolation_relationship_key": "f2_vs_x2",
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
         (5, 1): {
             "type": "scatter3d",
@@ -231,15 +196,14 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "x_label": "$f_1$",
             "y_label": "$f_2$",
             "z_label": "$x_1$",
-            "data_key": "norm_f1",  # Directly use norm_f1 from DTO
-            "data_mapping": {"x": None},  # Data is already x, no further mapping needed
-            "y_data_key": "norm_f2",  # New: direct key for y-axis
-            "z_data_key": "norm_x1",  # Direct key for z-axis
-            "surface_key": "f1f2_vs_x1",
+            "x_data_key": "norm_f1",
+            "y_data_key": "norm_f2",
+            "z_data_key": "norm_x1",
+            "surface_source_key": "interpolations_2d",
+            "surface_relationship_key": "f1f2_vs_x1",
             "name": "Original Points",
             "color": "#1f77b4",
             "marker_size": 5,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
         (5, 2): {
             "type": "scatter3d",
@@ -248,15 +212,14 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             "x_label": "$f_1$",
             "y_label": "$f_2$",
             "z_label": "$x_2$",
-            "data_key": "norm_f1",  # Directly use norm_f1 from DTO
-            "data_mapping": {"x": None},  # Data is already x, no further mapping needed
+            "x_data_key": "norm_f1",
             "y_data_key": "norm_f2",
             "z_data_key": "norm_x2",
-            "surface_key": "f1f2_vs_x2",
+            "surface_source_key": "interpolations_2d",
+            "surface_relationship_key": "f1f2_vs_x2",
             "name": "Original Points",
             "color": "#1f77b4",
             "marker_size": 5,
-            "interpolation_colors": _INTERPOLATION_COLORS_MAP,
         },
     }
 
@@ -314,11 +277,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
     def _create_figure_layout(self) -> go.Figure:
         """
         Creates and configures the main figure layout for the dashboard.
-
-        Returns:
-            go.Figure: The configured Plotly figure object.
         """
-
         rows = max(r for r, c in self._SUBPLOT_CONFIG.keys())
         cols = max(c for r, c in self._SUBPLOT_CONFIG.keys())
 
@@ -337,11 +296,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             subplot_titles=subplot_titles,
             horizontal_spacing=0.08,
             vertical_spacing=0.1,
-            column_widths=[
-                0.3,
-                0.3,
-                0.4,
-            ],
+            column_widths=[0.3, 0.3, 0.4],
             row_heights=[0.15, 0.15, 0.15, 0.15, 0.4],
         )
 
@@ -352,7 +307,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                 font=dict(size=self._FIGURE_LAYOUT_CONFIG["title_font_size"]),
             ),
             height=self._FIGURE_LAYOUT_CONFIG["height"],
-            width=self._FIGURE_LAYOUT_CONFIG["width"],  # Fixed typo
+            width=self._FIGURE_LAYOUT_CONFIG["width"],
             showlegend=self._FIGURE_LAYOUT_CONFIG["showlegend"],
             template=self._FIGURE_LAYOUT_CONFIG["template"],
             legend=dict(
@@ -391,22 +346,18 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
             plot_type = config.get("type")
             description = config.get("description", "")
 
-            # For scatter and scatter3d, data_key and data_mapping now work differently
-            # We now primarily access data directly via DTO attributes.
-
             if plot_type == "scatter":
-                # For scatter plots, data_key might point to a dictionary (e.g., f1_relationships)
-                # or a tuple/array (e.g., pareto_set, normalized_decision_space)
-                data_container = getattr(
-                    dto, config.get("data_key")
-                )  # Get the dict or tuple
-
-                x_data = self._get_data_from_mapping(
-                    data_container, config.get("data_mapping", {}).get("x")
-                )
-                y_data = self._get_data_from_mapping(
-                    data_container, config.get("data_mapping", {}).get("y")
-                )
+                if "data_key" in config:  # For pareto_set/front (2D array, indexed)
+                    data_source = getattr(dto, config["data_key"], None)
+                    x_data = self._get_data_from_indexed_source(
+                        data_source, config.get("data_mapping", {}).get("x")
+                    )
+                    y_data = self._get_data_from_indexed_source(
+                        data_source, config.get("data_mapping", {}).get("y")
+                    )
+                else:  # For normalized X/F scatter plots (direct DTO attributes)
+                    x_data = getattr(dto, config.get("x_data_key"), None)
+                    y_data = getattr(dto, config.get("y_data_key"), None)
 
                 if (
                     x_data is None
@@ -422,38 +373,45 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                 self._add_scatter_plot(fig, row, col, x_data, y_data, config)
 
                 # Add interpolations if configured
-                if "interpolation_key" in config:
-                    interpolations = self._get_data_from_mapping(
-                        data_container, config["interpolation_key"]
+                if (
+                    "interpolation_source_key" in config
+                    and "interpolation_relationship_key" in config
+                ):
+                    # Get the top-level interpolation dictionary (e.g., dto.interpolations_1d)
+                    top_level_interpolations = getattr(
+                        dto, config["interpolation_source_key"], None
                     )
-                    if interpolations:
+                    # Get the specific relationship's interpolation methods dictionary (e.g., dto.interpolations_1d["f1_vs_f2"])
+                    interpolation_methods_dict = (
+                        top_level_interpolations.get(
+                            config["interpolation_relationship_key"]
+                        )
+                        if top_level_interpolations
+                        else None
+                    )
+
+                    if interpolation_methods_dict:
                         self._add_interpolation_traces(
                             fig,
                             row,
                             col,
-                            interpolations,
-                            config.get("interpolation_colors", {}),
+                            interpolation_methods_dict,
+                            self._INTERPOLATION_COLORS,
                         )
 
             elif plot_type == "parcoords":
                 parcoords_data = getattr(dto, config.get("data_key"), None)
-                if parcoords_data is None:
+                if parcoords_data is None or parcoords_data.size == 0:
                     print(
-                        f"Warning: Missing data for parcoords plot at ({row}, {col}). Skipping."
+                        f"Warning: Missing or empty data for parcoords plot at ({row}, {col}). Skipping."
                     )
                     continue
                 self._add_parcoords_plot(fig, row, col, parcoords_data, config)
 
             elif plot_type == "scatter3d":
-                x_data = getattr(
-                    dto, config.get("data_key"), None
-                )  # Direct access to norm_f1/f2/x1/x2
-                y_data = getattr(
-                    dto, config.get("y_data_key"), None
-                )  # Direct access to norm_f1/f2/x1/x2
-                z_data = getattr(
-                    dto, config.get("z_data_key"), None
-                )  # Direct access to norm_f1/f2/x1/x2
+                x_data = getattr(dto, config.get("x_data_key"), None)
+                y_data = getattr(dto, config.get("y_data_key"), None)
+                z_data = getattr(dto, config.get("z_data_key"), None)
 
                 if (
                     x_data is None
@@ -471,17 +429,28 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                 self._add_scatter3d_plot(fig, row, col, x_data, y_data, z_data, config)
 
                 # Add surface interpolations if configured
-                if "surface_key" in config:
-                    surface_data = getattr(dto, "multivariate_interpolations", {}).get(
-                        config["surface_key"]
+                if (
+                    "surface_source_key" in config
+                    and "surface_relationship_key" in config
+                ):
+                    # Get the top-level interpolation dictionary (e.g., dto.interpolations_2d)
+                    top_level_interpolations = getattr(
+                        dto, config["surface_source_key"], None
                     )
-                    if surface_data:
+                    # Get the specific relationship's interpolation methods dictionary (e.g., dto.interpolations_2d["f1f2_vs_x1"])
+                    surface_methods_dict = (
+                        top_level_interpolations.get(config["surface_relationship_key"])
+                        if top_level_interpolations
+                        else None
+                    )
+
+                    if surface_methods_dict:
                         self._add_3d_surface_traces(
                             fig,
                             row,
                             col,
-                            surface_data,
-                            config.get("interpolation_colors", {}),
+                            surface_methods_dict,
+                            self._INTERPOLATION_COLORS,
                         )
             else:
                 print(
@@ -491,43 +460,29 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
             self._add_description(fig, row, col, description)
 
-    def _get_data_from_mapping(self, data_source, mapping_key) -> np.ndarray | None:
+    def _get_data_from_indexed_source(
+        self, data_source: np.ndarray | tuple, index: int | None
+    ) -> np.ndarray | None:
         """
-        Helper to retrieve data from a given data_source based on the mapping key.
-        Mapping key can be an integer (for numpy array index) or a string (for dict key).
-        Lambda functions are no longer expected here.
+        Helper to retrieve data from a numpy array or tuple using an integer index.
+        Used for pareto_set/front.
         """
-        if (
-            data_source is None or mapping_key is None
-        ):  # Added check for mapping_key being None
-            return data_source  # If data_key directly holds the array and mapping_key is None (e.g. for 3D x-data)
+        if data_source is None or index is None:
+            return None
 
-        if isinstance(mapping_key, int):
-            if isinstance(data_source, (np.ndarray, list, tuple)):
-                try:
-                    if isinstance(data_source, np.ndarray) and data_source.ndim > 1:
-                        return data_source[:, mapping_key]
-                    else:
-                        return np.asarray(data_source[mapping_key])
-                except (IndexError, TypeError):
-                    print(
-                        f"Error: Invalid index {mapping_key} for data source type {type(data_source)}."
-                    )
-                    return None
-            else:
+        if isinstance(data_source, np.ndarray):
+            if data_source.ndim > 1:
+                return data_source[:, index]
+            else:  # If it's a 1D array (e.g., if we ever use this for a single normalized array), and index is 0, return itself
+                return data_source if index == 0 else None
+        elif isinstance(data_source, (list, tuple)):
+            try:
+                return np.asarray(data_source[index])
+            except (IndexError, TypeError):
                 print(
-                    f"Error: Integer index {mapping_key} not supported for data source type {type(data_source)}."
+                    f"Error: Invalid index {index} for data source type {type(data_source)}."
                 )
                 return None
-        elif isinstance(mapping_key, str):
-            if isinstance(data_source, dict):
-                return data_source.get(mapping_key)
-            else:
-                print(
-                    f"Error: String key '{mapping_key}' not supported for data source type {type(data_source)} (expected dict)."
-                )
-                return None
-        # No more callable (lambda) handling here
         return None
 
     def _add_scatter_plot(
@@ -587,7 +542,9 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig.add_trace(
             go.Parcoords(
                 line=dict(
-                    color=data[:, 2] if data.shape[1] > 2 else data[:, 0],
+                    color=data[:, 2]  # Example: Use the third column (f1) for color
+                    if data.shape[1] > 2
+                    else data[:, 0],  # Fallback to first column
                     colorscale="Viridis",
                     showscale=False,
                     cmin=np.min(data[:, 2])
@@ -608,13 +565,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig: go.Figure,
         row: int,
         col: int,
-        interpolations: dict,
-        interpolation_colors: dict,  # Now passed directly from config
+        interpolation_methods_dict: dict[
+            str, tuple[np.ndarray, np.ndarray]
+        ],  # This is now the inner dict of methods
+        interpolation_colors: dict,
     ) -> None:
         """
-        Adds interpolation lines for a scatter plot.
+        Adds interpolation lines for a scatter plot, iterating through all methods in the dict.
         """
-        for method_name, (x_grid, y_grid) in interpolations.items():
+        for method_name, (x_grid, y_grid) in interpolation_methods_dict.items():
             show_legend_item = method_name not in self._added_legend_items
             fig.add_trace(
                 go.Scatter(
@@ -624,7 +583,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
                     line=dict(
                         color=interpolation_colors.get(method_name, "#000000"),
                         width=2.5,
-                        dash="solid" if method_name == "Pchip" else "dash",
+                        dash="solid",  # Keep solid unless a dash pattern is explicitly desired per method
                     ),
                     name=method_name,
                     legendgroup=method_name,
@@ -688,13 +647,15 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
         fig: go.Figure,
         row: int,
         col: int,
-        surface_data: dict,
-        interpolation_colors: dict,  # Now passed directly from config
+        surface_methods_dict: dict[
+            str, tuple[np.ndarray, np.ndarray, np.ndarray]
+        ],  # This is now the inner dict of methods
+        interpolation_colors: dict,
     ) -> None:
         """
-        Adds 3D surface interpolations.
+        Adds 3D surface interpolations, iterating through all methods in the dict.
         """
-        for method_name, (X_grid, Y_grid, Z_grid) in surface_data.items():
+        for method_name, (X_grid, Y_grid, Z_grid) in surface_methods_dict.items():
             show_in_legend = method_name not in self._added_legend_items
 
             fig.add_trace(
