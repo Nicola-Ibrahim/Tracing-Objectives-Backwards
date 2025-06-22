@@ -193,6 +193,9 @@ class ParetoVisualizationMapper:
                 )
 
             for method_name, grid_tuple in dataset.interpolations_1d[rel_key].items():
+                print(
+                    f"Validating 1D interpolation method '{method_name}' grid for '{grid_tuple}' in relationship '{rel_key}'"
+                )
                 if not (
                     isinstance(grid_tuple, tuple)
                     and len(grid_tuple) == 2

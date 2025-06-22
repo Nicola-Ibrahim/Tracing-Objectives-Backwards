@@ -4,7 +4,7 @@ import torch.nn as nn
 from numpy.typing import NDArray
 
 from ...domain.entities.objectives_preference import ObjectivePreferences
-from ...domain.interfaces.base_interpolator import BaseInterpolator
+from ...domain.interfaces.base_interpolator import BaseInverseDecisionMapper
 from ..similarities import SimilarityMethod
 
 
@@ -118,7 +118,7 @@ class Decoder(nn.Module):
             return output.cpu().numpy().flatten()
 
 
-class NeuralNetworkInterpolator(BaseInterpolator):
+class NeuralNetworkInterpolator(BaseInverseDecisionMapper):
     """
     Interpolator that uses a neural network decoder to map interpolation parameters (alpha)
     to decision vectors.

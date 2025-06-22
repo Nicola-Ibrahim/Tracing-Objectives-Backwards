@@ -1,12 +1,11 @@
 import numpy as np
 from scipy.spatial import geometric_slerp
 
-from ....domain import ObjectivePreferences
-from ....domain import BaseInterpolator
+from ....domain import BaseInverseDecisionMapper, ObjectivePreferences
 from ...similarities import SimilarityMethod
 
 
-class GeodesicInterpolator(BaseInterpolator):
+class GeodesicInterpolator(BaseInverseDecisionMapper):
     def __init__(self, pareto_set):
         self.pareto_set = pareto_set
         self.start_point = pareto_set[0]

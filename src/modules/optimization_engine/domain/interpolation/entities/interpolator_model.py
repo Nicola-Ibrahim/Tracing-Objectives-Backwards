@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from ..interfaces.base_interpolator import BaseInterpolator
+from ..interfaces.base_inverse_decision_mappers import BaseInverseDecisionMapper
 
 
 class InterpolatorModel(BaseModel):
@@ -27,7 +27,7 @@ class InterpolatorModel(BaseModel):
     parameters: dict = Field(
         ..., description="The parameters used to initialize the interpolator."
     )
-    fitted_interpolator: BaseInterpolator = Field(
+    fitted_interpolator: BaseInverseDecisionMapper = Field(
         ..., description="The actual fitted interpolator instance."
     )
     metrics: dict[str, Any] = Field(
@@ -42,7 +42,5 @@ class InterpolatorModel(BaseModel):
     # You might add timestamps, training duration, etc.
 
     class Config:
-        arbitrary_types_allowed = (
-            True  # Allow Pydantic to handle non-Pydantic types like BaseInterpolator
-        )
-        # Be cautious with this; for production, consider how to serialize/deserialize BaseInterpolator
+        arbitrary_types_allowed = True  # Allow Pydantic to handle non-Pydantic types like BaseInverseDecisionMapper
+        # Be cautious with this; for production, consider how to serialize/deserialize BaseInverseDecisionMapper

@@ -3,12 +3,11 @@ from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from ....domain import ObjectivePreferences
-from ....domain import BaseInterpolator
+from ....domain import BaseInverseDecisionMapper, ObjectivePreferences
 from ...similarities import SimilarityMethod
 
 
-class KNearestNeighborInterpolator(BaseInterpolator):
+class KNearestNeighborInterpolator(BaseInverseDecisionMapper):
     """
     K-Nearest Neighbors interpolator that selects top K candidate solutions closest
     to the user preference in the objective space and returns a weighted average

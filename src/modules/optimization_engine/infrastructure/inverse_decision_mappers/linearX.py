@@ -4,12 +4,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import minimize
 
-from ...utils.preprocessing.similarities import SimilarityMethod
+from ...domain.interfaces.base_interpolator import BaseInverseDecisionMapper
 from ...modules.interpolation.domain.models.preference import ObjectivePreferences
-from ...domain.interfaces.base_interpolator import BaseInterpolator
+from ...utils.preprocessing.similarities import SimilarityMethod
 
 
-class LocalXInterpolator(BaseInterpolator):
+class LocalXInterpolator(BaseInverseDecisionMapper):
     """
     Base class for local interpolators in X-space that find decision vectors
     to match desired objectives via inverse design.

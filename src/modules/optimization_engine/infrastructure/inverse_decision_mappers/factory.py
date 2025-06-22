@@ -3,11 +3,13 @@ from typing import Any
 from ...domain.interpolation.entities.interpolator_type import (
     InterpolatorType,
 )
-from ...domain.interpolation.interfaces.base_interpolator import BaseInterpolator
-from .splines.geodesic import GeodesicInterpolator
+from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
+    BaseInverseDecisionMapper,
+)
 from .ml.knn import KNearestNeighborInterpolator
-from .splines.linear import LinearInterpolator
 from .nn import NeuralNetworkInterpolator
+from .splines.geodesic import GeodesicInterpolator
+from .splines.linear import LinearInterpolator
 
 
 class InterpolatorFactory:
@@ -18,7 +20,7 @@ class InterpolatorFactory:
 
     def create_interpolator(
         self, interpolator_type: InterpolatorType, params: dict[str, Any]
-    ) -> BaseInterpolator:
+    ) -> BaseInverseDecisionMapper:
         """
         Creates and returns an instance of an interpolator based on the specified type.
 
@@ -29,8 +31,8 @@ class InterpolatorFactory:
                                      interpolator's constructor.
 
         Returns:
-            BaseInterpolator: An initialized instance of the requested interpolator,
-                              conforming to the BaseInterpolator interface.
+            BaseInverseDecisionMapper: An initialized instance of the requested interpolator,
+                              conforming to the BaseInverseDecisionMapper interface.
 
         Raises:
             ValueError: If an unknown or unsupported InterpolatorType is provided.

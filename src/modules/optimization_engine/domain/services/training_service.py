@@ -5,7 +5,9 @@ from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
 
 from ..interpolation.entities.interpolator_model import InterpolatorModel
-from ..interpolation.interfaces.base_interpolator import BaseInterpolator
+from ..interpolation.interfaces.base_inverse_decision_mappers import (
+    BaseInverseDecisionMapper,
+)
 from ..interpolation.interfaces.base_normalizer import BaseNormalizer
 
 
@@ -17,7 +19,7 @@ class TrainingService:
 
     def train_and_predict(
         self,
-        instance: BaseInterpolator,
+        instance: BaseInverseDecisionMapper,
         name: str,
         type: str,
         params: dict,
