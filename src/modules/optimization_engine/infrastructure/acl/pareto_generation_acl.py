@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ....optimization_engine.domain.generation.entities.pareto_data import ParetoDataModel
+from ....optimization_engine.domain.generation.entities.pareto_data import (
+    ParetoDataModel,
+)
 from ....optimization_engine.domain.services.pareto_generation_service import (
     ParetoGenerationService,
 )

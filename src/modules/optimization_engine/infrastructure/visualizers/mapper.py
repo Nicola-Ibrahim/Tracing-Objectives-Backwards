@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
+
+from ...domain.services.pareto_data_service import ParetoDataset
 
 
 @dataclass
@@ -40,22 +41,27 @@ class ParetoVisualizationMapper:
     Performs data validation and transformation.
     """
 
-    def map_to_dto(self, dataset: Any) -> ParetoVisualizationDTO:
+    def map_to_dto(
+        self, dataset: ParetoDataset
+    ) -> ParetoVisualizationDTO:  # Changed type hint to ParetoDataset
         """
         Transform dataset into visualization DTO
         """
         # Orchestrate validation using dedicated methods
+        # The validation methods will now rely on the properties for their checks where applicable
         self._validate_core_data(dataset)
-        self._validate_normalized_data(dataset)
+        self._validate_normalized_data(
+            dataset
+        )  # This method will be updated to use properties internally
         self._validate_1d_interpolations(dataset)
         self._validate_2d_interpolations(dataset)
 
         # Extract normalized components for direct access in DTO
-        # These come from the 'normalized' dictionary in ParetoDataset
-        norm_x1 = dataset.normalized["x1"]
-        norm_x2 = dataset.normalized["x2"]
-        norm_f1 = dataset.normalized["f1"]
-        norm_f2 = dataset.normalized["f2"]
+        # Now using the properties for cleaner and safer access
+        norm_x1 = dataset.norm_x1
+        norm_x2 = dataset.norm_x2
+        norm_f1 = dataset.norm_f1
+        norm_f2 = dataset.norm_f2
 
         return ParetoVisualizationDTO(
             pareto_set=dataset.pareto_set,
@@ -77,8 +83,9 @@ class ParetoVisualizationMapper:
             interpolations_2d=dataset.interpolations_2d,
         )
 
-    def _validate_core_data(self, dataset: Any):
+    def _validate_core_data(self, dataset: ParetoDataset):
         """Validates the core Pareto set and front arrays, including their dimensions."""
+        # No change here, pareto_set and pareto_front are direct attributes
         if (
             not isinstance(dataset.pareto_set, np.ndarray)
             or dataset.pareto_set.size == 0
@@ -108,27 +115,61 @@ class ParetoVisualizationMapper:
                 f"Number of samples in 'pareto_set' ({dataset.pareto_set.shape[0]}) does not match 'pareto_front' ({dataset.pareto_front.shape[0]})."
             )
 
-    def _validate_normalized_data(self, dataset: Any):
-        """Validates the normalized data dictionary."""
-        required_norm_keys = ["f1", "f2", "x1", "x2"]
-        if not isinstance(dataset.normalized, dict):
-            raise TypeError("Normalized data 'dataset.normalized' is not a dictionary.")
-        for key in required_norm_keys:
-            if key not in dataset.normalized or not isinstance(
-                dataset.normalized[key], np.ndarray
-            ):
-                raise ValueError(
-                    f"Missing or invalid normalized '{key}' in dataset (must be np.ndarray)."
-                )
-            if dataset.normalized[key].ndim != 1:
-                raise ValueError(f"Normalized '{key}' should be a 1D array.")
-            if dataset.normalized[key].shape[0] != dataset.pareto_set.shape[0]:
-                raise ValueError(
-                    f"Number of samples in normalized '{key}' ({dataset.normalized[key].shape[0]}) does not match 'pareto_set' ({dataset.pareto_set.shape[0]})."
-                )
+    def _validate_normalized_data(self, dataset: ParetoDataset):
+        """
+        Validates the normalized data using ParetoDataset's properties.
+        This implicitly checks the existence and type through the property access.
+        """
+        # Attempt to access properties to trigger AttributeError if data is None/missing
+        try:
+            norm_f1 = dataset.norm_f1
+            norm_f2 = dataset.norm_f2
+            norm_x1 = dataset.norm_x1
+            norm_x2 = dataset.norm_x2
+        except AttributeError as e:
+            raise ValueError(
+                f"Missing or unset normalized data in ParetoDataset: {e}"
+            ) from e
 
-    def _validate_1d_interpolations(self, dataset: Any):
-        """Validates the 1D interpolations dictionary."""
+        # Further dimension and size checks on the retrieved arrays
+        if not isinstance(norm_f1, np.ndarray) or norm_f1.ndim != 1:
+            raise TypeError("Normalized 'f1' should be a 1D numpy array.")
+        if not isinstance(norm_f2, np.ndarray) or norm_f2.ndim != 1:
+            raise TypeError("Normalized 'f2' should be a 1D numpy array.")
+        if not isinstance(norm_x1, np.ndarray) or norm_x1.ndim != 1:
+            raise TypeError("Normalized 'x1' should be a 1D numpy array.")
+        if not isinstance(norm_x2, np.ndarray) or norm_x2.ndim != 1:
+            raise TypeError("Normalized 'x2' should be a 1D numpy array.")
+
+        # Check sample count consistency after confirming they are arrays
+        expected_samples = dataset.pareto_set.shape[0]
+        if norm_f1.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'f1' sample count ({norm_f1.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+        if norm_f2.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'f2' sample count ({norm_f2.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+        if norm_x1.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'x1' sample count ({norm_x1.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+        if norm_x2.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'x2' sample count ({norm_x2.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+
+    def _validate_1d_interpolations(self, dataset: ParetoDataset):
+        """
+        Validates the 1D interpolations dictionary.
+        This method will continue to access the dictionary directly as it's
+        dealing with the structure of the `interpolations_1d` field itself,
+        not individual pre-extracted components like `norm_x1`.
+        However, we can leverage `get_1d_interpolation` if we wanted to
+        validate specific relationships/methods, but here we're validating
+        the *container* structure.
+        """
         required_1d_rel_keys = [
             "f1_vs_f2",
             "f1_vs_x1",
@@ -162,8 +203,11 @@ class ParetoVisualizationMapper:
                         f"1D interpolation '{rel_key}' method '{method_name}' must be a tuple of two 1D numpy arrays."
                     )
 
-    def _validate_2d_interpolations(self, dataset: Any):
-        """Validates the 2D interpolations dictionary."""
+    def _validate_2d_interpolations(self, dataset: ParetoDataset):
+        """
+        Validates the 2D interpolations dictionary.
+        Similar to _validate_1d_interpolations, this checks the container structure.
+        """
         required_2d_rel_keys = ["f1f2_vs_x1", "f1f2_vs_x2"]
         if not isinstance(dataset.interpolations_2d, dict):
             raise TypeError("'dataset.interpolations_2d' is not a dictionary.")
