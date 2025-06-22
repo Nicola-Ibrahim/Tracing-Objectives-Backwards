@@ -19,26 +19,75 @@ from ..generation.interfaces.base_archiver import BaseParetoArchiver
 class ParetoDataset:
     """
     Container for all Pareto optimization data in various representations:
-    - Original values
+    - Core Pareto set and front (original values)
     - Normalized values
     - Computed interpolations
+
+    This version removes the redundant 'original' dictionary, as original
+    decision and objective values are directly accessible from pareto_set
+    and pareto_front, respectively.
     """
 
-    # Core Pareto data
-    pareto_set: np.ndarray = None
-    pareto_front: np.ndarray = None
-
-    # Original values
-    original: dict[str, np.ndarray] = field(
-        default_factory=lambda: {"f1": None, "f2": None, "x1": None, "x2": None}
+    # --- Core Pareto Data ---
+    # These are the primary sources for original decision and objective values.
+    # pareto_set[:,0] is x1, pareto_set[:,1] is x2
+    # pareto_front[:,0] is f1, pareto_front[:,1] is f2
+    pareto_set: np.ndarray = field(
+        default=None,
+        metadata={
+            "description": "Original decision variables (X) for Pareto optimal solutions. Expected shape (n_samples, n_decision_vars)."
+        },
+    )
+    pareto_front: np.ndarray = field(
+        default=None,
+        metadata={
+            "description": "Original objective function values (F) for Pareto optimal solutions. Expected shape (n_samples, n_objective_vars)."
+        },
     )
 
-    # Normalized values (0-1 range)
-    normalized: dict[str, np.ndarray] = field(
-        default_factory=lambda: {"f1": None, "f2": None, "x1": None, "x2": None}
+    # --- Normalized Values (0-1 range) ---
+    # We maintain this dictionary for flexibility, but expose properties for direct access.
+    # These are 1D arrays extracted from the normalized Pareto front/set during processing.
+    normalized: dict[str, np.ndarray, None] = field(
+        default_factory=lambda: {"f1": None, "f2": None, "x1": None, "x2": None},
+        metadata={
+            "description": "Dictionary of normalized (0-1 range) decision and objective variables."
+        },
     )
 
-    # 1D interpolations: (x_grid, y_grid) tuples
+    @property
+    def norm_f1(self) -> np.ndarray:
+        """Returns the normalized values of objective function 1."""
+        f1 = self.normalized.get("f1")
+        if f1 is None:
+            raise AttributeError("Normalized 'f1' data is not set in ParetoDataset.")
+        return f1
+
+    @property
+    def norm_f2(self) -> np.ndarray:
+        """Returns the normalized values of objective function 2."""
+        f2 = self.normalized.get("f2")
+        if f2 is None:
+            raise AttributeError("Normalized 'f2' data is not set in ParetoDataset.")
+        return f2
+
+    @property
+    def norm_x1(self) -> np.ndarray:
+        """Returns the normalized values of decision variable 1."""
+        x1 = self.normalized.get("x1")
+        if x1 is None:
+            raise AttributeError("Normalized 'x1' data is not set in ParetoDataset.")
+        return x1
+
+    @property
+    def norm_x2(self) -> np.ndarray:
+        """Returns the normalized values of decision variable 2."""
+        x2 = self.normalized.get("x2")
+        if x2 is None:
+            raise AttributeError("Normalized 'x2' data is not set in ParetoDataset.")
+        return x2
+
+    # --- 1D Interpolations ---
     interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = field(
         default_factory=lambda: {
             "f1_vs_f2": {},
@@ -47,18 +96,72 @@ class ParetoDataset:
             "x1_vs_x2": {},
             "f2_vs_x1": {},
             "f2_vs_x2": {},
-        }
+        },
+        metadata={
+            "description": "1D interpolations for various variable relationships."
+        },
     )
 
-    # 2D multivariate interpolations: (X_grid, Y_grid, Z_grid) tuples
+    def get_1d_interpolation(
+        self, relationship: str, method: str
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Retrieves a specific 1D interpolation (x_grid, y_grid) for a given relationship and method.
+
+        Args:
+            relationship (str): The name of the relationship (e.g., "f1_vs_f2").
+            method (str): The name of the interpolation method (e.g., "Pchip", "Cubic Spline").
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: A tuple containing the x_grid and y_grid.
+
+        Raises:
+            KeyError: If the relationship or method is not found.
+        """
+        if relationship not in self.interpolations_1d:
+            raise KeyError(f"1D interpolation relationship '{relationship}' not found.")
+        if method not in self.interpolations_1d[relationship]:
+            raise KeyError(
+                f"Interpolation method '{method}' not found for relationship '{relationship}'."
+            )
+        return self.interpolations_1d[relationship][method]
+
+    # --- 2D Multivariate Interpolations ---
     interpolations_2d: dict[
         str, dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
     ] = field(
         default_factory=lambda: {
             "f1f2_vs_x1": {},
             "f1f2_vs_x2": {},
-        }
+        },
+        metadata={
+            "description": "2D interpolations for multivariate relationships (surfaces)."
+        },
     )
+
+    def get_2d_interpolation(
+        self, relationship: str, method: str
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Retrieves a specific 2D interpolation (X_grid, Y_grid, Z_grid) for a given relationship and method.
+
+        Args:
+            relationship (str): The name of the relationship (e.g., "f1f2_vs_x1").
+            method (str): The name of the interpolation method (e.g., "Linear ND", "RBF").
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]: A tuple containing the X_grid, Y_grid, and Z_grid.
+
+        Raises:
+            KeyError: If the relationship or method is not found.
+        """
+        if relationship not in self.interpolations_2d:
+            raise KeyError(f"2D interpolation relationship '{relationship}' not found.")
+        if method not in self.interpolations_2d[relationship]:
+            raise KeyError(
+                f"Interpolation method '{method}' not found for relationship '{relationship}'."
+            )
+        return self.interpolations_2d[relationship][method]
 
 
 class ParetoDataService:
@@ -111,17 +214,17 @@ class ParetoDataService:
         dataset.pareto_set = loaded_result.pareto_set
         dataset.pareto_front = loaded_result.pareto_front
 
-        # Extract and store original values
-        dataset.original["f1"] = dataset.pareto_front[:, 0]
-        dataset.original["f2"] = dataset.pareto_front[:, 1]
-        dataset.original["x1"] = dataset.pareto_set[:, 0]
-        dataset.original["x2"] = dataset.pareto_set[:, 1]
+        # Compute and store normalized values, now directly from pareto_set/front
+        # Ensure that pareto_front and pareto_set have at least 2 columns
+        if dataset.pareto_front.shape[1] < 2:
+            raise ValueError("pareto_front must have at least 2 columns for f1 and f2.")
+        if dataset.pareto_set.shape[1] < 2:
+            raise ValueError("pareto_set must have at least 2 columns for x1 and x2.")
 
-        # Compute and store normalized values
-        dataset.normalized["f1"] = self._normalize_array(dataset.original["f1"])
-        dataset.normalized["f2"] = self._normalize_array(dataset.original["f2"])
-        dataset.normalized["x1"] = self._normalize_array(dataset.original["x1"])
-        dataset.normalized["x2"] = self._normalize_array(dataset.original["x2"])
+        dataset.normalized["f1"] = self._normalize_array(dataset.pareto_front[:, 0])
+        dataset.normalized["f2"] = self._normalize_array(dataset.pareto_front[:, 1])
+        dataset.normalized["x1"] = self._normalize_array(dataset.pareto_set[:, 0])
+        dataset.normalized["x2"] = self._normalize_array(dataset.pareto_set[:, 1])
 
         # Compute all interpolations
         self._compute_all_1d_interpolations(dataset)
@@ -141,6 +244,7 @@ class ParetoDataService:
         norm = dataset.normalized
 
         # Get unique points for stable interpolation
+        # Note: These still correctly use the *normalized* values
         unique_f1, f1_idx = np.unique(norm["f1"], return_index=True)
         unique_x1, x1_idx = np.unique(norm["x1"], return_index=True)
 
