@@ -1,19 +1,19 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
+from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ....domain.interpolation.interfaces.base_normalizer import BaseNormalizer
 from ....domain.interpolation.interfaces.base_repository import (
-    BaseTrainedModelRepository,
+    BaseInterpolationModelRepository,
 )
-from ....domain.generation.interfaces.base_archiver import BaseParetoArchiver
 from .guided_mode_generate_decision_command import GuidedModeGenerateDecisionCommand
 
 
 class GuidedModeGenerateDecisionHandler:
     def __init__(
         self,
-        model_repository: BaseTrainedModelRepository,
-        pareto_archiver: BaseParetoArchiver,
+        model_repository: BaseInterpolationModelRepository,
+        pareto_archiver: BaseParetoDataRepository,
         y_normalizer: BaseNormalizer,
         x_normalizer: BaseNormalizer,
     ):

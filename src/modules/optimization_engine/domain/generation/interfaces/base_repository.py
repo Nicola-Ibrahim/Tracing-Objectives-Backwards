@@ -5,7 +5,7 @@ from .....shared.config import ROOT_PATH
 from ..entities.pareto_data import ParetoDataModel
 
 
-class BaseParetoArchiver(ABC):
+class BaseParetoDataRepository(ABC):
     def __init__(self, file_path: str | Path = "data/raw"):
         """
         Initialize Pareto data manager.

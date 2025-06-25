@@ -2,7 +2,7 @@ import numpy as np
 
 from ....domain.interpolation.interfaces.base_normalizer import BaseNormalizer
 from ....domain.interpolation.interfaces.base_repository import (
-    BaseTrainedModelRepository,
+    BaseInterpolationModelRepository,
 )
 from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
 
@@ -10,7 +10,7 @@ from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
 class FreeModeGenerateDecisionHandler:
     def __init__(
         self,
-        model_repository: BaseTrainedModelRepository,
+        model_repository: BaseInterpolationModelRepository,
         y_normalizer: BaseNormalizer,
         x_normalizer: BaseNormalizer,
     ):

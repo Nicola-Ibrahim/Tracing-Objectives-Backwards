@@ -33,7 +33,7 @@ class GeodesicInterpolatorParams(InterpolatorParams):
         extra = "forbid"
 
 
-class KNearestNeighborInterpolatorParams(InterpolatorParams):
+class NearestNeighborInterpolatorParams(InterpolatorParams):
     n_neighbors: int = Field(5, gt=0, description="Number of neighbors to use.")
     weights: str = Field(
         "uniform",

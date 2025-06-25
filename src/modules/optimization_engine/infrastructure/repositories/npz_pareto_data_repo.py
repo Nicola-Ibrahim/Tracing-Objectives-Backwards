@@ -3,10 +3,10 @@ from pathlib import Path
 import numpy as np
 
 from ...domain.generation.entities.pareto_data import ParetoDataModel
-from ...domain.generation.interfaces.base_archiver import BaseParetoArchiver
+from ...domain.generation.interfaces.base_repository import BaseParetoDataRepository
 
 
-class ParetoNPzArchiver(BaseParetoArchiver):
+class NPZParetoDataRepository(BaseParetoDataRepository):
     """
     Archiver that saves Pareto data in compressed numpy format (.npz).
     This format is efficient for storing large arrays and supports metadata.

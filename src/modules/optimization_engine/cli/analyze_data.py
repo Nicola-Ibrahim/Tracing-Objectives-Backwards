@@ -5,17 +5,18 @@ from ..application.analyzing.analyze_biobj_data.analyzing_biobj_data_handler imp
     AnalyzeBiobjDataCommandHandler,
 )
 from ..domain.services.pareto_data_service import ParetoDataService
-from ..infrastructure.archivers.npz import ParetoNPzArchiver
-from ..infrastructure.visualizers.plotly import PlotlyParetoVisualizer
+from ..infrastructure.archivers.npz_pareto_data_repo import NPZParetoDataRepository
 from ..infrastructure.visualizers.mapper import ParetoVisualizationMapper
+from ..infrastructure.visualizers.plotly import PlotlyParetoVisualizer
+
 
 def analyze_data():
     # --- Use the correctly instantiated service in the ACL ---
     command = AnalyzeBiobjDataCommand()
     handler = AnalyzeBiobjDataCommandHandler(
-        pareto_data_service=ParetoDataService(archiver=ParetoNPzArchiver()),
+        pareto_data_service=ParetoDataService(archiver=NPZParetoDataRepository()),
         visualizer=PlotlyParetoVisualizer(),
-        pareto_data_mapper=ParetoVisualizationMapper()
+        pareto_data_mapper=ParetoVisualizationMapper(),
     )
 
     handler.execute(command)

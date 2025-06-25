@@ -2,8 +2,51 @@ from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
+from sklearn.preprocessing import MinMaxScaler
 
 from ..domain.interpolation.interfaces.base_normalizer import BaseNormalizer
+
+
+class MinMaxScalerNormalizer(BaseNormalizer):
+    """
+    Concrete implementation of BaseNormalizer using scikit-learn's MinMaxScaler.
+    """
+
+    def __init__(self, feature_range: tuple[float, float] = (0, 1)):
+        self.scaler = MinMaxScaler(feature_range=feature_range)
+        self.feature_range = feature_range
+
+    def fit(self, data: NDArray[np.floating], y: NDArray | None = None) -> Self:
+        """
+        Fits the scaler to the data.
+        Args:
+            data: Input data array (n_samples, n_features)
+            y: Optional target values (ignored)
+        Returns:
+            The fitted scaler instance (self)
+        """
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)  # Reshape for single feature
+        self.scaler.fit(data)
+        return self
+
+    def fit_transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
+        """Fits the scaler to data and transforms it."""
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)  # Reshape for single feature
+        return self.scaler.fit_transform(data)
+
+    def transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
+        """Transforms data using the fitted scaler."""
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)  # Reshape for single feature
+        return self.scaler.transform(data)
+
+    def inverse_transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
+        """Inverse transforms data to the original scale."""
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)  # Reshape for single feature
+        return self.scaler.inverse_transform(data)
 
 
 class HypercubeNormalizer(BaseNormalizer):
@@ -60,6 +103,13 @@ class HypercubeNormalizer(BaseNormalizer):
 
         return X_norm
 
+    def fit_transform(
+        self, X: NDArray[np.float64], y: NDArray | None = None
+    ) -> NDArray[np.float64]:
+        """Fit to data, then transform it"""
+        self.fit(X, y)
+        return self.transform(X)
+
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse the normalization to original scale"""
         if self.min_vals is None or self.max_vals is None:
@@ -112,6 +162,13 @@ class StandardNormalizer(BaseNormalizer):
             raise RuntimeError("Normalizer has not been fitted")
         return (X - self.mean) / self.std
 
+    def fit_transform(
+        self, X: NDArray[np.float64], y: NDArray | None = None
+    ) -> NDArray[np.float64]:
+        """Fit to data, then transform it"""
+        self.fit(X, y)
+        return self.transform(X)
+
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse z-score normalization: X_norm * std + mean"""
         if self.mean is None or self.std is None:
@@ -157,6 +214,13 @@ class UnitVectorNormalizer(BaseNormalizer):
         else:
             raise ValueError(f"Unsupported axis: {self.axis}")
 
+    def fit_transform(
+        self, X: NDArray[np.float64], y: NDArray | None = None
+    ) -> NDArray[np.float64]:
+        """Fit to data, then transform it"""
+        self.fit(X, y)
+        return self.transform(X)
+
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse the normalization by scaling back with original norms"""
         if self.norm_values is None:
@@ -196,35 +260,16 @@ class LogNormalizer(BaseNormalizer):
         else:
             return np.log(X_shifted) / np.log(self.base)  # General log
 
+    def fit_transform(
+        self, X: NDArray[np.float64], y: NDArray | None = None
+    ) -> NDArray[np.float64]:
+        """Fit to data, then transform it"""
+        self.fit(X, y)
+        return self.transform(X)
+
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse log transformation: base^X_norm - offset"""
         if self.base == np.e:
             return np.exp(X_norm) - self.offset
         else:
             return np.power(self.base, X_norm) - self.offset
-
-
-class SklearnWrapperNormalizer(BaseNormalizer):
-    """
-    Adapter for sklearn preprocessing scalers.
-    Allows using any sklearn scaler with our BaseNormalizer interface.
-
-    Args:
-        scaler: Instance of sklearn scaler (e.g., StandardScaler, MinMaxScaler, MaxAbsScaler)
-    """
-
-    def __init__(self, scaler):
-        self.scaler = scaler
-
-    def fit(self, X: NDArray[np.float64], y: NDArray | None = None) -> Self:
-        """Delegate fitting to the wrapped sklearn scaler"""
-        self.scaler.fit(X, y)
-        return self
-
-    def transform(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
-        """Delegate transformation to the wrapped sklearn scaler"""
-        return self.scaler.transform(X)
-
-    def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
-        """Delegate inverse transformation to the wrapped sklearn scaler"""
-        return self.scaler.inverse_transform(X_norm)

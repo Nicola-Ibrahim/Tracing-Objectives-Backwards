@@ -1,8 +1,8 @@
 from dataclasses import asdict
 from pathlib import Path
 
-from ....shared.infrastructure.archivers.base import BaseParetoArchiver
-from ....shared.infrastructure.archivers.pickle import ParetoPickleArchiver
+from ....shared.infrastructure.archivers.base import BaseParetoDataRepository
+from ....shared.infrastructure.archivers.pickle import PickleParetoDataRepository
 from ..algorithms.config import NSGA2Config
 from ..algorithms.nsga2 import NSGAII
 from ..optimizers.config import OptimizerConfig
@@ -21,7 +21,9 @@ class ElectricalVechicleParetoGenerating:
     It uses NSGA-II algorithm and processes results using a specified archiver and processor.
     """
 
-    def __init__(self, archiver: BaseParetoArchiver, processor: BaseResultProcessor):
+    def __init__(
+        self, archiver: BaseParetoDataRepository, processor: BaseResultProcessor
+    ):
         self.archiver = archiver
         self.processor = processor
 
@@ -89,7 +91,7 @@ def run_optimization():
         pf=True,
     )
 
-    archiver = ParetoPickleArchiver(output_dir=Path("data/raw"))
+    archiver = PickleParetoDataRepository(output_dir=Path("data/raw"))
     processor = OptimizationResultProcessor()
 
     result_file = facade.run_optimization(

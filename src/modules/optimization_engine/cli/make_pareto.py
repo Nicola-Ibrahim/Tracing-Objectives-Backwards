@@ -10,7 +10,7 @@ from ..application.paretos.generate_biobj_pareto_data.generate_pareto_command im
     GenerateParetoCommand,
 )
 from ..infrastructure.algorithms import AlgorithmFactory
-from ..infrastructure.archivers.npz import ParetoNPzArchiver
+from ..infrastructure.archivers.npz_pareto_data_repo import NPZParetoDataRepository
 from ..infrastructure.optimizers import OptimizerFactory
 from ..infrastructure.problems import ProblemFactory
 
@@ -32,7 +32,7 @@ def generate_data(problem_id: int):
         problem_factory=ProblemFactory(),
         algorithm_factory=AlgorithmFactory(),
         optimizer_factory=OptimizerFactory(),
-        archiver=ParetoNPzArchiver(),
+        archiver=NPZParetoDataRepository(),
     )
 
     # 3. Execute

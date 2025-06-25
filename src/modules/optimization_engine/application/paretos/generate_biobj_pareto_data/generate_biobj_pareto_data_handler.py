@@ -1,9 +1,7 @@
 from pathlib import Path
 
 from ....domain.generation.entities.pareto_data import ParetoDataModel
-from ....domain.generation.interfaces.base_archiver import BaseParetoArchiver
-
-# Import the factories and archiver directly
+from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ....infrastructure.algorithms import AlgorithmFactory
 from ....infrastructure.optimizers import OptimizerFactory
 from ....infrastructure.problems import ProblemFactory
@@ -22,7 +20,7 @@ class GenerateBiobjParetoDataCommandHandler:
         problem_factory: ProblemFactory,
         algorithm_factory: AlgorithmFactory,
         optimizer_factory: OptimizerFactory,
-        archiver: BaseParetoArchiver,
+        archiver: BaseParetoDataRepository,
     ):
         """
         Initializes the command handler with necessary factories and an archiver.

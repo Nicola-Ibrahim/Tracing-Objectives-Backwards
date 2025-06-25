@@ -2,11 +2,11 @@ import pickle
 from pathlib import Path
 from typing import Any
 
-from ...domain.entities.pareto_data import ParetoDataModel
-from ...domain.interfaces.base_archiver import BaseParetoArchiver
+from ...domain.generation.entities.pareto_data import ParetoDataModel
+from ...domain.generation.interfaces.base_repository import BaseParetoDataRepository
 
 
-class ParetoPickleArchiver(BaseParetoArchiver):
+class PickleParetoDataRepository(BaseParetoDataRepository):
     """
     Archiver that saves and loads Pareto data using Python's pickle format.
 
