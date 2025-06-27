@@ -9,100 +9,75 @@ class BaseInverseDecisionMapper(ABC):
     Base class for Inverse Decision Mappers (and general interpolators in this context).
     It defines the common interface for fitting the mapper and making predictions.
 
-    In the context of ParetoDataService's general interpolation needs:
-    - 'objective_space_points' acts as the independent variable (x-axis data).
-    - 'decision_space_points' acts as the dependent variable (y-axis data).
-    - 'target_objective_points' are the points at which to evaluate the interpolation.
-
-    For specific inverse mapping use cases (e.g., objectives -> decisions):
-    - 'objective_space_points' would indeed be objective values.
-    - 'decision_space_points' would be corresponding decision values.
-    - 'target_objective_points' would be new objective values for which to find decisions.
+    This class now enforces a clean abstraction by providing shared logic in concrete methods
+    and requiring subclasses to implement core functionality.
     """
 
-    @abstractmethod
+    def __init__(self) -> None:
+        """
+        Initializes the base inverse decision mapper.
+        Subclasses should call this constructor via super().__init__().
+        """
+        self._objective_dim: int | None = None
+        self._decision_dim: int | None = None
+
+    @property
+    def dimensionality(self) -> str:
+        """
+        Returns the dimensionality handled by the mapper.
+        This is determined from the input data during fitting.
+        """
+        if self._objective_dim is None:
+            return "Unfitted"  # A better state than 'ND'
+        elif self._objective_dim == 1:
+            return "1D"
+        else:
+            return "ND"
+
     def fit(
         self,
-        objective_space_points: NDArray[np.float64],
-        decision_space_points: NDArray[np.float64],
+        objectives: NDArray[np.float64],
+        decisions: NDArray[np.float64],
     ) -> None:
         """
         Fits the mapper with its knowledge base of known points.
+        This concrete method performs universal data validation.
+
+        Subclasses must call `super().fit(objectives, decisions)` at the start of their
+        own `fit` method before performing their specific fitting logic.
 
         Args:
-            objective_space_points (NDArray[np.float64]): Known points in the 'independent' space.
-            decision_space_points (NDArray[np.float64]): Corresponding points in the 'dependent' space.
+            objectives (NDArray[np.float64]): Known points in the 'independent' space.
+            decisions (NDArray[np.float64]): Corresponding points in the 'dependent' space.
         """
-        if len(objective_space_points) != len(decision_space_points):
+        if objectives.ndim == 1:
+            objectives = objectives.reshape(-1, 1)
+        if decisions.ndim == 1:
+            decisions = decisions.reshape(-1, 1)
+
+        if objectives.shape[0] != decisions.shape[0]:
             raise ValueError(
-                "objective_space_points and decision_space_points must have the same number of samples."
+                "objectives and decisions must have the same number of samples."
             )
-        if objective_space_points.shape[0] == 0:
+        if objectives.shape[0] == 0:
             raise ValueError("Input data cannot be empty for fitting the mapper.")
+
+        # Store dimensions, which will be used by the dimensionality property
+        self._objective_dim = objectives.shape[1]
+        self._decision_dim = decisions.shape[1]
 
     @abstractmethod
     def predict(
         self,
-        target_objective_points: NDArray[np.float64],
+        target_objectives: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         """
         Predicts corresponding 'dependent' values for given 'independent' target points.
 
         Args:
-            target_objective_points (NDArray[np.float64]): The points in the 'independent' space
+            target_objectives (NDArray[np.float64]): The points in the 'independent' space
                                                           for which to predict 'dependent' values.
         Returns:
             NDArray[np.float64]: Predicted values in the 'dependent' space.
         """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def dimensionality(self) -> str:
-        """Returns the dimensionality handled by the mapper (e.g., '1D', 'ND')."""
-        pass
-
-
-class Base1DInverseDecisionMapper(BaseInverseDecisionMapper):
-    """
-    Base class for 1-Dimensional Inverse Decision Mappers.
-    Expects 1D arrays for objective_space_points and decision_space_points during fit.
-    """
-
-    @property
-    def dimensionality(self) -> str:
-        return "1D"
-
-    def fit(
-        self,
-        objective_space_points: NDArray[np.float64],
-        decision_space_points: NDArray[np.float64],
-    ) -> None:
-        if objective_space_points.ndim > 1 or decision_space_points.ndim > 1:
-            raise ValueError(
-                "1D mappers expect 1D arrays for objective_space_points and decision_space_points."
-            )
-        super().fit(objective_space_points, decision_space_points)
-
-
-class BaseNDInverseDecisionMapper(BaseInverseDecisionMapper):
-    """
-    Base class for N-Dimensional Inverse Decision Mappers.
-    Expects objective_space_points to be 2D (n_samples, n_features_x) and
-    decision_space_points to be 1D (n_samples,) or 2D (n_samples, n_features_y).
-    """
-
-    @property
-    def dimensionality(self) -> str:
-        return "ND"
-
-    def fit(
-        self,
-        objective_space_points: NDArray[np.float64],
-        decision_space_points: NDArray[np.float64],
-    ) -> None:
-        if objective_space_points.ndim < 1:
-            raise ValueError(
-                "ND mappers expect objective_space_points to be at least 1D (or 2D for multiple features)."
-            )
-        super().fit(objective_space_points, decision_space_points)
+        raise NotImplementedError  # No implementation in the abstract class
