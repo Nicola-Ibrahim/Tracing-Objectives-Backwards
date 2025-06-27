@@ -10,11 +10,13 @@ from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
 class RBFInverseDecisionMapper(BaseInverseDecisionMapper):
     _interp_func: RBFInterpolator | None = None
 
-    def __init__(self, neighbors: int = 10, kernel: str = "gaussian") -> None:
+    def __init__(
+        self, n_neighbors: int = 10, kernel: str = "thin_plate_spline"
+    ) -> None:
         """Initialize the RBF Inverse Decision Mapper.
 
         Args:
-            neighbors (int): Number of nearest neighbors to consider for interpolation.
+            n_neighbors (int): Number of nearest neighbors to consider for interpolation.
             kernel (str): Type of kernel to use for interpolation. Default is 'gaussian'.
                 `linear` : -r
                 `thin_plate_spline` : r**2 * log(r)
@@ -33,7 +35,7 @@ class RBFInverseDecisionMapper(BaseInverseDecisionMapper):
         """
         super().__init__()
         self._interp_func: RBFInterpolator = None
-        self.neighbors = neighbors
+        self.neighbors = n_neighbors
         self.kernel = kernel
 
         # Validate kernel and neighbors during init
@@ -51,7 +53,7 @@ class RBFInverseDecisionMapper(BaseInverseDecisionMapper):
             raise ValueError(
                 f"Invalid kernel '{kernel}'. Must be one of {valid_kernels}."
             )
-        if neighbors < 1:
+        if n_neighbors < 1:
             raise ValueError("Neighbors must be at least 1.")
 
     def fit(

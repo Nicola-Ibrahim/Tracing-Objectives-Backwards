@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import pickle
@@ -20,8 +21,16 @@ from ...domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
 
-# Define the TypeVar for the repository
-T = TypeVar("T", bound=InterpolatorModel)
+
+class DateTimeEncoder(json.JSONEncoder):
+    """
+    Custom JSONEncoder to serialize datetime objects to ISO 8601 format.
+    """
+
+    def default(self, obj):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class InverseDecisionMapperFileHandler:
@@ -54,7 +63,7 @@ class InverseDecisionMapperFileHandler:
         """Saves model metadata as a JSON file to a specified path."""
         try:
             with open(file_path, "w") as f:
-                json.dump(metadata_content, f, indent=4)
+                json.dump(metadata_content, f, indent=4, cls=DateTimeEncoder)
         except Exception as e:
             raise IOError(f"Failed to save metadata to {file_path}: {e}") from e
 

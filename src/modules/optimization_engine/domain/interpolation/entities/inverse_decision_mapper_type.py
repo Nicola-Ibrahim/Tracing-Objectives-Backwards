@@ -7,19 +7,9 @@ class InverseDecisionMapperType(Enum):
     This Enum serves as a central registry of interpolator kinds within the domain.
     """
 
-    # Bivariate decision mappers
-    # These are used for two-dimensional data interpolation
-    NEURAL_NETWORK = "neural_network"
-    GEODESIC = "geodesic"
-    PCHIP = "pchip"
-    SPLINE = "spline"
-    POLYNOMIAL = "polynomial"
-    RBF = "rbf"
-    QUADRATIC = "quadratic"
-    CUBIC = "cubic"
-    NEAREST_NEIGHBORS = "nearest_neighbors"
-
     # Multivariate decision mappers
-    # These are used for higher-dimensional data interpolation
     LINEAR_ND = "linear_nd"
-    QUADRATIC_ND = "quadratic_nd"
+    NEAREST_NEIGHBORS_ND = "nearest_neighbors_nd"
+    RBF_ND = "rbf_nd"
+    CLOUGH_TOCHER_ND = "clough_tocher_nd"
+    NEURAL_NETWORK_ND = "neural_network_nd"

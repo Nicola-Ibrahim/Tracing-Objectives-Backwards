@@ -10,7 +10,7 @@ from ..interpolation.interfaces.base_inverse_decision_mappers import (
     BaseInverseDecisionMapper,
 )
 from ..interpolation.interfaces.base_repository import (
-    BaseInverseDecisionMapperRepository,
+    BaseInterpolationModelRepository,
 )
 
 
@@ -189,7 +189,7 @@ class ParetoDataService:
     def __init__(
         self,
         pareto_data_repo: BaseParetoDataRepository,
-        inverse_decisoin_mapper_repo: BaseInverseDecisionMapperRepository,
+        inverse_decisoin_mapper_repo: BaseInterpolationModelRepository,
     ):
         self._pareto_data_repo = pareto_data_repo
         self._inverse_decisoin_mapper_repo = inverse_decisoin_mapper_repo

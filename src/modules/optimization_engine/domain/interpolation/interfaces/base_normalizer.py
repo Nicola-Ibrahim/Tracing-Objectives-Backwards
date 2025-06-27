@@ -37,17 +37,12 @@ class BaseNormalizer(BaseEstimator, TransformerMixin):
         self, X: NDArray[np.float64], y: NDArray | None = None
     ) -> NDArray[np.float64]:
         """
-        Fit to data, then transform it.
+        Convenience method: fit to data, then transform it.
         Equivalent to fit().transform() but more efficient.
-
-        Args:
-            X: Input data array (n_samples, n_features)
-            y: Optional target values (ignored)
-
-        Returns:
-            Normalized version of the input data
         """
-        raise NotImplementedError("Subclasses must implement fit_transform method")
+
+        self.fit(X, y)
+        return self.transform(X)
 
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """
@@ -60,13 +55,3 @@ class BaseNormalizer(BaseEstimator, TransformerMixin):
             Data in the original scale
         """
         raise NotImplementedError("Subclasses must implement inverse_transform method")
-
-    def fit_transform(
-        self, X: NDArray[np.float64], y: NDArray | None = None
-    ) -> NDArray[np.float64]:
-        """
-        Convenience method: fit to data, then transform it.
-        Equivalent to fit().transform() but more efficient.
-        """
-        self.fit(X, y)
-        return self.transform(X)

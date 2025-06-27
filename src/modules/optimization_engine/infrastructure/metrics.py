@@ -7,7 +7,7 @@ from sklearn.metrics import (
 from ..domain.interpolation.interfaces.base_metric import BaseValidationMetric
 
 
-class MeanSquaredErrorMetric(BaseValidationMetric):
+class MeanSquaredErrorValidationMetric(BaseValidationMetric):
     """
     Concrete implementation of BaseValidationMetric for Mean Squared Error (MSE).
     Leverages scikit-learn's mean_squared_error for robust calculation.

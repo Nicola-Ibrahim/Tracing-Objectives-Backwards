@@ -10,6 +10,16 @@ class BaseValidationMetric(ABC):
     Defines the interface for any metric calculation method.
     """
 
+    @property
+    def name(self) -> str:
+        """
+        Returns the name of the validation metric.
+
+        Returns:
+            The name of the metric as a string.
+        """
+        return self.__class__.__name__
+
     @abstractmethod
     def calculate(
         self,

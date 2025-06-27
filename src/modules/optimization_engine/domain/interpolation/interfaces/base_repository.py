@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar
 
 from ..entities.interpolator_model import InterpolatorModel
-
-T = TypeVar("T", bound=InterpolatorModel)
 
 
 class BaseInterpolationModelRepository(ABC):
@@ -13,7 +10,7 @@ class BaseInterpolationModelRepository(ABC):
     """
 
     @abstractmethod
-    def save(self, model_entity: T) -> None:
+    def save(self, interpolator_model: InterpolatorModel) -> None:
         """
         Saves a new InterpolatorModel entity (representing a specific training run/version).
         Each version is saved in a unique directory identified by its ID.
@@ -25,7 +22,7 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def load(self, model_id: str) -> T:
+    def load(self, model_version_id: str) -> InterpolatorModel:
         """
         Retrieves a specific InterpolatorModel entity by its unique ID.
 
@@ -42,7 +39,9 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_latest_version(self, model_conceptual_name: str) -> T:
+    def get_all_versions_by_conceptual_name(
+        self, model_conceptual_name: str
+    ) -> list[InterpolatorModel]:
         """
         Retrieves the latest trained version of a model based on its conceptual name.
         The 'latest' version is determined by the 'trained_at' timestamp.
@@ -60,9 +59,7 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_versions_by_conceptual_name(
-        self, model_conceptual_name: str
-    ) -> list[T]:
+    def get_latest_version(self, model_conceptual_name: str) -> InterpolatorModel:
         """
         Retrieves all trained versions of a model based on its conceptual name.
 

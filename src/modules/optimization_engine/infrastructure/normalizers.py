@@ -30,12 +30,6 @@ class MinMaxScalerNormalizer(BaseNormalizer):
         self.scaler.fit(data)
         return self
 
-    def fit_transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
-        """Fits the scaler to data and transforms it."""
-        if data.ndim == 1:
-            data = data.reshape(-1, 1)  # Reshape for single feature
-        return self.scaler.fit_transform(data)
-
     def transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
         """Transforms data using the fitted scaler."""
         if data.ndim == 1:
@@ -103,13 +97,6 @@ class HypercubeNormalizer(BaseNormalizer):
 
         return X_norm
 
-    def fit_transform(
-        self, X: NDArray[np.float64], y: NDArray | None = None
-    ) -> NDArray[np.float64]:
-        """Fit to data, then transform it"""
-        self.fit(X, y)
-        return self.transform(X)
-
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse the normalization to original scale"""
         if self.min_vals is None or self.max_vals is None:
@@ -162,13 +149,6 @@ class StandardNormalizer(BaseNormalizer):
             raise RuntimeError("Normalizer has not been fitted")
         return (X - self.mean) / self.std
 
-    def fit_transform(
-        self, X: NDArray[np.float64], y: NDArray | None = None
-    ) -> NDArray[np.float64]:
-        """Fit to data, then transform it"""
-        self.fit(X, y)
-        return self.transform(X)
-
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse z-score normalization: X_norm * std + mean"""
         if self.mean is None or self.std is None:
@@ -213,13 +193,6 @@ class UnitVectorNormalizer(BaseNormalizer):
             return X / self.norm_values
         else:
             raise ValueError(f"Unsupported axis: {self.axis}")
-
-    def fit_transform(
-        self, X: NDArray[np.float64], y: NDArray | None = None
-    ) -> NDArray[np.float64]:
-        """Fit to data, then transform it"""
-        self.fit(X, y)
-        return self.transform(X)
 
     def inverse_transform(self, X_norm: NDArray[np.float64]) -> NDArray[np.float64]:
         """Reverse the normalization by scaling back with original norms"""

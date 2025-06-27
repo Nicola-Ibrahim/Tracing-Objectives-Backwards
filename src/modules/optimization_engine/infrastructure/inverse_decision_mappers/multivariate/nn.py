@@ -80,12 +80,11 @@ class NeuralNetworkInterpolator(BaseInverseDecisionMapper):
 
     def __init__(
         self,
-        decoder: Decoder,
         epochs: int = 1000,
         learning_rate: float = 0.001,
     ) -> None:
         # The decoder is part of this class's state
-        self.decoder = decoder
+        self.decoder = Decoder()
         self.epochs = epochs
         self.learning_rate = learning_rate
         # Call the parent's constructor to initialize shared state

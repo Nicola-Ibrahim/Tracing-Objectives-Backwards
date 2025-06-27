@@ -54,7 +54,8 @@ class PickleParetoDataRepository(BaseParetoDataRepository):
             FileNotFoundError: If the file does not exist at the specified path.
             ValueError: If the loaded data cannot be parsed into a ParetoDataModel object.
         """
-        file_path = self.base_path / filename
+        file_path = self.base_path / f"{filename}.pkl"
+        print(f"Loading Pareto data from {file_path}")
         if not file_path.exists():
             raise FileNotFoundError(f"No Pareto data found at {file_path}")
         with file_path.open("rb") as f:

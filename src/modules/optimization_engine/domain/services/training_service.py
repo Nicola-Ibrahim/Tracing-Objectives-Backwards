@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
@@ -7,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from ..interpolation.interfaces.base_inverse_decision_mappers import (
     BaseInverseDecisionMapper,
 )
+from ..interpolation.interfaces.base_metric import BaseValidationMetric
 from ..interpolation.interfaces.base_normalizer import BaseNormalizer
 
 
@@ -14,91 +13,111 @@ class DecisionMapperTrainingService:
     """
     Domain service responsible for handling the data splitting, normalization,
     and the core training/prediction workflow for interpolators.
-    It separates the training and prediction concerns for better SRP adherence.
+    It encapsulates the training and prediction concerns for better SRP adherence.
     """
+
+    def __init__(
+        self,
+        validation_metric: BaseValidationMetric,
+        decisions_normalizer: BaseNormalizer,
+        objectives_normalizer: BaseNormalizer,
+    ):
+        """
+        Initializes the service with a validation metric dependency.
+        """
+        self._validation_metric = validation_metric
+        self._decisions_normalizer = decisions_normalizer
+        self._objectives_normalizer = objectives_normalizer
 
     def train(
         self,
         inverse_decision_mapper: BaseInverseDecisionMapper,
-        X_data: NDArray[np.floating],
-        Y_data: NDArray[np.floating],
-        x_normalizer_class: type[BaseNormalizer],
-        y_normalizer_class: type[BaseNormalizer],
+        objectives: NDArray[np.floating],  # Objective data (input to the mapper)
+        decisions: NDArray[np.floating],  # Decision data (output from the mapper)
         test_size: float = 0.33,
         random_state: int = 42,
-    ) -> Tuple[
+    ) -> tuple[
         BaseInverseDecisionMapper,
-        NDArray[np.floating],
-        NDArray[np.floating],
-        BaseNormalizer,  # Return the fitted x_normalizer instance
-        BaseNormalizer,  # Return the fitted y_normalizer instance
+        dict[str, float],
     ]:
         """
-        Splits data, normalizes it, and trains the interpolator.
+        Splits data, normalizes it, trains the interpolator, and calculates validation metrics.
 
         Args:
-            inverse_decision_mapper: An unfitted instance of BaseInverseDecisionMapper to be trained.
-            X_data: Raw input data (candidate solutions).
-            Y_data: Raw output data (objective front).
-            x_normalizer_class: The class type for the X-data normalizer.
-            y_normalizer_class: The class type for the Y-data normalizer.
+            inverse_decision_mapper: An unfitted instance of BaseInverseDecisionMapper.
+            objectives: Raw input data for the mapper (Objectives).
+            decisions: Raw output data for the mapper (Decisions).
             test_size: Proportion of data for validation.
             random_state: Seed for reproducibility.
 
         Returns:
             A tuple containing:
-            - fitted_inverse_decision_mapper (BaseInverseDecisionMapper): The interpolator instance after fitting.
-            - X_val_norm (NDArray): Normalized validation input features.
-            - y_val (NDArray): True validation output values (original scale).
-            - x_normalizer (BaseNormalizer): The fitted normalizer for X data.
-            - y_normalizer (BaseNormalizer): The fitted normalizer for Y data.
+            - fitted_inverse_decision_mapper (BaseInverseDecisionMapper): The trained interpolator.
+            - objectives_normalizer (BaseNormalizer): The fitted normalizer for objective data.
+            - decisions_normalizer (BaseNormalizer): The fitted normalizer for decision data.
+            - metrics (Dict): A dictionary of calculated validation metrics.
         """
-        # Split data into train and validation set
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_data, Y_data, test_size=test_size, random_state=random_state
+        # Split data into train and validation sets
+        objectives_train, objectives_val, decisions_train, decisions_val = (
+            train_test_split(
+                objectives, decisions, test_size=test_size, random_state=random_state
+            )
         )
 
-        # Instantiate normalizers
-        x_normalizer = x_normalizer_class(feature_range=(-1, 1))  # Example range
-        y_normalizer = y_normalizer_class(feature_range=(0, 1))  # Example range
+        # Normalize training and validation data
+        objectives_train = self._objectives_normalizer.fit_transform(objectives_train)
+        objectives_val = self._objectives_normalizer.transform(objectives_val)
+        decisions_train = self._decisions_normalizer.fit_transform(decisions_train)
 
-        # Normalize training data
-        X_train_norm = x_normalizer.fit_transform(X_train)
-        Y_train_norm = y_normalizer.fit_transform(y_train)
-
-        # Transform validation data using same parameters
-        X_val_norm = x_normalizer.transform(X_val)
-
-        # Fit the interpolator instance
+        # Fit the interpolator instance on normalized data
         inverse_decision_mapper.fit(
-            candidate_solutions=X_train_norm,
-            objective_front=Y_train_norm,
+            objectives=objectives_train,  # Objectives are the input to the inverse mapper
+            decisions=decisions_train,  # Decisions are the output of the inverse mapper
         )
 
-        # Return fitted instance, normalized validation X, true validation Y, and fitted normalizers
-        return inverse_decision_mapper, X_val_norm, y_val, x_normalizer, y_normalizer
+        # Predict decision values on the validation set
+        decisions_pred_val = inverse_decision_mapper.predict(objectives_val)
+
+        # Inverse-transform predictions to original scale
+        decisions_pred_val_2_original = self._decisions_normalizer.inverse_transform(
+            decisions_pred_val
+        )
+
+        # Calculate validation metrics using the injected metric
+        metrics = {
+            self._validation_metric.name: self._validation_metric.calculate(
+                y_true=decisions_val, y_pred=decisions_pred_val_2_original
+            )
+        }
+
+        print(f"Validation Metrics: {metrics}")
+
+        # Return fitted instance, fitted normalizers, and metrics
+        return inverse_decision_mapper, metrics
 
     def predict(
         self,
         fitted_inverse_decision_mapper: BaseInverseDecisionMapper,
-        X_query_norm: NDArray[np.floating],
-        y_normalizer_instance: BaseNormalizer,
+        target_objectives_norm: NDArray[np.floating],
     ) -> NDArray[np.floating]:
         """
         Generates predictions using a fitted interpolator and inverse-transforms them.
 
         Args:
             fitted_inverse_decision_mapper: A pre-fitted instance of BaseInverseDecisionMapper.
-            X_query_norm: Normalized input features for which to make predictions.
-            y_normalizer_instance: The *fitted* normalizer used for Y data during training.
+            target_objectives_norm: Normalized objective values for which to make predictions.
 
         Returns:
-            y_pred (NDArray): Predicted output values in their original scale.
+            predicted_decisions (NDArray): Predicted decision values in their original scale.
         """
-        # Predict normalized values
-        y_pred_norm = fitted_inverse_decision_mapper.predict(X_query_norm)
+        # Predict normalized values (these are normalized decision values)
+        predicted_decisions_norm = fitted_inverse_decision_mapper.predict(
+            target_objectives_norm
+        )
 
         # Inverse-transform predictions to original scale
-        y_pred = y_normalizer_instance.inverse_transform(y_pred_norm)
+        predicted_decisions = self._decisions_normalizer.inverse_transform(
+            predicted_decisions_norm
+        )
 
-        return y_pred
+        return predicted_decisions

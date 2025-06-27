@@ -6,18 +6,19 @@ class InterpolatorParams(BaseModel):
     pass
 
 
-class NeuralNetworkInterpolatorParams(InterpolatorParams):
-    hidden_layer_sizes: tuple[int, ...] = Field(
-        ..., description="Sizes of the hidden layers."
-    )
-    activation: str = Field(
-        "relu", description="Activation function for hidden layers."
-    )
-    solver: str = Field("adam", description="The solver for weight optimization.")
-    learning_rate_init: float = Field(0.001, gt=0, description="Initial learning rate.")
-    max_iter: int = Field(200, gt=0, description="Maximum number of iterations.")
+class CloughTocherInterpolatorParams(InterpolatorParams):
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
 
-    # Add other NN specific parameters as needed
+
+class NeuralNetworkInterpolatorParams(InterpolatorParams):
+    epochs: int = Field(
+        1000, gt=0, description="Number of epochs for training the neural network."
+    )
+    learning_rate: float = Field(
+        0.001, gt=0, description="Learning rate for the neural network optimizer."
+    )
+
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
 
@@ -34,14 +35,6 @@ class GeodesicInterpolatorParams(InterpolatorParams):
 
 
 class NearestNeighborInterpolatorParams(InterpolatorParams):
-    n_neighbors: int = Field(5, gt=0, description="Number of neighbors to use.")
-    weights: str = Field(
-        "uniform",
-        description="Weight function used in prediction. 'uniform' or 'distance'.",
-    )
-    metric: str = Field("euclidean", description="Distance metric to use.")
-
-    # Add other KNN specific parameters
     class Config:
         extra = "forbid"
 
@@ -52,3 +45,16 @@ class LinearInterpolatorParams(InterpolatorParams):
 
     class Config:
         extra = "forbid"
+
+
+class RBFInterpolatorParams(InterpolatorParams):
+    n_neighbors: int = Field(
+        10, gt=0, description="Number of nearest neighbors for RBF interpolation."
+    )
+    kernel: str = Field(
+        "thin_plate_spline",
+        description="Type of kernel to use for RBF interpolation.",
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined

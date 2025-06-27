@@ -21,7 +21,7 @@ class TrainInterpolatorCommand(BaseModel):
         "This file should be in a format compatible with the training service (e.g., CSV, JSON).",
     )
 
-    interpolator_conceptual_name: str = Field(
+    model_conceptual_name: str = Field(
         ...,
         description="A human-readable conceptual name for the interpolator type being trained. "
         "This name is used to group different versions of the same interpolator (e.g., 'f1_vs_f2_PchipMapper').",
