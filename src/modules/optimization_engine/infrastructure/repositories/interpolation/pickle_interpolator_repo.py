@@ -113,7 +113,6 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
                 "InterpolatorModel entity must have a unique 'id' for saving."
             )
 
-        # --- NEW FILE STRUCTURE LOGIC ---
         # Create a subdirectory for the interpolator type
         model_type_directory = (
             self._base_model_storage_path / interpolator_model.parameters.get("type")
@@ -122,7 +121,10 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         model_type_directory.mkdir(exist_ok=True)
 
         # Then create a directory for the unique model ID within the type directory
-        model_version_directory = model_type_directory / interpolator_model.id
+        model_version_directory = (
+            model_type_directory
+            / interpolator_model.trained_at.strftime("%Y-%m-%d_%H-%M-%S")
+        )
         os.makedirs(model_version_directory, exist_ok=True)
 
         # Define file paths within the model's dedicated directory
