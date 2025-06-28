@@ -1,16 +1,14 @@
 from ..application.interpolation.train_model.dtos import (
-    CloughTocherInterpolatorParams,
-    LinearInterpolatorParams,
-    RBFInterpolatorParams,
+    CloughTocherInverseDecisionMapperParams,
+    LinearInverseDecisionMapperParams,
+    NearestNeighborInverseDecisoinMapperParams,
+    RBFInverseDecisionMapperParams,
 )
 from ..application.interpolation.train_model.train_interpolator_command import (
     TrainInterpolatorCommand,
 )
 from ..application.interpolation.train_model.train_interpolator_handler import (
     TrainInterpolatorCommandHandler,
-)
-from ..domain.interpolation.entities.inverse_decision_mapper_type import (
-    InverseDecisionMapperType,
 )
 from ..domain.services.training_service import DecisionMapperTrainingService
 from ..infrastructure.inverse_decision_mappers.factory import (
@@ -19,14 +17,13 @@ from ..infrastructure.inverse_decision_mappers.factory import (
 from ..infrastructure.loggers.cmd_logger import CMDLogger
 from ..infrastructure.metrics import MeanSquaredErrorValidationMetric
 from ..infrastructure.normalizers import MinMaxScalerNormalizer
-from ..infrastructure.repositories.npz_pareto_data_repo import (
+from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
-from ..infrastructure.repositories.pickle_interpolator_repo import (
+from ..infrastructure.repositories.interpolation.pickle_interpolator_repo import (
     PickleInterpolationModelRepository,
 )
 
-# Instantiate the TrainInterpolatorCommandHandler
 command_handler = TrainInterpolatorCommandHandler(
     pareto_data_repo=NPZParetoDataRepository(),
     inverse_decision_factory=InverseDecisionMapperFactory(),
@@ -40,26 +37,11 @@ command_handler = TrainInterpolatorCommandHandler(
 )
 
 
-linear_command = TrainInterpolatorCommand(
-    data_file_name="pareto_data",
-    model_conceptual_name="My1DLinearMapper",
-    type=InverseDecisionMapperType.RBF_ND,
-    params=RBFInterpolatorParams(),
+command = TrainInterpolatorCommand(
+    params=RBFInverseDecisionMapperParams(),
     test_size=0.2,
     random_state=42,
-    description="1D Linear Interpolator trained on synthetic data for demonstration.",
-    notes="This is a test run to verify the full dependency injection setup.",
-    collection="Demo_1D_Mappers",
-    training_data_identifier="synthetic_1d_data_v1",
+    base_name="f1f2_vs_x1x2",
 )
 
-try:
-    command_handler.handle(linear_command)
-    print("\nLinear Interpolator training command executed successfully.")
-
-
-except Exception as e:
-    print(f"\nAn error occurred during command execution: {e}")
-    import traceback
-
-    traceback.print_exc()
+command_handler.execute(command)

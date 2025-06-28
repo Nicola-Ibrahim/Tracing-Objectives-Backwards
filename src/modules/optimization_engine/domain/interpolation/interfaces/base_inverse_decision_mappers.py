@@ -34,6 +34,14 @@ class BaseInverseDecisionMapper(ABC):
         else:
             return "ND"
 
+    @property
+    def type(self) -> str:
+        """
+        Returns the type of the inverse decision mapper.
+        This should be overridden by subclasses to return their specific type.
+        """
+        return self.__class__.__name__
+
     def fit(
         self,
         objectives: NDArray[np.float64],

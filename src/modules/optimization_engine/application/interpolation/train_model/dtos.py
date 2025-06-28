@@ -1,17 +1,29 @@
 from pydantic import BaseModel, Field
 
+from ....domain.interpolation.enums.inverse_decision_mapper_type import (
+    InverseDecisionMapperType,
+)
 
-class InterpolatorParams(BaseModel):
-    # Common parameters if any, or just a base for polymorphism
+
+class InverseDecisionMapperParams(BaseModel):
     pass
 
 
-class CloughTocherInterpolatorParams(InterpolatorParams):
+class CloughTocherInverseDecisionMapperParams(InverseDecisionMapperParams):
+    type: InverseDecisionMapperType = Field(
+        InverseDecisionMapperType.CLOUGH_TOCHER_ND.value,
+        description="Type of the Clough-Tocher interpolation method.",
+    )
+
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class NeuralNetworkInterpolatorParams(InterpolatorParams):
+class NeuralNetworkInverserDecisionMapperParams(InverseDecisionMapperParams):
+    type: InverseDecisionMapperType = Field(
+        InverseDecisionMapperType.NEURAL_NETWORK_ND.value,
+        description="Type of the neural network interpolation method.",
+    )
     epochs: int = Field(
         1000, gt=0, description="Number of epochs for training the neural network."
     )
@@ -23,7 +35,7 @@ class NeuralNetworkInterpolatorParams(InterpolatorParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class GeodesicInterpolatorParams(InterpolatorParams):
+class GeodesicInterpolatorParams(InverseDecisionMapperParams):
     num_paths: int = Field(100, gt=0, description="Number of geodesic paths to sample.")
     max_iterations: int = Field(
         50, gt=0, description="Max iterations for path finding."
@@ -34,20 +46,31 @@ class GeodesicInterpolatorParams(InterpolatorParams):
         extra = "forbid"
 
 
-class NearestNeighborInterpolatorParams(InterpolatorParams):
-    class Config:
-        extra = "forbid"
-
-
-class LinearInterpolatorParams(InterpolatorParams):
-    # Linear might have fewer parameters, or none, just keep it for consistency
-    pass
+class NearestNeighborInverseDecisoinMapperParams(InverseDecisionMapperParams):
+    type: InverseDecisionMapperType = Field(
+        InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value,
+        description="Type of the nearest neighbor interpolation method.",
+    )
 
     class Config:
         extra = "forbid"
 
 
-class RBFInterpolatorParams(InterpolatorParams):
+class LinearInverseDecisionMapperParams(InverseDecisionMapperParams):
+    type: InverseDecisionMapperType = Field(
+        InverseDecisionMapperType.LINEAR_ND.value,
+        description="Type of the linear interpolation method.",
+    )
+
+    class Config:
+        extra = "forbid"
+
+
+class RBFInverseDecisionMapperParams(InverseDecisionMapperParams):
+    type: InverseDecisionMapperType = Field(
+        InverseDecisionMapperType.RBF_ND.value,
+        description="Type of the radial basis function interpolation method.",
+    )
     n_neighbors: int = Field(
         10, gt=0, description="Number of nearest neighbors for RBF interpolation."
     )

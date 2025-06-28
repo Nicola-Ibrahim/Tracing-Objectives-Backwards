@@ -2,8 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from ...domain.generation.entities.pareto_data import ParetoDataModel
-from ...domain.generation.interfaces.base_repository import BaseParetoDataRepository
+from ....domain.generation.entities.pareto_data import ParetoDataModel
+from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 
 
 class NPZParetoDataRepository(BaseParetoDataRepository):

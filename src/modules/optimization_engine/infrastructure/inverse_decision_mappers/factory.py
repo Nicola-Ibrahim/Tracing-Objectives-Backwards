@@ -1,6 +1,6 @@
-from typing import Any, Type
+from typing import Any
 
-from ...domain.interpolation.entities.inverse_decision_mapper_type import (
+from ...domain.interpolation.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
 )
 from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
@@ -20,17 +20,15 @@ class InverseDecisionMapperFactory:
     """
 
     # A class-level registry to map the enum type to the corresponding class
-    _registry: dict[InverseDecisionMapperType, Type[BaseInverseDecisionMapper]] = {
-        InverseDecisionMapperType.RBF_ND: RBFInverseDecisionMapper,
-        InverseDecisionMapperType.LINEAR_ND: LinearNDInverseDecisionMapper,
-        InverseDecisionMapperType.NEAREST_NEIGHBORS_ND: NearestNDInverseDecisionMapper,
-        InverseDecisionMapperType.NEURAL_NETWORK_ND: NeuralNetworkInterpolator,
-        InverseDecisionMapperType.CLOUGH_TOCHER_ND: CloughTocherInverseDecisionMapper,
+    _registry: dict[InverseDecisionMapperType, BaseInverseDecisionMapper] = {
+        InverseDecisionMapperType.RBF_ND.value: RBFInverseDecisionMapper,
+        InverseDecisionMapperType.LINEAR_ND.value: LinearNDInverseDecisionMapper,
+        InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value: NearestNDInverseDecisionMapper,
+        InverseDecisionMapperType.NEURAL_NETWORK_ND.value: NeuralNetworkInterpolator,
+        InverseDecisionMapperType.CLOUGH_TOCHER_ND.value: CloughTocherInverseDecisionMapper,
     }
 
-    def create(
-        self, type: InverseDecisionMapperType, params: dict[str, Any]
-    ) -> BaseInverseDecisionMapper:
+    def create(self, params: dict[str, Any]) -> BaseInverseDecisionMapper:
         """
         Creates and returns an instance of an interpolator based on the specified type
         by looking it up in the factory's registry.
@@ -48,28 +46,19 @@ class InverseDecisionMapperFactory:
             ValueError: If the provided type is not registered in the factory.
         """
         # Look up the class in the registry dictionary
-        mapper_class = self._registry.get(type)
+        if "type" not in params:
+            raise ValueError(
+                "The 'type' key must be present in the parameters dictionary."
+            )
+
+        mapper_class_type = params.pop("type", None)
+
+        mapper_class = self._registry.get(mapper_class_type)
 
         if mapper_class is None:
-            raise ValueError(f"Unknown or unsupported interpolator type: {type.value}")
+            raise ValueError(
+                f"Unknown or unsupported interpolator type: {mapper_class_type}"
+            )
 
         # Instantiate the class using the parameters from the dictionary
         return mapper_class(**params)
-
-    @classmethod
-    def register(
-        cls,
-        type: InverseDecisionMapperType,
-        mapper_class: Type[BaseInverseDecisionMapper],
-    ) -> None:
-        """
-        Registers a new interpolator class with the factory's registry.
-        This allows for extending the factory's capabilities without modifying the create() method.
-        """
-        if not issubclass(mapper_class, BaseInverseDecisionMapper):
-            raise TypeError(
-                "mapper_class must be a subclass of BaseInverseDecisionMapper"
-            )
-        if type in cls._registry:
-            print(f"Warning: Overwriting existing mapper for type '{type.value}'.")
-        cls._registry[type] = mapper_class

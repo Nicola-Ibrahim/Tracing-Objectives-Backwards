@@ -90,8 +90,6 @@ class DecisionMapperTrainingService:
             )
         }
 
-        print(f"Validation Metrics: {metrics}")
-
         # Return fitted instance, fitted normalizers, and metrics
         return inverse_decision_mapper, metrics
 

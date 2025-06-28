@@ -3,21 +3,20 @@ import json
 import os
 import pickle
 from pathlib import Path
-from typing import Any, List, TypeVar
+from typing import Any
 
-from ....shared.config import ROOT_PATH
-from ...application.interpolation.train_model.dtos import (
+from .....shared.config import ROOT_PATH
+from ....application.interpolation.train_model.dtos import (
     GeodesicInterpolatorParams,
-    InterpolatorParams,
-    LinearInterpolatorParams,
-    NearestNeighborInterpolatorParams,
-    NeuralNetworkInterpolatorParams,
+    LinearInverseDecisionMapperParams,
+    NearestNeighborInverseDecisoinMapperParams,
+    NeuralNetworkInverserDecisionMapperParams,
 )
-from ...domain.interpolation.entities.interpolator_model import InterpolatorModel
-from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
+from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
+from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
     BaseInverseDecisionMapper,
 )
-from ...domain.interpolation.interfaces.base_repository import (
+from ....domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
 
@@ -94,11 +93,10 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
 
         # Registry to map string types to their corresponding Pydantic parameter models for deserialization
         self._parameter_model_registry = {
-            "neural_network": NeuralNetworkInterpolatorParams,
+            "neural_network": NeuralNetworkInverserDecisionMapperParams,
             "geodesic": GeodesicInterpolatorParams,
-            "k_nearest_neighbor": NearestNeighborInterpolatorParams,
-            "linear": LinearInterpolatorParams,
-            # Add other specific parameter DTOs as needed
+            "k_nearest_neighbor": NearestNeighborInverseDecisoinMapperParams,
+            "linear": LinearInverseDecisionMapperParams,
         }
 
     def save(self, interpolator_model: InterpolatorModel) -> None:
@@ -115,39 +113,29 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
                 "InterpolatorModel entity must have a unique 'id' for saving."
             )
 
-        model_version_directory = self._base_model_storage_path / interpolator_model.id
+        # --- NEW FILE STRUCTURE LOGIC ---
+        # Create a subdirectory for the interpolator type
+        model_type_directory = (
+            self._base_model_storage_path / interpolator_model.parameters.get("type")
+        )
+
+        model_type_directory.mkdir(exist_ok=True)
+
+        # Then create a directory for the unique model ID within the type directory
+        model_version_directory = model_type_directory / interpolator_model.id
         os.makedirs(model_version_directory, exist_ok=True)
 
         # Define file paths within the model's dedicated directory
         mapper_artifact_path = model_version_directory / "inverse_decision_mapper.pkl"
         metadata_file_path = model_version_directory / "metadata.json"
 
-        # Save the inverse decision mapper instance
+        # Save the inverse decision mapper instance and metadata
         self._inverse_decision_mapper_handler.save(
             interpolator_model.inverse_decision_mapper, mapper_artifact_path
         )
-        print(
-            f"Mapper artifact for '{interpolator_model.name}' (ID: {interpolator_model.id}) "
-            f"saved to {mapper_artifact_path}"
-        )
-
-        # Save the model's metadata (excluding the mapper itself)
-        # Pydantic's .model_dump() combined with the InterpolatorModel's Config
-        # handles datetime serialization to ISO format automatically.
-        model_metadata = interpolator_model.model_dump(
-            exclude={"inverse_decision_mapper"}
-        )
+        model_metadata = interpolator_model.to_save_format()
         self._inverse_decision_mapper_handler.save_metadata(
             metadata_file_path, model_metadata
-        )
-        print(
-            f"Metadata for '{interpolator_model.name}' (ID: {interpolator_model.id}) "
-            f"saved to {metadata_file_path}"
-        )
-
-        print(
-            f"Interpolator Model '{interpolator_model.name}' (ID: {interpolator_model.id}) "
-            f"saved successfully."
         )
 
     def load(self, model_version_id: str) -> InterpolatorModel:
@@ -183,44 +171,13 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             mapper_artifact_path
         )
 
-        # Reconstruct the 'parameters' field into its specific Pydantic model type if applicable
-        deserialized_parameters = model_metadata.get("parameters")
-
-        if isinstance(deserialized_parameters, dict):
-            interpolator_type = model_metadata.get("interpolator_type")
-            ParameterModelType = self._parameter_model_registry.get(
-                interpolator_type, InterpolatorParams
-            )
-            try:
-                # Attempt to reconstruct the Pydantic model for parameters
-                deserialized_parameters = ParameterModelType(**deserialized_parameters)
-            except Exception as e:
-                print(
-                    f"Warning: Failed to reconstruct parameters for model ID {model_version_id} "
-                    f"(type '{interpolator_type}'): {e}. Storing parameters as raw dictionary."
-                )
-                # Fallback: keep as dict if Pydantic model reconstruction fails
-
-        # Reconstruct and return the InterpolatorModel entity.
-        # Pydantic's from_dict (used implicitly by constructor) will handle
-        # datetime string to datetime object conversion based on InterpolatorModel's Config.
-        return InterpolatorModel(
-            id=model_metadata["id"],
-            name=model_metadata["name"],
-            interpolator_type=model_metadata["interpolator_type"],
-            parameters=deserialized_parameters,
-            inverse_decision_mapper=loaded_decision_mapper,
-            metrics=model_metadata.get("metrics", {}),
-            trained_at=model_metadata["trained_at"],
-            training_data_identifier=model_metadata.get("training_data_identifier"),
-            description=model_metadata.get("description"),
-            notes=model_metadata.get("notes"),
-            collection=model_metadata.get("collection"),
+        return InterpolatorModel.from_saved_format(
+            saved_data=model_metadata, loaded_mapper=loaded_decision_mapper
         )
 
     def get_all_versions_by_conceptual_name(
         self, model_conceptual_name: str
-    ) -> List[InterpolatorModel]:
+    ) -> list[InterpolatorModel]:
         """
         Retrieves all trained versions of a model that share a given conceptual name.
 
@@ -230,7 +187,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         Returns:
             A list of InterpolatorModel entities, sorted by 'trained_at' timestamp in descending order (latest first).
         """
-        found_model_versions: List[InterpolatorModel] = []
+        found_model_versions: list[InterpolatorModel] = []
         for model_version_directory in self._base_model_storage_path.iterdir():
             if model_version_directory.is_dir():
                 try:
@@ -243,6 +200,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
 
                     if model_metadata.get("name") == model_conceptual_name:
                         # Load the full model entity by its ID (directory name)
+                        # The load method now handles all the deserialization logic
                         model_version = self.load(model_version_directory.name)
                         found_model_versions.append(model_version)
                 except (
@@ -256,7 +214,6 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
                     )
                     continue
 
-        # Sort the versions by their training timestamp, with the latest version appearing first
         found_model_versions.sort(key=lambda model: model.trained_at, reverse=True)
         return found_model_versions
 

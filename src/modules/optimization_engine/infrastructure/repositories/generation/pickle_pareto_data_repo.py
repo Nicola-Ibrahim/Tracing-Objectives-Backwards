@@ -2,8 +2,8 @@ import pickle
 from pathlib import Path
 from typing import Any
 
-from ...domain.generation.entities.pareto_data import ParetoDataModel
-from ...domain.generation.interfaces.base_repository import BaseParetoDataRepository
+from ....domain.generation.entities.pareto_data import ParetoDataModel
+from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 
 
 class PickleParetoDataRepository(BaseParetoDataRepository):

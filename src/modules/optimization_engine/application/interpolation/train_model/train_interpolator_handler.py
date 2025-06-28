@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
 from ....domain.interpolation.interfaces.base_logger import BaseLogger
@@ -34,7 +32,7 @@ class TrainInterpolatorCommandHandler:
         self._decsion_mapper_training_service = decision_mapper_training_service
         self._trained_model_repository = trained_model_repository
 
-    def handle(self, command: TrainInterpolatorCommand) -> None:
+    def execute(self, command: TrainInterpolatorCommand) -> None:
         """
         Executes the training workflow for a given interpolator using the command's data.
 
@@ -45,12 +43,11 @@ class TrainInterpolatorCommandHandler:
 
         # Create the decision mapper using the factory
         inverse_decision_mapper = self._inverse_decision_factory.create(
-            type=command.type,
             params=command.params.model_dump(),
         )
 
         # Load raw data using the injected archiver
-        raw_data = self._pareto_data_repo.load(filename=command.data_file_name)
+        raw_data = self._pareto_data_repo.load(filename="pareto_data")
 
         # Delegate training to the domain service
         fitted_inverse_decision_mapper, validation_metrics = (
@@ -65,32 +62,11 @@ class TrainInterpolatorCommandHandler:
 
         # Construct the InterpolatorModel entity with all its metadata
         trained_interpolator_model = InterpolatorModel(
-            name=command.model_conceptual_name,
-            interpolator_type=command.type.value,
-            parameters=command.params,
-            inverse_decision_mapper=fitted_inverse_decision_mapper,  # Use the fitted mapper
+            name=f"{command.base_name}_{command.params.type}_Mapper",
+            parameters=command.params.model_dump(),
+            inverse_decision_mapper=fitted_inverse_decision_mapper,
             metrics=validation_metrics,
-            trained_at=datetime.now(),
-            training_data_identifier=(
-                command.training_data_identifier
-                if command.training_data_identifier
-                else command.data_source_path
-            ),
-            description=command.description,
-            notes=command.notes,
-            collection=command.collection,
         )
 
-        # # Log validation metrics
-        # self._logger.log_metrics(trained_interpolator_model.metrics)
-
-        # # Log the InterpolatorModel entity
-        # self._logger.log_model(model=trained_interpolator_model)
-
-        # # Save the InterpolatorModel entity to the repository
-        # self._trained_model_repository.save(trained_interpolator_model)
-
-        # print(
-        #     f"Successfully trained and saved model '{trained_interpolator_model.name}' "
-        #     f"(ID: {trained_interpolator_model.id}) trained at {trained_interpolator_model.trained_at}"
-        # )
+        # Save the InterpolatorModel entity to the repository
+        self._trained_model_repository.save(trained_interpolator_model)
