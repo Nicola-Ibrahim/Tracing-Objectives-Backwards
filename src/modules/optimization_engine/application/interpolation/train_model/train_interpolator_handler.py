@@ -50,7 +50,7 @@ class TrainInterpolatorCommandHandler:
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
 
         # Delegate training to the domain service
-        fitted_inverse_decision_mapper, validation_metrics = (
+        fitted_inverse_decision_mapper,  validation_metrics = (
             self._decsion_mapper_training_service.train(
                 inverse_decision_mapper=inverse_decision_mapper,
                 objectives=raw_data.pareto_front,

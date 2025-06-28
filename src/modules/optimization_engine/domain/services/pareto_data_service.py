@@ -1,11 +1,9 @@
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
-from ..generation.interfaces.base_repository import BaseParetoDataRepository
 from ..interpolation.interfaces.base_inverse_decision_mappers import (
     BaseInverseDecisionMapper,
 )
@@ -79,7 +77,7 @@ class ParetoDataset:
 
     # --- 1D Interpolations ---
     # Now stores tuples of numpy arrays
-    interpolations_1d: dict[str, dict[str, Tuple[np.ndarray, np.ndarray]]] = (
+    interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = (
         field(  # Changed type hint
             default_factory=lambda: {
                 "f1_vs_f2": {},
@@ -97,7 +95,7 @@ class ParetoDataset:
 
     def get_1d_interpolated_data(
         self, relationship: str, method: str
-    ) -> Tuple[np.ndarray, np.ndarray]:  # Changed return type hint
+    ) -> tuple[np.ndarray, np.ndarray]:  # Changed return type hint
         """
         Retrieves the specific 1D interpolated data for a given relationship and method.
 
@@ -106,7 +104,7 @@ class ParetoDataset:
             method (str): The name of the interpolation method (e.g., "Pchip", "Cubic Spline").
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: A tuple containing the x and y interpolated data arrays.
+            tuple[np.ndarray, np.ndarray]: A tuple containing the x and y interpolated data arrays.
 
         Raises:
             KeyError: If the relationship or method is not found.
@@ -124,7 +122,7 @@ class ParetoDataset:
     # --- 2D Multivariate Interpolations ---
     # Now stores tuples of numpy arrays
     interpolations_2d: dict[
-        str, dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray]]
+        str, dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
     ] = field(  # Changed type hint
         default_factory=lambda: {
             "f1f2_vs_x1": {},
@@ -137,7 +135,7 @@ class ParetoDataset:
 
     def get_2d_interpolated_data(
         self, relationship: str, method: str
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:  # Changed return type hint
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:  # Changed return type hint
         """
         Retrieves the specific 2D interpolated data for a given relationship and method.
 
@@ -146,7 +144,7 @@ class ParetoDataset:
             method (str): The name of the mapping method (e.g., "Linear ND", "Nearest Neighbor").
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: A tuple containing the x_grid_1, x_grid_2, and z_values arrays.
+            tuple[np.ndarray, np.ndarray, np.ndarray]: A tuple containing the x_grid_1, x_grid_2, and z_values arrays.
 
         Raises:
             KeyError: If the relationship or method is not found.
@@ -188,31 +186,26 @@ class ParetoDataService:
 
     def __init__(
         self,
-        pareto_data_repo: BaseParetoDataRepository,
         inverse_decisoin_mapper_repo: BaseInterpolationModelRepository,
     ):
-        self._pareto_data_repo = pareto_data_repo
         self._inverse_decisoin_mapper_repo = inverse_decisoin_mapper_repo
 
-    def prepare_dataset(self, data_identifier: str | Path) -> ParetoDataset:
-        """Prepare complete Pareto dataset with original, normalized, and interpolated data"""
-        loaded_result = self._pareto_data_repo.load(data_identifier)
-
-        if not hasattr(loaded_result, "pareto_set") or not hasattr(
-            loaded_result, "pareto_front"
+    def prepare_dataset(self, pareto_data: Any) -> ParetoDataset:
+        if not hasattr(pareto_data, "pareto_set") or not hasattr(
+            pareto_data, "pareto_front"
         ):
             raise ValueError(
                 "Archiver did not return valid Pareto data (missing pareto_set or pareto_front)."
             )
 
-        if loaded_result.pareto_set.size == 0 or loaded_result.pareto_front.size == 0:
+        if pareto_data.pareto_set.size == 0 or pareto_data.pareto_front.size == 0:
             raise ValueError(
                 "Loaded Pareto data (pareto_set or pareto_front) is empty."
             )
 
         dataset = ParetoDataset()
-        dataset.pareto_set = loaded_result.pareto_set
-        dataset.pareto_front = loaded_result.pareto_front
+        dataset.pareto_set = pareto_data.pareto_set
+        dataset.pareto_front = pareto_data.pareto_front
 
         if dataset.pareto_front.shape[1] < 2:
             raise ValueError("pareto_front must have at least 2 columns for f1 and f2.")
@@ -302,7 +295,7 @@ class ParetoDataService:
         method_name: str,
         method_info: dict[str, Any],
         x_interpolation_range: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray] | None:
+    ) -> tuple[np.ndarray, np.ndarray] | None:
         """
         Loads a 1D inverse decision mapper, performs prediction, and returns results as tuples.
         Returns None if the model cannot be loaded or predicted.
@@ -426,7 +419,7 @@ class ParetoDataService:
         mesh_f1: np.ndarray,
         mesh_f2: np.ndarray,
         points_for_prediction: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
         """
         Loads a 2D inverse decision mapper, performs prediction, and returns results as tuples.
         Returns None if the model cannot be loaded or predicted.

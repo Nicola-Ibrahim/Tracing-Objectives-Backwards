@@ -12,7 +12,9 @@ from ..application.paretos.generate_biobj_pareto_data.generate_pareto_command im
 from ..infrastructure.algorithms import AlgorithmFactory
 from ..infrastructure.optimizers import OptimizerFactory
 from ..infrastructure.problems import ProblemFactory
-from ..infrastructure.repositories.npz_pareto_data_repo import NPZParetoDataRepository
+from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
+    NPZParetoDataRepository,
+)
 
 
 @click.command()

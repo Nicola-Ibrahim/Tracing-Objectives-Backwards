@@ -10,7 +10,7 @@ class InverseDecisionMapperParams(BaseModel):
 
 
 class CloughTocherInverseDecisionMapperParams(InverseDecisionMapperParams):
-    type: InverseDecisionMapperType = Field(
+    type: str = Field(
         InverseDecisionMapperType.CLOUGH_TOCHER_ND.value,
         description="Type of the Clough-Tocher interpolation method.",
     )
@@ -20,7 +20,7 @@ class CloughTocherInverseDecisionMapperParams(InverseDecisionMapperParams):
 
 
 class NeuralNetworkInverserDecisionMapperParams(InverseDecisionMapperParams):
-    type: InverseDecisionMapperType = Field(
+    type: str = Field(
         InverseDecisionMapperType.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
@@ -47,7 +47,7 @@ class GeodesicInterpolatorParams(InverseDecisionMapperParams):
 
 
 class NearestNeighborInverseDecisoinMapperParams(InverseDecisionMapperParams):
-    type: InverseDecisionMapperType = Field(
+    type: str = Field(
         InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value,
         description="Type of the nearest neighbor interpolation method.",
     )
@@ -57,7 +57,7 @@ class NearestNeighborInverseDecisoinMapperParams(InverseDecisionMapperParams):
 
 
 class LinearInverseDecisionMapperParams(InverseDecisionMapperParams):
-    type: InverseDecisionMapperType = Field(
+    type: str = Field(
         InverseDecisionMapperType.LINEAR_ND.value,
         description="Type of the linear interpolation method.",
     )
@@ -67,7 +67,7 @@ class LinearInverseDecisionMapperParams(InverseDecisionMapperParams):
 
 
 class RBFInverseDecisionMapperParams(InverseDecisionMapperParams):
-    type: InverseDecisionMapperType = Field(
+    type: str = Field(
         InverseDecisionMapperType.RBF_ND.value,
         description="Type of the radial basis function interpolation method.",
     )

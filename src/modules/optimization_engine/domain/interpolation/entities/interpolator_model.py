@@ -2,23 +2,9 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
-from ....application.interpolation.train_model.dtos import (
-    LinearInverseDecisionMapperParams,
-    NearestNeighborInverseDecisoinMapperParams,
-    NeuralNetworkInverserDecisionMapperParams,
-    RBFInverseDecisionMapperParams,
-)
-from ..enums.inverse_decision_mapper_type import InverseDecisionMapperType
 from ..interfaces.base_inverse_decision_mappers import BaseInverseDecisionMapper
-
-_parameter_model_registry = {
-    InverseDecisionMapperType.NEURAL_NETWORK_ND: NeuralNetworkInverserDecisionMapperParams,
-    InverseDecisionMapperType.NEAREST_NEIGHBORS_ND: NearestNeighborInverseDecisoinMapperParams,
-    InverseDecisionMapperType.LINEAR_ND: LinearInverseDecisionMapperParams,
-    InverseDecisionMapperType.RBF_ND: RBFInverseDecisionMapperParams,
-}
 
 
 class InterpolatorModel(BaseModel):
