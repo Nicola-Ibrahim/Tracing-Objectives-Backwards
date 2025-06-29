@@ -46,7 +46,7 @@ class AnalyzeBiobjDataCommandHandler:
         """
         # Retrieve the dataset using the repository
         pareto_data = self._pareto_data_repo.load(filename=command.data_file_name)
-        print(pareto_data)
+
         dataset = self._pareto_data_service.prepare_dataset(pareto_data=pareto_data)
 
         # Map the raw data to a structured DTO

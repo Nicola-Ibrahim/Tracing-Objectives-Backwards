@@ -2,14 +2,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+import scipy.interpolate as spi
 from sklearn.preprocessing import MinMaxScaler
-
-from ..interpolation.interfaces.base_inverse_decision_mappers import (
-    BaseInverseDecisionMapper,
-)
-from ..interpolation.interfaces.base_repository import (
-    BaseInterpolationModelRepository,
-)
 
 
 @dataclass
@@ -76,26 +70,23 @@ class ParetoDataset:
         return x2
 
     # --- 1D Interpolations ---
-    # Now stores tuples of numpy arrays
-    interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = (
-        field(  # Changed type hint
-            default_factory=lambda: {
-                "f1_vs_f2": {},
-                "f1_vs_x1": {},
-                "f1_vs_x2": {},
-                "x1_vs_x2": {},
-                "f2_vs_x1": {},
-                "f2_vs_x2": {},
-            },
-            metadata={
-                "description": "1D interpolated data for various variable relationships."
-            },
-        )
+    interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = field(
+        default_factory=lambda: {
+            "f1_vs_f2": {},
+            "f1_vs_x1": {},
+            "f1_vs_x2": {},
+            "x1_vs_x2": {},
+            "f2_vs_x1": {},
+            "f2_vs_x2": {},
+        },
+        metadata={
+            "description": "1D interpolated data for various variable relationships."
+        },
     )
 
     def get_1d_interpolated_data(
         self, relationship: str, method: str
-    ) -> tuple[np.ndarray, np.ndarray]:  # Changed return type hint
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Retrieves the specific 1D interpolated data for a given relationship and method.
 
@@ -120,10 +111,9 @@ class ParetoDataset:
         return self.interpolations_1d[relationship][method]
 
     # --- 2D Multivariate Interpolations ---
-    # Now stores tuples of numpy arrays
     interpolations_2d: dict[
         str, dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
-    ] = field(  # Changed type hint
+    ] = field(
         default_factory=lambda: {
             "f1f2_vs_x1": {},
             "f1f2_vs_x2": {},
@@ -135,7 +125,7 @@ class ParetoDataset:
 
     def get_2d_interpolated_data(
         self, relationship: str, method: str
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:  # Changed return type hint
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Retrieves the specific 2D interpolated data for a given relationship and method.
 
@@ -163,32 +153,29 @@ class ParetoDataset:
 class ParetoDataService:
     """
     Service for preparing Pareto optimization data in various representations.
-    Focuses on data transformation without visualization-specific logic.
+    This version creates and fits interpolators from scipy.interpolate directly.
     """
 
-    # These dictionaries now define the relationships and the expected filename suffix for loading.
-    # The 'class' is no longer directly instantiated here.
+    # --- Updated Interpolation Methods to use scipy.interpolate classes/kinds directly ---
     INTERPOLATION_METHODS_1D: dict[str, Any] = {
-        "Pchip": {"filename_suffix": "PchipInverseDecisionMapper.pkl"},
-        "Cubic Spline": {"filename_suffix": "CubicSplineInverseDecisionMapper.pkl"},
-        "Linear": {"filename_suffix": "LinearInverseDecisionMapper.pkl"},
-        "Quadratic": {"filename_suffix": "QuadraticInverseDecisionMapper.pkl"},
-        "RBF": {"filename_suffix": "RBFInverseDecisionMapper.pkl"},
+        "Pchip": spi.PchipInterpolator,
+        "Cubic Spline": spi.CubicSpline,
+        "Linear": "linear",  # 'kind' for interp1d
+        "Quadratic": "quadratic",  # 'kind' for interp1d
+        "RBF": spi.RBFInterpolator,
     }
 
     INTERPOLATION_METHODS_ND: dict[str, Any] = {
-        "Nearest Neighbor": {"filename_suffix": "NearestNDInverseDecisionMapper.pkl"},
-        "Linear ND": {"filename_suffix": "LinearNDInverseDecisionMapper.pkl"},
+        "Nearest Neighbor": spi.NearestNDInterpolator,
+        "Linear ND": spi.LinearNDInterpolator,
     }
 
     _NUM_INTERPOLATION_POINTS_1D = 100
     _NUM_INTERPOLATION_POINTS_2D_GRID = 50
 
-    def __init__(
-        self,
-        inverse_decisoin_mapper_repo: BaseInterpolationModelRepository,
-    ):
-        self._inverse_decisoin_mapper_repo = inverse_decisoin_mapper_repo
+    def __init__(self):
+        # The repository dependency is removed as we now create interpolators directly.
+        pass
 
     def prepare_dataset(self, pareto_data: Any) -> ParetoDataset:
         if not hasattr(pareto_data, "pareto_set") or not hasattr(
@@ -231,57 +218,118 @@ class ParetoDataService:
         normalized_data = scaler.fit_transform(reshaped_data)
         return normalized_data.flatten()
 
+    def _preprocess_1d_data(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Sorts data by x and removes duplicate x values to ensure a strictly
+        increasing sequence, as required by many SciPy interpolators.
+        """
+        # Sort data by x values
+        sort_indices = np.argsort(x)
+        x_sorted = x[sort_indices]
+        y_sorted = y[sort_indices]
+
+        # Find indices of unique x values to remove duplicates
+        _, unique_indices = np.unique(x_sorted, return_index=True)
+
+        # Return the data with unique x values
+        return x_sorted[unique_indices], y_sorted[unique_indices]
+
     def _compute_all_1d_interpolations(self, dataset: ParetoDataset):
-        """Load 1D inverse decision mappers and predict their interpolated data for various relationships."""
+        """Fit and predict 1D scipy.interpolate mappers for various relationships."""
         norm = dataset.normalized
 
-        # Define interpolation ranges based on the normalized data's actual bounds
-        f1_min, f1_max = norm["f1"].min(), norm["f1"].max()
-        x1_min, x1_max = norm["x1"].min(), norm["x1"].max()
-        f2_min, f2_max = norm["f2"].min(), norm["f2"].max()
-
-        interpolation_ranges_1d = {
-            "f1_vs_f2": self._create_interpolation_range(f1_min, f1_max),
-            "f1_vs_x1": self._create_interpolation_range(f1_min, f1_max),
-            "f1_vs_x2": self._create_interpolation_range(f1_min, f1_max),
-            "x1_vs_x2": self._create_interpolation_range(x1_min, x1_max),
-            "f2_vs_x1": self._create_interpolation_range(f2_min, f2_max),
-            "f2_vs_x2": self._create_interpolation_range(f2_min, f2_max),
+        # --- Define the data mapping for each relationship ---
+        relationship_data_map = {
+            "f1_vs_f2": {"x_train": norm["f1"], "y_train": norm["f2"]},
+            "f1_vs_x1": {"x_train": norm["f1"], "y_train": norm["x1"]},
+            "f1_vs_x2": {"x_train": norm["f1"], "y_train": norm["x2"]},
+            "x1_vs_x2": {"x_train": norm["x1"], "y_train": norm["x2"]},
+            "f2_vs_x1": {"x_train": norm["f2"], "y_train": norm["x1"]},
+            "f2_vs_x2": {"x_train": norm["f2"], "y_train": norm["x2"]},
         }
 
-        # Explicitly define which relationships support which 1D methods
-        relationships_to_process_1d = {
-            "f1_vs_f2": ["Pchip", "Cubic Spline", "Linear", "Quadratic", "RBF"],
-            "f1_vs_x1": ["Pchip", "Cubic Spline", "Linear", "Quadratic", "RBF"],
-            "f1_vs_x2": ["Pchip", "Cubic Spline", "Linear", "Quadratic", "RBF"],
-            "x1_vs_x2": ["Pchip", "Cubic Spline", "Linear", "Quadratic", "RBF"],
-            "f2_vs_x1": ["Pchip", "Cubic Spline", "Linear", "Quadratic", "RBF"],
-            "f2_vs_x2": ["Pchip", "Cubic Spline", "Linear", "Quadratic", "RBF"],
-        }
+        for relationship_name, data_sources in relationship_data_map.items():
+            x_train = data_sources["x_train"]
+            y_train = data_sources["y_train"]
 
-        for relationship_name, methods in relationships_to_process_1d.items():
-            # Initialize the dictionary for this relationship if it doesn't exist
-            if relationship_name not in dataset.interpolations_1d:
-                dataset.interpolations_1d[relationship_name] = {}
+            # Ensure data is valid for interpolation
+            if (
+                x_train is None
+                or y_train is None
+                or x_train.size < 2
+                or y_train.size < 2
+            ):
+                print(
+                    f"Warning: Not enough data points to interpolate for '{relationship_name}'. Skipping."
+                )
+                continue
 
-            x_interpolation_range = interpolation_ranges_1d[relationship_name]
+            # --- Preprocess data to be sorted and have unique x values ---
+            x_train_processed, y_train_processed = self._preprocess_1d_data(
+                x_train, y_train
+            )
 
-            for method_name in methods:
-                method_info = self.INTERPOLATION_METHODS_1D.get(method_name)
-                if not method_info:
+            if x_train_processed.size < 2:
+                print(
+                    f"Warning: After preprocessing, not enough unique data points for '{relationship_name}'. Skipping."
+                )
+                continue
+
+            # Create the interpolation range from the processed training data's min/max
+            x_interpolation_range = self._create_interpolation_range(
+                x_train_processed.min(), x_train_processed.max()
+            )
+
+            for (
+                method_name,
+                method_class_or_kind,
+            ) in self.INTERPOLATION_METHODS_1D.items():
+                try:
+                    interpolator_input_x = x_train_processed
+                    interpolator_predict_x = x_interpolation_range
+
+                    # --- Special handling for RBFInterpolator's 2D input requirement ---
+                    if method_name == "RBF":
+                        # RBFInterpolator requires the input data points `x` to be 2D, shape (n_points, n_dims).
+                        # We use np.atleast_2d and transpose to guarantee a (N, 1) shape for 1D data.
+                        interpolator_input_x = np.atleast_2d(x_train_processed).T
+                        interpolator_predict_x = np.atleast_2d(x_interpolation_range).T
+
+                        interp_func = method_class_or_kind(
+                            interpolator_input_x, y_train_processed
+                        )
+
+                    # --- Standard handling for other 1D interpolators ---
+                    elif isinstance(method_class_or_kind, str):  # For interp1d 'kind'
+                        # `interp1d` requires a sorted x, but not necessarily unique for 'linear'
+                        # 'quadratic' and 'cubic' do need unique, so preprocessing helps all.
+                        interp_func = spi.interp1d(
+                            interpolator_input_x,
+                            y_train_processed,
+                            kind=method_class_or_kind,
+                            fill_value="extrapolate",
+                        )
+                    else:  # For classes like PchipInterpolator, CubicSpline
+                        interp_func = method_class_or_kind(
+                            interpolator_input_x, y_train_processed
+                        )
+
+                    # Predict interpolated values
+                    interpolated_y_values = interp_func(interpolator_predict_x)
+
+                    # Store the result in the dataset
+                    dataset.interpolations_1d[relationship_name][method_name] = (
+                        x_interpolation_range,
+                        interpolated_y_values,
+                    )
+
+                except Exception as e:
                     print(
-                        f"Warning: Configuration for 1D method '{method_name}' not found. Skipping."
+                        f"Error computing 1D interpolation for {relationship_name} with '{method_name}': {e}. Skipping."
                     )
                     continue
-
-                result = self._load_and_predict_1d_mapper(
-                    relationship_name=relationship_name,
-                    method_name=method_name,
-                    method_info=method_info,
-                    x_interpolation_range=x_interpolation_range,
-                )
-                if result is not None:
-                    dataset.interpolations_1d[relationship_name][method_name] = result
 
     def _create_interpolation_range(self, min_val: float, max_val: float) -> np.ndarray:
         """Helper to create a linspace for interpolation."""
@@ -289,74 +337,41 @@ class ParetoDataService:
             return np.array([min_val])
         return np.linspace(min_val, max_val, self._NUM_INTERPOLATION_POINTS_1D)
 
-    def _load_and_predict_1d_mapper(
-        self,
-        relationship_name: str,
-        method_name: str,
-        method_info: dict[str, Any],
-        x_interpolation_range: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray] | None:
-        """
-        Loads a 1D inverse decision mapper, performs prediction, and returns results as tuples.
-        Returns None if the model cannot be loaded or predicted.
-        """
-        # Filenames follow a convention: relationship_name_MapperClassName.pkl
-        # E.g., "f1_vs_f2_PchipInverseDecisionMapper.pkl"
-        filename = f"{relationship_name}_{method_info['filename_suffix']}"
-
-        try:
-            mapper_instance: BaseInverseDecisionMapper = (
-                self._inverse_decisoin_mapper_repo.load(filename)
-            )
-
-            if x_interpolation_range.size > 0:
-                # Assuming 1D mappers can handle 1D input for prediction.
-                # If a mapper (like RBF) expects 2D input for predict even for 1D case,
-                # it should be handled within the mapper's predict method or here.
-                # For RBF, if it expects (N, 1) and x_interpolation_range is (N,), reshape it.
-                if method_name == "RBF":  # Example specific handling
-                    x_for_predict = x_interpolation_range.reshape(-1, 1)
-                else:
-                    x_for_predict = x_interpolation_range
-
-                interpolated_y_values = mapper_instance.predict(x_for_predict)
-            else:
-                interpolated_y_values = np.array([])
-
-            return (x_interpolation_range, interpolated_y_values)
-
-        except FileNotFoundError:
-            print(
-                f"Pre-trained model for {relationship_name} - {method_name} not found at {self._inverse_decisoin_mapper_repo.get_model_path(filename)}. Skipping."
-            )
-            return None
-        except Exception as e:
-            print(
-                f"Error loading or predicting with mapper for {relationship_name} - {method_name}: {str(e)}"
-            )
-            return None
-
     def _compute_all_2d_interpolations(self, dataset: ParetoDataset):
-        """Load all 2D multivariate inverse decision mappers and predict their interpolated data."""
-        X_input_independent_source_data = np.column_stack(
-            (dataset.normalized["f1"], dataset.normalized["f2"])
-        )
+        """Fit and predict 2D scipy.interpolate mappers for various relationships."""
+        norm = dataset.normalized
 
-        mesh_f1, mesh_f2, points_for_prediction_2d = (
-            np.array([]),
-            np.array([]),
-            np.array([]),
-        )  # Initialize for empty data case
+        # --- Define the data mapping for each relationship ---
+        relationship_data_map = {
+            "f1f2_vs_x1": {
+                "X_train": np.column_stack((norm["f1"], norm["f2"])),
+                "y_train": norm["x1"],
+            },
+            "f1f2_vs_x2": {
+                "X_train": np.column_stack((norm["f1"], norm["f2"])),
+                "y_train": norm["x2"],
+            },
+        }
 
-        if X_input_independent_source_data.shape[0] > 0:
-            f1_min, f1_max = (
-                X_input_independent_source_data[:, 0].min(),
-                X_input_independent_source_data[:, 0].max(),
-            )
-            f2_min, f2_max = (
-                X_input_independent_source_data[:, 1].min(),
-                X_input_independent_source_data[:, 1].max(),
-            )
+        for relationship_name, data_sources in relationship_data_map.items():
+            X_train = data_sources["X_train"]
+            y_train = data_sources["y_train"]
+
+            # Ensure data is valid for interpolation
+            if (
+                X_train is None
+                or y_train is None
+                or X_train.shape[0] < 2
+                or y_train.size < 2
+            ):
+                print(
+                    f"Warning: Not enough data points to interpolate for '{relationship_name}'. Skipping."
+                )
+                continue
+
+            # Create the 2D grid for prediction
+            f1_min, f1_max = X_train[:, 0].min(), X_train[:, 0].max()
+            f2_min, f2_max = X_train[:, 1].min(), X_train[:, 1].max()
 
             grid_f1 = (
                 np.linspace(f1_min, f1_max, self._NUM_INTERPOLATION_POINTS_2D_GRID)
@@ -369,87 +384,31 @@ class ParetoDataService:
                 else np.array([f2_min])
             )
 
-            if grid_f1.size == 1 and grid_f2.size == 1:
-                mesh_f1, mesh_f2 = (
-                    np.array([grid_f1[0]]),
-                    np.array([grid_f2[0]]),
-                )  # Ensure they are 1x1 arrays, not scalars
-            else:
-                mesh_f1, mesh_f2 = np.meshgrid(grid_f1, grid_f2)
-
+            mesh_f1, mesh_f2 = np.meshgrid(grid_f1, grid_f2)
             points_for_prediction_2d = np.column_stack(
                 (mesh_f1.ravel(), mesh_f2.ravel())
             )
 
-        # Explicitly define which relationships support which 2D methods
-        relationships_to_process_2d = {
-            "f1f2_vs_x1": ["Nearest Neighbor", "Linear ND"],
-            "f1f2_vs_x2": ["Nearest Neighbor", "Linear ND"],
-        }
+            for method_name, method_class in self.INTERPOLATION_METHODS_ND.items():
+                try:
+                    # Create and fit the interpolator instance
+                    interp_func = method_class(X_train, y_train)
 
-        for relationship_name, methods in relationships_to_process_2d.items():
-            # Initialize the dictionary for this relationship if it doesn't exist
-            if relationship_name not in dataset.interpolations_2d:
-                dataset.interpolations_2d[relationship_name] = {}
+                    # Predict interpolated Z values
+                    interpolated_z_values_flat = interp_func(points_for_prediction_2d)
+                    interpolated_z_values = interpolated_z_values_flat.reshape(
+                        mesh_f1.shape
+                    )
 
-            for method_name in methods:
-                method_info = self.INTERPOLATION_METHODS_ND.get(method_name)
-                if not method_info:
+                    # Store the result in the dataset
+                    dataset.interpolations_2d[relationship_name][method_name] = (
+                        mesh_f1,
+                        mesh_f2,
+                        interpolated_z_values,
+                    )
+
+                except Exception as e:
                     print(
-                        f"Warning: Configuration for 2D method '{method_name}' not found. Skipping."
+                        f"Error computing 2D interpolation for {relationship_name} with '{method_name}': {e}. Skipping."
                     )
                     continue
-
-                result = self._load_and_predict_2d_mapper(
-                    relationship_name=relationship_name,
-                    method_name=method_name,
-                    method_info=method_info,
-                    mesh_f1=mesh_f1,
-                    mesh_f2=mesh_f2,
-                    points_for_prediction=points_for_prediction_2d,
-                )
-                if result is not None:
-                    dataset.interpolations_2d[relationship_name][method_name] = result
-
-    def _load_and_predict_2d_mapper(
-        self,
-        relationship_name: str,
-        method_name: str,
-        method_info: dict[str, Any],
-        mesh_f1: np.ndarray,
-        mesh_f2: np.ndarray,
-        points_for_prediction: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
-        """
-        Loads a 2D inverse decision mapper, performs prediction, and returns results as tuples.
-        Returns None if the model cannot be loaded or predicted.
-        """
-        filename = f"{relationship_name}_{method_info['filename_suffix']}"
-
-        try:
-            mapper_instance: BaseInverseDecisionMapper = (
-                self._inverse_decisoin_mapper_repo.load(filename)
-            )
-
-            if points_for_prediction.shape[0] > 0:
-                interpolated_z_values_flat = mapper_instance.predict(
-                    points_for_prediction
-                )
-                interpolated_z_values = interpolated_z_values_flat.reshape(
-                    mesh_f1.shape
-                )
-            else:
-                interpolated_z_values = np.array([])
-
-            return (mesh_f1, mesh_f2, interpolated_z_values)
-
-        except FileNotFoundError:
-            print(
-                f"Pre-trained model for {relationship_name} - {method_name} not found at {self._inverse_decisoin_mapper_repo.get_model_path(filename)}. Skipping."
-            )
-            return None
-        except Exception as e:
-            print(
-                f"Error loading or predicting with mapper for {relationship_name} - {method_name}: {str(e)}"
-            )
-            return None
