@@ -147,7 +147,7 @@ my_app/
 │   ├── orchestrators/      # High-level coordinators or pipelines
 │   └── cli/                # CLI commands (Typer command definitions)
 ├── infrastructure/
-│   ├── plotters/           # Framework-specific plotters (e.g., PlotlyParetoPlotter)
+│   ├── visualizers/           # Framework-specific visualizers (e.g., PlotlyParetoPlotter)
 │   ├── repositories/       # File/DB adapters (e.g., JSONLoader, CSVWriter)
 │   └── loggers/            # External logger implementations (e.g., WandbLogger)
 ├── main.py                 # Entrypoint (e.g., CLI launcher or server start)
