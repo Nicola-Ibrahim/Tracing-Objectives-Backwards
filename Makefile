@@ -56,7 +56,7 @@ data-process: data-generate data-analyze  # Run the full data generation and ana
 	@echo "$(GREEN)✔️ Full data processing pipeline completed successfully.$(RESET)"
 
 # ====================================================================================
-# Model Training Commands
+# Model Training & Inference Commands
 # ====================================================================================
 
 .PHONY: train-interpolator
@@ -65,16 +65,24 @@ train-interpolator:  # Train an inverse decision mapper using the synthetic data
 	$(UV) python -m src.modules.optimization_engine.cli.train_interpolator
 	@echo "$(GREEN)Interpolator training complete.$(RESET)"
 
-# ====================================================================================
-# Model Training Commands
-# ====================================================================================
+.PHONY: train-all-interpolator
+train-all-interpolator:  # Train an inverse decision mapper using the synthetic data
+	@echo "$(BLUE)Training interpolator model...$(RESET)"
+	$(UV) python -m src.modules.optimization_engine.cli.train_all_interpolator
+	@echo "$(GREEN)Interpolator training complete.$(RESET)"
 
+.PHONY: generate-decision
+generate-decision:  # Generate a decision from a trained model for a hardcoded target objective
+	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
+	$(UV) python -m src.modules.optimization_engine.cli.generate_decision
+	@echo "$(GREEN)Decision generation complete.$(RESET)"
+	
 .PHONY: analyze-performance
 analyze-performance:  # Analyze and visualize the performance metrics of trained models
 	@echo "$(BLUE)Analyzing model performance...$(RESET)"
-	$(UV) python -m  src.modules.optimization_engine.cli.analyze_performance
+	$(UV) python -m src.modules.optimization_engine.cli.analyze_performance
 	@echo "$(GREEN)Performance analysis complete.$(RESET)"
-
+	
 # ====================================================================================
 # Maintenance Commands
 # ====================================================================================
