@@ -22,7 +22,7 @@ def main():
 
     # Specify the target objective point (f1, f2, ...).
     # Modify this list with your desired values.
-    target_objective_point = [415, 1200]
+    target_objective_point = [410, 1240]
 
     # Initialize the repository
     interpolation_model_repo = PickleInterpolationModelRepository()
@@ -39,7 +39,7 @@ def main():
     )
 
     # Execute the command
-    predicted_decision = handler.handle(command)
+    predicted_decision = handler.execute(command)
 
     print("\n--- Prediction Result ---")
     print(f"Interpolator Type: {interpolator_type_to_use}")

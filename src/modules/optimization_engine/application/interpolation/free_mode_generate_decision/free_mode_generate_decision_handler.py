@@ -25,7 +25,7 @@ class FreeModeGenerateDecisionCommandHandler:
         """
         self._interpolation_model_repo = interpolation_model_repo
 
-    def handle(self, command: FreeModeGenerateDecisionCommand) -> np.ndarray:
+    def execute(self, command: FreeModeGenerateDecisionCommand) -> np.ndarray:
         """
         Fetches the latest trained model of a specific type, uses the stored
         fitted normalizers to preprocess the target objective, generates the
@@ -42,21 +42,26 @@ class FreeModeGenerateDecisionCommandHandler:
             Exception: For other errors during model loading or prediction.
         """
         # Fetch the latest trained model based on the interpolator_type
-        # This now loads the fitted model AND its associated fitted normalizers
         model = self._interpolation_model_repo.get_latest_version(
             interpolator_type=command.interpolator_type
         )
+
         # Use the interpolator and normalizers loaded with the model
         inverse_decision_mapper = model.inverse_decision_mapper
         decisions_normalizer = model.decisions_normalizer
+        objectives_normalizer = model.objectives_normalizer
 
         # Normalize the target objective using the loaded, fitted normalizer
-        y_norm = decisions_normalizer.transform(np.array(command.target_objective))
+        objective_norm = objectives_normalizer.transform(
+            np.array(command.target_objective)
+        )
 
         # Generate the predicted decision in the normalized space
-        x_pred_norm = inverse_decision_mapper.predict(y_norm)[0]
+        decision_pred_norm = inverse_decision_mapper.predict(objective_norm)[0]
 
         # Denormalize the predicted decision back to its original scale
-        x_pred = decisions_normalizer.inverse_transform(np.array([x_pred_norm]))[0]
+        decision_pred = decisions_normalizer.inverse_transform(
+            np.array([decision_pred_norm])
+        )[0]
 
-        return x_pred
+        return decision_pred

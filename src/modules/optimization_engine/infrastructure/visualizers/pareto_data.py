@@ -336,7 +336,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                 family=self._FIGURE_LAYOUT_CONFIG["font_family"],
                 size=self._FIGURE_LAYOUT_CONFIG["font_size"],
             ),
-            hovermode=self._FIGURE_LAYOUT_CONFIG["hovermode"],
+            hovermode="closest",
         )
         return fig
 
@@ -463,8 +463,6 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                     f"Warning: Unsupported plot type '{plot_type}' for subplot ({row}, {col})."
                 )
                 continue
-
-            self._add_description(fig, row, col, description)
 
     def _get_data_from_indexed_source(
         self, data_source: np.ndarray | tuple, index: int | None
