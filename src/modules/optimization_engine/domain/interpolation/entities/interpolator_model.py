@@ -18,10 +18,6 @@ class InterpolatorModel(BaseModel):
         default_factory=lambda: str(uuid4()),
         description="Unique identifier for this specific training run/model version.",
     )
-    name: str = Field(
-        ...,
-        description="A human-readable name for this model version, typically derived from the base name and type.",
-    )
 
     parameters: dict[Any, Any] = Field(
         ...,
@@ -39,6 +35,8 @@ class InterpolatorModel(BaseModel):
         default_factory=datetime.now,
         description="Timestamp indicating when this model version was trained.",
     )
+
+    version_number: int = Field(..., description="The number of training run")
 
     class Config:
         arbitrary_types_allowed = True

@@ -91,14 +91,6 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             parents=True, exist_ok=True
         )  # Ensure the base models directory exists
 
-        # Registry to map string types to their corresponding Pydantic parameter models for deserialization
-        self._parameter_model_registry = {
-            "neural_network": NeuralNetworkInverserDecisionMapperParams,
-            "geodesic": GeodesicInterpolatorParams,
-            "k_nearest_neighbor": NearestNeighborInverseDecisoinMapperParams,
-            "linear": LinearInverseDecisionMapperParams,
-        }
-
     def save(self, interpolator_model: InterpolatorModel) -> None:
         """
         Saves a new InterpolatorModel entity, representing a specific training version.
@@ -114,15 +106,15 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             )
 
         # Create a subdirectory for the interpolator type
-        model_type_directory = (
+        interpolators_directory = (
             self._base_model_storage_path / interpolator_model.parameters.get("type")
         )
 
-        model_type_directory.mkdir(exist_ok=True)
+        interpolators_directory.mkdir(exist_ok=True)
 
         # Then create a directory for the unique model ID within the type directory
         model_version_directory = (
-            model_type_directory
+            interpolators_directory
             / interpolator_model.trained_at.strftime("%Y-%m-%d_%H-%M-%S")
         )
         os.makedirs(model_version_directory, exist_ok=True)
@@ -177,20 +169,22 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             saved_data=model_metadata, loaded_mapper=loaded_decision_mapper
         )
 
-    def get_all_versions_by_conceptual_name(
-        self, model_conceptual_name: str
-    ) -> list[InterpolatorModel]:
+    def get_all_versions(self, interpolator_type: str) -> list[InterpolatorModel]:
         """
-        Retrieves all trained versions of a model that share a given conceptual name.
+        Retrieves all trained versions of a model based on its 'type' from the parameters.
 
         Args:
-            model_conceptual_name: The conceptual name of the model type (e.g., 'f1_vs_f2_PchipMapper').
+            interpolator_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
 
         Returns:
             A list of InterpolatorModel entities, sorted by 'trained_at' timestamp in descending order (latest first).
         """
         found_model_versions: list[InterpolatorModel] = []
-        for model_version_directory in self._base_model_storage_path.iterdir():
+        interpolators_directory = self._base_model_storage_path / interpolator_type
+        if not interpolators_directory.exists():
+            return []
+
+        for model_version_directory in interpolators_directory.iterdir():
             if model_version_directory.is_dir():
                 try:
                     metadata_file_path = model_version_directory / "metadata.json"
@@ -199,12 +193,9 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
                             metadata_file_path
                         )
                     )
-
-                    if model_metadata.get("name") == model_conceptual_name:
-                        # Load the full model entity by its ID (directory name)
-                        # The load method now handles all the deserialization logic
-                        model_version = self.load(model_version_directory.name)
-                        found_model_versions.append(model_version)
+                    # We can use the 'id' to load the full model
+                    model_version = self.load(model_metadata.get("id"))
+                    found_model_versions.append(model_version)
                 except (
                     FileNotFoundError,
                     json.JSONDecodeError,
@@ -219,28 +210,26 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         found_model_versions.sort(key=lambda model: model.trained_at, reverse=True)
         return found_model_versions
 
-    def get_latest_version(self, model_conceptual_name: str) -> InterpolatorModel:
+    def get_latest_version(self, interpolator_type: str) -> InterpolatorModel:
         """
-        Retrieves the latest trained version of a model based on its conceptual name.
+        Retrieves the latest trained version of a model based on its type.
         The 'latest' version is determined by the most recent 'trained_at' timestamp.
 
         Args:
-            model_conceptual_name: The conceptual name of the model type.
+            interpolator_type: The type of the interpolator model.
 
         Returns:
             The InterpolatorModel entity representing the latest version.
 
         Raises:
-            FileNotFoundError: If no model versions are found for the given conceptual name.
+            FileNotFoundError: If no model versions are found for the given type.
             Exception: For other errors during version lookup.
         """
-        found_model_versions = self.get_all_versions_by_conceptual_name(
-            model_conceptual_name
-        )
+        found_model_versions = self.get_latest_version(interpolator_type)
 
         if not found_model_versions:
             raise FileNotFoundError(
-                f"No model versions found for conceptual name: '{model_conceptual_name}'"
+                f"No model versions found for type: '{interpolator_type}'"
             )
 
         # The list is already sorted by 'trained_at' in descending order, so the first element is the latest.

@@ -62,10 +62,10 @@ class TrainInterpolatorCommandHandler:
 
         # Construct the InterpolatorModel entity with all its metadata
         trained_interpolator_model = InterpolatorModel(
-            name=f"{command.base_name}_{command.params.type}_Mapper",
             parameters=command.params.model_dump(),
             inverse_decision_mapper=fitted_inverse_decision_mapper,
             metrics=validation_metrics,
+            version_number=command.version_number,
         )
 
         # Save the InterpolatorModel entity to the repository

@@ -62,9 +62,6 @@ if __name__ == "__main__":
     test_size = 0.2
     random_state = 42
 
-    # Base name for the trained models
-    base_model_name = "f1f2_vs_x1x2"
-
     # Loop through each interpolator type
     for param_class in interpolator_param_classes:
         interpolator_type_name = param_class.__name__.replace(
@@ -73,9 +70,9 @@ if __name__ == "__main__":
 
         # Loop multiple times for each interpolator type
         for i in range(num_runs_per_type):
-            run_number = i + 1
+            version_numberber = i + 1
             print(
-                f"  > Run {run_number}/{num_runs_per_type} for {interpolator_type_name}"
+                f"  > Run {version_numberber}/{num_runs_per_type} for {interpolator_type_name}"
             )
 
             # Instantiate the parameters for the current interpolator type
@@ -83,23 +80,17 @@ if __name__ == "__main__":
             # For simplicity, we assume they can be instantiated without args here.
             interpolator_params_instance = param_class()
 
-            # Create a unique base name for each run to avoid overwriting files
-            # This is crucial for gathering distinct metadata files.
-            unique_base_name = (
-                f"{base_model_name}_{interpolator_type_name.lower()}_run{run_number}"
-            )
-
             # Construct the command with the appropriate parameters
             command = TrainInterpolatorCommand(
                 params=interpolator_params_instance,
                 test_size=test_size,
                 random_state=random_state,
-                base_name=unique_base_name,
+                version_number=version_numberber,
             )
 
             # Execute the command handler
             command_handler.execute(command)
             print(
-                f"  Successfully completed run {run_number} for {interpolator_type_name}"
+                f"  Successfully completed run {version_numberber} for {interpolator_type_name}"
             )
             time.sleep(0.5)

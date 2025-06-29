@@ -14,12 +14,13 @@ class KrigingInverseDecisionMapper(BaseInverseDecisionMapper):
     NOTE: This implementation is limited to objective spaces with 2 dimensions.
     """
 
+    # We must store a list of models because the underlying library is single-output.
     _kriging_models: list[krige.OrdinaryKriging] | None = None
 
     def __init__(
         self,
         variogram_model: str = "linear",
-        n_neighbors: int | None = 12,  # This parameter will not be used with this fix
+        n_neighbors: int | None = 12,
     ) -> None:
         """
         Initializes the Kriging mapper.
@@ -45,15 +46,14 @@ class KrigingInverseDecisionMapper(BaseInverseDecisionMapper):
                 "KrigingInverseDecisionMapper requires objectives with exactly 2 dimensions (x, y)."
             )
 
-        # 3. Fit a separate Kriging model for each output dimension
+        # 3. Fit a separate Kriging model for each output dimension.
+        # This is necessary because pykrige.OrdinaryKriging can only handle one output (z) at a time.
         self._kriging_models = []
         for i in range(self._decision_dim):
-            # OrdinaryKriging expects x, y, and z arrays
-            # --- FIXED: Removed 'local_search' and 'n_closest_points' for compatibility with older pykrige versions ---
             model = krige.OrdinaryKriging(
                 x=objectives[:, 0],
                 y=objectives[:, 1],
-                z=decisions[:, i],
+                z=decisions[:, i],  # Pass only one decision dimension as the output
                 variogram_model=self.variogram_model,
                 coordinates_type="euclidean",
             )
@@ -79,8 +79,6 @@ class KrigingInverseDecisionMapper(BaseInverseDecisionMapper):
         # Call each fitted Kriging model and stack the results
         predictions = []
         for model in self._kriging_models:
-            # NOTE: PyKrige's `execute` method is designed for grids. For ungridded points,
-            # you must iterate or use a different method. This can be slow for large datasets.
             pred_values, _ = model.execute(
                 "points", target_objectives[:, 0], target_objectives[:, 1]
             )

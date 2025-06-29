@@ -30,10 +30,6 @@ class TrainInterpolatorCommand(BaseModel):
         "Pass an int for reproducible output across multiple function calls.",
     )
 
-    base_name: str = Field(
-        ...,
-        description="The base name for the model file. This will be used to construct the final "
-        "file name where the trained model will be saved.",
-    )
+    version_number: int = Field(..., description="The number of training run")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

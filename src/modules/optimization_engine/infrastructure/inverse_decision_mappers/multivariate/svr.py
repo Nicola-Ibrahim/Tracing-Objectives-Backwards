@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import SVR
 
 from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
@@ -9,10 +10,12 @@ from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
 
 class SVRInverseDecisionMapper(BaseInverseDecisionMapper):
     """
-    Inverse Decision Mapper using Scikit-learn's Support Vector Regressor (SVR).
+    Inverse Decision Mapper using Scikit-learn's Support Vector Regressor (SVR)
+    with a MultiOutputRegressor wrapper to handle multi-dimensional decisions.
     """
 
-    _svr_models: list[SVR] | None = None
+    # Now we store a single wrapped model
+    _svr_model: MultiOutputRegressor | None = None
 
     def __init__(
         self,
@@ -40,20 +43,22 @@ class SVRInverseDecisionMapper(BaseInverseDecisionMapper):
         # 1. Call the parent's fit method for universal validation
         super().fit(objectives, decisions)
 
-        # 2. Fit a separate SVR model for each output dimension
-        self._svr_models = []
-        for i in range(self._decision_dim):
-            model = SVR(kernel=self.kernel, C=self.C, epsilon=self.epsilon)
-            # SVR expects a 1D array for the target (decisions[:, i])
-            model.fit(objectives, decisions[:, i])
-            self._svr_models.append(model)
+        # 2. Create a single SVR model to be wrapped
+        base_svr = SVR(kernel=self.kernel, C=self.C, epsilon=self.epsilon)
+
+        # 3. Wrap the single SVR model in a MultiOutputRegressor
+        # This allows it to handle the multi-dimensional `decisions` output.
+        self._svr_model = MultiOutputRegressor(estimator=base_svr)
+
+        # 4. Fit the single wrapped model on the objectives and multi-dimensional decisions
+        self._svr_model.fit(objectives, decisions)
 
     def predict(
         self,
         target_objectives: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         # Perform validation specific to this method
-        if self._svr_models is None:
+        if self._svr_model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
         if target_objectives.ndim == 1:
@@ -65,10 +70,5 @@ class SVRInverseDecisionMapper(BaseInverseDecisionMapper):
                 f"but got {target_objectives.shape[1]} dimensions."
             )
 
-        # Call each fitted SVR model and stack the results
-        predictions = []
-        for model in self._svr_models:
-            pred_values = model.predict(target_objectives)
-            predictions.append(pred_values)
-
-        return np.column_stack(predictions)
+        # Call the predict method on the single wrapped model
+        return self._svr_model.predict(target_objectives)

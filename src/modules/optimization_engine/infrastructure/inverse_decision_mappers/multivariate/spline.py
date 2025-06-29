@@ -14,6 +14,7 @@ class SplineInverseDecisionMapper(BaseInverseDecisionMapper):
     NOTE: This implementation is limited to objective spaces with 2 dimensions.
     """
 
+    # We must store a list of spline functions for each output dimension.
     _spline_funcs: list[SmoothBivariateSpline] | None = None
 
     def __init__(self, s: float = 0.0) -> None:
@@ -39,12 +40,16 @@ class SplineInverseDecisionMapper(BaseInverseDecisionMapper):
                 "SplineInverseDecisionMapper requires objectives with exactly 2 dimensions (x, y)."
             )
 
-        # 3. Fit a separate spline for each output dimension
+        # 3. Fit a separate spline for each output dimension.
+        # This is necessary because SmoothBivariateSpline can only handle a single output (z).
         self._spline_funcs = []
         for i in range(self._decision_dim):
             # SmoothBivariateSpline expects 1D arrays for x, y, z
             spline_func = SmoothBivariateSpline(
-                x=objectives[:, 0], y=objectives[:, 1], z=decisions[:, i], s=self.s
+                x=objectives[:, 0],
+                y=objectives[:, 1],
+                z=decisions[:, i],  # Pass only one decision dimension as the output
+                s=self.s,
             )
             self._spline_funcs.append(spline_func)
 

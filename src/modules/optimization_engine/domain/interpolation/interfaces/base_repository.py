@@ -39,34 +39,27 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_versions_by_conceptual_name(
-        self, model_conceptual_name: str
-    ) -> list[InterpolatorModel]:
+    def get_all_versions(self, interpolator_type: str) -> list[InterpolatorModel]:
         """
-        Retrieves the latest trained version of a model based on its conceptual name.
-        The 'latest' version is determined by the 'trained_at' timestamp.
+        Retrieves all trained versions of a model based on its type.
 
         Args:
-            model_conceptual_name: The conceptual name of the model type (e.g., 'f1_vs_f2_PchipMapper').
+            interpolator_type: The type of interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
-            The InterpolatorModel entity representing the latest version.
-
-        Raises:
-            FileNotFoundError: If no model with the given conceptual name is found.
-            Exception: For other errors during version lookup.
+            A list of InterpolatorModel entities, sorted by version_number (highest first)
         """
         pass
 
     @abstractmethod
-    def get_latest_version(self, model_conceptual_name: str) -> InterpolatorModel:
+    def get_latest_version(self, interpolator_type: str) -> InterpolatorModel:
         """
-        Retrieves all trained versions of a model based on its conceptual name.
+        Retrieves the latest trained version of a model based on its type.
 
         Args:
-            model_conceptual_name: The conceptual name of the model type.
+            interpolator_type: The type of interpolation model
 
         Returns:
-            A list of InterpolatorModel entities, sorted by trained_at timestamp (latest first).
+            The InterpolatorModel entity with the highest version_number
         """
         pass
