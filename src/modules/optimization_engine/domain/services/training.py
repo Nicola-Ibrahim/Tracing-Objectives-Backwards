@@ -40,6 +40,7 @@ class DecisionMapperTrainingService:
         decisions: NDArray[np.floating],  # Decision data (output from the mapper)
         test_size: float = 0.33,
         random_state: int = 42,
+        with_plotting: bool = False,
     ) -> tuple[
         BaseInverseDecisionMapper,
         dict[str, float],
@@ -97,15 +98,15 @@ class DecisionMapperTrainingService:
             )
         }
 
-        # Call the dedicated plotting method
-        self._plot_validation_results(
-            objectives_train=objectives_train_norm,
-            objectives_val=objectives_val_norm,
-            decisions_train=decisions_train_norm,
-            decisions_val=decisions_val_norm,
-            decisions_pred_val=decisions_pred_val_norm,
-            validation_metric_name=self._validation_metric.name,
-        )
+        if with_plotting:
+            # Call the dedicated plotting method
+            self._plot_validation_results(
+                objectives_train=objectives_train_norm,
+                objectives_val=objectives_val_norm,
+                decisions_train=decisions_train_norm,
+                decisions_val=decisions_val_norm,
+                decisions_pred_val=decisions_pred_val_norm,
+            )
 
         # Return fitted instance, fitted normalizers, and metrics
         return inverse_decision_mapper, metrics
@@ -144,7 +145,6 @@ class DecisionMapperTrainingService:
         decisions_train: NDArray[np.floating],
         decisions_val: NDArray[np.floating],
         decisions_pred_val: NDArray[np.floating],
-        validation_metric_name: str,
     ) -> None:
         """
         Generates and displays interactive Plotly plots to visualize validation results.
@@ -166,24 +166,46 @@ class DecisionMapperTrainingService:
         residuals_dim1 = decisions_val[:, 0] - decisions_pred_val[:, 0]
         residuals_dim2 = decisions_val[:, 1] - decisions_pred_val[:, 1]
 
-        # --- Create a 5x2 subplot figure with specific titles and grouping ---
+        # Check the number of objective dimensions for plotting
+        num_objective_dims = objectives_val.shape[1]
+        num_rows = 5
+        subplot_titles_list = [
+            "Model Performance: Actual vs. Predicted Decisions",  # (1,1)
+            "Input Data Distribution (Objective Space)",  # (1,2)
+            "Output Data Distribution (Decision Space)",  # (2,1)
+            "Error Magnitude vs. Predicted Value",  # (2,2)
+            "Residuals vs. Predicted (Decision Dim 1)",  # (3,1)
+            "Residuals vs. Predicted (Decision Dim 2)",  # (3,2)
+            "Residuals in 2D Space (Dim 1 vs. Dim 2)",  # (4,1)
+            "Distribution of Prediction Errors",  # (4,2)
+        ]
+
+        # Dynamically add titles for Error Magnitude vs. Objective Dimensions
+        error_magnitude_titles = []
+        for i in range(num_objective_dims):
+            error_magnitude_titles.append(
+                f"Error Magnitude vs. Objective Dimension {i + 1}"
+            )
+
+        # Determine the number of rows needed for the error magnitude plots
+        num_error_mag_rows = (
+            num_objective_dims + 1
+        ) // 2  # 1 row for 1-2 dims, 2 for 3-4, etc.
+        num_rows += num_error_mag_rows
+
+        # Add the dynamically generated titles to the subplot titles list
+        subplot_titles_list.extend(error_magnitude_titles)
+        # Pad with empty strings if needed to maintain pairs
+        if len(subplot_titles_list) % 2 != 0:
+            subplot_titles_list.append("")
+
+        # --- Create a dynamic subplot figure with specific titles ---
         fig = make_subplots(
-            rows=5,
+            rows=num_rows,
             cols=2,
-            subplot_titles=(
-                "Model Performance: Actual vs. Predicted Decisions",  # (1,1) - Group 1
-                "Input Data Distribution (Objective Space)",  # (1,2) - Group 2 (Moved here)
-                "Output Data Distribution (Decision Space)",  # (2,1) - Group 2
-                "Model Performance: Error Magnitude vs. Objective 1",  # (2,2) - Group 1 (Moved here)
-                "Residuals vs. Predicted (Decision Dim 1)",  # (3,1) - Group 3
-                "Residuals vs. Predicted (Decision Dim 2)",  # (3,2) - Group 3
-                "Residuals in 2D Space (Dim 1 vs. Dim 2)",  # (4,1) - Group 3
-                "Error Magnitude vs. Predicted Value (Overall)",  # (4,2) - Group 4 (Moved here)
-                "Distribution of Prediction Errors",  # (5,1) - Group 4
-                "Objective Space with Validation Errors",  # (5,2) - Group 4 (This is the old error magnitude plot, re-titled)
-            ),
+            subplot_titles=tuple(subplot_titles_list),
             horizontal_spacing=0.08,
-            vertical_spacing=0.07,  # Slightly reduced vertical spacing
+            vertical_spacing=0.07,
         )
 
         # ===============================================================
@@ -225,7 +247,6 @@ class DecisionMapperTrainingService:
             row=1,
             col=1,
         )
-        # Add lines connecting actual to predicted points
         for i in range(decisions_val.shape[0]):
             fig.add_trace(
                 go.Scatter(
@@ -301,13 +322,12 @@ class DecisionMapperTrainingService:
                 trace.marker.opacity = 0.8
             fig.add_trace(trace, row=2, col=1)
 
-        # --- Subplot 4 (Row 2, Col 2): Error Magnitude vs. Objective 1 ---
-        # This shows if error magnitude is related to the input objective value.
-        fig_errors_overall = px.scatter(x=objectives_val[:, 0], y=errors)
-        for trace in fig_errors_overall.data:
+        # --- Subplot 4 (Row 2, Col 2): Error Magnitude vs. Predicted Value (Overall) ---
+        fig_err_vs_pred = px.scatter(x=decisions_pred_val[:, 0], y=errors)
+        for trace in fig_err_vs_pred.data:
             trace.update(
-                name="Error Magnitude",
-                marker=dict(color="purple", size=8, opacity=0.7, symbol="cross"),
+                name="Error Mag vs. Pred Val",
+                marker=dict(color="brown", size=8, opacity=0.7, symbol="diamond-open"),
             )
             fig.add_trace(trace, row=2, col=2)
 
@@ -377,34 +397,42 @@ class DecisionMapperTrainingService:
         fig.add_vline(x=0, line_dash="dot", line_color="grey", row=4, col=1)
         fig.add_hline(y=0, line_dash="dot", line_color="grey", row=4, col=1)
 
-        # ===============================================================
-        # --- Group 3: Overall Error Metrics ---
-        # ===============================================================
-
-        # --- Subplot 8 (Row 4, Col 2): Error Magnitude vs. Predicted Value (Overall) ---
-        fig_err_vs_pred = px.scatter(x=decisions_pred_val[:, 0], y=errors)
-        for trace in fig_err_vs_pred.data:
-            trace.update(
-                name="Error Mag vs. Pred Val",
-                marker=dict(color="brown", size=8, opacity=0.7, symbol="diamond-open"),
-            )
-            fig.add_trace(trace, row=4, col=2)
-
-        # --- Subplot 9 (Row 5, Col 1): Distribution of Prediction Errors (Histogram) ---
+        # --- Subplot 8 (Row 4, Col 2): Distribution of Prediction Errors (Histogram) ---
         histogram_fig = px.histogram(
             x=errors, nbins=20, color_discrete_sequence=["teal"]
         )
         for trace in histogram_fig.data:
-            fig.add_trace(trace, row=5, col=1)
+            fig.add_trace(trace, row=4, col=2)
 
-        # --- Subplot 10 (Row 5, Col 2): Error Magnitude vs. Objective 2 ---
-        fig_errors_overall_dim2 = px.scatter(x=objectives_val[:, 1], y=errors)
-        for trace in fig_errors_overall_dim2.data:
-            trace.update(
-                name="Error Mag vs. Obj Dim 2",
-                marker=dict(color="olive", size=8, opacity=0.7, symbol="star"),
+        # ===============================================================
+        # --- Group 3: Error Magnitude vs. Objective Dimensions ---
+        # ===============================================================
+
+        # Dynamically add scatter plots for each objective dimension
+        current_row = 5
+        for i in range(num_objective_dims):
+            col = (i % 2) + 1  # 1, 2, 1, 2...
+
+            fig.add_trace(
+                go.Scatter(
+                    x=objectives_val[:, i],
+                    y=errors,
+                    mode="markers",
+                    name=f"Error vs. Obj Dim {i+1}",
+                    marker=dict(
+                        color=px.colors.qualitative.Plotly[i],
+                        size=8,
+                        opacity=0.7,
+                        symbol="circle",
+                    ),
+                ),
+                row=current_row,
+                col=col,
             )
-            fig.add_trace(trace, row=5, col=2)
+
+            # If we're on the second column, increment the row
+            if col == 2:
+                current_row += 1
 
         # --- Update subplot axes titles for clarity ---
         fig.update_xaxes(title_text="Decision Dimension 1", row=1, col=1)
@@ -414,9 +442,9 @@ class DecisionMapperTrainingService:
 
         fig.update_xaxes(title_text="Decision Dimension 1", row=2, col=1)
         fig.update_yaxes(title_text="Decision Dimension 2", row=2, col=1)
-        fig.update_xaxes(title_text="Objective Dimension 1", row=2, col=2)
+        fig.update_xaxes(title_text="Predicted Value (Decision Dim 1)", row=2, col=2)
         fig.update_yaxes(
-            title_text=f"Error Magnitude ({validation_metric_name.upper()})",
+            title_text="Error Magnitude (MSE)",
             row=2,
             col=2,
         )
@@ -428,39 +456,29 @@ class DecisionMapperTrainingService:
 
         fig.update_xaxes(title_text="Residual Dimension 1", row=4, col=1)
         fig.update_yaxes(title_text="Residual Dimension 2", row=4, col=1)
-        fig.update_xaxes(title_text="Predicted Value (Decision Dim 1)", row=4, col=2)
-        fig.update_yaxes(
-            title_text=f"Error Magnitude ({validation_metric_name.upper()})",
+        fig.update_xaxes(
+            title_text="Error Magnitude (MSE)",
             row=4,
             col=2,
         )
+        fig.update_yaxes(title_text="Count", row=4, col=2)
 
-        fig.update_xaxes(
-            title_text=f"Error Magnitude ({validation_metric_name.upper()})",
-            row=5,
-            col=1,
-        )
-        fig.update_yaxes(title_text="Count", row=5, col=1)
-        fig.update_xaxes(title_text="Objective Dimension 2", row=5, col=2)
-        fig.update_yaxes(
-            title_text=f"Error Magnitude ({validation_metric_name.upper()})",
-            row=5,
-            col=2,
-        )
+        # Dynamically update axes titles for the new error magnitude plots
+        for i in range(num_objective_dims):
+            current_row = 5 + i // 2
+            col = (i % 2) + 1
+            fig.update_xaxes(
+                title_text=f"Objective Dimension {i+1}", row=current_row, col=col
+            )
+            fig.update_yaxes(
+                title_text="Error Magnitude (MSE)",
+                row=current_row,
+                col=col,
+            )
 
-        # --- CALCULATE DYNAMIC ANNOTATION POSITIONS FOR ALIGNMENT ---
-        y_domain_row1 = fig.layout.yaxis.domain
-        y_domain_row2 = fig.layout.yaxis3.domain
-        y_domain_row3 = fig.layout.yaxis5.domain
-        y_domain_row4 = fig.layout.yaxis7.domain
-        y_domain_row5 = fig.layout.yaxis9.domain
-
-        y_offset = 0.04
-        y_pos_row1 = y_domain_row1[0] - y_offset
-        y_pos_row2 = y_domain_row2[0] - y_offset
-        y_pos_row3 = y_domain_row3[0] - y_offset
-        y_pos_row4 = y_domain_row4[0] - y_offset
-        y_pos_row5 = y_domain_row5[0] - y_offset
+        y_domains = [fig.layout[f"yaxis{2*i+1}"].domain for i in range(num_rows)]
+        y_offset = 0.03
+        y_positions = [dom[0] - y_offset for dom in y_domains]
 
         center_x_col1 = (fig.layout.xaxis.domain[0] + fig.layout.xaxis.domain[1]) / 2
         center_x_col2 = (fig.layout.xaxis2.domain[0] + fig.layout.xaxis2.domain[1]) / 2
@@ -474,7 +492,7 @@ class DecisionMapperTrainingService:
                 xref="paper",
                 yref="paper",
                 x=center_x_col1,
-                y=y_pos_row1,
+                y=y_positions[0],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -487,7 +505,7 @@ class DecisionMapperTrainingService:
                 xref="paper",
                 yref="paper",
                 x=center_x_col2,
-                y=y_pos_row1,
+                y=y_positions[0],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -500,7 +518,7 @@ class DecisionMapperTrainingService:
                 xref="paper",
                 yref="paper",
                 x=center_x_col1,
-                y=y_pos_row2,
+                y=y_positions[1],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -508,12 +526,12 @@ class DecisionMapperTrainingService:
             ),
             # Annotation for Subplot 4 (Row 2, Col 2)
             go.layout.Annotation(
-                text="Plots the error magnitude vs. an input dimension.<br>"
-                "A consistent scatter indicates uniform model performance across the input space.",
+                text="Plots overall error magnitude against predicted values (Decision Dim 1).<br>"
+                "Helps identify if error size changes systematically with predicted value.",
                 xref="paper",
                 yref="paper",
                 x=center_x_col2,
-                y=y_pos_row2,
+                y=y_positions[1],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -526,7 +544,7 @@ class DecisionMapperTrainingService:
                 xref="paper",
                 yref="paper",
                 x=center_x_col1,
-                y=y_pos_row3,
+                y=y_positions[2],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -539,7 +557,7 @@ class DecisionMapperTrainingService:
                 xref="paper",
                 yref="paper",
                 x=center_x_col2,
-                y=y_pos_row3,
+                y=y_positions[2],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -553,7 +571,7 @@ class DecisionMapperTrainingService:
                 xref="paper",
                 yref="paper",
                 x=center_x_col1,
-                y=y_pos_row4,
+                y=y_positions[3],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -561,38 +579,12 @@ class DecisionMapperTrainingService:
             ),
             # Annotation for Subplot 8 (Row 4, Col 2)
             go.layout.Annotation(
-                text="Plots overall error magnitude against predicted values (Decision Dim 1).<br>"
-                "Helps identify if error size changes systematically with predicted value.",
-                xref="paper",
-                yref="paper",
-                x=center_x_col2,
-                y=y_pos_row4,
-                showarrow=False,
-                align="center",
-                font=dict(size=10, color="grey"),
-                yanchor="top",
-            ),
-            # Annotation for Subplot 9 (Row 5, Col 1)
-            go.layout.Annotation(
                 text="Histogram showing the frequency of different error magnitudes.<br>"
                 "Ideally, errors should be centered around zero and normally distributed.",
                 xref="paper",
                 yref="paper",
-                x=center_x_col1,
-                y=y_pos_row5,
-                showarrow=False,
-                align="center",
-                font=dict(size=10, color="grey"),
-                yanchor="top",
-            ),
-            # Annotation for Subplot 10 (Row 5, Col 2)
-            go.layout.Annotation(
-                text="Plots the error magnitude vs. the second input dimension.<br>"
-                "Helps check for uniform model performance across the input space.",
-                xref="paper",
-                yref="paper",
                 x=center_x_col2,
-                y=y_pos_row5,
+                y=y_positions[3],
                 showarrow=False,
                 align="center",
                 font=dict(size=10, color="grey"),
@@ -600,10 +592,31 @@ class DecisionMapperTrainingService:
             ),
         ]
 
+        # Dynamically add annotations for the new error magnitude plots
+        for i in range(num_objective_dims):
+            current_row_index = 4 + i // 2
+            col = (i % 2) + 1
+            x_pos = center_x_col1 if col == 1 else center_x_col2
+
+            annotations.append(
+                go.layout.Annotation(
+                    text=f"Plots the error magnitude against objective dimension {i+1}.<br>"
+                    "A consistent scatter indicates uniform model performance.",
+                    xref="paper",
+                    yref="paper",
+                    x=x_pos,
+                    y=y_positions[current_row_index],
+                    showarrow=False,
+                    align="center",
+                    font=dict(size=10, color="grey"),
+                    yanchor="top",
+                )
+            )
+
         # --- Update final layout with overall titles, axes, and annotations ---
         fig.update_layout(
             title_text="Comprehensive Model Validation Dashboard",
-            height=2600,  # Increased height for the new layout
+            height=3000,  # Increased height for the new plots
             showlegend=True,
             hovermode="closest",
             annotations=annotations,

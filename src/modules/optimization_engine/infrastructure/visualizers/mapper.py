@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ...domain.services.pareto_data_service import ParetoDataset
+from ...domain.services.pareto_data import ParetoDataset
 
 
 @dataclass

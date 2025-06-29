@@ -32,8 +32,7 @@ class CloughTocherInverseDecisionMapper(BaseInverseDecisionMapper):
 
         # Perform specific fitting logic
         self._interp_func = CloughTocher2DInterpolator(
-            points=objectives,
-            values=decisions,
+            points=objectives, values=decisions, fill_value="extrapolate"
         )
 
     def predict(

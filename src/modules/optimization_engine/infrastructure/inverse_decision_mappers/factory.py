@@ -7,6 +7,7 @@ from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
     BaseInverseDecisionMapper,
 )
 from .multivariate.clough_tocher import CloughTocherInverseDecisionMapper
+from .multivariate.gaussian_process import GaussianProcessInverseDecisionMapper
 from .multivariate.linear import LinearNDInverseDecisionMapper
 from .multivariate.nearest_neighbors import NearestNDInverseDecisionMapper
 from .multivariate.nn import NeuralNetworkInterpolator
@@ -26,6 +27,7 @@ class InverseDecisionMapperFactory:
         InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value: NearestNDInverseDecisionMapper,
         InverseDecisionMapperType.NEURAL_NETWORK_ND.value: NeuralNetworkInterpolator,
         InverseDecisionMapperType.CLOUGH_TOCHER_ND.value: CloughTocherInverseDecisionMapper,
+        InverseDecisionMapperType.GAUSSIAN_PROCESS_ND.value: GaussianProcessInverseDecisionMapper,
     }
 
     def create(self, params: dict[str, Any]) -> BaseInverseDecisionMapper:

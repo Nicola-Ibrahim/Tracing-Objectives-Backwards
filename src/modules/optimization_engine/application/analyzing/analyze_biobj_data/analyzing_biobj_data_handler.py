@@ -2,7 +2,7 @@ from ....domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
 from ....domain.generation.interfaces.base_repository import (
     BaseParetoDataRepository,
 )
-from ....domain.services.pareto_data_service import ParetoDataService
+from ....domain.services.pareto_data import ParetoDataService
 from ....infrastructure.visualizers.mapper import ParetoVisualizationMapper
 from .analyzing_biobj_data_command import AnalyzeBiobjDataCommand
 

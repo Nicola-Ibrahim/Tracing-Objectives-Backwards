@@ -29,11 +29,11 @@ class MeanSquaredErrorValidationMetric(BaseValidationMetric):
             The Mean Squared Error as a float.
         """
         # Ensure inputs are numpy arrays if they aren't already (though type hints help)
-        y_true_np = np.asarray(y_true)
-        y_pred_np = np.asarray(y_pred)
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
 
         # Basic shape check for compatibility, sklearn will also handle this
-        if y_true_np.shape != y_pred_np.shape:
+        if y_true.shape != y_pred.shape:
             raise ValueError("y_true and y_pred must have the same shape.")
 
-        return float(sk_mean_squared_error(y_true_np, y_pred_np))
+        return float(sk_mean_squared_error(y_true, y_pred))

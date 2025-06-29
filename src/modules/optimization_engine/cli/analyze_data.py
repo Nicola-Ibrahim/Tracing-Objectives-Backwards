@@ -4,12 +4,12 @@ from ..application.analyzing.analyze_biobj_data.analyzing_biobj_data_command imp
 from ..application.analyzing.analyze_biobj_data.analyzing_biobj_data_handler import (
     AnalyzeBiobjDataCommandHandler,
 )
-from ..domain.services.pareto_data_service import ParetoDataService
+from ..domain.services.pareto_data import ParetoDataService
 from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
 from ..infrastructure.visualizers.mapper import ParetoVisualizationMapper
-from ..infrastructure.visualizers.plotly import PlotlyParetoVisualizer
+from ..infrastructure.visualizers.data import PlotlyParetoVisualizer
 
 
 def analyze_data():

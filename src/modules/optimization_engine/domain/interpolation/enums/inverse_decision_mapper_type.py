@@ -13,3 +13,4 @@ class InverseDecisionMapperType(Enum):
     RBF_ND = "rbf_nd"
     CLOUGH_TOCHER_ND = "clough_tocher_nd"
     NEURAL_NETWORK_ND = "neural_network_nd"
+    GAUSSIAN_PROCESS_ND = "gaussian_process_nd"
