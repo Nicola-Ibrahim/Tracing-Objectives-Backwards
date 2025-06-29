@@ -1007,9 +1007,11 @@ dependencies = [
     { name = "pip" },
     { name = "plotly", extra = ["express"] },
     { name = "pydantic" },
+    { name = "pykrige" },
     { name = "pymoo" },
     { name = "requests" },
     { name = "scikit-learn" },
+    { name = "sklearn-som" },
     { name = "torch" },
     { name = "tqdm" },
     { name = "wandb" },
@@ -1028,9 +1030,11 @@ requires-dist = [
     { name = "pip", specifier = ">=25.1.1" },
     { name = "plotly", extras = ["express"], specifier = ">=6.0.1" },
     { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "pykrige", specifier = ">=1.7.2" },
     { name = "pymoo", specifier = ">=0.6.1.3" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
+    { name = "sklearn-som", specifier = ">=1.1.0" },
     { name = "torch", specifier = ">=2.7.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "wandb", specifier = ">=0.20.1" },
@@ -1266,6 +1270,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7c/2d/c3338d48ea6cc0feb8446d8e6937e1408088a72a39937982cc6111d17f84/pygments-2.19.1.tar.gz", hash = "sha256:61c16d2a8576dc0649d9f39e089b5f02bcd27fba10d8fb4dcc28173f7a45151f", size = 4968581 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl", hash = "sha256:9ea1544ad55cecf4b8242fab6dd35a93bbce657034b0611ee383099054ab6d8c", size = 1225293 },
+]
+
+[[package]]
+name = "pykrige"
+version = "1.7.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ea/00/d815833441d8c52bf4a6930952e77d3de77d0bf67b3202ccc12dabdae279/pykrige-1.7.2.tar.gz", hash = "sha256:25b45a4173714c0b62098d19019404cb3978fa8bd8abae9ba55a272a53979e35", size = 618688 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/57/a0161ed40ca24be480a02067410a849317d38d736fa3894190c0dc4280ab/PyKrige-1.7.2-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:91cd18ec9044d28fe5b397e5788b712b7f36c0c116de22ae7d56952f83b253ca", size = 227348 },
+    { url = "https://files.pythonhosted.org/packages/2c/f8/a4d6909126020c4193051c97a86b5a7bd6e312f96c88f85794a4b69ab8ce/PyKrige-1.7.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:2bdc676f5d3ddad2552dbf1e6d9699cc186039379dd0a84a5c9c2c27cbf9dc53", size = 214825 },
+    { url = "https://files.pythonhosted.org/packages/01/39/214da796fd63f74bfe78be57cda7d1ab0305a0b2345974ce0d65955f219c/PyKrige-1.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a6e15c999435de303f76413b41d6ba4d271e12d96a93ac2f1acd4d80d526fab2", size = 961681 },
+    { url = "https://files.pythonhosted.org/packages/e5/f1/df7322867f2279ce82a79211196c1dfd62c230bd62a889e0016ea4f6c7cf/PyKrige-1.7.2-cp312-cp312-win_amd64.whl", hash = "sha256:e0138c1dfdbbaeb76df20a304f90deeccec56951518ceae81e34bfbbb49649f5", size = 205914 },
 ]
 
 [[package]]
@@ -1614,6 +1634,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
+]
+
+[[package]]
+name = "sklearn-som"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/10/5b/88575b1a000232507b3ca6d187167d57ffb56e6bb8bec012e9d3bd4568f6/sklearn-som-1.1.0.tar.gz", hash = "sha256:9b8107f42dfbd68db0d1aa75dd2007be4e0136bf0af96da51513e295f76646d9", size = 6131 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/ef/5f42e874f7ea8e86b70914121e508c72cb7d301d2cb8c6f198534e6ffc24/sklearn_som-1.1.0-py3-none-any.whl", hash = "sha256:92b774da67fe5fb73cf0697e93bda63923060c121ae0383c4ecce638d1385719", size = 6701 },
 ]
 
 [[package]]
