@@ -30,8 +30,8 @@ class DecisionMapperTrainingService:
         Initializes the service with a validation metric dependency.
         """
         self._validation_metric = validation_metric
-        self._decisions_normalizer = decisions_normalizer
-        self._objectives_normalizer = objectives_normalizer
+        self.decisions_normalizer = decisions_normalizer
+        self.objectives_normalizer = objectives_normalizer
 
     def train(
         self,
@@ -70,13 +70,13 @@ class DecisionMapperTrainingService:
         )
 
         # Normalize training and validation data
-        objectives_train_norm = self._objectives_normalizer.fit_transform(
+        objectives_train_norm = self.objectives_normalizer.fit_transform(
             objectives_train
         )
-        objectives_val_norm = self._objectives_normalizer.transform(objectives_val)
+        objectives_val_norm = self.objectives_normalizer.transform(objectives_val)
 
-        decisions_train_norm = self._decisions_normalizer.fit_transform(decisions_train)
-        decisions_val_norm = self._decisions_normalizer.transform(decisions_val)
+        decisions_train_norm = self.decisions_normalizer.fit_transform(decisions_train)
+        decisions_val_norm = self.decisions_normalizer.transform(decisions_val)
 
         # Fit the interpolator instance on normalized data
         inverse_decision_mapper.fit(
@@ -87,7 +87,7 @@ class DecisionMapperTrainingService:
         decisions_pred_val_norm = inverse_decision_mapper.predict(objectives_val_norm)
 
         # Inverse-transform predictions to original scale
-        decisions_pred_val = self._decisions_normalizer.inverse_transform(
+        decisions_pred_val = self.decisions_normalizer.inverse_transform(
             decisions_pred_val_norm
         )
 
@@ -109,7 +109,12 @@ class DecisionMapperTrainingService:
             )
 
         # Return fitted instance, fitted normalizers, and metrics
-        return inverse_decision_mapper, metrics
+        return (
+            inverse_decision_mapper,
+            self.objectives_normalizer,
+            self.decisions_normalizer,
+            metrics,
+        )
 
     def predict(
         self,
@@ -132,7 +137,7 @@ class DecisionMapperTrainingService:
         )
 
         # Inverse-transform predictions to original scale
-        predicted_decisions = self._decisions_normalizer.inverse_transform(
+        predicted_decisions = self.decisions_normalizer.inverse_transform(
             predicted_decisions_norm
         )
 

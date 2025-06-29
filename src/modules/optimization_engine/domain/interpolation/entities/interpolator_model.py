@@ -5,6 +5,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from ..interfaces.base_inverse_decision_mappers import BaseInverseDecisionMapper
+from ..interfaces.base_normalizer import BaseNormalizer
 
 
 class InterpolatorModel(BaseModel):
@@ -27,6 +28,16 @@ class InterpolatorModel(BaseModel):
         ...,
         description="The actual fitted inverse decision mapper instance from this run.",
     )
+
+    objectives_normalizer: BaseNormalizer = Field(
+        ...,
+        description="The fitted normalizer for the input/decision space (x_train).",
+    )
+    decisions_normalizer: BaseNormalizer = Field(
+        ...,
+        description="The fitted normalizer for the output/objective space (y_train).",
+    )
+
     metrics: dict[str, Any] = Field(
         default_factory=dict,
         description="Performance metrics specific to this training run.",
@@ -54,11 +65,17 @@ class InterpolatorModel(BaseModel):
         """
         # Use model_dump, but hide this implementation detail from the repository.
         # Pydantic's dump handles datetime serialization to ISO format.
-        return self.model_dump(exclude={"inverse_decision_mapper"})
+        return self.model_dump(
+            exclude={"inverse_decision_mapper", "objectives_normalizer", "decisions_normalizer"}
+        )
 
     @classmethod
     def from_saved_format(
-        cls, saved_data: dict[str, Any], loaded_mapper: BaseInverseDecisionMapper
+        cls,
+        saved_data: dict[str, Any],
+        loaded_mapper: BaseInverseDecisionMapper,
+        loaded_x_normalizer: BaseNormalizer,
+        loaded_y_normalizer: BaseNormalizer,
     ):
         """
         Constructs an InterpolatorModel entity from saved metadata and a loaded mapper.
@@ -67,7 +84,8 @@ class InterpolatorModel(BaseModel):
         # Note: Pydantic's constructor handles automatic deserialization of
         # ISO-formatted datetime strings if the field is typed as datetime.
         return cls(
-            inverse_decision_mapper=loaded_mapper,
-            # We can directly pass the loaded dictionary to the constructor
             **saved_data,
+            inverse_decision_mapper=loaded_mapper,
+            x_normalizer=loaded_x_normalizer,
+            y_normalizer=loaded_y_normalizer,
         )

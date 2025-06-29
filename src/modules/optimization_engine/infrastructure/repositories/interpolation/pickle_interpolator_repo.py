@@ -6,16 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .....shared.config import ROOT_PATH
-from ....application.interpolation.train_model.dtos import (
-    GeodesicInterpolatorParams,
-    LinearInverseDecisionMapperParams,
-    NearestNeighborInverseDecisoinMapperParams,
-    NeuralNetworkInverserDecisionMapperParams,
-)
 from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
-from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
-    BaseInverseDecisionMapper,
-)
 from ....domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
@@ -38,25 +29,23 @@ class InverseDecisionMapperFileHandler:
     and their associated metadata (using JSON) to and from the file system.
     """
 
-    def save(self, inverse_decsion_mapper: BaseInverseDecisionMapper, file_path: Path):
-        """Saves a model instance to a specified file path using pickle."""
+    def save(self, obj: Any, file_path: Path):
+        """Saves a Python object to a specified file path using pickle."""
         try:
             with open(file_path, "wb") as f:
-                pickle.dump(inverse_decsion_mapper, f)
+                pickle.dump(obj, f)
         except Exception as e:
-            raise IOError(f"Failed to pickle model instance to {file_path}: {e}") from e
+            raise IOError(f"Failed to pickle object to {file_path}: {e}") from e
 
-    def load(self, file_path: Path) -> BaseInverseDecisionMapper:
-        """Loads a model instance from a specified file path using pickle."""
+    def load(self, file_path: Path) -> Any:
+        """Loads a Python object from a specified file path using pickle."""
         if not file_path.exists():
-            raise FileNotFoundError(f"Model artifact not found at {file_path}")
+            raise FileNotFoundError(f"Artifact not found at {file_path}")
         try:
             with open(file_path, "rb") as f:
                 return pickle.load(f)
         except Exception as e:
-            raise IOError(
-                f"Failed to unpickle model instance from {file_path}: {e}"
-            ) from e
+            raise IOError(f"Failed to unpickle object from {file_path}: {e}") from e
 
     def save_metadata(self, file_path: Path, metadata_content: dict[str, Any]):
         """Saves model metadata as a JSON file to a specified path."""
@@ -98,7 +87,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
 
         Args:
             interpolator_model: The InterpolatorModel entity to save. Its 'id' field
-                                  is used to determine the storage location.
+                                 is used to determine the storage location.
         """
         if not interpolator_model.id:
             raise ValueError(
@@ -121,12 +110,25 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
 
         # Define file paths within the model's dedicated directory
         mapper_artifact_path = model_version_directory / "inverse_decision_mapper.pkl"
+        y_normalizer_artifact_path = (
+            model_version_directory / "decisions_normalizer.pkl"
+        )
+        x_normalizer_artifact_path = (
+            model_version_directory / "objectives_normalizer.pkl"
+        )
         metadata_file_path = model_version_directory / "metadata.json"
 
-        # Save the inverse decision mapper instance and metadata
+        # Save the inverse decision mapper instance, normalizers, and metadata
         self._inverse_decision_mapper_handler.save(
             interpolator_model.inverse_decision_mapper, mapper_artifact_path
         )
+        self._inverse_decision_mapper_handler.save(
+            interpolator_model.decisions_normalizer, y_normalizer_artifact_path
+        )
+        self._inverse_decision_mapper_handler.save(
+            interpolator_model.objectives_normalizer, x_normalizer_artifact_path
+        )
+
         model_metadata = interpolator_model.to_save_format()
         self._inverse_decision_mapper_handler.save_metadata(
             metadata_file_path, model_metadata
@@ -135,6 +137,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
     def load(self, model_version_id: str) -> InterpolatorModel:
         """
         Retrieves a specific InterpolatorModel entity by its unique version ID.
+        It now also loads the fitted normalizer instances.
 
         Args:
             model_version_id: The unique identifier of the specific model version to load.
@@ -146,27 +149,47 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             FileNotFoundError: If the model version with the specified ID is not found.
             IOError: For other loading errors (e.g., corrupted files).
         """
-        model_version_directory = self._base_model_storage_path / model_version_id
-        if not model_version_directory.exists():
+        # We need to find the full path based on the type and timestamp/ID
+        # The ID is the timestamp, so we need to search for it.
+        found_path = None
+        for model_type_directory in self._base_model_storage_path.iterdir():
+            if model_type_directory.is_dir():
+                model_version_directory = model_type_directory / model_version_id
+                if model_version_directory.exists():
+                    found_path = model_version_directory
+                    break
+
+        if not found_path:
             raise FileNotFoundError(
-                f"Model version with ID {model_version_id} not found at {model_version_directory}"
+                f"Model version with ID {model_version_id} not found."
             )
 
-        metadata_file_path = model_version_directory / "metadata.json"
-        mapper_artifact_path = model_version_directory / "inverse_decision_mapper.pkl"
+        metadata_file_path = found_path / "metadata.json"
+        mapper_artifact_path = found_path / "inverse_decision_mapper.pkl"
+        y_normalizer_artifact_path = found_path / "y_normalizer.pkl"
+        x_normalizer_artifact_path = found_path / "x_normalizer.pkl"
 
         # Load metadata
         model_metadata = self._inverse_decision_mapper_handler.load_metadata(
             metadata_file_path
         )
 
-        # Load the fitted inverse decision mapper
+        # Load the fitted artifacts
         loaded_decision_mapper = self._inverse_decision_mapper_handler.load(
             mapper_artifact_path
         )
+        loaded_y_normalizer = self._inverse_decision_mapper_handler.load(
+            y_normalizer_artifact_path
+        )
+        loaded_x_normalizer = self._inverse_decision_mapper_handler.load(
+            x_normalizer_artifact_path
+        )
 
         return InterpolatorModel.from_saved_format(
-            saved_data=model_metadata, loaded_mapper=loaded_decision_mapper
+            saved_data=model_metadata,
+            loaded_mapper=loaded_decision_mapper,
+            loaded_x_normalizer=loaded_x_normalizer,  # Pass loaded normalizers
+            loaded_y_normalizer=loaded_y_normalizer,  # Pass loaded normalizers
         )
 
     def get_all_versions(self, interpolator_type: str) -> list[InterpolatorModel]:
@@ -174,7 +197,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         Retrieves all trained versions of a model based on its 'type' from the parameters.
 
         Args:
-            interpolator_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
+            model_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
 
         Returns:
             A list of InterpolatorModel entities, sorted by 'trained_at' timestamp in descending order (latest first).
@@ -187,14 +210,8 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         for model_version_directory in interpolators_directory.iterdir():
             if model_version_directory.is_dir():
                 try:
-                    metadata_file_path = model_version_directory / "metadata.json"
-                    model_metadata = (
-                        self._inverse_decision_mapper_handler.load_metadata(
-                            metadata_file_path
-                        )
-                    )
-                    # We can use the 'id' to load the full model
-                    model_version = self.load(model_metadata.get("id"))
+                    # We can use the directory name as the model_version_id (the timestamp)
+                    model_version = self.load(model_version_directory.name)
                     found_model_versions.append(model_version)
                 except (
                     FileNotFoundError,
