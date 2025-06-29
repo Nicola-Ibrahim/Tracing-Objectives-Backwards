@@ -8,10 +8,13 @@ from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
 )
 from .multivariate.clough_tocher import CloughTocherInverseDecisionMapper
 from .multivariate.gaussian_process import GaussianProcessInverseDecisionMapper
+from .multivariate.kriging import KrigingInverseDecisionMapper
 from .multivariate.linear import LinearNDInverseDecisionMapper
 from .multivariate.nearest_neighbors import NearestNDInverseDecisionMapper
 from .multivariate.nn import NeuralNetworkInterpolator
 from .multivariate.rbf import RBFInverseDecisionMapper
+from .multivariate.spline import SplineInverseDecisionMapper
+from .multivariate.svr import SVRInverseDecisionMapper
 
 
 class InverseDecisionMapperFactory:
@@ -28,6 +31,9 @@ class InverseDecisionMapperFactory:
         InverseDecisionMapperType.NEURAL_NETWORK_ND.value: NeuralNetworkInterpolator,
         InverseDecisionMapperType.CLOUGH_TOCHER_ND.value: CloughTocherInverseDecisionMapper,
         InverseDecisionMapperType.GAUSSIAN_PROCESS_ND.value: GaussianProcessInverseDecisionMapper,
+        InverseDecisionMapperType.SPLINE_ND.value: SplineInverseDecisionMapper,
+        InverseDecisionMapperType.KRIGING_ND.value: KrigingInverseDecisionMapper,
+        InverseDecisionMapperType.SVR_ND.value: SVRInverseDecisionMapper,
     }
 
     def create(self, params: dict[str, Any]) -> BaseInverseDecisionMapper:

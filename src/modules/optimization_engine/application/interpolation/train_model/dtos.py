@@ -1,5 +1,6 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
-from sklearn.gaussian_process.kernels import Kernel
 
 from ....domain.interpolation.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
@@ -72,6 +73,11 @@ class LinearInverseDecisionMapperParams(InverseDecisionMapperParams):
 
 
 class RBFInverseDecisionMapperParams(InverseDecisionMapperParams):
+    """
+    Pydantic model to define and validate parameters for an
+    RBFInverseDecisionMapper.
+    """
+
     type: str = Field(
         InverseDecisionMapperType.RBF_ND.value,
         description="Type of the radial basis function interpolation method.",
@@ -79,9 +85,29 @@ class RBFInverseDecisionMapperParams(InverseDecisionMapperParams):
     n_neighbors: int = Field(
         10, gt=0, description="Number of nearest neighbors for RBF interpolation."
     )
-    kernel: str = Field(
+
+    kernel: Literal[
+        "linear",
         "thin_plate_spline",
-        description="Type of kernel to use for RBF interpolation.",
+        "cubic",
+        "quintic",
+        "multiquadric",
+        "inverse_multiquadric",
+        "inverse_quadratic",
+        "gaussian",
+    ] = Field(
+        "thin_plate_spline",
+        description="""Type of kernel to use for RBF interpolation.
+        Options correspond to different basis functions:
+        `linear` : -r
+        `thin_plate_spline` : r**2 * log(r)
+        `cubic` : r**3
+        `quintic` : -r**5
+        `multiquadric` : -sqrt(1 + r**2)
+        `inverse_multiquadric` : 1/sqrt(1 + r**2)
+        `inverse_quadratic` : 1/(1 + r**2)
+        `gaussian` : exp(-r**2)
+        """,
     )
 
     class Config:
@@ -99,10 +125,10 @@ class GaussianProcessInverseDecisionMapperParams(InverseDecisionMapperParams):
         description="Type of the gaussian process interpolation method.",
     )
 
-    kernel: Kernel | str = Field(
+    kernel: Literal["Matern", "RBF"] = Field(
         "Matern",
         description="""The kernel (covariance function) to use for the Gaussian Process.
-        Can be a string ('RBF' or 'Matern') or a scikit-learn Kernel object.""",
+        Must be one of 'Matern' or 'RBF'.""",
     )
 
     alpha: float = Field(
@@ -127,3 +153,70 @@ class GaussianProcessInverseDecisionMapperParams(InverseDecisionMapperParams):
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
         arbitrary_types_allowed = True
+
+
+class SplineInverseDecisionMapperParams(InverseDecisionMapperParams):
+    """Pydantic model for SmoothBivariateSpline mapper parameters."""
+
+    type: str = Field(
+        InverseDecisionMapperType.SPLINE_ND.value,
+        description="Type of the spline interpolation method.",
+    )
+
+    # `s` is the smoothing factor. 0 means interpolation (passes through all points).
+    # A positive value will produce a smoother curve.
+    s: float = Field(
+        0.0, ge=0.0, description="Positive smoothing factor. 0 for interpolation."
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+
+
+class KrigingInverseDecisionMapperParams(InverseDecisionMapperParams):
+    """Pydantic model for OrdinaryKriging mapper parameters."""
+
+    type: str = Field(
+        InverseDecisionMapperType.KRIGING_ND.value,
+        description="Type of the Kriging interpolation method.",
+    )
+
+    variogram_model: Literal["linear", "gaussian", "spherical", "exponential"] = Field(
+        "linear", description="Type of variogram model to use for Kriging."
+    )
+    # The number of data points to use in a local neighborhood search
+    # around the interpolation point. Use `None` to use all points.
+    n_neighbors: int | None = Field(
+        12,
+        ge=1,
+        description="Number of nearest neighbors to use for Kriging. None for all points.",
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+
+
+class SVRInverseDecisionMapperParams(InverseDecisionMapperParams):
+    """Pydantic model for SVR mapper parameters."""
+
+    type: str = Field(
+        InverseDecisionMapperType.SVR_ND.value,
+        description="Type of the SVR interpolation method.",
+    )
+
+    kernel: Literal["linear", "poly", "rbf", "sigmoid"] = Field(
+        "rbf", description="Specifies the kernel type to be used in the algorithm."
+    )
+    C: float = Field(
+        1.0,
+        gt=0.0,
+        description="Regularization parameter. The strength of the regularization is inversely proportional to C.",
+    )
+    epsilon: float = Field(
+        0.1,
+        ge=0.0,
+        description="Epsilon in the epsilon-SVR model. Specifies the epsilon-tube within which no penalty is associated with errors.",
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined

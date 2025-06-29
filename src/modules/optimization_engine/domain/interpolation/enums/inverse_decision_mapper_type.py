@@ -7,10 +7,13 @@ class InverseDecisionMapperType(Enum):
     This Enum serves as a central registry of interpolator kinds within the domain.
     """
 
-    # Multivariate decision mappers
-    LINEAR_ND = "linear_nd"
-    NEAREST_NEIGHBORS_ND = "nearest_neighbors_nd"
-    RBF_ND = "rbf_nd"
     CLOUGH_TOCHER_ND = "clough_tocher_nd"
     NEURAL_NETWORK_ND = "neural_network_nd"
+    NEAREST_NEIGHBORS_ND = "nearest_neighbors_nd"
+    LINEAR_ND = "linear_nd"
+    RBF_ND = "rbf_nd"
     GAUSSIAN_PROCESS_ND = "gaussian_process_nd"
+    GEODESIC_ND = "geodesic_nd"
+    SPLINE_ND = "spline_nd"
+    KRIGING_ND = "kriging_nd"
+    SVR_ND = "svr_nd"
