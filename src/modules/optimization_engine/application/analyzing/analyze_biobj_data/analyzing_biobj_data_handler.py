@@ -1,4 +1,6 @@
-from ....domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
+from ....domain.analyzing.interfaces.base_visualizer import (
+    BaseDataVisualizer,
+)
 from ....domain.generation.interfaces.base_repository import (
     BaseParetoDataRepository,
 )
@@ -17,7 +19,7 @@ class AnalyzeBiobjDataCommandHandler:
         self,
         pareto_data_repo: BaseParetoDataRepository,
         pareto_data_service: ParetoDataService,
-        visualizer: BaseParetoVisualizer,
+        visualizer: BaseDataVisualizer,
         pareto_data_mapper: ParetoVisualizationMapper,
     ):
         """
@@ -42,9 +44,9 @@ class AnalyzeBiobjDataCommandHandler:
         Args:
             command: The command containing the identifier for the data to analyze.
         """
-        # Retrieve the dataset using the ParetoDataService
-        pareto_data = self._pareto_data_repo.load(filename="pareto_data")
-
+        # Retrieve the dataset using the repository
+        pareto_data = self._pareto_data_repo.load(filename=command.data_file_name)
+        print(pareto_data)
         dataset = self._pareto_data_service.prepare_dataset(pareto_data=pareto_data)
 
         # Map the raw data to a structured DTO

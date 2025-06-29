@@ -7,7 +7,9 @@ from ..application.analyzing.analyze_interpolators_performace.analyze_interpolat
     AnalyzeModelPerformanceCommandHandler,
 )
 from ..domain.services.interpolators_metrics import InterpolatorsMetricsLoader
-from ..infrastructure.visualizers.performance import IntrepolatorsPerformanceVisualizer
+from ..infrastructure.visualizers.performance import (
+    PlotlyIntrepolatorsPerformanceVisualizer,
+)
 
 
 def main():
@@ -19,7 +21,7 @@ def main():
 
     # 2. Instantiate Infrastructure Layer components
     metrics_loader = InterpolatorsMetricsLoader()
-    performance_visualizer = IntrepolatorsPerformanceVisualizer()
+    performance_visualizer = PlotlyIntrepolatorsPerformanceVisualizer()
 
     # 3. Instantiate Application Layer components, injecting dependencies
     performance_handler = AnalyzeModelPerformanceCommandHandler(

@@ -6,7 +6,7 @@ from ....domain.interpolation.interfaces.base_repository import (
 from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
 
 
-class FreeModeGenerateDecisionHandler:
+class FreeModeGenerateDecisionCommandHandler:
     """
     Handles the command to generate a decision (input parameters)
     for a given target objective in free mode.

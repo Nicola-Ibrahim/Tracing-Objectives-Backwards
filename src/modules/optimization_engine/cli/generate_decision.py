@@ -2,7 +2,7 @@ from ..application.interpolation.free_mode_generate_decision.free_mode_generate_
     FreeModeGenerateDecisionCommand,
 )
 from ..application.interpolation.free_mode_generate_decision.free_mode_generate_decision_handler import (
-    FreeModeGenerateDecisionHandler,
+    FreeModeGenerateDecisionCommandHandler,
 )
 from ..domain.interpolation.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
@@ -28,7 +28,7 @@ def main():
     interpolation_model_repo = PickleInterpolationModelRepository()
 
     # Initialize the handler with the repository
-    handler = FreeModeGenerateDecisionHandler(
+    handler = FreeModeGenerateDecisionCommandHandler(
         interpolation_model_repo=interpolation_model_repo
     )
 

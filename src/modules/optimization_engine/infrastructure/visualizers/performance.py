@@ -1,10 +1,12 @@
 import pandas as pd
 import plotly.express as px
 
-from ...domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
+from ...domain.analyzing.interfaces.base_visualizer import (
+    BaseDataVisualizer,
+)
 
 
-class IntrepolatorsPerformanceVisualizer(BaseParetoVisualizer):
+class PlotlyIntrepolatorsPerformanceVisualizer(BaseDataVisualizer):
     """
     A concrete visualizer that uses Plotly Express to plot model performance.
     This is an infrastructure component.

@@ -9,7 +9,7 @@ from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
 from ..infrastructure.visualizers.mapper import ParetoVisualizationMapper
-from ..infrastructure.visualizers.data import PlotlyParetoVisualizer
+from ..infrastructure.visualizers.pareto_data import PlotlyParetoDataVisualizer
 
 
 def analyze_data():
@@ -18,7 +18,7 @@ def analyze_data():
     handler = AnalyzeBiobjDataCommandHandler(
         pareto_data_repo=NPZParetoDataRepository(),
         pareto_data_service=ParetoDataService(),
-        visualizer=PlotlyParetoVisualizer(),
+        visualizer=PlotlyParetoDataVisualizer(),
         pareto_data_mapper=ParetoVisualizationMapper(),
     )
 

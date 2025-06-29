@@ -5,11 +5,13 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 # Assuming these imports are correct based on your project structure
-from ...domain.analyzing.interfaces.base_visualizer import BaseParetoVisualizer
+from ...domain.analyzing.interfaces.base_visualizer import (
+    BaseDataVisualizer,
+)
 from .mapper import ParetoVisualizationDTO
 
 
-class PlotlyParetoVisualizer(BaseParetoVisualizer):
+class PlotlyParetoDataVisualizer(BaseDataVisualizer):
     """
     Dashboard for visualizing Pareto set and front with precomputed interpolations.
 
@@ -253,7 +255,7 @@ class PlotlyParetoVisualizer(BaseParetoVisualizer):
 
     def __init__(self, save_path: Path | None = None):
         """
-        Initializes the PlotlyParetoVisualizer.
+        Initializes the PlotlyParetoDataVisualizer.
 
         Args:
             save_path (Path | None): Optional path to save the generated plots.
