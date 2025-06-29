@@ -4,10 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Assuming these imports are correct based on your project structure
-from ...domain.analyzing.interfaces.base_visualizer import (
-    BaseDataVisualizer,
-)
+from ...domain.analyzing.interfaces.base_visualizer import BaseDataVisualizer
 from .mapper import ParetoVisualizationDTO
 
 
