@@ -222,8 +222,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "title_text": "Enhanced Pareto Optimization Dashboard",
         "title_x": 0.5,
         "title_font_size": 24,
-        # The height is reduced for the smaller number of rows
-        "height": 1800,
+        # The height is increased to give more room for plots
+        "height": 2200,
         "width": 1600,
         "showlegend": True,
         "template": "plotly_white",
@@ -245,7 +245,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
 
     # Description positions are updated for the new 6-row layout.
     _DESCRIPTION_POSITIONS = {
-        "row": {1: 0.95, 2: 0.82, 3: 0.69, 4: 0.56, 5: 0.43, 6: 0.15},
+        "row": {1: 0.97, 2: 0.82, 3: 0.67, 4: 0.52, 5: 0.37, 6: 0.15},
         "col": {1: 0.25, 2: 0.75},
     }
 
@@ -299,7 +299,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             vertical_spacing=0.05,  # Reduced spacing
             # Adjust column and row widths to fit the new layout
             column_widths=[0.5, 0.5],
-            row_heights=[0.1] * (rows - 2) + [0.3] * 2,  # Two large rows for 3D plots
+            # All rows have the same height now for a more uniform grid.
+            row_heights=[1 / rows] * rows,
         )
 
         fig.update_layout(

@@ -49,7 +49,6 @@ class FreeModeGenerateDecisionCommandHandler:
         # Use the interpolator and normalizers loaded with the model
         inverse_decision_mapper = model.inverse_decision_mapper
         decisions_normalizer = model.decisions_normalizer
-        objectives_normalizer = model.objectives_normalizer
 
         # Normalize the target objective using the loaded, fitted normalizer
         y_norm = decisions_normalizer.transform(np.array(command.target_objective))
@@ -58,6 +57,6 @@ class FreeModeGenerateDecisionCommandHandler:
         x_pred_norm = inverse_decision_mapper.predict(y_norm)[0]
 
         # Denormalize the predicted decision back to its original scale
-        x_pred = objectives_normalizer.inverse_transform(np.array([x_pred_norm]))[0]
+        x_pred = decisions_normalizer.inverse_transform(np.array([x_pred_norm]))[0]
 
         return x_pred
