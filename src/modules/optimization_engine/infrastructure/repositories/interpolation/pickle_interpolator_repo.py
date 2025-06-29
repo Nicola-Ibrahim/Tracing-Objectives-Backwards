@@ -102,21 +102,23 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         interpolators_directory.mkdir(exist_ok=True)
 
         # Then create a directory for the unique model ID within the type directory
-        model_version_directory = (
+        interpolator_version_directory = (
             interpolators_directory
             / interpolator_model.trained_at.strftime("%Y-%m-%d_%H-%M-%S")
         )
-        os.makedirs(model_version_directory, exist_ok=True)
+        os.makedirs(interpolator_version_directory, exist_ok=True)
 
         # Define file paths within the model's dedicated directory
-        mapper_artifact_path = model_version_directory / "inverse_decision_mapper.pkl"
+        mapper_artifact_path = (
+            interpolator_version_directory / "inverse_decision_mapper.pkl"
+        )
         y_normalizer_artifact_path = (
-            model_version_directory / "decisions_normalizer.pkl"
+            interpolator_version_directory / "decisions_normalizer.pkl"
         )
         x_normalizer_artifact_path = (
-            model_version_directory / "objectives_normalizer.pkl"
+            interpolator_version_directory / "objectives_normalizer.pkl"
         )
-        metadata_file_path = model_version_directory / "metadata.json"
+        metadata_file_path = interpolator_version_directory / "metadata.json"
 
         # Save the inverse decision mapper instance, normalizers, and metadata
         self._inverse_decision_mapper_handler.save(
@@ -134,12 +136,13 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             metadata_file_path, model_metadata
         )
 
-    def load(self, model_version_id: str) -> InterpolatorModel:
+    def load(self, interpolator_type: str, model_version_id: str) -> InterpolatorModel:
         """
-        Retrieves a specific InterpolatorModel entity by its unique version ID.
-        It now also loads the fitted normalizer instances.
+        Retrieves a specific InterpolatorModel entity by its type and unique version ID.
+        This is a direct lookup, which is much more efficient than a global search.
 
         Args:
+            interpolator_type: The type of the interpolator (e.g., 'gaussian_process_nd').
             model_version_id: The unique identifier of the specific model version to load.
 
         Returns:
@@ -149,25 +152,26 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             FileNotFoundError: If the model version with the specified ID is not found.
             IOError: For other loading errors (e.g., corrupted files).
         """
-        # We need to find the full path based on the type and timestamp/ID
-        # The ID is the timestamp, so we need to search for it.
-        found_path = None
-        for model_type_directory in self._base_model_storage_path.iterdir():
-            if model_type_directory.is_dir():
-                model_version_directory = model_type_directory / model_version_id
-                if model_version_directory.exists():
-                    found_path = model_version_directory
-                    break
+        # Construct the path directly from the type and ID.
+        interpolator_version_directory = (
+            self._base_model_storage_path / interpolator_type / model_version_id
+        )
 
-        if not found_path:
+        if not interpolator_version_directory.exists():
             raise FileNotFoundError(
-                f"Model version with ID {model_version_id} not found."
+                f"Model version with ID '{model_version_id}' for type '{interpolator_type}' not found at {interpolator_version_directory}"
             )
 
-        metadata_file_path = found_path / "metadata.json"
-        mapper_artifact_path = found_path / "inverse_decision_mapper.pkl"
-        y_normalizer_artifact_path = found_path / "y_normalizer.pkl"
-        x_normalizer_artifact_path = found_path / "x_normalizer.pkl"
+        metadata_file_path = interpolator_version_directory / "metadata.json"
+        mapper_artifact_path = (
+            interpolator_version_directory / "inverse_decision_mapper.pkl"
+        )
+        y_normalizer_artifact_path = (
+            interpolator_version_directory / "decisions_normalizer.pkl"
+        )
+        x_normalizer_artifact_path = (
+            interpolator_version_directory / "objectives_normalizer.pkl"
+        )
 
         # Load metadata
         model_metadata = self._inverse_decision_mapper_handler.load_metadata(
@@ -175,21 +179,21 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         )
 
         # Load the fitted artifacts
-        loaded_decision_mapper = self._inverse_decision_mapper_handler.load(
+        inverse_decision_mapper = self._inverse_decision_mapper_handler.load(
             mapper_artifact_path
         )
-        loaded_y_normalizer = self._inverse_decision_mapper_handler.load(
+        decisions_normalizer = self._inverse_decision_mapper_handler.load(
             y_normalizer_artifact_path
         )
-        loaded_x_normalizer = self._inverse_decision_mapper_handler.load(
+        objectives_normalizer = self._inverse_decision_mapper_handler.load(
             x_normalizer_artifact_path
         )
 
         return InterpolatorModel.from_saved_format(
             saved_data=model_metadata,
-            loaded_mapper=loaded_decision_mapper,
-            loaded_x_normalizer=loaded_x_normalizer,  # Pass loaded normalizers
-            loaded_y_normalizer=loaded_y_normalizer,  # Pass loaded normalizers
+            inverse_decision_mapper=inverse_decision_mapper,
+            objectives_normalizer=objectives_normalizer,
+            decisions_normalizer=decisions_normalizer,
         )
 
     def get_all_versions(self, interpolator_type: str) -> list[InterpolatorModel]:
@@ -197,7 +201,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         Retrieves all trained versions of a model based on its 'type' from the parameters.
 
         Args:
-            model_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
+            interpolator_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
 
         Returns:
             A list of InterpolatorModel entities, sorted by 'trained_at' timestamp in descending order (latest first).
@@ -207,11 +211,13 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         if not interpolators_directory.exists():
             return []
 
-        for model_version_directory in interpolators_directory.iterdir():
-            if model_version_directory.is_dir():
+        for interpolator_version_directory in interpolators_directory.iterdir():
+            if interpolator_version_directory.is_dir():
                 try:
-                    # We can use the directory name as the model_version_id (the timestamp)
-                    model_version = self.load(model_version_directory.name)
+                    # Pass the interpolator_type along with the directory name (the ID) to the load method.
+                    model_version = self.load(
+                        interpolator_type, interpolator_version_directory.name
+                    )
                     found_model_versions.append(model_version)
                 except (
                     FileNotFoundError,
@@ -220,7 +226,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
                     ValueError,
                 ) as e:
                     print(
-                        f"Warning: Could not process directory '{model_version_directory.name}': {e}. Skipping."
+                        f"Warning: Could not process directory '{interpolator_version_directory.name}': {e}. Skipping."
                     )
                     continue
 
@@ -242,7 +248,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             FileNotFoundError: If no model versions are found for the given type.
             Exception: For other errors during version lookup.
         """
-        found_model_versions = self.get_latest_version(interpolator_type)
+        found_model_versions = self.get_all_versions(interpolator_type)
 
         if not found_model_versions:
             raise FileNotFoundError(

@@ -61,6 +61,7 @@ class TrainInterpolatorCommandHandler:
             decisions=raw_data.pareto_set,
             test_size=command.test_size,
             random_state=command.random_state,
+            with_plotting=command.should_generate_plots,
         )
 
         # Construct the InterpolatorModel entity with all its metadata

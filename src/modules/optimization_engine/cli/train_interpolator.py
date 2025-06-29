@@ -1,5 +1,3 @@
-import time
-
 from ..application.interpolation.train_model.dtos import (
     GaussianProcessInverseDecisionMapperParams,
     KrigingInverseDecisionMapperParams,
@@ -43,54 +41,18 @@ if __name__ == "__main__":
         trained_model_repository=PickleInterpolationModelRepository(),
     )
 
-    # Define the interpolator parameter classes we want to test
-    # These are the DTOs for each interpolator type
-    interpolator_param_classes = [
-        GaussianProcessInverseDecisionMapperParams,
-        NearestNeighborInverseDecisoinMapperParams,
-        NeuralNetworkInverserDecisionMapperParams,
-        RBFInverseDecisionMapperParams,
-        KrigingInverseDecisionMapperParams,
-        SVRInverseDecisionMapperParams,
-        SplineInverseDecisionMapperParams,
-    ]
-
-    # Define how many times to train each interpolator type
-    num_runs_per_type = 15  # Train each interpolator type 3 times
-
     # Common parameters for all training runs
     test_size = 0.2
     random_state = 42
 
-    # Loop through each interpolator type
-    for param_class in interpolator_param_classes:
-        interpolator_type_name = param_class.__name__.replace(
-            "InverseDecisionMapperParams", ""
-        )
+    # Construct the command with the appropriate parameters
+    command = TrainInterpolatorCommand(
+        params=RBFInverseDecisionMapperParams(),
+        test_size=test_size,
+        random_state=random_state,
+        version_number=16,
+        should_generate_plots=True,
+    )
 
-        # Loop multiple times for each interpolator type
-        for i in range(num_runs_per_type):
-            version_numberber = i + 1
-            print(
-                f"  > Run {version_numberber}/{num_runs_per_type} for {interpolator_type_name}"
-            )
-
-            # Instantiate the parameters for the current interpolator type
-            # You might want to pass specific args/kwargs if these DTOs have required params
-            # For simplicity, we assume they can be instantiated without args here.
-            interpolator_params_instance = param_class()
-
-            # Construct the command with the appropriate parameters
-            command = TrainInterpolatorCommand(
-                params=interpolator_params_instance,
-                test_size=test_size,
-                random_state=random_state,
-                version_number=version_numberber,
-            )
-
-            # Execute the command handler
-            command_handler.execute(command)
-            print(
-                f"  Successfully completed run {version_numberber} for {interpolator_type_name}"
-            )
-            time.sleep(0.5)
+    # Execute the command handler
+    command_handler.execute(command)

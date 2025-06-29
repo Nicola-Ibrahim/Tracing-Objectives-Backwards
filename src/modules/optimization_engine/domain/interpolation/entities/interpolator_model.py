@@ -66,16 +66,20 @@ class InterpolatorModel(BaseModel):
         # Use model_dump, but hide this implementation detail from the repository.
         # Pydantic's dump handles datetime serialization to ISO format.
         return self.model_dump(
-            exclude={"inverse_decision_mapper", "objectives_normalizer", "decisions_normalizer"}
+            exclude={
+                "inverse_decision_mapper",
+                "objectives_normalizer",
+                "decisions_normalizer",
+            }
         )
 
     @classmethod
     def from_saved_format(
         cls,
         saved_data: dict[str, Any],
-        loaded_mapper: BaseInverseDecisionMapper,
-        loaded_x_normalizer: BaseNormalizer,
-        loaded_y_normalizer: BaseNormalizer,
+        inverse_decision_mapper: BaseInverseDecisionMapper,
+        objectives_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
     ):
         """
         Constructs an InterpolatorModel entity from saved metadata and a loaded mapper.
@@ -85,7 +89,7 @@ class InterpolatorModel(BaseModel):
         # ISO-formatted datetime strings if the field is typed as datetime.
         return cls(
             **saved_data,
-            inverse_decision_mapper=loaded_mapper,
-            x_normalizer=loaded_x_normalizer,
-            y_normalizer=loaded_y_normalizer,
+            inverse_decision_mapper=inverse_decision_mapper,
+            objectives_normalizer=objectives_normalizer,
+            decisions_normalizer=decisions_normalizer,
         )

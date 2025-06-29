@@ -16,7 +16,7 @@ class MinMaxScalerNormalizer(BaseNormalizer):
         self.scaler = MinMaxScaler(feature_range=feature_range)
         self.feature_range = feature_range
 
-    def fit(self, data: NDArray[np.floating], y: NDArray | None = None) -> Self:
+    def fit(self, X: NDArray[np.floating], y: NDArray | None = None) -> Self:
         """
         Fits the scaler to the data.
         Args:
@@ -25,22 +25,23 @@ class MinMaxScalerNormalizer(BaseNormalizer):
         Returns:
             The fitted scaler instance (self)
         """
-        if data.ndim == 1:
-            data = data.reshape(-1, 1)  # Reshape for single feature
-        self.scaler.fit(data)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        self.scaler.fit(X)
         return self
 
-    def transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
+    def transform(self, X: NDArray[np.floating]) -> NDArray[np.floating]:
         """Transforms data using the fitted scaler."""
-        if data.ndim == 1:
-            data = data.reshape(-1, 1)  # Reshape for single feature
-        return self.scaler.transform(data)
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
 
-    def inverse_transform(self, data: NDArray[np.floating]) -> NDArray[np.floating]:
+        return self.scaler.transform(X)
+
+    def inverse_transform(self, X_norm: NDArray[np.floating]) -> NDArray[np.floating]:
         """Inverse transforms data to the original scale."""
-        if data.ndim == 1:
-            data = data.reshape(-1, 1)  # Reshape for single feature
-        return self.scaler.inverse_transform(data)
+        if X_norm.ndim == 1:
+            X_norm = X_norm.reshape(-1, 1)
+        return self.scaler.inverse_transform(X_norm)
 
 
 class HypercubeNormalizer(BaseNormalizer):

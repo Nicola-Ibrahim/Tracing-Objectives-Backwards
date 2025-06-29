@@ -32,4 +32,9 @@ class TrainInterpolatorCommand(BaseModel):
 
     version_number: int = Field(..., description="The number of training run")
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    should_generate_plots: bool = Field(
+        True, description="Enables the generation and saving of visualization plots."
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
