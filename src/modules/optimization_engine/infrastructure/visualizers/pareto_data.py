@@ -28,6 +28,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "Linear ND": "#FFEA07",
     }
 
+    # Updated for a 2-column layout with the parallel coordinates plot removed.
+    # The plots have been re-packed to fill the grid.
     _SUBPLOT_CONFIG = {
         (1, 1): {
             "type": "scatter",
@@ -57,13 +59,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 7,
             "showlegend": True,
         },
-        (1, 3): {
-            "type": "parcoords",
-            "title": "Parallel Coordinates",
-            "description": "Multivariate analysis across all dimensions",
-            "data_key": "parallel_coordinates_data",
-            "dimensions_labels": ["x₁", "x₂", "f₁", "f₂"],
-        },
+        # Removed the parallel coordinates plot at (2, 1)
         (2, 1): {
             "type": "scatter",
             "title": "Normalized Decision Space",
@@ -92,7 +88,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 6,
             "showlegend": True,
         },
-        (2, 3): {
+        (3, 1): {
             "type": "scatter",
             "title": "$x_1$ vs $x_2$ (Interpolations)",
             "description": "Relationship between decision variables",
@@ -100,15 +96,15 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "y_label": "Normalized $x_2$",
             "x_data_key": "norm_x1",
             "y_data_key": "norm_x2",
-            "interpolation_source_key": "interpolations_1d",  # Points to the top-level dict in DTO
-            "interpolation_relationship_key": "x1_vs_x2",  # Points to the specific relationship dict
+            "interpolation_source_key": "interpolations_1d",
+            "interpolation_relationship_key": "x1_vs_x2",
             "name": "Data Points",
             "color": "#3498db",
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
         },
-        (3, 1): {
+        (3, 2): {
             "type": "scatter",
             "title": "$f_1$ vs $f_2$ (Interpolations)",
             "description": "Relationship between $f_1$ and $f_2$",
@@ -124,7 +120,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 6,
             "showlegend": False,
         },
-        (3, 2): {
+        (4, 1): {
             "type": "scatter",
             "title": "$f_1$ vs $x_1$ (Interpolations)",
             "description": "Relationship between $f_1$ and $x_1$",
@@ -140,7 +136,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 6,
             "showlegend": False,
         },
-        (3, 3): {
+        (4, 2): {
             "type": "scatter",
             "title": "$f_1$ vs $x_2$ (Interpolations)",
             "description": "Relationship between $f_1$ and $x_2$",
@@ -156,7 +152,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 6,
             "showlegend": False,
         },
-        (4, 1): {
+        (5, 1): {
             "type": "scatter",
             "title": "$f_2$ vs $x_1$ (Interpolations)",
             "description": "Relationship between $f_2$ and $x_1$",
@@ -172,7 +168,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 6,
             "showlegend": False,
         },
-        (4, 2): {
+        (5, 2): {
             "type": "scatter",
             "title": "$f_2$ vs $x_2$ (Interpolations)",
             "description": "Relationship between $f_2$ and $x_2$",
@@ -188,7 +184,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "marker_size": 6,
             "showlegend": False,
         },
-        (5, 1): {
+        (6, 1): {
             "type": "scatter3d",
             "title": "3D: $f_1$, $f_2$, $x_1$",
             "description": "3D: $f_1$, $f_2$ and $x_1$ with interpolation",
@@ -204,7 +200,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "color": "#1f77b4",
             "marker_size": 5,
         },
-        (5, 2): {
+        (6, 2): {
             "type": "scatter3d",
             "title": "3D: $f_1$, $f_2$, $x_2$",
             "description": "3D: $f_1$, $f_2$ and $x_2$ with interpolation",
@@ -226,8 +222,9 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "title_text": "Enhanced Pareto Optimization Dashboard",
         "title_x": 0.5,
         "title_font_size": 24,
-        "height": 2200,
-        "width": 1800,
+        # The height is reduced for the smaller number of rows
+        "height": 1800,
+        "width": 1600,
         "showlegend": True,
         "template": "plotly_white",
         "legend_orientation": "h",
@@ -243,11 +240,13 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "margin_r": 50,
         "font_family": "Arial",
         "font_size": 12,
+        "hovermode": "closest",
     }
 
+    # Description positions are updated for the new 6-row layout.
     _DESCRIPTION_POSITIONS = {
-        "row": {1: 0.92, 2: 0.72, 3: 0.52, 4: 0.32, 5: 0.12},
-        "col": {1: 0.15, 2: 0.5, 3: 0.85},
+        "row": {1: 0.95, 2: 0.82, 3: 0.69, 4: 0.56, 5: 0.43, 6: 0.15},
+        "col": {1: 0.25, 2: 0.75},
     }
 
     def __init__(self, save_path: Path | None = None):
@@ -278,25 +277,29 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         Creates and configures the main figure layout for the dashboard.
         """
         rows = max(r for r, c in self._SUBPLOT_CONFIG.keys())
-        cols = max(c for r, c in self._SUBPLOT_CONFIG.keys())
+        cols = 2  # Fixed to 2 columns
 
         specs = [[None for _ in range(cols)] for _ in range(rows)]
         subplot_titles = [None] * (rows * cols)
 
         for (r, c), config in self._SUBPLOT_CONFIG.items():
             if 1 <= r <= rows and 1 <= c <= cols:
+                # Ensure the specs are updated with the correct subplot type
                 specs[r - 1][c - 1] = {"type": config["type"]}
+                # Update the subplot titles to match the new grid
                 subplot_titles[(r - 1) * cols + (c - 1)] = config["title"]
 
+        # Adjusted horizontal and vertical spacing to give more room to the plots.
         fig = make_subplots(
             rows=rows,
             cols=cols,
             specs=specs,
             subplot_titles=subplot_titles,
-            horizontal_spacing=0.08,
-            vertical_spacing=0.1,
-            column_widths=[0.3, 0.3, 0.4],
-            row_heights=[0.15, 0.15, 0.15, 0.15, 0.4],
+            horizontal_spacing=0.05,  # Reduced spacing
+            vertical_spacing=0.05,  # Reduced spacing
+            # Adjust column and row widths to fit the new layout
+            column_widths=[0.5, 0.5],
+            row_heights=[0.1] * (rows - 2) + [0.3] * 2,  # Two large rows for 3D plots
         )
 
         fig.update_layout(
@@ -332,6 +335,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                 family=self._FIGURE_LAYOUT_CONFIG["font_family"],
                 size=self._FIGURE_LAYOUT_CONFIG["font_size"],
             ),
+            hovermode=self._FIGURE_LAYOUT_CONFIG["hovermode"],
         )
         return fig
 
@@ -396,6 +400,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                             col,
                             interpolation_methods_dict,
                             self._INTERPOLATION_COLORS,
+                            config,  # Pass the subplot config
                         )
 
             elif plot_type == "parcoords":
@@ -450,6 +455,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                             col,
                             surface_methods_dict,
                             self._INTERPOLATION_COLORS,
+                            config,  # Pass the subplot config
                         )
             else:
                 print(
@@ -509,6 +515,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                 ),
                 name=config.get("name", "Data Points"),
                 showlegend=config.get("showlegend", True),
+                # Add hover template for detailed info on hover
+                hovertemplate=f"{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<extra>{config['name']}</extra>",
             ),
             row=row,
             col=col,
@@ -568,6 +576,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             str, tuple[np.ndarray, np.ndarray]
         ],  # This is now the inner dict of methods
         interpolation_colors: dict,
+        config: dict,  # New parameter to access subplot config
     ) -> None:
         """
         Adds interpolation lines for a scatter plot, iterating through all methods in the dict.
@@ -587,6 +596,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                     name=method_name,
                     legendgroup=method_name,
                     showlegend=show_legend_item,
+                    # Add hover template for lines
+                    hovertemplate=f"Method: {method_name}<br>{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<extra></extra>",
                 ),
                 row=row,
                 col=col,
@@ -625,6 +636,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                 name=config.get("name", "Original Points"),
                 legendgroup="original_3d_points",
                 showlegend=show_legend_points,
+                # Add hover template for 3D points
+                hovertemplate=f"{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<br>{config['z_label']}: %{{z:.4f}}<extra>{config['name']}</extra>",
             ),
             row=row,
             col=col,
@@ -632,13 +645,17 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         if show_legend_points:
             self._added_legend_items.add(config.get("name", "Original Points"))
 
+        # Update scene to set a default camera view and a 'data' aspect mode to stretch the plot.
         fig.update_scenes(
             xaxis_title_text=config["x_label"],
             yaxis_title_text=config["y_label"],
             zaxis_title_text=config["z_label"],
-            aspectmode="cube",
+            # Changed aspectmode from 'cube' to 'data' to stretch plots to fit data ranges.
+            aspectmode="data",
             row=row,
             col=col,
+            # Set a default camera position for a consistent view
+            camera=dict(eye=dict(x=1.25, y=1.25, z=1.25)),
         )
 
     def _add_3d_surface_traces(
@@ -650,6 +667,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             str, tuple[np.ndarray, np.ndarray, np.ndarray]
         ],  # This is now the inner dict of methods
         interpolation_colors: dict,
+        config: dict,  # New parameter to access subplot config
     ) -> None:
         """
         Adds 3D surface interpolations, iterating through all methods in the dict.
@@ -671,6 +689,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                     showlegend=show_in_legend,
                     showscale=False,
                     legendgroup=method_name,
+                    # Add hover template for surfaces
+                    hovertemplate=f"Method: {method_name}<br>{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<br>{config['z_label']}: %{{z:.4f}}<extra></extra>",
                 ),
                 row=row,
                 col=col,
@@ -714,6 +734,16 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         """
         Adds a description text annotation below a subplot.
         """
+        # Ensure row and col indices are valid
+        if (
+            row not in self._DESCRIPTION_POSITIONS["row"]
+            or col not in self._DESCRIPTION_POSITIONS["col"]
+        ):
+            print(
+                f"Warning: No description position configured for subplot ({row}, {col})."
+            )
+            return
+
         row_pos = self._DESCRIPTION_POSITIONS["row"].get(row, 0)
         col_pos = self._DESCRIPTION_POSITIONS["col"].get(col, 0)
 
