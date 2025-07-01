@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.metrics import (
@@ -37,3 +39,19 @@ class MeanSquaredErrorValidationMetric(BaseValidationMetric):
             raise ValueError("y_true and y_pred must have the same shape.")
 
         return float(sk_mean_squared_error(y_true, y_pred))
+
+
+class MetricFactory:
+    """
+    Concrete factory for creating various validation metric instances.
+    """
+
+    def create(self, metric_type: str, **kwargs: Any) -> BaseValidationMetric:
+        """
+        Creates and returns a concrete validation metric instance based on the given type and parameters.
+        """
+        if metric_type == "MSE":
+            return MeanSquaredErrorValidationMetric(**kwargs)
+        # Add more metric types here as you implement them
+        else:
+            raise ValueError(f"Unknown metric type: {metric_type}")

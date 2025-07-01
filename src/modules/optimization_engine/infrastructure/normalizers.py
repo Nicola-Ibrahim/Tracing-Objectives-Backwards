@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Any, Self
 
 import numpy as np
 from numpy.typing import NDArray
@@ -247,3 +247,27 @@ class LogNormalizer(BaseNormalizer):
             return np.exp(X_norm) - self.offset
         else:
             return np.power(self.base, X_norm) - self.offset
+
+
+class NormalizerFactory:
+    """
+    Concrete factory for creating various normalizer instances.
+    """
+
+    def create(self, normalizer_type: str, **kwargs: Any) -> BaseNormalizer:
+        """
+        Creates and returns a concrete normalizer instance based on the given type and parameters.
+        """
+        if normalizer_type == "MinMaxScaler":
+            return MinMaxScalerNormalizer(**kwargs)
+        elif normalizer_type == "HypercubeNormalizer":
+            return HypercubeNormalizer(**kwargs)
+        elif normalizer_type == "StandardNormalizer":
+            return StandardNormalizer(**kwargs)
+        elif normalizer_type == "UnitVectorNormalizer":
+            return UnitVectorNormalizer(**kwargs)
+        elif normalizer_type == "LogNormalizer":
+            return LogNormalizer(**kwargs)
+        # Add more normalizer types here as you implement them
+        else:
+            raise ValueError(f"Unknown normalizer type: {normalizer_type}")

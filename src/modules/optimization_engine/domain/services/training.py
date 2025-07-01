@@ -20,29 +20,26 @@ class DecisionMapperTrainingService:
     It encapsulates the training and prediction concerns for better SRP adherence.
     """
 
-    def __init__(
-        self,
-        validation_metric: BaseValidationMetric,
-        decisions_normalizer: BaseNormalizer,
-        objectives_normalizer: BaseNormalizer,
-    ):
+    def __init__(self):
         """
         Initializes the service with a validation metric dependency.
         """
-        self._validation_metric = validation_metric
-        self.decisions_normalizer = decisions_normalizer
-        self.objectives_normalizer = objectives_normalizer
 
     def train(
         self,
         inverse_decision_mapper: BaseInverseDecisionMapper,
         objectives: NDArray[np.floating],  # Objective data (input to the mapper)
         decisions: NDArray[np.floating],  # Decision data (output from the mapper)
+        validation_metric: BaseValidationMetric,
+        objectives_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
         test_size: float = 0.33,
         random_state: int = 42,
         with_plotting: bool = False,
     ) -> tuple[
         BaseInverseDecisionMapper,
+        BaseNormalizer,
+        BaseNormalizer,
         dict[str, float],
     ]:
         """
@@ -70,13 +67,11 @@ class DecisionMapperTrainingService:
         )
 
         # Normalize training and validation data
-        objectives_train_norm = self.objectives_normalizer.fit_transform(
-            objectives_train
-        )
-        objectives_val_norm = self.objectives_normalizer.transform(objectives_val)
+        objectives_train_norm = objectives_normalizer.fit_transform(objectives_train)
+        objectives_val_norm = objectives_normalizer.transform(objectives_val)
 
-        decisions_train_norm = self.decisions_normalizer.fit_transform(decisions_train)
-        decisions_val_norm = self.decisions_normalizer.transform(decisions_val)
+        decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
+        decisions_val_norm = decisions_normalizer.transform(decisions_val)
 
         # Fit the interpolator instance on normalized data
         inverse_decision_mapper.fit(
@@ -87,13 +82,13 @@ class DecisionMapperTrainingService:
         decisions_pred_val_norm = inverse_decision_mapper.predict(objectives_val_norm)
 
         # Inverse-transform predictions to original scale
-        decisions_pred_val = self.decisions_normalizer.inverse_transform(
+        decisions_pred_val = decisions_normalizer.inverse_transform(
             decisions_pred_val_norm
         )
 
         # Calculate validation metrics using the injected metric
         metrics = {
-            self._validation_metric.name: self._validation_metric.calculate(
+            validation_metric.name: validation_metric.calculate(
                 y_true=decisions_val, y_pred=decisions_pred_val
             )
         }
@@ -111,8 +106,8 @@ class DecisionMapperTrainingService:
         # Return fitted instance, fitted normalizers, and metrics
         return (
             inverse_decision_mapper,
-            self.objectives_normalizer,
-            self.decisions_normalizer,
+            objectives_normalizer,
+            decisions_normalizer,
             metrics,
         )
 
@@ -137,7 +132,7 @@ class DecisionMapperTrainingService:
         )
 
         # Inverse-transform predictions to original scale
-        predicted_decisions = self.decisions_normalizer.inverse_transform(
+        predicted_decisions = decisions_normalizer.inverse_transform(
             predicted_decisions_norm
         )
 

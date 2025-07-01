@@ -8,6 +8,8 @@ from ....domain.services.training import DecisionMapperTrainingService
 from ....infrastructure.inverse_decision_mappers.factory import (
     InverseDecisionMapperFactory,
 )
+from ....infrastructure.metrics import MetricFactory
+from ....infrastructure.normalizers import NormalizerFactory
 from .train_interpolator_command import TrainInterpolatorCommand
 
 
@@ -25,12 +27,16 @@ class TrainInterpolatorCommandHandler:
         logger: BaseLogger,
         decision_mapper_training_service: DecisionMapperTrainingService,
         trained_model_repository: BaseInterpolationModelRepository,
+        normalizer_factory: NormalizerFactory,
+        metric_factory: MetricFactory,
     ):
         self._pareto_data_repo = pareto_data_repo
         self._inverse_decision_factory = inverse_decision_factory
         self._logger = logger
         self._decsion_mapper_training_service = decision_mapper_training_service
         self._trained_model_repository = trained_model_repository
+        self._normalizer_factory = normalizer_factory
+        self._metric_factory = metric_factory
 
     def execute(self, command: TrainInterpolatorCommand) -> None:
         """
@@ -46,15 +52,31 @@ class TrainInterpolatorCommandHandler:
             params=command.params.model_dump(),
         )
 
+        objectives_normalizer = self._normalizer_factory.create(
+            normalizer_type=command.objectives_normalizer_config.type,
+            **command.objectives_normalizer_config.params,
+        )
+
+        decisions_normalizer = self._normalizer_factory.create(
+            normalizer_type=command.decisions_normalizer_config.type,
+            **command.decisions_normalizer_config.params,
+        )
+
+        # Create validation metric using the metric factory, based on command config
+        validation_metric = self._metric_factory.create(
+            metric_type=command.validation_metric_config.type,
+            **command.validation_metric_config.params,
+        )
+
         # Load raw data using the injected archiver
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
 
         # Delegate training to the domain service
         (
             fitted_inverse_decision_mapper,
-            objectives_normalizer,
-            decisions_normalizer,
-            validation_metrics,
+            fitted_objectives_normalizer,
+            fitted_decisions_normalizer,
+            metrics,
         ) = self._decsion_mapper_training_service.train(
             inverse_decision_mapper=inverse_decision_mapper,
             objectives=raw_data.pareto_front,
@@ -62,16 +84,19 @@ class TrainInterpolatorCommandHandler:
             test_size=command.test_size,
             random_state=command.random_state,
             with_plotting=command.should_generate_plots,
+            validation_metric=validation_metric,
+            objectives_normalizer=objectives_normalizer,
+            decisions_normalizer=decisions_normalizer,
         )
 
         # Construct the InterpolatorModel entity with all its metadata
         trained_interpolator_model = InterpolatorModel(
             parameters=command.params.model_dump(),
             inverse_decision_mapper=fitted_inverse_decision_mapper,
-            metrics=validation_metrics,
+            metrics=metrics,
             version_number=command.version_number,
-            objectives_normalizer=objectives_normalizer,
-            decisions_normalizer=decisions_normalizer,
+            objectives_normalizer=fitted_objectives_normalizer,
+            decisions_normalizer=fitted_decisions_normalizer,
         )
 
         # Save the InterpolatorModel entity to the repository
