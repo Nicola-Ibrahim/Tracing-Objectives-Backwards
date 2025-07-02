@@ -6,7 +6,7 @@ from ...domain.analyzing.interfaces.base_visualizer import (
 )
 
 
-class PlotlyIntrepolatorsPerformanceVisualizer(BaseDataVisualizer):
+class PlotlyIntrepolatorsMetricsVisualizer(BaseDataVisualizer):
     """
     A concrete visualizer that uses Plotly Express to plot model performance.
     This is an infrastructure component.

@@ -546,7 +546,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "title_text": "Enhanced Pareto Optimization Dashboard",
         "title_x": 0.5,
         "title_font_size": 24,
-        "height": 2200,
+        "height": 2700,
         "width": 1600,
         "showlegend": True,
         "template": "plotly_white",
@@ -634,7 +634,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             horizontal_spacing=0.05,
             vertical_spacing=0.05,
             column_widths=[0.5, 0.5],
-            row_heights=[0.1, 0.1, 0.1, 0.1, 0.3, 0.3],
+            row_heights=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
         )
 
         fig.update_layout(
