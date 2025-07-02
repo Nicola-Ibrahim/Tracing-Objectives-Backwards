@@ -1,6 +1,6 @@
 import time
 
-from ..application.interpolation.train_model.dtos import (
+from ..application.interpolation.dtos import (
     GaussianProcessInverseDecisionMapperParams,
     KrigingInverseDecisionMapperParams,
     NearestNeighborInverseDecisoinMapperParams,
@@ -9,15 +9,14 @@ from ..application.interpolation.train_model.dtos import (
     SplineInverseDecisionMapperParams,
     SVRInverseDecisionMapperParams,
 )
-from ..application.interpolation.train_model.train_interpolator_command import (
+from ..application.interpolation.train_single_interpolator_command.train_single_interpolator_command import (
     MetricConfig,
     NormalizerConfig,
-    TrainInterpolatorCommand,
+    TrainSingleInterpolatorCommand,
 )
-from ..application.interpolation.train_model.train_interpolator_handler import (
-    TrainInterpolatorCommandHandler,
+from ..application.interpolation.train_single_interpolator_command.train_single_interpolator_handler import (
+    TrainSingleInterpolatorCommandHandler,
 )
-from ..domain.services.training import DecisionMapperTrainingService
 from ..infrastructure.inverse_decision_mappers.factory import (
     InverseDecisionMapperFactory,
 )
@@ -30,17 +29,20 @@ from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
 from ..infrastructure.repositories.interpolation.pickle_interpolator_repo import (
     PickleInterpolationModelRepository,
 )
+from ..infrastructure.visualizers.training_performace import (
+    PlotlyTrainingPerformanceVisualizer,
+)
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
-    command_handler = TrainInterpolatorCommandHandler(
+    command_handler = TrainSingleInterpolatorCommandHandler(
         pareto_data_repo=NPZParetoDataRepository(),
         inverse_decision_factory=InverseDecisionMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        decision_mapper_training_service=DecisionMapperTrainingService(),
         trained_model_repository=PickleInterpolationModelRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
+        visualizer=PlotlyTrainingPerformanceVisualizer(),
     )
 
     # Define the interpolator parameter classes we want to test
@@ -81,7 +83,7 @@ if __name__ == "__main__":
             interpolator_params_instance = param_class()
 
             # Construct the command with the appropriate parameters
-            command = TrainInterpolatorCommand(
+            command = TrainSingleInterpolatorCommand(
                 params=interpolator_params_instance,
                 test_size=test_size,
                 random_state=random_state,
