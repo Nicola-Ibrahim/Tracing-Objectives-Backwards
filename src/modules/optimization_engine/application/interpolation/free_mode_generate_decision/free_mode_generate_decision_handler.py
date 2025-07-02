@@ -39,53 +39,46 @@ class FreeModeGenerateDecisionCommandHandler:
         decisions_normalizer = model.decisions_normalizer
         objectives_normalizer = model.objectives_normalizer
 
-        # Load and normalize Pareto front
+        # Load raw Pareto data
         raw_data = self._paret_data_repo.load("pareto_data")
 
-        target_objective_array = np.array(command.target_objective)
-        # Ensure target_objective_array is 2D for normalizer.transform if it expects it
-        if target_objective_array.ndim == 1:
-            target_objective_array = target_objective_array.reshape(1, -1)
+        target_objective = np.array(command.target_objective)
+        # Ensure target_objective is 2D for normalizer.transform if it expects it
+        if target_objective.ndim == 1:
+            target_objective = target_objective.reshape(1, -1)
 
-        objective_norm = objectives_normalizer.transform(target_objective_array)
+        target_objective_norm = objectives_normalizer.transform(target_objective)
         self._logger.log_info(
-            f"Target objective: {target_objective_array}. Normalized: {objective_norm}."
+            f"Target objective: {target_objective}. Normalized: {target_objective_norm}."
         )
 
-        normalized_front = objectives_normalizer.transform(raw_data.pareto_front)
+        pareto_front_norm = objectives_normalizer.transform(raw_data.pareto_front)
 
         try:
+            # Initialize feasibility checker with both unnormalized and normalized fronts
             objective_feasibility_checker = ObjectiveFeasibilityChecker(
-                normalized_pareto_front=normalized_front,
+                pareto_front=raw_data.pareto_front,
+                pareto_front_norm=pareto_front_norm,
                 tolerance=command.distance_tolerance,
             )
-
-            objective_feasibility_checker.validate(objective_norm)
-
-        except ObjectiveOutOfBoundsError as e:
-            self._logger.log_error(
-                "❌ The selected objective is outside the feasible Pareto front."
-            )
-            self._logger.log_error(f"Closest distance: {e.distance:.4f}")
-            self._logger.log_error(
-                "Here are some nearby feasible objectives you can try:"
-            )
-            self._logger.log_error(f"Feasibility check failed: {e}")
-
-            for s in objective_feasibility_checker.get_nearest_suggestions(
-                target_objective_array, command.num_suggestions
-            ):
-                rounded = tuple(round(x, 4) for x in s)
-                rounded = objectives_normalizer.inverse_transform(
-                    np.array(rounded).reshape(1, -1)
-                )
-                self._logger.log_error(f"f1: {rounded[0][0]}, f2: {rounded[0][1]}")
-        else:
-            # Proceed with interpolation
             self._logger.log_info(
-                f"Predicting decision for normalized objective: {objective_norm}."
+                f"Initiating feasibility check for target objective with tolerance {command.distance_tolerance}."
             )
-            decision_pred_norm = inverse_decision_mapper.predict(objective_norm)
+            # Validate, passing both unnormalized and normalized targets
+            objective_feasibility_checker.validate(
+                target_objective,
+                target_objective_norm,
+                num_suggestions=command.num_suggestions,
+            )
+            self._logger.log_info(
+                "Feasibility check completed successfully. Objective is feasible."
+            )
+
+            # Proceed with interpolation if validation passes
+            self._logger.log_info(
+                f"Predicting decision for normalized objective: {target_objective_norm}."
+            )
+            decision_pred_norm = inverse_decision_mapper.predict(target_objective_norm)
             self._logger.log_info(
                 f"Normalized predicted decision: {decision_pred_norm}."
             )
@@ -99,4 +92,34 @@ class FreeModeGenerateDecisionCommandHandler:
                 f"Inverse-transformed predicted decision: {decision_pred}."
             )
 
+            self._logger.log_info(
+                "FreeMode decision generation completed successfully."
+            )
             return decision_pred
+
+        except ObjectiveOutOfBoundsError as e:
+            self._logger.log_error(
+                f"❌ Feasibility check failed. Reason: {e.reason.value}"
+            )
+            self._logger.log_error(f"   Message: {e.message}")
+            if e.distance is not None:
+                self._logger.log_error(
+                    f"   Closest distance to front: {e.distance:.4f}"
+                )
+            if e.extra_info:
+                self._logger.log_error(f"   Details: {e.extra_info}")
+
+            if e.suggestions is not None and len(e.suggestions) > 0:
+                self._logger.log_error(
+                    "   Here are some nearby feasible objectives you can try (original scale):"
+                )
+                # Inverse-transform suggestions for logging in original scale
+                for s_norm in e.suggestions:
+                    # Ensure s_norm is 2D for inverse_transform
+                    s_unnorm = objectives_normalizer.inverse_transform(
+                        s_norm.reshape(1, -1)
+                    )[0]
+                    # Assuming 2 objectives (f1, f2)
+                    self._logger.log_error(
+                        f"   - f1: {s_unnorm[0]:.4f}, f2: {s_unnorm[1]:.4f}"
+                    )
