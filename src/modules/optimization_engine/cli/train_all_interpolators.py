@@ -98,4 +98,4 @@ if __name__ == "__main__":
             print(
                 f"  Successfully completed run {version_number} for {interpolator_type_name}"
             )
-            time.sleep(0.5)
+            time.sleep(1)

@@ -141,4 +141,5 @@ class TrainSingleInterpolatorCommandHandler:
                 decisions_val=decisions_val_norm,
                 decisions_pred_val=decisions_pred_val_norm,
             )
+
             self._logger.log_info("Plots generated.")
