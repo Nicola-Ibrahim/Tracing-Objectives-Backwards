@@ -112,10 +112,10 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         mapper_artifact_path = (
             interpolator_version_directory / "inverse_decision_mapper.pkl"
         )
-        y_normalizer_artifact_path = (
+        decisions_normalizer_artifact_path = (
             interpolator_version_directory / "decisions_normalizer.pkl"
         )
-        x_normalizer_artifact_path = (
+        objecitves_normalizer_artifact_path = (
             interpolator_version_directory / "objectives_normalizer.pkl"
         )
         metadata_file_path = interpolator_version_directory / "metadata.json"
@@ -125,10 +125,11 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             interpolator_model.inverse_decision_mapper, mapper_artifact_path
         )
         self._inverse_decision_mapper_handler.save(
-            interpolator_model.decisions_normalizer, y_normalizer_artifact_path
+            interpolator_model.decisions_normalizer, decisions_normalizer_artifact_path
         )
         self._inverse_decision_mapper_handler.save(
-            interpolator_model.objectives_normalizer, x_normalizer_artifact_path
+            interpolator_model.objectives_normalizer,
+            objecitves_normalizer_artifact_path,
         )
 
         model_metadata = interpolator_model.to_save_format()
@@ -166,10 +167,10 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         mapper_artifact_path = (
             interpolator_version_directory / "inverse_decision_mapper.pkl"
         )
-        y_normalizer_artifact_path = (
+        decisions_normalizer_artifact_path = (
             interpolator_version_directory / "decisions_normalizer.pkl"
         )
-        x_normalizer_artifact_path = (
+        objecitves_normalizer_artifact_path = (
             interpolator_version_directory / "objectives_normalizer.pkl"
         )
 
@@ -183,10 +184,10 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             mapper_artifact_path
         )
         decisions_normalizer = self._inverse_decision_mapper_handler.load(
-            y_normalizer_artifact_path
+            decisions_normalizer_artifact_path
         )
         objectives_normalizer = self._inverse_decision_mapper_handler.load(
-            x_normalizer_artifact_path
+            objecitves_normalizer_artifact_path
         )
 
         return InterpolatorModel.from_saved_format(
