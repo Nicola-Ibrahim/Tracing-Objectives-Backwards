@@ -23,7 +23,7 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-class InverseDecisionMapperFileHandler:
+class PickleFileHandler:
     """
     Handles the serialization and deserialization of model artifacts (using pickle)
     and their associated metadata (using JSON) to and from the file system.
@@ -75,7 +75,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
 
     def __init__(self):
         self._base_model_storage_path = ROOT_PATH / "models"
-        self._inverse_decision_mapper_handler = InverseDecisionMapperFileHandler()
+        self._inverse_decision_mapper_handler = PickleFileHandler()
         self._base_model_storage_path.mkdir(
             parents=True, exist_ok=True
         )  # Ensure the base models directory exists
