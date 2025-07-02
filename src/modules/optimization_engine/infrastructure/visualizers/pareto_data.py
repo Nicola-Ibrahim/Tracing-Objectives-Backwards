@@ -1,11 +1,652 @@
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
+import scipy.interpolate as spi
 from plotly.subplots import make_subplots
+from sklearn.preprocessing import MinMaxScaler
 
 from ...domain.analyzing.interfaces.base_visualizer import BaseDataVisualizer
-from .mapper import ParetoVisualizationDTO
+
+
+@dataclass
+class ParetoDataset:
+    """
+    Container for all Pareto optimization data in various representations:
+    - Core Pareto set and front (original values)
+    - Normalized values
+    - Computed interpolations
+    """
+
+    # --- Core Pareto Data ---
+    pareto_set: np.ndarray = field(
+        default_factory=lambda: np.array([]),
+        metadata={
+            "description": "Original decision variables (X) for Pareto optimal solutions. Expected shape (n_samples, n_decision_vars)."
+        },
+    )
+    pareto_front: np.ndarray = field(
+        default_factory=lambda: np.array([]),
+        metadata={
+            "description": "Original objective function values (F) for Pareto optimal solutions. Expected shape (n_samples, n_objective_vars)."
+        },
+    )
+
+    # --- Normalized Values (0-1 range) ---
+    normalized: dict[str, np.ndarray | None] = field(
+        default_factory=lambda: {"f1": None, "f2": None, "x1": None, "x2": None},
+        metadata={
+            "description": "Dictionary of normalized (0-1 range) decision and objective variables."
+        },
+    )
+
+    @property
+    def norm_f1(self) -> np.ndarray:
+        """Returns the normalized values of objective function 1."""
+        f1 = self.normalized.get("f1")
+        if f1 is None or f1.size == 0:
+            raise AttributeError("Normalized 'f1' data is not set in ParetoDataset.")
+        return f1
+
+    @property
+    def norm_f2(self) -> np.ndarray:
+        """Returns the normalized values of objective function 2."""
+        f2 = self.normalized.get("f2")
+        if f2 is None or f2.size == 0:
+            raise AttributeError("Normalized 'f2' data is not set in ParetoDataset.")
+        return f2
+
+    @property
+    def norm_x1(self) -> np.ndarray:
+        """Returns the normalized values of decision variable 1."""
+        x1 = self.normalized.get("x1")
+        if x1 is None or x1.size == 0:
+            raise AttributeError("Normalized 'x1' data is not set in ParetoDataset.")
+        return x1
+
+    @property
+    def norm_x2(self) -> np.ndarray:
+        """Returns the normalized values of decision variable 2."""
+        x2 = self.normalized.get("x2")
+        if x2 is None or x2.size == 0:
+            raise AttributeError("Normalized 'x2' data is not set in ParetoDataset.")
+        return x2
+
+    # --- 1D Interpolations ---
+    interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = field(
+        default_factory=lambda: {
+            "f1_vs_f2": {},
+            "f1_vs_x1": {},
+            "f1_vs_x2": {},
+            "x1_vs_x2": {},
+            "f2_vs_x1": {},
+            "f2_vs_x2": {},
+        },
+        metadata={
+            "description": "1D interpolated data for various variable relationships."
+        },
+    )
+
+    def get_1d_interpolated_data(
+        self, relationship: str, method: str
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Retrieves the specific 1D interpolated data for a given relationship and method.
+
+        Args:
+            relationship (str): The name of the relationship (e.g., "f1_vs_f2").
+            method (str): The name of the interpolation method (e.g., "Pchip", "Cubic Spline").
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: A tuple containing the x and y interpolated data arrays.
+
+        Raises:
+            KeyError: If the relationship or method is not found.
+        """
+        if relationship not in self.interpolations_1d:
+            raise KeyError(
+                f"1D interpolated data relationship '{relationship}' not found."
+            )
+        if method not in self.interpolations_1d[relationship]:
+            raise KeyError(
+                f"Interpolated data for method '{method}' not found for relationship '{relationship}'."
+            )
+        return self.interpolations_1d[relationship][method]
+
+    # --- 2D Multivariate Interpolations ---
+    interpolations_2d: dict[
+        str, dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
+    ] = field(
+        default_factory=lambda: {
+            "f1f2_vs_x1": {},
+            "f1f2_vs_x2": {},
+        },
+        metadata={
+            "description": "2D interpolated data for multivariate relationships (surfaces)."
+        },
+    )
+
+    def get_2d_interpolated_data(
+        self, relationship: str, method: str
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Retrieves the specific 2D interpolated data for a given relationship and method.
+
+        Args:
+            relationship (str): The name of the relationship (e.g., "f1f2_vs_x1").
+            method (str): The name of the mapping method (e.g., "Linear ND", "Nearest Neighbor").
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]: A tuple containing the x_grid_1, x_grid_2, and z_values arrays.
+
+        Raises:
+            KeyError: If the relationship or method is not found.
+        """
+        if relationship not in self.interpolations_2d:
+            raise KeyError(
+                f"2D interpolated data relationship '{relationship}' not found."
+            )
+        if method not in self.interpolations_2d[relationship]:
+            raise KeyError(
+                f"Interpolated data for method '{method}' not found for relationship '{relationship}'."
+            )
+        return self.interpolations_2d[relationship][method]
+
+
+class ParetoDataService:
+    """
+    Service for preparing Pareto optimization data in various representations.
+    This version creates and fits interpolators from scipy.interpolate directly.
+    """
+
+    # --- Updated Interpolation Methods to use scipy.interpolate classes/kinds directly ---
+    INTERPOLATION_METHODS_1D: dict[str, Any] = {
+        "Pchip": spi.PchipInterpolator,
+        "Cubic Spline": spi.CubicSpline,
+        "Linear": "linear",  # 'kind' for interp1d
+        "Quadratic": "quadratic",  # 'kind' for interp1d
+        "RBF": spi.RBFInterpolator,
+    }
+
+    INTERPOLATION_METHODS_ND: dict[str, Any] = {
+        "Nearest Neighbor": spi.NearestNDInterpolator,
+        "Linear ND": spi.LinearNDInterpolator,
+    }
+
+    _NUM_INTERPOLATION_POINTS_1D = 100
+    _NUM_INTERPOLATION_POINTS_2D_GRID = 50
+
+    def __init__(self):
+        # The repository dependency is removed as we now create interpolators directly.
+        pass
+
+    def prepare_dataset(self, pareto_data: Any) -> ParetoDataset:
+        if not hasattr(pareto_data, "pareto_set") or not hasattr(
+            pareto_data, "pareto_front"
+        ):
+            raise ValueError(
+                "Archiver did not return valid Pareto data (missing pareto_set or pareto_front)."
+            )
+
+        if pareto_data.pareto_set.size == 0 or pareto_data.pareto_front.size == 0:
+            raise ValueError(
+                "Loaded Pareto data (pareto_set or pareto_front) is empty."
+            )
+
+        dataset = ParetoDataset()
+        dataset.pareto_set = pareto_data.pareto_set
+        dataset.pareto_front = pareto_data.pareto_front
+
+        if dataset.pareto_front.shape[1] < 2:
+            raise ValueError("pareto_front must have at least 2 columns for f1 and f2.")
+        if dataset.pareto_set.shape[1] < 2:
+            raise ValueError("pareto_set must have at least 2 columns for x1 and x2.")
+
+        dataset.normalized["f1"] = self._normalize_array(dataset.pareto_front[:, 0])
+        dataset.normalized["f2"] = self._normalize_array(dataset.pareto_front[:, 1])
+        dataset.normalized["x1"] = self._normalize_array(dataset.pareto_set[:, 0])
+        dataset.normalized["x2"] = self._normalize_array(dataset.pareto_set[:, 1])
+
+        self._compute_all_1d_interpolations(dataset)
+        self._compute_all_2d_interpolations(dataset)
+
+        return dataset
+
+    def _normalize_array(self, data_array: np.ndarray) -> np.ndarray:
+        """Normalize array to [0, 1] range using Min-Max scaling"""
+        if data_array.size == 0:
+            return np.array([])
+        scaler = MinMaxScaler()
+        reshaped_data = data_array.reshape(-1, 1)
+        normalized_data = scaler.fit_transform(reshaped_data)
+        return normalized_data.flatten()
+
+    def _preprocess_1d_data(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Sorts data by x and removes duplicate x values to ensure a strictly
+        increasing sequence, as required by many SciPy interpolators.
+        """
+        # Sort data by x values
+        sort_indices = np.argsort(x)
+        x_sorted = x[sort_indices]
+        y_sorted = y[sort_indices]
+
+        # Find indices of unique x values to remove duplicates
+        _, unique_indices = np.unique(x_sorted, return_index=True)
+
+        # Return the data with unique x values
+        return x_sorted[unique_indices], y_sorted[unique_indices]
+
+    def _compute_all_1d_interpolations(self, dataset: ParetoDataset):
+        """Fit and predict 1D scipy.interpolate mappers for various relationships."""
+        norm = dataset.normalized
+
+        # --- Define the data mapping for each relationship ---
+        relationship_data_map = {
+            "f1_vs_f2": {"x_train": norm["f1"], "y_train": norm["f2"]},
+            "f1_vs_x1": {"x_train": norm["f1"], "y_train": norm["x1"]},
+            "f1_vs_x2": {"x_train": norm["f1"], "y_train": norm["x2"]},
+            "x1_vs_x2": {"x_train": norm["x1"], "y_train": norm["x2"]},
+            "f2_vs_x1": {"x_train": norm["f2"], "y_train": norm["x1"]},
+            "f2_vs_x2": {"x_train": norm["f2"], "y_train": norm["x2"]},
+        }
+
+        for relationship_name, data_sources in relationship_data_map.items():
+            x_train = data_sources["x_train"]
+            y_train = data_sources["y_train"]
+
+            # Ensure data is valid for interpolation
+            if (
+                x_train is None
+                or y_train is None
+                or x_train.size < 2
+                or y_train.size < 2
+            ):
+                print(
+                    f"Warning: Not enough data points to interpolate for '{relationship_name}'. Skipping."
+                )
+                continue
+
+            # --- Preprocess data to be sorted and have unique x values ---
+            x_train_processed, y_train_processed = self._preprocess_1d_data(
+                x_train, y_train
+            )
+
+            if x_train_processed.size < 2:
+                print(
+                    f"Warning: After preprocessing, not enough unique data points for '{relationship_name}'. Skipping."
+                )
+                continue
+
+            # Create the interpolation range from the processed training data's min/max
+            x_interpolation_range = self._create_interpolation_range(
+                x_train_processed.min(), x_train_processed.max()
+            )
+
+            for (
+                method_name,
+                method_class_or_kind,
+            ) in self.INTERPOLATION_METHODS_1D.items():
+                try:
+                    interpolator_input_x = x_train_processed
+                    interpolator_predict_x = x_interpolation_range
+
+                    # --- Special handling for RBFInterpolator's 2D input requirement ---
+                    if method_name == "RBF":
+                        # RBFInterpolator requires the input data points `x` to be 2D, shape (n_points, n_dims).
+                        # We use np.atleast_2d and transpose to guarantee a (N, 1) shape for 1D data.
+                        interpolator_input_x = np.atleast_2d(x_train_processed).T
+                        interpolator_predict_x = np.atleast_2d(x_interpolation_range).T
+
+                        interp_func = method_class_or_kind(
+                            interpolator_input_x, y_train_processed
+                        )
+
+                    # --- Standard handling for other 1D interpolators ---
+                    elif isinstance(method_class_or_kind, str):  # For interp1d 'kind'
+                        # `interp1d` requires a sorted x, but not necessarily unique for 'linear'
+                        # 'quadratic' and 'cubic' do need unique, so preprocessing helps all.
+                        interp_func = spi.interp1d(
+                            interpolator_input_x,
+                            y_train_processed,
+                            kind=method_class_or_kind,
+                            fill_value="extrapolate",
+                        )
+                    else:  # For classes like PchipInterpolator, CubicSpline
+                        interp_func = method_class_or_kind(
+                            interpolator_input_x, y_train_processed
+                        )
+
+                    # Predict interpolated values
+                    interpolated_y_values = interp_func(interpolator_predict_x)
+
+                    # Store the result in the dataset
+                    dataset.interpolations_1d[relationship_name][method_name] = (
+                        x_interpolation_range,
+                        interpolated_y_values,
+                    )
+
+                except Exception as e:
+                    print(
+                        f"Error computing 1D interpolation for {relationship_name} with '{method_name}': {e}. Skipping."
+                    )
+                    continue
+
+    def _create_interpolation_range(self, min_val: float, max_val: float) -> np.ndarray:
+        """Helper to create a linspace for interpolation."""
+        if min_val == max_val:
+            return np.array([min_val])
+        return np.linspace(min_val, max_val, self._NUM_INTERPOLATION_POINTS_1D)
+
+    def _compute_all_2d_interpolations(self, dataset: ParetoDataset):
+        """Fit and predict 2D scipy.interpolate mappers for various relationships."""
+        norm = dataset.normalized
+
+        # --- Define the data mapping for each relationship ---
+        relationship_data_map = {
+            "f1f2_vs_x1": {
+                "X_train": np.column_stack((norm["f1"], norm["f2"])),
+                "y_train": norm["x1"],
+            },
+            "f1f2_vs_x2": {
+                "X_train": np.column_stack((norm["f1"], norm["f2"])),
+                "y_train": norm["x2"],
+            },
+        }
+
+        for relationship_name, data_sources in relationship_data_map.items():
+            X_train = data_sources["X_train"]
+            y_train = data_sources["y_train"]
+
+            # Ensure data is valid for interpolation
+            if (
+                X_train is None
+                or y_train is None
+                or X_train.shape[0] < 2
+                or y_train.size < 2
+            ):
+                print(
+                    f"Warning: Not enough data points to interpolate for '{relationship_name}'. Skipping."
+                )
+                continue
+
+            # Create the 2D grid for prediction
+            f1_min, f1_max = X_train[:, 0].min(), X_train[:, 0].max()
+            f2_min, f2_max = X_train[:, 1].min(), X_train[:, 1].max()
+
+            grid_f1 = (
+                np.linspace(f1_min, f1_max, self._NUM_INTERPOLATION_POINTS_2D_GRID)
+                if f1_min != f1_max
+                else np.array([f1_min])
+            )
+            grid_f2 = (
+                np.linspace(f2_min, f2_max, self._NUM_INTERPOLATION_POINTS_2D_GRID)
+                if f2_min != f2_max
+                else np.array([f2_min])
+            )
+
+            mesh_f1, mesh_f2 = np.meshgrid(grid_f1, grid_f2)
+            points_for_prediction_2d = np.column_stack(
+                (mesh_f1.ravel(), mesh_f2.ravel())
+            )
+
+            for method_name, method_class in self.INTERPOLATION_METHODS_ND.items():
+                try:
+                    # Create and fit the interpolator instance
+                    interp_func = method_class(X_train, y_train)
+
+                    # Predict interpolated Z values
+                    interpolated_z_values_flat = interp_func(points_for_prediction_2d)
+                    interpolated_z_values = interpolated_z_values_flat.reshape(
+                        mesh_f1.shape
+                    )
+
+                    # Store the result in the dataset
+                    dataset.interpolations_2d[relationship_name][method_name] = (
+                        mesh_f1,
+                        mesh_f2,
+                        interpolated_z_values,
+                    )
+
+                except Exception as e:
+                    print(
+                        f"Error computing 2D interpolation for {relationship_name} with '{method_name}': {e}. Skipping."
+                    )
+                    continue
+
+
+@dataclass
+class ParetoVisualizationDTO:
+    """
+    Data Transfer Object for Pareto visualization data.
+    Provides a strict interface for the visualizer with validated data structure.
+
+    This version is designed to align with the ParetoDataset's nested
+    structure for interpolations, allowing for multiple interpolation methods.
+    """
+
+    pareto_set: np.ndarray  # Original X values (decision space)
+    pareto_front: np.ndarray  # Original F values (objective space)
+
+    # Individual normalized components, directly accessible at the top level
+    norm_x1: np.ndarray
+    norm_x2: np.ndarray
+    norm_f1: np.ndarray
+    norm_f2: np.ndarray
+
+    # Data for parallel coordinates (combined normalized data)
+    parallel_coordinates_data: np.ndarray
+
+    # Dictionaries containing interpolation grids, now mirroring ParetoDataset's structure:
+    # Outer dict: relationship_name -> Inner dict: method_name -> (x_grid, y_grid)
+    interpolations_1d: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]]
+
+    # Outer dict: relationship_name -> Inner dict: method_name -> (X_grid, Y_grid, Z_grid)
+    interpolations_2d: dict[str, dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]]
+
+
+class ParetoVisualizationMapper:
+    """
+    Maps ParetoDataset to a structured DTO suitable for visualization.
+    Performs data validation and transformation.
+    """
+
+    def map_to_dto(
+        self, dataset: ParetoDataset
+    ) -> ParetoVisualizationDTO:  # Changed type hint to ParetoDataset
+        """
+        Transform dataset into visualization DTO
+        """
+        # Orchestrate validation using dedicated methods
+        # The validation methods will now rely on the properties for their checks where applicable
+        self._validate_core_data(dataset)
+        self._validate_normalized_data(
+            dataset
+        )  # This method will be updated to use properties internally
+        self._validate_1d_interpolations(dataset)
+        self._validate_2d_interpolations(dataset)
+
+        # Extract normalized components for direct access in DTO
+        # Now using the properties for cleaner and safer access
+        norm_x1 = dataset.norm_x1
+        norm_x2 = dataset.norm_x2
+        norm_f1 = dataset.norm_f1
+        norm_f2 = dataset.norm_f2
+
+        return ParetoVisualizationDTO(
+            pareto_set=dataset.pareto_set,
+            pareto_front=dataset.pareto_front,
+            norm_x1=norm_x1,
+            norm_x2=norm_x2,
+            norm_f1=norm_f1,
+            norm_f2=norm_f2,
+            # Parallel coordinates data uses the normalized values
+            parallel_coordinates_data=np.hstack(
+                [
+                    norm_x1.reshape(-1, 1),
+                    norm_x2.reshape(-1, 1),
+                    norm_f1.reshape(-1, 1),
+                    norm_f2.reshape(-1, 1),
+                ]
+            ),
+            interpolations_1d=dataset.interpolations_1d,
+            interpolations_2d=dataset.interpolations_2d,
+        )
+
+    def _validate_core_data(self, dataset: ParetoDataset):
+        """Validates the core Pareto set and front arrays, including their dimensions."""
+        # No change here, pareto_set and pareto_front are direct attributes
+        if (
+            not isinstance(dataset.pareto_set, np.ndarray)
+            or dataset.pareto_set.size == 0
+        ):
+            raise ValueError(
+                "Invalid or missing 'pareto_set' in dataset. Must be a non-empty numpy array."
+            )
+        if dataset.pareto_set.ndim != 2 or dataset.pareto_set.shape[1] < 2:
+            raise ValueError(
+                f"'pareto_set' must be a 2D array with at least 2 columns (for x1, x2), but has shape {dataset.pareto_set.shape}."
+            )
+
+        if (
+            not isinstance(dataset.pareto_front, np.ndarray)
+            or dataset.pareto_front.size == 0
+        ):
+            raise ValueError(
+                "Invalid or missing 'pareto_front' in dataset. Must be a non-empty numpy array."
+            )
+        if dataset.pareto_front.ndim != 2 or dataset.pareto_front.shape[1] < 2:
+            raise ValueError(
+                f"'pareto_front' must be a 2D array with at least 2 columns (for f1, f2), but has shape {dataset.pareto_front.shape}."
+            )
+
+        if dataset.pareto_set.shape[0] != dataset.pareto_front.shape[0]:
+            raise ValueError(
+                f"Number of samples in 'pareto_set' ({dataset.pareto_set.shape[0]}) does not match 'pareto_front' ({dataset.pareto_front.shape[0]})."
+            )
+
+    def _validate_normalized_data(self, dataset: ParetoDataset):
+        """
+        Validates the normalized data using ParetoDataset's properties.
+        This implicitly checks the existence and type through the property access.
+        """
+        # Attempt to access properties to trigger AttributeError if data is None/missing
+        try:
+            norm_f1 = dataset.norm_f1
+            norm_f2 = dataset.norm_f2
+            norm_x1 = dataset.norm_x1
+            norm_x2 = dataset.norm_x2
+        except AttributeError as e:
+            raise ValueError(
+                f"Missing or unset normalized data in ParetoDataset: {e}"
+            ) from e
+
+        # Further dimension and size checks on the retrieved arrays
+        if not isinstance(norm_f1, np.ndarray) or norm_f1.ndim != 1:
+            raise TypeError("Normalized 'f1' should be a 1D numpy array.")
+        if not isinstance(norm_f2, np.ndarray) or norm_f2.ndim != 1:
+            raise TypeError("Normalized 'f2' should be a 1D numpy array.")
+        if not isinstance(norm_x1, np.ndarray) or norm_x1.ndim != 1:
+            raise TypeError("Normalized 'x1' should be a 1D numpy array.")
+        if not isinstance(norm_x2, np.ndarray) or norm_x2.ndim != 1:
+            raise TypeError("Normalized 'x2' should be a 1D numpy array.")
+
+        # Check sample count consistency after confirming they are arrays
+        expected_samples = dataset.pareto_set.shape[0]
+        if norm_f1.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'f1' sample count ({norm_f1.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+        if norm_f2.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'f2' sample count ({norm_f2.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+        if norm_x1.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'x1' sample count ({norm_x1.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+        if norm_x2.shape[0] != expected_samples:
+            raise ValueError(
+                f"Normalized 'x2' sample count ({norm_x2.shape[0]}) does not match 'pareto_set' ({expected_samples})."
+            )
+
+    def _validate_1d_interpolations(self, dataset: ParetoDataset):
+        """
+        Validates the 1D interpolations dictionary.
+        This method will continue to access the dictionary directly as it's
+        dealing with the structure of the `interpolations_1d` field itself,
+        not individual pre-extracted components like `norm_x1`.
+        However, we can leverage `get_1d_interpolation` if we wanted to
+        validate specific relationships/methods, but here we're validating
+        the *container* structure.
+        """
+        required_1d_rel_keys = [
+            "f1_vs_f2",
+            "f1_vs_x1",
+            "f1_vs_x2",
+            "x1_vs_x2",
+            "f2_vs_x1",
+            "f2_vs_x2",
+        ]
+        if not isinstance(dataset.interpolations_1d, dict):
+            raise TypeError("'dataset.interpolations_1d' is not a dictionary.")
+
+        for rel_key in required_1d_rel_keys:
+            if rel_key not in dataset.interpolations_1d:
+                raise ValueError(
+                    f"Missing 1D interpolation relationship key: '{rel_key}' in 'dataset.interpolations_1d'."
+                )
+
+            if not isinstance(dataset.interpolations_1d[rel_key], dict):
+                raise TypeError(
+                    f"1D interpolation relationship '{rel_key}' is not a dictionary of methods."
+                )
+
+            for method_name, grid_tuple in dataset.interpolations_1d[rel_key].items():
+                if not (
+                    isinstance(grid_tuple, tuple)
+                    and len(grid_tuple) == 2
+                    and all(isinstance(arr, np.ndarray) for arr in grid_tuple)
+                    and all(arr.ndim == 1 for arr in grid_tuple)
+                ):
+                    raise TypeError(
+                        f"1D interpolation '{rel_key}' method '{method_name}' must be a tuple of two 1D numpy arrays."
+                    )
+
+    def _validate_2d_interpolations(self, dataset: ParetoDataset):
+        """
+        Validates the 2D interpolations dictionary.
+        Similar to _validate_1d_interpolations, this checks the container structure.
+        """
+        required_2d_rel_keys = ["f1f2_vs_x1", "f1f2_vs_x2"]
+        if not isinstance(dataset.interpolations_2d, dict):
+            raise TypeError("'dataset.interpolations_2d' is not a dictionary.")
+
+        for rel_key in required_2d_rel_keys:
+            if rel_key not in dataset.interpolations_2d:
+                raise ValueError(
+                    f"Missing 2D interpolation relationship key: '{rel_key}' in 'dataset.interpolations_2d'."
+                )
+
+            if not isinstance(dataset.interpolations_2d[rel_key], dict):
+                raise TypeError(
+                    f"2D interpolation relationship '{rel_key}' is not a dictionary of methods."
+                )
+
+            for method_name, grid_tuple in dataset.interpolations_2d[rel_key].items():
+                if not (
+                    isinstance(grid_tuple, tuple)
+                    and len(grid_tuple) == 3
+                    and all(isinstance(arr, np.ndarray) for arr in grid_tuple)
+                    and all(arr.ndim >= 2 for arr in grid_tuple)
+                ):
+                    raise TypeError(
+                        f"2D interpolation '{rel_key}' method '{method_name}' must be a tuple of three (>=2D) numpy arrays (X, Y, Z grids)."
+                    )
 
 
 class PlotlyParetoDataVisualizer(BaseDataVisualizer):
@@ -259,7 +900,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         super().__init__(save_path)
         self._added_legend_items = set()
 
-    def plot(self, dto: ParetoVisualizationDTO) -> None:
+    def plot(self, data: Any):
         """
         Generates and displays a comprehensive Pareto optimization dashboard.
 
@@ -267,6 +908,11 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             dto (ParetoVisualizationDTO): Data Transfer Object containing all
                                           pre-processed data for visualization.
         """
+
+        prepared_data = ParetoDataService().prepare_dataset(data)
+
+        dto = ParetoVisualizationMapper().map_to_dto(prepared_data)
+
         fig = self._create_figure_layout()
         self._add_all_subplots_from_config(fig, dto)
 

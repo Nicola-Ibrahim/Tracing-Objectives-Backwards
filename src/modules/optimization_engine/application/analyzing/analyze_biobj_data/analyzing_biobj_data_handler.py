@@ -4,8 +4,6 @@ from ....domain.analyzing.interfaces.base_visualizer import (
 from ....domain.generation.interfaces.base_repository import (
     BaseParetoDataRepository,
 )
-from ....domain.services.pareto_data import ParetoDataService
-from ....infrastructure.visualizers.mapper import ParetoVisualizationMapper
 from .analyzing_biobj_data_command import AnalyzeBiobjDataCommand
 
 
@@ -18,9 +16,7 @@ class AnalyzeBiobjDataCommandHandler:
     def __init__(
         self,
         pareto_data_repo: BaseParetoDataRepository,
-        pareto_data_service: ParetoDataService,
         visualizer: BaseDataVisualizer,
-        pareto_data_mapper: ParetoVisualizationMapper,
     ):
         """
         Initializes the command handler with a dedicated analysis data service and a visualizer.
@@ -30,9 +26,7 @@ class AnalyzeBiobjDataCommandHandler:
             visualizer: The component responsible for plotting the data.
         """
         self._pareto_data_repo = pareto_data_repo
-        self._pareto_data_service = pareto_data_service
         self._visualizer = visualizer
-        self._pareto_data_mapper = pareto_data_mapper
 
     def execute(self, command: AnalyzeBiobjDataCommand) -> None:
         """
@@ -47,10 +41,5 @@ class AnalyzeBiobjDataCommandHandler:
         # Retrieve the dataset using the repository
         pareto_data = self._pareto_data_repo.load(filename=command.data_file_name)
 
-        dataset = self._pareto_data_service.prepare_dataset(pareto_data=pareto_data)
-
-        # Map the raw data to a structured DTO
-        dto = self._pareto_data_mapper.map_to_dto(dataset)
-
         # Visualize the data using the provided visualizer
-        self._visualizer.plot(dto=dto)
+        self._visualizer.plot(data=pareto_data)

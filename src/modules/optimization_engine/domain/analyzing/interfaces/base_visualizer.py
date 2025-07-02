@@ -13,4 +13,4 @@ class BaseDataVisualizer(ABC):
     @abstractmethod
     def plot(self, data: Any) -> None:
         """Visualize the Pareto set and front."""
-        pass
+        raise NotImplementedError("Subclasses must implement this method.")
