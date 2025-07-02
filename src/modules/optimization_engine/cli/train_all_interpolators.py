@@ -9,12 +9,12 @@ from ..application.interpolation.dtos import (
     SplineInverseDecisionMapperParams,
     SVRInverseDecisionMapperParams,
 )
-from ..application.interpolation.train_single_interpolator_command.train_single_interpolator_command import (
+from ..application.interpolation.train_single_interpolator.train_single_interpolator_command import (
     MetricConfig,
     NormalizerConfig,
     TrainSingleInterpolatorCommand,
 )
-from ..application.interpolation.train_single_interpolator_command.train_single_interpolator_handler import (
+from ..application.interpolation.train_single_interpolator.train_single_interpolator_handler import (
     TrainSingleInterpolatorCommandHandler,
 )
 from ..infrastructure.inverse_decision_mappers.factory import (
