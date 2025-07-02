@@ -13,7 +13,6 @@ class BaseLogger(ABC):
         """Log an error message."""
         pass
 
-    @abstractmethod
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         """Log evaluation or training metrics."""
         pass

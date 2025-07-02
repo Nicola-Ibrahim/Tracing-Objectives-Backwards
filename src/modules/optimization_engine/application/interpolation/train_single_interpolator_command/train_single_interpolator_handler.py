@@ -48,6 +48,7 @@ class TrainSingleInterpolatorCommandHandler:
             command (TrainSingleInterpolatorCommand): The Pydantic command containing
                                                all necessary training parameters and metadata.
         """
+        self._logger.log_info("Starting single train/test split interpolator training.")
 
         # Create the decision mapper using the factory
         inverse_decision_mapper = self._inverse_decision_factory.create(
@@ -72,6 +73,7 @@ class TrainSingleInterpolatorCommandHandler:
 
         # Load raw data using the injected archiver
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
+        self._logger.log_info("Raw Pareto data loaded.")
 
         # Split data into train and validation sets
         objectives_train, objectives_val, decisions_train, decisions_val = (
@@ -81,6 +83,9 @@ class TrainSingleInterpolatorCommandHandler:
                 test_size=command.test_size,
                 random_state=command.random_state,
             )
+        )
+        self._logger.log_info(
+            f"Data split into training ({len(objectives_train)} samples) and validation ({len(objectives_val)} samples) sets."
         )
 
         # Normalize training and validation data
@@ -94,6 +99,7 @@ class TrainSingleInterpolatorCommandHandler:
         inverse_decision_mapper.fit(
             objectives=objectives_train_norm, decisions=decisions_train_norm
         )
+        self._logger.log_info("Inverse decision mapper model fitted on training data.")
 
         # Predict decision values on the validation set
         decisions_pred_val_norm = inverse_decision_mapper.predict(objectives_val_norm)
@@ -109,6 +115,7 @@ class TrainSingleInterpolatorCommandHandler:
                 y_true=decisions_val, y_pred=decisions_pred_val
             )
         }
+        self._logger.log_metrics(f"Validation Metrics: {metrics}")
 
         # Construct the InterpolatorModel entity with all its metadata
         trained_interpolator_model = InterpolatorModel(
@@ -122,8 +129,11 @@ class TrainSingleInterpolatorCommandHandler:
 
         # Save the InterpolatorModel entity to the repository
         self._trained_model_repository.save(trained_interpolator_model)
+        self._logger.log_info("Interpolator model saved to repository.")
 
         if self._visualizer:
+            # The visualizer expects an object with pareto_front and pareto_set.
+            # We pass the validation data and predictions for plotting.
             self._visualizer.plot(
                 objectives_train=objectives_train_norm,
                 objectives_val=objectives_val_norm,
@@ -131,3 +141,4 @@ class TrainSingleInterpolatorCommandHandler:
                 decisions_val=decisions_val_norm,
                 decisions_pred_val=decisions_pred_val_norm,
             )
+            self._logger.log_info("Plots generated.")

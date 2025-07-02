@@ -147,7 +147,7 @@ class TrainCvInterpolatorCommandHandler:
                 f"Fold {fold_idx + 1} {validation_metric.name}: {fold_metric_value:.4f}"
             )
 
-            if self._visualizer:
+            if command.generate_plots_per_fold and self._visualizer:
                 self._logger.log_info(f"Generating plots for Fold {fold_idx + 1}...")
                 self._visualizer.plot(
                     raw_pareto_data=type(
@@ -216,6 +216,20 @@ class TrainCvInterpolatorCommandHandler:
             decisions_normalizer=decisions_normalizer_final,
         )
 
+        # Log the model artifact using the updated logger method
+        self._logger.log_model(
+            model=trained_interpolator_model.inverse_decision_mapper,
+            name=f"{command.params.get('model_type', 'Interpolator')}_v{command.version_number}_cv",
+            model_type=command.params.get("model_type", "Unknown"),
+            description=f"Interpolator model trained with {command.cross_validation_config.n_splits}-fold CV.",
+            parameters=command.params.model_dump(),
+            metrics=final_metrics,
+            notes=f"Cross-validation results for version {command.version_number}.",
+            collection_name="cv_interpolator_models",  # Example collection name
+            step=command.version_number,  # Using version number as step for model logging
+        )
+        self._logger.log_info("Interpolator model artifact logged.")
+
         # Save the InterpolatorModel entity to the repository
         self._trained_model_repository.save(trained_interpolator_model)
-        self._logger.log_info("Interpolator model with CV results saved.")
+        self._logger.log_info("Interpolator model with CV results saved to repository.")

@@ -29,9 +29,6 @@ from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
 from ..infrastructure.repositories.interpolation.pickle_interpolator_repo import (
     PickleInterpolationModelRepository,
 )
-from ..infrastructure.visualizers.training_performace import (
-    PlotlyTrainingPerformanceVisualizer,
-)
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
@@ -42,7 +39,6 @@ if __name__ == "__main__":
         trained_model_repository=PickleInterpolationModelRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
-        visualizer=PlotlyTrainingPerformanceVisualizer(),
     )
 
     # Define the interpolator parameter classes we want to test
@@ -59,10 +55,6 @@ if __name__ == "__main__":
 
     # Define how many times to train each interpolator type
     num_runs_per_type = 15  # Train each interpolator type 3 times
-
-    # Common parameters for all training runs
-    test_size = 0.2
-    random_state = 42
 
     # Loop through each interpolator type
     for param_class in interpolator_param_classes:
@@ -85,10 +77,7 @@ if __name__ == "__main__":
             # Construct the command with the appropriate parameters
             command = TrainSingleInterpolatorCommand(
                 params=interpolator_params_instance,
-                test_size=test_size,
-                random_state=random_state,
                 version_number=version_number,
-                should_generate_plots=False,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
                 objectives_normalizer_config=NormalizerConfig(
                     type="MinMaxScaler",
