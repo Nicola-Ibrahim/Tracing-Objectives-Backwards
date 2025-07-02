@@ -65,10 +65,10 @@ train-interpolator:  # Train an inverse decision mapper using the synthetic data
 	$(UV) python -m src.modules.optimization_engine.cli.train_interpolator
 	@echo "$(GREEN)Interpolator training complete.$(RESET)"
 
-.PHONY: train-all-interpolator
-train-all-interpolator:  # Train an inverse decision mapper using the synthetic data
+.PHONY: train-all-interpolators
+train-all-interpolators:  # Train an inverse decision mapper using the synthetic data
 	@echo "$(BLUE)Training interpolator model...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.train_all_interpolator
+	$(UV) python -m src.modules.optimization_engine.cli.train_all_interpolators
 	@echo "$(GREEN)Interpolator training complete.$(RESET)"
 
 .PHONY: generate-decision
