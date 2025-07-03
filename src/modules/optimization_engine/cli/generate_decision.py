@@ -26,7 +26,7 @@ def main():
 
     # Specify the target objective point (f1, f2, ...).
     # Modify this list with your desired values.
-    target_objective_point = [415, 1200]
+    target_objective_point = [394.6, 2000]
 
     # Initialize the handler with the repository
     handler = FreeModeGenerateDecisionCommandHandler(

@@ -7,6 +7,7 @@ from ....domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
 from ....domain.services.feasibility_checker import ObjectiveFeasibilityChecker
+from ....infrastructure.problems.biobj import get_coco_problem
 from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
 
 
@@ -39,11 +40,18 @@ class FreeModeGenerateDecisionCommandHandler:
         decisions_normalizer = model.decisions_normalizer
         objectives_normalizer = model.objectives_normalizer
 
-        # Load raw Pareto data
+        # Load Pareto data
         raw_data = self._paret_data_repo.load("pareto_data")
 
+        # Load original COCO problem for ground-truth objective evaluation
+        coco_problem = get_coco_problem(function_indices=5)
+        self._logger.log_info(
+            f"Using COCO problem: func_id={coco_problem.id}, "
+            f"instance={coco_problem.id_instance}, dim={coco_problem.dimension}"
+        )
+
+        # Normalize user input
         target_objective = np.array(command.target_objective)
-        # Ensure target_objective is 2D for normalizer.transform if it expects it
         if target_objective.ndim == 1:
             target_objective = target_objective.reshape(1, -1)
 
@@ -55,36 +63,26 @@ class FreeModeGenerateDecisionCommandHandler:
         pareto_front_norm = objectives_normalizer.transform(raw_data.pareto_front)
 
         try:
-            # Initialize feasibility checker with both unnormalized and normalized fronts
-            objective_feasibility_checker = ObjectiveFeasibilityChecker(
+            # Validate that the target is feasible
+            checker = ObjectiveFeasibilityChecker(
                 pareto_front=raw_data.pareto_front,
                 pareto_front_norm=pareto_front_norm,
                 tolerance=command.distance_tolerance,
             )
-            self._logger.log_info(
-                f"Initiating feasibility check for target objective with tolerance {command.distance_tolerance}."
-            )
-            # Validate, passing both unnormalized and normalized targets
-            objective_feasibility_checker.validate(
-                target_objective,
-                target_objective_norm,
+            checker.validate(
+                target=target_objective,
+                target_norm=target_objective_norm,
                 num_suggestions=command.num_suggestions,
             )
-            self._logger.log_info(
-                "Feasibility check completed successfully. Objective is feasible."
-            )
+            self._logger.log_info("✅ Target objective passed feasibility check.")
 
-            # Proceed with interpolation if validation passes
-            self._logger.log_info(
-                f"Predicting decision for normalized objective: {target_objective_norm}."
-            )
+            # Predict normalized decision
             decision_pred_norm = inverse_decision_mapper.predict(target_objective_norm)
             self._logger.log_info(
                 f"Normalized predicted decision: {decision_pred_norm}."
             )
 
-            # Inverse-transform predictions to original scale.
-            # Note: predict typically returns 2D array, so [0] is used to get the 1D result for a single prediction.
+            # Convert decision back to original space
             decision_pred = decisions_normalizer.inverse_transform(decision_pred_norm)[
                 0
             ]
@@ -92,8 +90,27 @@ class FreeModeGenerateDecisionCommandHandler:
                 f"Inverse-transformed predicted decision: {decision_pred}."
             )
 
+            # ✅ Evaluate the decision using the true COCO problem
+            true_objective = np.array(coco_problem(decision_pred))
+            abs_diff = np.abs(true_objective - target_objective[0])
+            rel_diff = abs_diff / np.maximum(np.abs(target_objective[0]), 1e-8)
+
+            self._logger.log_info(f"🎯 Evaluated objective from COCO: {true_objective}")
+            self._logger.log_info(f"🎯 Target objective: {target_objective[0]}")
+            self._logger.log_info(f"📏 Absolute error: {abs_diff}")
+            formatted_rel_diff = [f"{v:.6f}" for v in rel_diff]
             self._logger.log_info(
-                "FreeMode decision generation completed successfully."
+                f"📐 Relative error: [{', '.join(formatted_rel_diff)}]"
+            )
+
+            # Optional: Add threshold for deviation warning
+            if np.any(rel_diff > 0.1):  # 10% relative deviation
+                self._logger.log_warning(
+                    f"⚠️ Evaluated objective deviates significantly (>10%) from the target."
+                )
+
+            self._logger.log_info(
+                "🎉 FreeMode decision generation completed successfully."
             )
             return decision_pred
 
@@ -111,15 +128,12 @@ class FreeModeGenerateDecisionCommandHandler:
 
             if e.suggestions is not None and len(e.suggestions) > 0:
                 self._logger.log_error(
-                    "   Here are some nearby feasible objectives you can try (original scale):"
+                    "   Nearby feasible objectives you can try (original scale):"
                 )
-                # Inverse-transform suggestions for logging in original scale
                 for s_norm in e.suggestions:
-                    # Ensure s_norm is 2D for inverse_transform
                     s_unnorm = objectives_normalizer.inverse_transform(
                         s_norm.reshape(1, -1)
                     )[0]
-                    # Assuming 2 objectives (f1, f2)
                     self._logger.log_error(
                         f"   - f1: {s_unnorm[0]:.4f}, f2: {s_unnorm[1]:.4f}"
                     )
