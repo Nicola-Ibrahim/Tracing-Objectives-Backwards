@@ -24,22 +24,22 @@ class ObjectiveOutOfBoundsError(Exception):
         self,
         message: str,
         reason: FeasibilityFailureReason,
-        distance: float | None = None,
+        score: float | None = None,
         suggestions: np.ndarray | None = None,
         extra_info: str | None = None,
     ):
         super().__init__(message)
         self.message = message
         self.reason = reason
-        self.distance = distance
+        self.score = score
         self.suggestions = suggestions
         self.extra_info = extra_info
 
     def __str__(self):
         # Override str for clearer default printing if not specifically handled
         details = [f"Reason: {self.reason.value}", self.message]
-        if self.distance is not None:
-            details.append(f"Distance: {self.distance:.4f}")
+        if self.score is not None:
+            details.append(f"Score value: {self.score:.4f}")
         if self.extra_info:
             details.append(self.extra_info)
         return "\n".join(details)
