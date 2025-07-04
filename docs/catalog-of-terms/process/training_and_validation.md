@@ -1,81 +1,110 @@
-# Multi-Objective Optimization: Inverse Decision Mapping
+# 🎯 Multi-Objective Optimization: Inverse Decision Mapping
 
-## 🧠 Overall Goal
+## 🎯 Objective
 
-Given:
+Train a model to **learn the inverse mapping**:
 
-* A dataset of **Pareto-optimal objective vectors** $Y = \{ y_i = (f_1^{(i)}, \dots, f_m^{(i)}) \in \mathbb{R}^m \}_{i=1}^N$
-* Their **corresponding decision vectors** $X = \{ x_i \in \mathbb{R}^n \}_{i=1}^N$
-* A **user-provided target objective** $y_{\text{target}} = (f_1^{\text{target}}, \dots, f_m^{\text{target}})$
+> From: objective values (on the Pareto front)  
+> To: decision variables that generated them
 
-We aim to find the decision vector ($x_{\text{target}}$) that produces a desired objective vector ($y_{\text{target}}$). This is done by training a model to map objectives back to decisions.
+Formally:
 
-$$x_{\text{target}} \approx I(y_{\text{target}})$$
+$$
+I: \mathbf{y} \in \mathbb{R}^m \longmapsto \mathbf{x} \in \mathbb{R}^n
+$$
 
-## 📈 Step-by-Step Process
+Where:
 
-The process involves two main stages: **Training the Inverse Decision Mapper** and **Generating Decisions (Inference)**.
+- $\mathbf{y}$ = objective vector
+  $$
+  Y = \{ \mathbf{y}_i = (f_1^{(i)}, f_2^{(i)}, \dots, f_m^{(i)}) \}_{i=1}^N
+  $$
 
-### Phase 1: Training the Inverse Decision Mapper
+- $\mathbf{x}$ = decision vector
+  $$
+  X = \{ \mathbf{x}_i \in \mathbb{R}^n \}_{i=1}^N
+  $$
 
-This phase prepares your Pareto-optimal data and trains a model to predict decision variables from objective values.
+We aim to compute a **decision vector** $\mathbf{x}_{\text{target}}$ that would generate an objective close to the target:
 
-1. **Load Pareto Data:**
-    * The system loads your complete set of Pareto-optimal objective ($Y$) and decision ($X$) data.
+$$
+\mathbf{x}_{\text{target}} \approx I(\mathbf{y}_{\text{target}})
+$$
 
-2. **Data Splitting:**
-    * Data is divided into training and validation sets to assess the model's performance on unseen data.
-    $$(Y_{\text{train}}, X_{\text{train}}), (Y_{\text{val}}, X_{\text{val}}) = \text{train\_test\_split}(Y, X)$$
+Where $I(\cdot)$ is an **inverse decision mapper**, trained on historical Pareto-optimal data
 
-3. **Data Normalization:**
-    * Normalizers (e.g., `MinMaxScaler`) are created for both objectives ($Y$) and decisions ($X$).
-    * They are trained on the data to transform it into a consistent scale (e.g., $[0, 1]$).
-    $$Y_{\text{train}}^{\text{norm}} = \text{Norm}_Y(Y_{\text{train}}), \quad X_{\text{train}}^{\text{norm}} = \text{Norm}_X(X_{\text{train}})$$
+## 🔁 Process Overview
 
-    $$Y_{\text{val}}^{\text{norm}} = \text{Norm}_Y(Y_{\text{val}}), \quad X_{\text{val}}^{\text{norm}} = \text{Norm}_X(X_{\text{val}})$$
+We build a model to learn how to map from objective values to decision values.
 
-4. **Inverse Decision Mapper Training:**
-    * An `InverseDecisionMapper` model (like RBF or MLP) is chosen. This model learns to map normalized objectives to normalized decisions.
-    * The model is trained using the normalized training data:
+### Steps
 
-        ```pseudocode
-        TRAIN inverse_mapper WITH normalized_objectives_train AND normalized_decisions_train
-        ```
+1. **Load Historical Pareto Data**
+   - Objective values $Y$ and decision values $X$
 
-5. **Validation & Metric Calculation:**
-    * The trained model predicts decisions for the normalized validation objectives.
+2. **Train/Validation Split**
+   - Split into two subsets to assess generalization.
 
-        ```pseudocode
-        PREDICT normalized_decisions_pred_val = inverse_mapper ON normalized_objectives_val
-        ```
+3. **Normalize the Data**
+   - Scale both objectives and decisions to $[0, 1]$ using min-max normalization:
+     $$
+     \text{norm}(z) = \frac{z - \min(z)}{\max(z) - \min(z)}
+     $$
 
-    * These predictions are then converted back to their original scale:
-        $$X_{\text{pred\_val}} = \text{Norm}_X^{-1}(X_{\text{pred\_val}}^{\text{norm}})$$
-    * A chosen metric (e.g., Mean Squared Error) evaluates how well the predictions ($X_{\text{pred\_val}}$) match the actual validation decisions ($X_{\text{val}}$).
+4. **Train the Mapper**
+   - Fit a model such as **RBF**, **Kriging**, or **MLP** to learn:
+     $$
+     I: \mathbb{R}^m \rightarrow \mathbb{R}^n, \quad \mathbf{y} \mapsto \mathbf{x}
+     $$
 
-6. **Model Logging & Persistence:**
-    * The complete trained model, including normalizers and performance metrics, is saved for future use.
+5. **Validate and Measure Accuracy**
+   - Predict decision values on unseen data
+   - Compare predictions using a metric like Mean Squared Error (MSE)
 
-## 📊 Process Flowcharts
+6. **Save the Model**
+   - Store the trained interpolator, normalizers, and performance metrics
 
-### Flowchart 1: Inverse Decision Mapper Training Process
+## 📊 Flowchart: Training Phase
 
 ```mermaid
 flowchart TD
-    A[Start Training Command] --> B{Load Pareto Data};
-    B --> C[Split Data into Train/Validation];
-    C --> D[Create & Fit Objective Normalizer];
-    C --> E[Create & Fit Decision Normalizer];
-    D --> F[Normalize Training Objectives];
-    E --> G[Normalize Training Decisions];
-    F --> H[Fit Inverse Decision Mapper];
-    G --> H;
-    H --> I[Normalize Validation Objectives];
-    I --> J[Predict Normalized Decisions];
-    J --> K[Inverse Transform Predicted Decisions];
-    K --> L[Calculate Validation Metrics];
-    L --> M[Construct InterpolatorModel Entity];
-    M --> N[Log Model Artifact];
-    N --> O[Save Model to Repository];
-    O --> P[End Training Process];
+  %% -----------------------------
+  subgraph "PHASE 1 - 📂 Data Preparation"
+    A["📂 Load Pareto Data (objectives, decisions)"]
+    A -->| Split into train & val | B["✂️ Train/Validation Split"]
+    B -->| Fit scaler on objectives | C["⚖️ Fit Objective Normalizer"]
+    B -->| Fit scaler on decisions | D["⚖️ Fit Decision Normalizer"]
+    C -->| Transform objectives_train | E["📏 Normalize Training Objectives"]
+    D -->| Transform decisions_train | F["📏 Normalize Training Decisions"]
+  end
+  %% -----------------------------
+  subgraph "PHASE 2 - 🧠 Model Training"
+    E -->| Normalized objectives | G["🧠 Train Inverse Mapper (RBF, MLP, etc.)"]
+    F -->| Normalized decisions | G
+  end
+  %% -----------------------------
+  subgraph "PHASE 3 - 🔍 Validation"
+    subgraph "🔹 Input Transformation"
+      G --> H["🔍 Normalize Validation Objectives (objectives_val → objectives_val_norm)"]
+    end
+    subgraph "🔹 Prediction"
+      H --> I["🧠 Predict Normalized Decisions (decisions_pred_norm)"]
+      I --> J["🔁 Inverse Transform to Original Scale (decisions_pred)"]
+    end
+    subgraph "🔹 Evaluation"
+      J --> K1["📐 Compute MSE"]
+      J --> K2["📐 Compute MAE"]
+      J --> K3["📐 Compute R² Score"]
+      K1 --> K["📊 Aggregate Validation Metrics"]
+      K2 --> K
+      K3 --> K
+    end
+  end
+  %% -----------------------------
+  subgraph "PHASE 4 - 💾 Save & Store"
+    K --> L["📦 Package Interpolator Model (model + scalers + metrics)"]
+    L --> M["💾 Save to Model Repository"]
+    M --> N["✅ Training Complete"]
+  end
+
 ```
