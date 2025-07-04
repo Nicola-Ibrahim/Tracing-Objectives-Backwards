@@ -47,7 +47,7 @@ class ObjectiveFeasibilityChecker:
         """Computes Euclidean distance between rows of A and a single row in B."""
         return np.linalg.norm(A - B, axis=1)
 
-    def _check_within_unnormalized_objective_bounds(self, target: np.ndarray) -> None:
+    def _check_within_objective_bounds(self, target: np.ndarray) -> None:
         """
         Checks if target objective lies within the min/max of the unnormalized Pareto front.
         Raises ValueError with a detailed message if any feature is out of bounds.
@@ -126,7 +126,7 @@ class ObjectiveFeasibilityChecker:
 
         # Step 1: Raw bounds check
         try:
-            self._check_within_unnormalized_objective_bounds(target)
+            self._check_within_objective_bounds(target)
         except ValueError as e:
             raise ObjectiveOutOfBoundsError(
                 message="Target objective is outside the historical Pareto front bounds.",
