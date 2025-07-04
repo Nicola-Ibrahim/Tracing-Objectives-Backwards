@@ -15,14 +15,20 @@ Rather than solving the original optimization problem again, we leverage:
 
 ```mermaid
 flowchart TD
-  A["🎯 Define Target Objective Y*"] --> B["🔃 Normalize Y*"]
-  B --> C["🧪 Soft Feasibility Check"]
-  C -->|✅ Feasible| D["🧠 Predict X* via Inverse Interpolator"]
-  D --> E["📏 Denormalize X*"]
-  E --> F["🎲 Evaluate f(X*) using Original Problem"]
-  F --> G["📐 Compute Absolute & Relative Error"]
-  C -->|❌ Infeasible| H["💡 Suggest Feasible Alternatives"]
-  H --> I["🔁 Repeat with New Y*"]
+
+  subgraph "🔷 Inverse Design Pipeline"
+    A["🎯 Define Target Objective Y*"] --> B["🔃 Normalize Y*"]
+    B --> C["🧪 Soft Feasibility Check"]
+
+    C -->|✅ Feasible| D["🧠 Predict X* via Inverse Interpolator"]
+    D --> E["📏 Denormalize X*"]
+    E --> F["🎲 Evaluate f(X*) using Original Problem"]
+    F --> G["📐 Compute Absolute & Relative Error"]
+
+    C -->|❌ Infeasible| H["💡 Suggest Feasible Alternatives"]
+    H --> I["🔁 Repeat with New Y*"]
+  end
+
 ```
 
 ## 🔍 Conceptual Blocks
@@ -48,14 +54,16 @@ Y_star_norm ← normalize(Y_star)
 Purpose: Ensure the target is not **too far** from previously observed Pareto-optimal objectives.
 
 ```mermaid
-graph TD
-  A["🔃 Normalized Y*"] --> B{"Within raw bounds?"}
-  B -- No --> C["❌ Raise Bounds Error 
-                Suggest alternatives"]
-  B -- Yes --> D{"Close to Pareto front?"}
-  D -- No --> E["❌ Raise Distance Error
-                Suggest alternatives"]
-  D -- Yes --> F["✅ Valid — proceed to interpolation"]
+flowchart TD
+
+  subgraph "🧪 Soft Feasibility Validation"
+    A["🔃 Normalized Y*"] --> B{"📉 Within Observed Bounds?"}
+    B -->|❌ No| C["⚠️ Raise Bound Error & Suggest"]
+    B -->|✅ Yes| D{"📍 Close to Pareto Front?"}
+    D -->|❌ No| E["⚠️ Raise Distance Error & Suggest"]
+    D -->|✅ Yes| F["✅ Proceed to Interpolation"]
+  end
+
 
 ```
 
@@ -89,11 +97,12 @@ X_star ← denormalize(X_star_norm)
 Interpolation techniques may include:
 
 ```mermaid
-graph TD
-  A["Interpolation Model"] --> B["RBF (Radial Basis Function)"]
-  A --> C["Kriging"]
-  A --> D["Barycentric Interpolation"]
-  A --> E["Neural Regression"]
+flowchart TD
+  A["📡 Interpolation Model"] --> B["📌 RBF (Radial Basis Function)"]
+  A --> C["📈 Kriging"]
+  A --> D["🔗 Barycentric Coordinates"]
+  A --> E["🧠 Neural Regression (MLP)"]
+
 
 ```
 
@@ -104,19 +113,23 @@ Each model approximates a local inverse mapping from objective space to decision
 If the true function $f(X)$ is available (e.g., a simulator or real-world evaluator):
 
 ```mermaid
-graph TD
-  A["📏 Denormalized Decision X*"] --> B["🎲 Evaluate f(X*) via Original COCO Problem"]
-  B --> C["📐 Compute Error Metrics"]
-  C --> D["✅ Accept if 
-        error < threshold"]
-  C --> E["🔁 Retry if error too large"]
-```
+flowchart TD
 
-```mermaid
-flowchart LR
-  A["Target Y* Fails Feasibility Check"] --> B["Generate Nearby Feasible Suggestions"]
-  B --> C["User Chooses New Y'"]
-  C --> D["Restart Interpolation Pipeline"]
+  subgraph "🎲 Evaluation + 🔁 Retry Strategy"
+
+    A["📏 Denormalized X*"] --> B["🎯 Evaluate f(X*) with Original Problem"]
+    B --> C["📐 Compute Absolute & Relative Error"]
+    C --> D{"✅ Is Error < Threshold?"}
+
+    D -->|Yes| E["🎉 Accept X*: Final Solution"]
+
+    D -->|No| F["📉 Mark as Inaccurate"]
+    F --> G["🧭 Suggest Feasible Alternatives for Y*"]
+    G --> H["🎯 User Chooses New Y′"]
+    H --> I["🔁 Restart Inverse Interpolation"]
+
+  end
+
 
 ```
 
@@ -130,10 +143,10 @@ rel_error ← abs_error / |Y_star|
 Example Output:
 
 ```
-🎯 Target Objective: [413.761, 1163.869]
-🎲 Actual f(X*): [413.786, 1163.998]
-📏 Absolute Error: [0.025, 0.129]
-📐 Relative Error: [0.000061, 0.000111]
+  🎯 Target Objective: [413.761, 1163.869]
+  🎲 Actual f(X*): [413.786, 1163.998]
+  📏 Absolute Error: [0.025, 0.129]
+  📐 Relative Error: [0.000061, 0.000111]
 ```
 
 ## 🧠 Design Principles
