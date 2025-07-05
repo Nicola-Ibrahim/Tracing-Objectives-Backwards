@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 
-from ...domain.analyzing.interfaces.base_visualizer import (
+from ...domain.analysis.interfaces.base_visualizer import (
     BaseDataVisualizer,
 )
 

@@ -8,7 +8,7 @@ import scipy.interpolate as spi
 from plotly.subplots import make_subplots
 from sklearn.preprocessing import MinMaxScaler
 
-from ...domain.analyzing.interfaces.base_visualizer import BaseDataVisualizer
+from ...domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 
 
 @dataclass

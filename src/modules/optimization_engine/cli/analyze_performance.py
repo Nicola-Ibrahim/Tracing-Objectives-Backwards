@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from ..application.analyzing.analyze_interpolators_performace.analyze_interpolators_performance_command import (
+from ..application.analysis.analyze_interpolators_performace.analyze_interpolators_performance_command import (
     AnalyzeIntrepolatorsPerformanceCommand,
 )
-from ..application.analyzing.analyze_interpolators_performace.analyze_interpolators_performance_handler import (
+from ..application.analysis.analyze_interpolators_performace.analyze_interpolators_performance_handler import (
     AnalyzeModelPerformanceCommandHandler,
 )
 from ..domain.services.interpolators_metrics import InterpolatorsMetricsLoader

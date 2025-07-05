@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 from sklearn.model_selection import KFold
 
-from ....domain.analyzing.interfaces.base_visualizer import BaseDataVisualizer
+from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
 from ....domain.interpolation.interfaces.base_logger import BaseLogger

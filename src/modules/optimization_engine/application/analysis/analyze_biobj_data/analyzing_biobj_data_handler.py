@@ -1,4 +1,4 @@
-from ....domain.analyzing.interfaces.base_visualizer import (
+from ....domain.analysis.interfaces.base_visualizer import (
     BaseDataVisualizer,
 )
 from ....domain.generation.interfaces.base_repository import (
