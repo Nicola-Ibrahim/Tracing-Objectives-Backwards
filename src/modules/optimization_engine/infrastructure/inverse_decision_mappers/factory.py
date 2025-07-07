@@ -6,15 +6,17 @@ from ...domain.interpolation.enums.inverse_decision_mapper_type import (
 from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
     BaseInverseDecisionMapper,
 )
-from .multivariate.clough_tocher import CloughTocherInverseDecisionMapper
-from .multivariate.gaussian_process import GaussianProcessInverseDecisionMapper
-from .multivariate.kriging import KrigingInverseDecisionMapper
-from .multivariate.linear import LinearNDInverseDecisionMapper
-from .multivariate.nearest_neighbors import NearestNDInverseDecisionMapper
-from .multivariate.nn import NeuralNetworkInterpolator
-from .multivariate.rbf import RBFInverseDecisionMapper
-from .multivariate.spline import SplineInverseDecisionMapper
-from .multivariate.svr import SVRInverseDecisionMapper
+from .deterministic.clough_tocher import CloughTocherInverseDecisionMapper
+from .deterministic.gaussian_process import GaussianProcessInverseDecisionMapper
+from .deterministic.kriging import KrigingInverseDecisionMapper
+from .deterministic.linear import LinearNDInverseDecisionMapper
+from .deterministic.nearest_neighbors import NearestNDInverseDecisionMapper
+from .deterministic.nn import NeuralNetworkInterpolator
+from .deterministic.rbf import RBFInverseDecisionMapper
+from .deterministic.spline import SplineInverseDecisionMapper
+from .deterministic.svr import SVRInverseDecisionMapper
+from .probabilistic.cvae import CVAEInverseDecisionMapper
+from .probabilistic.mdn import MDNInverseDecisionMapper
 
 
 class InverseDecisionMapperFactory:
@@ -34,6 +36,8 @@ class InverseDecisionMapperFactory:
         InverseDecisionMapperType.SPLINE_ND.value: SplineInverseDecisionMapper,
         InverseDecisionMapperType.KRIGING_ND.value: KrigingInverseDecisionMapper,
         InverseDecisionMapperType.SVR_ND.value: SVRInverseDecisionMapper,
+        InverseDecisionMapperType.CVAE_ND.value: CVAEInverseDecisionMapper,
+        InverseDecisionMapperType.MDN_ND.value: MDNInverseDecisionMapper,
     }
 
     def create(self, params: dict[str, Any]) -> BaseInverseDecisionMapper:
