@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from numpy.typing import NDArray
 from torch.distributions import Categorical, Independent, MixtureSameFamily, Normal
 
-from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
+from ....domain.interpolation.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
 

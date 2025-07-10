@@ -17,3 +17,8 @@ class InverseDecisionMapperType(Enum):
     SPLINE_ND = "spline_nd"
     KRIGING_ND = "kriging_nd"
     SVR_ND = "svr_nd"
+    CVAE_ND = "cvae_nd"
+    MDN_ND = "mdn_nd"
+
+
+

@@ -8,7 +8,7 @@ from sklearn.gaussian_process.kernels import (
     Matern,
 )
 
-from ....domain.interpolation.interfaces.base_inverse_decision_mappers import (
+from ....domain.interpolation.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
 

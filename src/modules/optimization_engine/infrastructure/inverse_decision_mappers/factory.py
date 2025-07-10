@@ -3,7 +3,7 @@ from typing import Any
 from ...domain.interpolation.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
 )
-from ...domain.interpolation.interfaces.base_inverse_decision_mappers import (
+from ...domain.interpolation.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
 from .deterministic.clough_tocher import CloughTocherInverseDecisionMapper
@@ -11,7 +11,7 @@ from .deterministic.gaussian_process import GaussianProcessInverseDecisionMapper
 from .deterministic.kriging import KrigingInverseDecisionMapper
 from .deterministic.linear import LinearNDInverseDecisionMapper
 from .deterministic.nearest_neighbors import NearestNDInverseDecisionMapper
-from .deterministic.nn import NeuralNetworkInterpolator
+from .deterministic.nn import NNInverseDecisionMapper
 from .deterministic.rbf import RBFInverseDecisionMapper
 from .deterministic.spline import SplineInverseDecisionMapper
 from .deterministic.svr import SVRInverseDecisionMapper
@@ -30,7 +30,7 @@ class InverseDecisionMapperFactory:
         InverseDecisionMapperType.RBF_ND.value: RBFInverseDecisionMapper,
         InverseDecisionMapperType.LINEAR_ND.value: LinearNDInverseDecisionMapper,
         InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value: NearestNDInverseDecisionMapper,
-        InverseDecisionMapperType.NEURAL_NETWORK_ND.value: NeuralNetworkInterpolator,
+        InverseDecisionMapperType.NEURAL_NETWORK_ND.value: NNInverseDecisionMapper,
         InverseDecisionMapperType.CLOUGH_TOCHER_ND.value: CloughTocherInverseDecisionMapper,
         InverseDecisionMapperType.GAUSSIAN_PROCESS_ND.value: GaussianProcessInverseDecisionMapper,
         InverseDecisionMapperType.SPLINE_ND.value: SplineInverseDecisionMapper,
