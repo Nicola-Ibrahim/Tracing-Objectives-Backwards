@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from ..interfaces.base_inverse_decision_mappers import BaseInverseDecisionMapper
+from ..interfaces.base_inverse_decision_mapper import BaseInverseDecisionMapper
 from ..interfaces.base_normalizer import BaseNormalizer
 
 

@@ -1,7 +1,7 @@
 from ....domain.analysis.interfaces.base_visualizer import (
     BaseDataVisualizer,
 )
-from ....domain.services.interpolators_metrics import InterpolatorsMetricsLoader
+from ....domain.analysis.loaders.interpolator_metrics import InterpolatorMetricsLoader
 from .analyze_interpolators_performance_command import (
     AnalyzeIntrepolatorsPerformanceCommand,
 )
@@ -15,12 +15,12 @@ class AnalyzeModelPerformanceCommandHandler:
 
     def __init__(
         self,
-        metrics_loader: InterpolatorsMetricsLoader,
+        metrics_loader: InterpolatorMetricsLoader,
         visualizer: BaseDataVisualizer,
     ):
         """
         Args:
-            metrics_loader (InterpolatorsMetricsLoader): The data access component (dependency).
+            metrics_loader (InterpolatorMetricsLoader): The data access component (dependency).
             visualizer (BaseDataVisualizer): The plotting component (dependency).
         """
         self.metrics_loader = metrics_loader

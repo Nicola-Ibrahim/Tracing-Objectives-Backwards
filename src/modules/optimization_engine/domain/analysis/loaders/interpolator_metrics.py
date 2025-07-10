@@ -1,10 +1,10 @@
 import json
 from typing import Any
 
-from ....shared.config import ROOT_PATH
+from .....shared.config import ROOT_PATH
 
 
-class InterpolatorsMetricsLoader:
+class InterpolatorMetricsLoader:
     """
     Loads specific metrics from trained model directories.
     This is a data access layer component within the Infrastructure Layer.

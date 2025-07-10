@@ -1,12 +1,18 @@
 import numpy as np
 
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.interpolation.exceptions import ObjectiveOutOfBoundsError
 from ....domain.interpolation.interfaces.base_logger import BaseLogger
 from ....domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
-from ....domain.services.feasibility_checker import ObjectiveFeasibilityChecker
+from ....domain.objective.feasibility.checker import ObjectiveFeasibilityChecker
+from ....domain.objective.feasibility.exceptions import ObjectiveOutOfBoundsError
+from ....domain.objective.feasibility.scoring_strategies import (
+    ConvexHullScoreStrategy,
+    KDEScoreStrategy,
+    LocalSphereScoreStrategy,
+    MinDistanceScoreStrategy,
+)
 from ....infrastructure.problems.biobj import get_coco_problem
 from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
 
@@ -68,9 +74,10 @@ class FreeModeGenerateDecisionCommandHandler:
                 pareto_front=raw_data.pareto_front,
                 pareto_front_norm=pareto_front_norm,
                 tolerance=command.distance_tolerance,
+                scorer=MinDistanceScoreStrategy(),
             )
             checker.validate(
-                target=target_objective,
+                target=target_objective,  # Use target_unnorm as per checker's API
                 target_norm=target_objective_norm,
                 num_suggestions=command.num_suggestions,
             )
@@ -97,7 +104,13 @@ class FreeModeGenerateDecisionCommandHandler:
 
             self._logger.log_info(f"🎯 Evaluated objective from COCO: {true_objective}")
             self._logger.log_info(f"🎯 Target objective: {target_objective[0]}")
-            self._logger.log_info(f"📏 Absolute error: {abs_diff}")
+
+            # Format abs_diff for better readability (precision instead of scientific notation)
+            formatted_abs_diff = [f"{v:.6f}" for v in abs_diff]
+            self._logger.log_info(
+                f"📏 Absolute error: [{', '.join(formatted_abs_diff)}]"
+            )
+
             formatted_rel_diff = [f"{v:.6f}" for v in rel_diff]
             self._logger.log_info(
                 f"📐 Relative error: [{', '.join(formatted_rel_diff)}]"
@@ -119,10 +132,8 @@ class FreeModeGenerateDecisionCommandHandler:
                 f"❌ Feasibility check failed. Reason: {e.reason.value}"
             )
             self._logger.log_error(f"   Message: {e.message}")
-            if e.distance is not None:
-                self._logger.log_error(
-                    f"   Closest distance to front: {e.distance:.4f}"
-                )
+            if e.score is not None:
+                self._logger.log_error(f"   Computed score: {e.score:.4f}")
             if e.extra_info:
                 self._logger.log_error(f"   Details: {e.extra_info}")
 

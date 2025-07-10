@@ -22,11 +22,11 @@ def main():
     Modify the variables below to change the inputs.
     """
     # Specify the type of interpolator to use.
-    interpolator_type_to_use = InverseDecisionMapperType.RBF_ND.value
+    interpolator_type_to_use = InverseDecisionMapperType.NEURAL_NETWORK_ND.value
 
     # Specify the target objective point (f1, f2, ...).
     # Modify this list with your desired values.
-    target_objective_point = [394.6, 2000]
+    target_objective_point = [415, 1400]
 
     # Initialize the handler with the repository
     handler = FreeModeGenerateDecisionCommandHandler(

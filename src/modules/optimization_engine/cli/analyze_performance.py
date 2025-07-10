@@ -1,12 +1,10 @@
-from pathlib import Path
-
 from ..application.analysis.analyze_interpolators_performace.analyze_interpolators_performance_command import (
     AnalyzeIntrepolatorsPerformanceCommand,
 )
 from ..application.analysis.analyze_interpolators_performace.analyze_interpolators_performance_handler import (
     AnalyzeModelPerformanceCommandHandler,
 )
-from ..domain.services.interpolators_metrics import InterpolatorsMetricsLoader
+from ..domain.analysis.loaders.interpolator_metrics import InterpolatorMetricsLoader
 from ..infrastructure.visualizers.interpolators_metrics import (
     PlotlyIntrepolatorsMetricsVisualizer,
 )
@@ -20,7 +18,7 @@ def main():
     # --- Composition Root / Dependency Injection ---
 
     # 2. Instantiate Infrastructure Layer components
-    metrics_loader = InterpolatorsMetricsLoader()
+    metrics_loader = InterpolatorMetricsLoader()
     performance_visualizer = PlotlyIntrepolatorsMetricsVisualizer()
 
     # 3. Instantiate Application Layer components, injecting dependencies
