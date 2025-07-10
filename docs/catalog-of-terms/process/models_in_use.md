@@ -55,14 +55,14 @@ Probabilistic models capture uncertainty in predictions by modeling outputs as p
 
 | Model Name | Objective                          | Loss Function               | Formula                                                                 |
 |------------|------------------------------------|-----------------------------|-------------------------------------------------------------------------|
-| CVAE       | Generative modeling with priors    | ELBO (Evidence Lower Bound) | $\mathcal{L}_{\text{CVAE}} = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - \text{KL}(q_\phi(z|x) \| p(z))$ |
+| CVAE       | Generative modeling with priors    | ELBO (Evidence Lower Bound) | $\mathcal{L}_{\text{CVAE}} = \mathbb{E}_{q_\phi(z\|x)}[\log p_\theta(x\|z)] - \text{KL}(q_\phi(z\|x) \| p(z))$ |
 | MDN        | Mixture density estimation         | Negative Log-Likelihood     | $-\log \left( \sum_{k=1}^K \pi_k \mathcal{N}(y \| \mu_k, \sigma_k^2) \right)$ |
 
 ### Key Formulations
 
 - **ELBO (CVAE)**:  
   $$
-  \mathcal{L}_{\text{CVAE}} = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - \beta \cdot \text{KL}(q_\phi(z|x) \| p(z))
+  \mathcal{L}_{\text{CVAE}} = \mathbb{E}_{q_\phi(z\|x)}[\log p_\theta(x\|z)] - \beta \cdot \text{KL}(q_\phi(z\|x) \| p(z))
   $$
   where $\beta$ balances reconstruction and regularization.
 
@@ -70,6 +70,21 @@ Probabilistic models capture uncertainty in predictions by modeling outputs as p
   $$
   \mathcal{L}_{\text{MDN}} = -\sum_{i=1}^N \log \left( \sum_{k=1}^K \pi_k^{(i)} \mathcal{N}(y_i \| \mu_k^{(i)}, \sigma_k^{(i)}) \right)
   $$
+
+---
+
+## 🔁 Comparison Table
+
+| Model     | Type         | Multimodal? | Uncertainty? | Sample Efficient? | Expressive? |
+|-----------|--------------|-------------|--------------|-------------------|-------------|
+| Linear    | Deterministic| ❌          | ❌           | ✅                | ❌          |
+| SVR       | Deterministic| ❌          | ✅ (margin)  | ✅                | ⚠️          |
+| RBF       | Deterministic| ❌          | ❌           | ✅                | ✅          |
+| GPR       | Deterministic| ❌          | ✅           | ✅                | ✅          |
+| KNN       | Deterministic| ❌          | ❌           | ✅                | ❌          |
+| NN        | Deterministic| ❌          | ❌           | ⚠️                | ✅✅         |
+| MDN       | Probabilistic| ✅          | ✅           | ⚠️                | ✅✅✅        |
+| CVAE      | Probabilistic| ✅          | ✅           | ❌
 
 ---
 
