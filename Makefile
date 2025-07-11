@@ -42,7 +42,7 @@ install:  # Install project dependencies using the uv lock file
 .PHONY: data-generate
 data-generate:  # Generate synthetic Pareto front data for a specified problem
 	@echo "$(BLUE)Generating synthetic data...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.make_pareto --problem-id 5
+	$(UV) python -m src.modules.optimization_engine.cli.generate_data --problem-id 5
 	@echo "$(GREEN)Data generation complete.$(RESET)"
 
 .PHONY: data-analyze
