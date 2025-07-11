@@ -3,6 +3,7 @@ import time
 from ..application.interpolation.dtos import (
     GaussianProcessInverseDecisionMapperParams,
     KrigingInverseDecisionMapperParams,
+    MDNInverseDecisionMapperParams,
     NearestNeighborInverseDecisoinMapperParams,
     NeuralNetworkInverserDecisionMapperParams,
     RBFInverseDecisionMapperParams,
@@ -51,6 +52,7 @@ if __name__ == "__main__":
         KrigingInverseDecisionMapperParams,
         SVRInverseDecisionMapperParams,
         SplineInverseDecisionMapperParams,
+        MDNInverseDecisionMapperParams,
     ]
 
     # Define how many times to train each interpolator type

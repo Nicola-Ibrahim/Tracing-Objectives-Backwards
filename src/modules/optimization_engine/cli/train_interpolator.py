@@ -1,6 +1,7 @@
 from ..application.interpolation.dtos import (
     GaussianProcessInverseDecisionMapperParams,
     KrigingInverseDecisionMapperParams,
+    MDNInverseDecisionMapperParams,
     NearestNeighborInverseDecisoinMapperParams,
     NeuralNetworkInverserDecisionMapperParams,
     RBFInverseDecisionMapperParams,
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     )
 
     command = TrainSingleInterpolatorCommand(
-        params=RBFInverseDecisionMapperParams(),
+        params=MDNInverseDecisionMapperParams(),
         version_number=1,
         should_generate_plots=True,
         objectives_normalizer_config=NormalizerConfig(
