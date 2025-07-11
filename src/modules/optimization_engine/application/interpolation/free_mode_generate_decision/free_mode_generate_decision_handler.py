@@ -7,7 +7,7 @@ from ....domain.interpolation.interfaces.base_repository import (
 )
 from ....domain.objective.feasibility.checker import ObjectiveFeasibilityChecker
 from ....domain.objective.feasibility.exceptions import ObjectiveOutOfBoundsError
-from ....domain.objective.feasibility.scoring_strategies import (
+from ....domain.objective.feasibility.scorers import (
     ConvexHullScoreStrategy,
     KDEScoreStrategy,
     LocalSphereScoreStrategy,
@@ -66,30 +66,32 @@ class FreeModeGenerateDecisionCommandHandler:
                 1, -1
             )  # Ensure 2D for normalizer
 
-        target_objective_norm = objectives_normalizer.transform(target_objective)
+        target_objective_normalized = objectives_normalizer.transform(target_objective)
         self._logger.log_info(
-            f"Target objective: {target_objective[0]} (Normalized: {target_objective_norm[0]})."
+            f"Target objective: {target_objective[0]} (Normalized: {target_objective_normalized[0]})."
         )
 
-        pareto_front_norm = objectives_normalizer.transform(raw_data.pareto_front)
+        pareto_front_normalized = objectives_normalizer.transform(raw_data.pareto_front)
 
         try:
             # Validate that the target is feasible
             checker = ObjectiveFeasibilityChecker(
                 pareto_front=raw_data.pareto_front,
-                pareto_front_norm=pareto_front_norm,
+                pareto_front_normalized=pareto_front_normalized,
                 tolerance=command.distance_tolerance,
                 scorer=KDEScoreStrategy(),
             )
             checker.validate(
                 target=target_objective,
-                target_norm=target_objective_norm,
+                target_normalized=target_objective_normalized,
                 num_suggestions=command.num_suggestions,
             )
             self._logger.log_info("✅ Target objective passed feasibility check.")
 
             # Predict normalized decision
-            decision_pred_norm = inverse_decision_mapper.predict(target_objective_norm)
+            decision_pred_norm = inverse_decision_mapper.predict(
+                target_objective_normalized
+            )
             self._logger.log_info(
                 f"Normalized predicted decision: {decision_pred_norm}."
             )
@@ -176,15 +178,11 @@ class FreeModeGenerateDecisionCommandHandler:
                 f"❌ Feasibility check failed. Reason: {e.reason.value}"
             )
             self._logger.log_error(f"   Message: {e.message}")
-            if e.score is not None:
-                self._logger.log_error(f"   Computed score: {e.score:.4f}")
             if e.extra_info:
                 self._logger.log_error(f"   Details: {e.extra_info}")
 
             if e.suggestions is not None and len(e.suggestions) > 0:
-                self._logger.log_error(
-                    "   Nearby feasible objectives you can try (original scale):"
-                )
+                possibilities = []
                 for s_norm in e.suggestions:
                     s_unnorm = objectives_normalizer.inverse_transform(
                         s_norm.reshape(1, -1)
@@ -193,4 +191,9 @@ class FreeModeGenerateDecisionCommandHandler:
                     s_str = ", ".join(
                         [f"f{i+1}: {val:.4f}" for i, val in enumerate(s_unnorm)]
                     )
-                    self._logger.log_error(f"   - {s_str}")
+                    possibilities.append(f"\n   - {s_str}")
+
+                self._logger.log_error(
+                    "   Nearby feasible objectives you can try (original scale):"
+                    f"{"".join(possibilities)}"
+                )
