@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-from numpy.typing import NDArray
+import numpy.typing as npt
 
 
 class BaseInverseDecisionMapper(ABC):
@@ -44,8 +44,8 @@ class BaseInverseDecisionMapper(ABC):
 
     def fit(
         self,
-        objectives: NDArray[np.float64],
-        decisions: NDArray[np.float64],
+        objectives: npt.NDArray[np.float64],
+        decisions: npt.NDArray[np.float64],
     ) -> None:
         """
         Fits the mapper with its knowledge base of known points.
@@ -77,8 +77,8 @@ class BaseInverseDecisionMapper(ABC):
     @abstractmethod
     def predict(
         self,
-        target_objectives: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
+        target_objectives: npt.NDArray[np.float64],
+    ) -> npt.NDArray[np.float64]:
         """
         Predicts corresponding 'dependent' values for given 'independent' target points.
 
