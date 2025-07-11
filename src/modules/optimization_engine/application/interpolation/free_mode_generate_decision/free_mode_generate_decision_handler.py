@@ -50,7 +50,10 @@ class FreeModeGenerateDecisionCommandHandler:
         raw_data = self._paret_data_repo.load("pareto_data")
 
         # Load original COCO problem for ground-truth objective evaluation
-        coco_problem = get_coco_problem(function_indices=5)
+        # Assuming get_coco_problem returns a callable that takes a decision and returns objectives
+        coco_problem = get_coco_problem(
+            function_indices=5
+        )  # Example: function 5 (two objectives)
         self._logger.log_info(
             f"Using COCO problem: func_id={coco_problem.id}, "
             f"instance={coco_problem.id_instance}, dim={coco_problem.dimension}"
@@ -59,11 +62,13 @@ class FreeModeGenerateDecisionCommandHandler:
         # Normalize user input
         target_objective = np.array(command.target_objective)
         if target_objective.ndim == 1:
-            target_objective = target_objective.reshape(1, -1)
+            target_objective = target_objective.reshape(
+                1, -1
+            )  # Ensure 2D for normalizer
 
         target_objective_norm = objectives_normalizer.transform(target_objective)
         self._logger.log_info(
-            f"Target objective: {target_objective}. Normalized: {target_objective_norm}."
+            f"Target objective: {target_objective[0]} (Normalized: {target_objective_norm[0]})."
         )
 
         pareto_front_norm = objectives_normalizer.transform(raw_data.pareto_front)
@@ -74,10 +79,10 @@ class FreeModeGenerateDecisionCommandHandler:
                 pareto_front=raw_data.pareto_front,
                 pareto_front_norm=pareto_front_norm,
                 tolerance=command.distance_tolerance,
-                scorer=MinDistanceScoreStrategy(),
+                scorer=KDEScoreStrategy(),
             )
             checker.validate(
-                target=target_objective,  # Use target_unnorm as per checker's API
+                target=target_objective,
                 target_norm=target_objective_norm,
                 num_suggestions=command.num_suggestions,
             )
@@ -90,6 +95,7 @@ class FreeModeGenerateDecisionCommandHandler:
             )
 
             # Convert decision back to original space
+            # inverse_transform usually returns 2D array, take first row for single prediction
             decision_pred = decisions_normalizer.inverse_transform(decision_pred_norm)[
                 0
             ]
@@ -97,29 +103,67 @@ class FreeModeGenerateDecisionCommandHandler:
                 f"Inverse-transformed predicted decision: {decision_pred}."
             )
 
-            # ✅ Evaluate the decision using the true COCO problem
+            # Evaluate the decision using the true COCO problem
             true_objective = np.array(coco_problem(decision_pred))
-            abs_diff = np.abs(true_objective - target_objective[0])
-            rel_diff = abs_diff / np.maximum(np.abs(target_objective[0]), 1e-8)
 
-            self._logger.log_info(f"🎯 Evaluated objective from COCO: {true_objective}")
-            self._logger.log_info(f"🎯 Target objective: {target_objective[0]}")
+            self._logger.log_info(f"🎯 Target objective (F): {target_objective[0]}")
+            self._logger.log_info(f"🎯 Achieved objective (F'): {true_objective}")
 
-            # Format abs_diff for better readability (precision instead of scientific notation)
+            # --- Improved Error Calculation ---
+            # Ensure both are 1D arrays for element-wise operations if they come in as 2D (1, N)
+            target_obj_1d = (
+                target_objective[0] if target_objective.ndim == 2 else target_objective
+            )
+
+            # 1. Absolute Difference (per objective)
+            abs_diff = np.abs(true_objective - target_obj_1d)
             formatted_abs_diff = [f"{v:.6f}" for v in abs_diff]
             self._logger.log_info(
-                f"📏 Absolute error: [{', '.join(formatted_abs_diff)}]"
+                f"📏 Absolute error per objective: [{', '.join(formatted_abs_diff)}]"
             )
 
-            formatted_rel_diff = [f"{v:.6f}" for v in rel_diff]
+            # 2. Euclidean Distance in Objective Space
+            euclidean_distance = np.linalg.norm(true_objective - target_obj_1d)
             self._logger.log_info(
-                f"📐 Relative error: [{', '.join(formatted_rel_diff)}]"
+                f"📏 Euclidean distance in objective space (L2-norm): {euclidean_distance:.6f}"
             )
 
-            # Optional: Add threshold for deviation warning
-            if np.any(rel_diff > 0.1):  # 10% relative deviation
+            # 3. Maximum Absolute Error (L-infinity norm)
+            max_abs_error = np.max(abs_diff)
+            self._logger.log_info(
+                f"📏 Maximum absolute error across objectives (L_inf-norm): {max_abs_error:.6f}"
+            )
+
+            # 4. Mean Absolute Error (MAE)
+            mean_abs_error = np.mean(abs_diff)
+            self._logger.log_info(
+                f"📏 Mean absolute error across objectives (MAE): {mean_abs_error:.6f}"
+            )
+
+            # 5. Relative Difference (per objective) - kept for individual objective insight
+            # Using np.maximum to prevent division by zero or very small numbers
+            rel_diff = abs_diff / np.maximum(np.abs(target_obj_1d), 1e-8)
+            formatted_rel_diff = [f"{v:.2%}" for v in rel_diff]  # Format as percentage
+            self._logger.log_info(
+                f"📐 Relative error per objective (compared to target): [{', '.join(formatted_rel_diff)}]"
+            )
+
+            # Optional: Add warning based on aggregated metric (e.g., Euclidean distance or Max Abs Error)
+            # Thresholds might need to be fine-tuned based on problem scale and acceptable deviation.
+            # A good practice might be to normalize the error by the typical range of the objectives
+            # for a more robust threshold. For this example, let's use a fixed value.
+
+            # Warning based on Euclidean distance
+            # (Example threshold, adjust based on expected objective scales)
+            if euclidean_distance > 0.1:
                 self._logger.log_warning(
-                    f"⚠️ Evaluated objective deviates significantly (>10%) from the target."
+                    f"⚠️ Achieved objective's Euclidean distance from target is significant ({euclidean_distance:.6f})."
+                )
+
+            # Warning based on maximum relative deviation across any single objective
+            if np.any(rel_diff > 0.1):  # If any objective deviates by more than 10%
+                self._logger.log_warning(
+                    f"⚠️ One or more objectives show significant relative deviation (>10%)."
                 )
 
             self._logger.log_info(
@@ -145,6 +189,8 @@ class FreeModeGenerateDecisionCommandHandler:
                     s_unnorm = objectives_normalizer.inverse_transform(
                         s_norm.reshape(1, -1)
                     )[0]
-                    self._logger.log_error(
-                        f"   - f1: {s_unnorm[0]:.4f}, f2: {s_unnorm[1]:.4f}"
+                    # Dynamically format suggestions for N objectives
+                    s_str = ", ".join(
+                        [f"f{i+1}: {val:.4f}" for i, val in enumerate(s_unnorm)]
                     )
+                    self._logger.log_error(f"   - {s_str}")
