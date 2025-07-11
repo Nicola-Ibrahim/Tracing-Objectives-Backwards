@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..enums import FeasibilityFailureReason
-from ..scoring_strategies.base import FeasibilityScoringStrategy
+from ..scorers.base import FeasibilityScoringStrategy
 from .base import BaseFeasibilityValidator, ValidationResult
 
 
