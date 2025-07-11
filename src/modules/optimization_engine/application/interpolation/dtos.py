@@ -222,6 +222,55 @@ class SVRInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
+class MDNInverseDecisionMapperParams(InverseDecisionMapperParams):
+    """
+    Pydantic model to define and validate parameters for an
+    MDNInverseDecisionMapper.
+    """
+
+    type: str = Field(
+        InverseDecisionMapperType.MDN_ND.value,
+        description="Type of the Mixture Density Network interpolation method.",
+    )
+    num_mixtures: int = Field(
+        5, gt=0, description="The number of Gaussian mixture components for the MDN."
+    )
+    epochs: int = Field(500, gt=0, description="Number of epochs for training the MDN.")
+    learning_rate: float = Field(
+        1e-3, gt=0, description="Learning rate for the Adam optimizer."
+    )
+
+    class Config:
+        extra = "forbid"
+
+
+class CVAEInverseDecisionMapperParams(InverseDecisionMapperParams):
+    """
+    Pydantic model to define and validate parameters for a
+    CVAEInverseDecisionMapper.
+    """
+
+    type: str = Field(
+        InverseDecisionMapperType.CVAE_ND.value,
+        description="Type of the Conditional Variational Autoencoder interpolation method.",
+    )
+    latent_dim: int = Field(
+        8, gt=0, description="Dimensionality of the latent space in the CVAE."
+    )
+    epochs: int = Field(
+        500, gt=0, description="Number of epochs for training the CVAE."
+    )
+    learning_rate: float = Field(
+        1e-3, gt=0, description="Learning rate for the Adam optimizer."
+    )
+    device: Literal["cpu", "cuda"] = Field(
+        "cpu", description="The device to run the CVAE model on ('cpu' or 'cuda')."
+    )
+
+    class Config:
+        extra = "forbid"
+
+
 class NormalizerConfig(BaseModel):
     """
     Configuration for a normalizer.
