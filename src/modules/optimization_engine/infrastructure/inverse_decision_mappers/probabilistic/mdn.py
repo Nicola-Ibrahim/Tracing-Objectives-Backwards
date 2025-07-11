@@ -72,7 +72,9 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
     rather than a single deterministic decision.
     """
 
-    def __init__(self, num_mixtures: int = 5, epochs: int = 500, lr: float = 1e-3):
+    def __init__(
+        self, num_mixtures: int = 5, epochs: int = 500, learning_rate: float = 1e-3
+    ):
         """
         Initializes the MDNInverseMapper.
 
@@ -84,7 +86,7 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
         super().__init__()
         self._num_mixtures = num_mixtures
         self._epochs = epochs
-        self._lr = lr
+        self._learning_rate = learning_rate
         self._model: MDN | None = None  # Initialize model as None, to be set in fit
 
     def fit(
@@ -108,7 +110,7 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
             input_dim=X.shape[1], output_dim=Y.shape[1], num_mixtures=self._num_mixtures
         )
         # Initialize the Adam optimizer
-        optimizer = torch.optim.Adam(self._model.parameters(), lr=self._lr)
+        optimizer = torch.optim.Adam(self._model.parameters(), lr=self._learning_rate)
 
         # Training loop
         for epoch in range(self._epochs):

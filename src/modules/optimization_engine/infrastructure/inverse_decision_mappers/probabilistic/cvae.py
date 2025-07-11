@@ -158,6 +158,9 @@ class CVAEInverseDecisionMapper(BaseInverseDecisionMapper):
 
         # Training loop
         for epoch in range(self._epochs):
+            self._encoder.train()  # Set to training mode
+            self._decoder.train()  # Set to training mode
+
             optimizer.zero_grad()  # Zero the gradients
 
             # Encoder forward pass: get mean and log-variance of the latent distribution
