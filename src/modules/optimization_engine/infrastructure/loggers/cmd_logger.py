@@ -39,7 +39,7 @@ class ColoredFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     LOG_COLORS = {
-        logging.DEBUG: LogColors.BRIGHT_BLACK,  # Or LogColors.CYAN
+        logging.DEBUG: LogColors.BRIGHT_BLACK,  # Or LogColors.CYAN, this is already defined
         logging.INFO: LogColors.GREEN,
         logging.WARNING: LogColors.YELLOW,
         logging.ERROR: LogColors.RED,
@@ -60,33 +60,43 @@ class ColoredFormatter(logging.Formatter):
 
 
 class CMDLogger(BaseLogger):
-    def __init__(self, name: str = "CMDLogger"):
+    def __init__(self, name: str = "CMDLogger", level: int = logging.INFO):
         """
         Initialize the CMD logger with colorful output.
+
+        Args:
+            name (str): The name of the logger.
+            level (int): The logging level (e.g., logging.INFO, logging.DEBUG).
         """
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
+        # Set the logger's level based on the constructor argument
+        self.logger.setLevel(level)
 
         # Prevent adding duplicate handlers if the logger is initialized multiple times
-        # (e.g., in a development environment or during tests).
-        # This is crucial to avoid multiple identical log messages.
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            # Use the custom ColoredFormatter
             formatter = ColoredFormatter()
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
-            # Propagate to root logger should be False to prevent duplicate messages
-            # if the root logger also has a StreamHandler.
-            self.logger.propagate = False
+            self.logger.propagate = (
+                False  # Prevent messages from being duplicated by root logger
+            )
 
     def log_info(self, message: str) -> None:
         """Log an informational message."""
         self.logger.info(message)
 
+    def log_warning(self, message: str) -> None:
+        """Log a warning message."""
+        self.logger.warning(message)
+
     def log_error(self, message: str) -> None:
         """Log an error message."""
         self.logger.error(message)
+
+    def log_debug(self, message: str) -> None:
+        """Log a debug message."""
+        self.logger.debug(message)
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         """Log evaluation or training metrics."""
@@ -105,7 +115,7 @@ class CMDLogger(BaseLogger):
         metrics: Optional[Dict[str, float]] = None,
         notes: Optional[str] = None,
         collection_name: Optional[str] = None,
-        step: Optional[int] = None,  # Now matches BaseLogger
+        step: Optional[int] = None,
     ):
         """Log model details for CMD output. Ignores some W&B specific metadata."""
         log_message = f"Logging Model: '{name}'"

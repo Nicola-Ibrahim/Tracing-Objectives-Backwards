@@ -32,10 +32,28 @@ class WandbLogger(BaseLogger):
         self.run.log({"info_message": message})
         print(f"Wandb Info: {message}")  # Also print to console for immediate feedback
 
+    def log_warning(self, message: str) -> None:
+        """Log a warning message to W&B."""
+        # W&B does not have a direct 'warning' log type like standard loggers.
+        # We can log it as a custom event or as part of the system logs if W&B captures stderr.
+        self.run.log({"warning_message": message})
+        print(
+            f"Wandb Warning: {message}"
+        )  # Also print to console for immediate feedback
+
     def log_error(self, message: str) -> None:
         """Log an error message to W&B."""
         self.run.log({"error_message": message})
         print(f"Wandb Error: {message}")  # Also print to console for immediate feedback
+
+    def log_debug(self, message: str) -> None:
+        """Log a debug message to W&B."""
+        # Similar to warning, W&B doesn't have a dedicated 'debug' log.
+        # Log it as an event, but typically debug messages are very verbose
+        # and might not be logged to W&B unless specifically needed for analysis.
+        # For this example, we'll log it as a custom event.
+        self.run.log({"debug_message": message})
+        print(f"Wandb Debug: {message}")  # Also print to console for immediate feedback
 
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         """Log evaluation or training metrics."""
@@ -51,9 +69,7 @@ class WandbLogger(BaseLogger):
         metrics: Optional[Dict[str, float]] = None,
         notes: Optional[str] = None,
         collection_name: Optional[str] = None,
-        step: Optional[
-            int
-        ] = None,  # Now matches BaseLogger - W&B uses this in log() for metrics, not directly for artifacts
+        step: Optional[int] = None,
     ):
         """Log a model as a W&B artifact."""
         with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as tmp_file:
@@ -81,36 +97,22 @@ class WandbLogger(BaseLogger):
 
         if collection_name:
             # For linking to a registry, the name should typically be `project/collection_name`
-            # or `entity/project/collection_name`. Assuming `wandb-registry-interpolation-models`
-            # is meant to be the entity or part of the project name for linking.
-            # A common pattern is `project_name/model_registry_name`.
-            # Let's assume collection_name is just the specific model collection within your project.
-            # The format for link_artifact is typically "entity/project/artifact_name" or "project/artifact_name"
-            # It seems you want to link to a W&B Model Registry.
-            # The target for link_artifact should be a fully qualified path to the registry
-            # e.g., "model_registry/MyAwesomeModels"
-            # If "wandb-registry-interpolation-models" is a specific project or entity, this might work.
-            # A more common registry linking would be:
-            # self.run.link_artifact(artifact, f"{self.run.project}/model_registry/{collection_name}")
-            # Or simpler if `collection_name` is intended to be the alias for this artifact version:
+            # or `entity/project/collection_name`.
+            # A common pattern for linking an artifact to a Model Registry entry is:
+            # self.run.link_artifact(artifact, f"{self.run.project}/{collection_name}")
+            # Or if `collection_name` is intended as an alias for the artifact:
             self.run.link_artifact(
                 artifact,
-                f"wandb-artifact://{self.run.project}/{name}",  # Link the specific artifact to itself but with a new alias/collection
+                f"wandb-artifact://{self.run.project}/{name}",
                 aliases=[collection_name],
             )
-            # If `collection_name` is meant to be a model name in the registry, you'd do:
-            # self.run.link_artifact(artifact, collection_name) # This would push the model to a registry with `collection_name` as the name
-            # For the original structure:
-            print(f"Wandb: Linking artifact to collection: {collection_name}")
+            print(f"Wandb: Linking artifact to collection/alias: {collection_name}")
 
         # Clean up the temporary file after logging
         Path(model_path).unlink(missing_ok=True)
 
     def load_model(self, artifact_name: str) -> Any:
         """Download a model artifact and load the pickled model."""
-        # Using self.run.use_artifact means the run needs to be active.
-        # Consider if you want to load models without an active run, which would require
-        # wandb.Api().artifact(...)
         try:
             artifact = self.run.use_artifact(f"{artifact_name}:latest", type="model")
             model_dir = artifact.download()
@@ -125,7 +127,4 @@ class WandbLogger(BaseLogger):
             self.log_error(f"Failed to load model artifact {artifact_name}: {e}")
             raise
         finally:
-            # Do not call run.finish() here, as this method might be called multiple times
-            # within an active run. The `run.finish()` should be handled externally
-            # when the entire logging process for a run is complete.
             pass
