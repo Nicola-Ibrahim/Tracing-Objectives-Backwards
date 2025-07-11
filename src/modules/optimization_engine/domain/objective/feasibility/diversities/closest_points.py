@@ -5,21 +5,22 @@ from .base import BaseDiversityStrategy
 
 class ClosestPointsDiversityStrategy(BaseDiversityStrategy):
     """
-    Simply returns the `num_desired_points` closest points from the pool
-    to the target. This is the "none" or default diversity method.
+    Returns the `num_suggestions` closest points from the full Pareto front
+    to the target. This acts as the "none" or default diversity method.
     """
 
     def select_diverse_points(
         self,
-        pool_points: np.ndarray,
-        num_desired_points: int,
-        target_normalized: np.ndarray,  # Used for ordering points by closeness
+        pareto_front_normalized: np.ndarray,
+        target_normalized: np.ndarray,
+        num_suggestions: int,
     ) -> np.ndarray:
-        if pool_points.shape[0] == 0:
-            return np.array([])
-        if num_desired_points == 0:
+        if pareto_front_normalized.shape[0] == 0 or num_suggestions == 0:
             return np.array([])
 
-        # Points are already sorted by distance to target when pool is created,
-        # so we just take the first `num_desired_points`.
-        return pool_points[:num_desired_points]
+        # Calculate distances to target from the FULL front
+        distances = np.linalg.norm(pareto_front_normalized - target_normalized, axis=1)
+        # Get indices of the closest points
+        closest_indices = np.argsort(distances)[:num_suggestions]
+        # Return the actual closest points
+        return pareto_front_normalized[closest_indices]

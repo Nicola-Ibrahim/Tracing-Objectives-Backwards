@@ -23,9 +23,7 @@ class BaseFeasibilityValidator(ABC):
     """
 
     @abstractmethod
-    def validate(
-        self,
-    ) -> ValidationResult:
+    def validate(self) -> ValidationResult:
         """s
         Performs the specific feasibility validation check.
 
