@@ -31,8 +31,9 @@ class Minimizer(BaseOptimizer):
         result = minimize(
             problem=self.problem,
             algorithm=self.algorithm,
-            **self.config.model_dump(),
+            **self.config,
         )
+
         return OptimizationResult(
             X=result.X, F=result.F, G=result.G, CV=result.CV, history=result.history
         )

@@ -5,21 +5,18 @@ from pydantic import BaseModel, Field
 
 class ProblemType(str, Enum):
     biobj = "biobj"
-    # Extend here if needed
 
 
 class AlgorithmType(str, Enum):
     nsga2 = "nsga2"
-    # Extend here if needed
 
 
 class OptimizerType(str, Enum):
     minimizer = "minimizer"
-    # Extend here if needed
 
 
 class ApplicationProblemConfig(BaseModel):
-    id: int = Field(
+    problem_id: int = Field(
         5,
         ge=1,
         description="The problem ID used within the COCO framework. Must be >= 55.",
@@ -38,6 +35,7 @@ class ApplicationAlgorithmConfig(BaseModel):
         description="The optimization algorithm to be used.",
         example="nsga2",
     )
+    population_size: int = Field(200, gt=0, description="Size of the population")
 
 
 class ApplicationOptimizerConfig(BaseModel):
@@ -45,6 +43,19 @@ class ApplicationOptimizerConfig(BaseModel):
         default=OptimizerType.minimizer,
         description="The optimizer runner strategy.",
         example="minimizer",
+    )
+
+    generations: int = Field(
+        default=16,
+        gt=1,
+        description="Number of generations for the optimization.",
+        example=16,
+    )
+
+    save_history: bool = Field(
+        default=False,
+        description="Whether to save the optimization history.",
+        example=False,
     )
 
 

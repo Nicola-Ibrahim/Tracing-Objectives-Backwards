@@ -25,8 +25,8 @@ def generate_data(problem_id: int):
     # 1. Build command from CLI arguments
     command = GenerateParetoCommand(
         problem_config=ApplicationProblemConfig(id=problem_id),
-        algorithm_config=ApplicationAlgorithmConfig(),  # Uses default NSGA2
-        optimizer_config=ApplicationOptimizerConfig(),  # Uses default Minimizer
+        algorithm_config=ApplicationAlgorithmConfig(),
+        optimizer_config=ApplicationOptimizerConfig(),
     )
 
     # 2. Setup dependencies (could later be moved to a container or bootstrap file)

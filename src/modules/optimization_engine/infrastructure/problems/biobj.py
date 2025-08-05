@@ -60,9 +60,6 @@ class BiObjProblemConfig(BaseModel):
         0, ge=0, description="Number of constraints in the optimization problem"
     )
 
-    xl: list[float] = Field(..., description="Lower bounds for decision variables")
-    xu: list[float] = Field(..., description="Upper bounds for decision variables")
-
 
 class COCOBiObjectiveProblem(BaseProblem):
     """
@@ -73,7 +70,7 @@ class COCOBiObjectiveProblem(BaseProblem):
 
     """
 
-    def __init__(self, problem: COCOProblem, config: BiObjProblemConfig):
+    def __init__(self, config: BiObjProblemConfig):
         """
         Initialize the BiObjectiveProblem with a COCO problem instance.
         Args:
@@ -81,14 +78,16 @@ class COCOBiObjectiveProblem(BaseProblem):
             lower_bounds: Lower bounds for the decision variables.
             upper_bounds: Upper bounds for the decision variables.
         """
-        self.coco_problem = problem
+        self.coco_problem = get_coco_problem(
+            "bbob-biobj", function_indices=config.problem_id
+        )
 
         super().__init__(
             n_var=config.n_var,
             n_obj=config.n_obj,
             n_constr=config.n_constr,
-            xl=np.array(config.xl),
-            xu=np.array(config.xu),
+            xl=np.array(self.coco_problem.xl),
+            xu=np.array(self.coco_problem.xu),
         )
 
     def _evaluate(self, X: np.ndarray, out: dict, *args, **kwargs) -> None:

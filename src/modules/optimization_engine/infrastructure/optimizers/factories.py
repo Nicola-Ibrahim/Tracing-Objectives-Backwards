@@ -1,31 +1,38 @@
 from ...domain.generation.interfaces.base_algorithm import BaseAlgorithm
 from ...domain.generation.interfaces.base_optimizer import BaseOptimizer
 from ...domain.generation.interfaces.base_problem import BaseProblem
-from .minimizer import Minimizer, MinimizerConfig
+from ...infrastructure.optimizers.minimizer import Minimizer, MinimizerConfig
+
+# Registry for optimizers
+OPTIMIZER_REGISTRY = {
+    "minimizer": Minimizer,
+}
 
 
 class OptimizerFactory:
     def create(
         self,
+        config: dict,
         problem: BaseProblem,
         algorithm: BaseAlgorithm,
-        config: dict,
     ) -> BaseOptimizer:
-        # Implementation creates optimizer with its dependencies
+        """
+        Creates an optimizer instance from a type string and configuration data.
+        """
+        try:
+            optimizer_class = OPTIMIZER_REGISTRY[config.get("type", "minimizer")]
 
-        opt_type = config["type"]
-        if opt_type == "minimizer":
-            minimizer_config = MinimizerConfig(
-                generations=16,
-                seed=42,
-                save_history=False,  # Avoids deepcopy of problem object
-                verbose=False,
-                pf=True,
+            return optimizer_class(
+                problem=problem,
+                algorithm=algorithm,
+                config=MinimizerConfig(**config),
             )
 
-            return Minimizer(
-                problem=problem, algorithm=algorithm, config=minimizer_config
-            )
+        except KeyError:
+            raise ValueError(f"Available types are: {list(OPTIMIZER_REGISTRY.keys())}")
 
-        else:
-            raise ValueError(f"Unsupported optimizer: {opt_type}")
+        except Exception as e:
+            raise ValueError(
+                f"Failed to create optimizer of type '{optimizer_class}' "
+                f"with config '{config}'. Error: {e}"
+            )
