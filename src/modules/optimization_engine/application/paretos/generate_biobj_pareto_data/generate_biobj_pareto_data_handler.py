@@ -69,6 +69,8 @@ class GenerateBiobjParetoDataCommandHandler:
             pareto_set=result.pareto_set,
             pareto_front=result.pareto_front,
             problem_name=algorithm_config.get("type", "UnknownAlgorithm"),
+            historical_solutions=result.all_historical_solutions,
+            historical_objectives=result.all_historical_objectives,
             metadata={
                 "algorithm": algorithm_config,
                 "optimizer": optimizer_config,

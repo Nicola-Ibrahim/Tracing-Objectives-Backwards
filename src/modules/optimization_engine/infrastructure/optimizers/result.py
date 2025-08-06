@@ -1,16 +1,9 @@
+from functools import cached_property
 from typing import Any
+
 import numpy as np
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
-
-
-class HistoryEntry(BaseModel):
-    """Structured data for a single generation in the optimization history."""
-
-    X: np.ndarray
-    F: np.ndarray
-    G: np.ndarray | None = None
-    CV: np.ndarray | None = None
 
 
 class OptimizationResult(BaseModel):
@@ -34,81 +27,160 @@ class OptimizationResult(BaseModel):
     CV: np.ndarray | None = Field(
         None, description="Aggregated constraint violation for the final population"
     )
-    history: list[HistoryEntry] | None = Field(
+    history: list[dict[str, np.ndarray]] | None = Field(
         None, description="History of the algorithm's population at each generation"
     )
 
+    class Config:
+        arbitrary_types_allowed = True
+
+    # ===================================================
+    # Validators for input data types
+    # ===================================================
+
+    @field_validator("X", "F", "G", "CV", mode="before")
+    @classmethod
+    def ensure_numpy_array(cls, v):
+        return np.asarray(v) if v is not None else v
+
     @model_validator(mode="after")
     def post_init_checks(self):
-        """
-        Post-initialization to ensure all data is in the correct format.
-        This runs after the model is initialized.
-        """
-        # Ensure all arrays are numpy arrays for consistency
-        self.X = np.asarray(self.X)
-        self.F = np.asarray(self.F)
-        if self.G is not None:
-            self.G = np.asarray(self.G)
-        if self.CV is not None:
-            self.CV = np.asarray(self.CV)
-
         # Handle cases where G or CV might be None for unconstrained problems
         if self.G is None:
             self.G = np.zeros((self.F.shape[0], 0))
         if self.CV is None:
             self.CV = np.zeros(self.F.shape[0])
-
         # Ensure CV is 1D
         if self.CV.ndim > 1:
             self.CV = self.CV.squeeze()
-
-        # The history logic from your original code was incorrect.
-        # History should be provided to the model, not created from the final population.
         return self
 
-    
-    @property
-    def final_solutions(self) -> np.ndarray:
-        """Decision variable vectors (X) of all feasible solutions in the final population."""
-        return self.X[self._is_feasible]
+    # ===================================================
+    # Cached Properties for Core Indexing and Masks
+    # ===================================================
 
-    @property
-    def final_objectives(self) -> np.ndarray:
-        """Objective values (F) for all feasible solutions in the final population."""
-        return self.F[self._is_feasible]
+    @cached_property
+    def _is_feasible_mask(self) -> np.ndarray:
+        """Boolean mask indicating feasibility of each solution in the final population."""
+        return self.CV <= 0.0
 
-  
+    @cached_property
+    def _feasible_indices(self) -> np.ndarray:
+        """Indices of all feasible solutions in the original array."""
+        return np.flatnonzero(self._is_feasible_mask)
+
+    @cached_property
+    def _pareto_indices(self) -> np.ndarray:
+        """Indices of Pareto-optimal solutions among feasible solutions."""
+        if not self._is_feasible_mask.any():
+            return np.array([], dtype=int)
+        return NonDominatedSorting().do(
+            self.F[self._is_feasible_mask], only_non_dominated_front=True
+        )
+
+    # ===================================================
+    # User-facing Properties
+    # ===================================================
+
     @property
     def pareto_set(self) -> np.ndarray:
-        """
-        Decision variable vectors of Pareto-optimal solutions (feasible only)
-
-        Returns:
-            np.ndarray: Decision variables of Pareto-optimal solutions
-        """
-        return self.final_solutions[self._get_final_pareto_front_indices()]
+        """Decision variable vectors of the Pareto-optimal solutions from the final population."""
+        return self.X[self._pareto_indices]
 
     @property
     def pareto_front(self) -> np.ndarray:
+        """Objective values of the Pareto-optimal solutions from the final population."""
+        return self.F[self._pareto_indices]
+
+    # ===================================================
+    # Historical Data Properties
+    # ===================================================
+
+    @cached_property
+    def all_historical_solutions(self) -> np.ndarray | None:
+        """All decision variables from all generations, combined into a single array."""
+        if not self.history:
+            return None
+        return np.vstack([g["X"] for g in self.history])
+
+    @cached_property
+    def all_historical_objectives(self) -> np.ndarray | None:
+        """All objective values from all generations, combined into a single array."""
+        if not self.history:
+            return None
+        return np.vstack([g["F"] for g in self.history])
+
+    @cached_property
+    def _all_historical_violations(self) -> np.ndarray | None:
+        """All aggregated constraint violations from all generations, combined."""
+        if not self.history:
+            return None
+        all_cv_list = [
+            g["CV"].reshape(-1, 1)
+            for g in self.history
+            if g.get("CV") is not None and g["CV"].size > 0
+        ]
+        if all_cv_list:
+            return np.vstack(all_cv_list).squeeze()
+
+        # If no CV data, return zeros of the correct size
+        return np.zeros(self.all_historical_solutions.shape[0])
+
+    @cached_property
+    def _is_feasible_historical_mask(self) -> np.ndarray | None:
+        """Boolean mask indicating feasibility of all historical solutions."""
+        if self._all_historical_violations is None:
+            return None
+        return self._all_historical_violations <= 0.0
+
+    @cached_property
+    def _pareto_indices_historical(self) -> np.ndarray | None:
         """
-        Objective values of Pareto-optimal solutions (feasible only)
-        Returns:
-            np.ndarray: Objective values of Pareto-optimal solutions
+        Indices of Pareto-optimal solutions among all historical feasible solutions.
+        The indices are relative to the combined historical arrays.
         """
-        return self.final_objectives[self._get_final_pareto_front_indices()]
+        if (
+            self.all_historical_objectives is None
+            or self._is_feasible_historical_mask is None
+        ):
+            return None
+
+        feasible_F_history = self.all_historical_objectives[
+            self._is_feasible_historical_mask
+        ]
+        if not feasible_F_history.size:
+            return np.array([], dtype=int)
+        return NonDominatedSorting().do(
+            feasible_F_history, only_non_dominated_front=True
+        )
 
     @property
-    def non_pareto_objectives(self) -> np.ndarray:
-        """Objective values of feasible but non-Pareto solutions"""
-        mask = np.ones(len(self.final_objectives), dtype=bool)
-        mask[self._get_final_pareto_front_indices()] = False
-        return self.final_objectives[mask]
+    def historical_pareto_set(self) -> np.ndarray | None:
+        """The Pareto-optimal set across all generations (feasible solutions only)."""
+        if (
+            self.all_historical_solutions is None
+            or self._pareto_indices_historical is None
+        ):
+            return None
 
+        feasible_X_history = self.all_historical_solutions[
+            self._is_feasible_historical_mask
+        ]
+        return feasible_X_history[self._pareto_indices_historical]
 
     @property
-    def pareto_solution_indices(self) -> np.ndarray:
-        """Indices of Pareto-optimal solutions in the original array"""
-        return self._get_final_feasible_indices[self._get_final_pareto_front_indices]
+    def historical_pareto_front(self) -> np.ndarray | None:
+        """The Pareto-optimal front across all generations (feasible solutions only)."""
+        if (
+            self.all_historical_objectives is None
+            or self._pareto_indices_historical is None
+        ):
+            return None
+
+        feasible_F_history = self.all_historical_objectives[
+            self._is_feasible_historical_mask
+        ]
+        return feasible_F_history[self._pareto_indices_historical]
 
     # =================================================================
     # Public Methods: High-level functionality for users
@@ -125,66 +197,12 @@ class OptimizationResult(BaseModel):
                 "violation_counts": np.array([], dtype=int),
                 "max_violations": np.array([], dtype=float),
             }
-        
+
         return {
             "total_violations": np.sum(~self.is_feasible),
             "violation_counts": np.sum(self.G > 0, axis=0),
             "max_violations": np.max(self.G, axis=0),
         }
-
-    def get_history_data(self) -> list[dict[str, np.ndarray]]:
-        """
-        Extracts all optimization history data into a structured format.
-
-        Returns:
-            list of dictionaries with keys: 'X', 'F', 'G', 'CV' for each generation.
-        """
-        if not self.history:
-            return None
-
-        history_data = []
-        for entry in self.history:
-            history_data.append(
-                {
-                    "X": entry.X,
-                    "F": entry.F,
-                    "G": entry.G,
-                    "CV": entry.CV,
-                }
-            )
-        return history_data
-
-    
-
-    # =================================================================
-    # Private Helper Properties: For internal use only
-    # =================================================================
-
-    def _is_feasible(self) -> np.ndarray:
-        """Boolean mask indicating feasibility of each solution in the final population."""
-        return self.CV <= 0.0
-
-
-    def _get_final_pareto_front_indices(self) -> np.ndarray:
-        """(Private) Indices (relative to the final feasible set) of Pareto-optimal solutions."""
-        if not self._is_feasible.any():
-            return np.array([], dtype=int)
-        return NonDominatedSorting().do(self.final_objectives, only_non_dominated_front=True)
-    
-    def _get_final_all_fronts_indices(self) -> list[np.ndarray]:
-        """(Private) Full non-dominated sorting of the final feasible solutions into fronts."""
-        if not self._is_feasible.any():
-            return []
-        return NonDominatedSorting().do(self.final_objectives, only_non_dominated_front=False)
-
-    def _get_final_feasible_indices(self) -> np.ndarray:
-        """(Private) Indices of all feasible solutions in the original final population array."""
-        return np.flatnonzero(self._is_feasible)
-
-    def _get_final_pareto_solution_indices(self) -> np.ndarray:
-        """(Private) Indices of Pareto-optimal solutions in the original final population array."""
-        return self._get_final_feasible_indices[self._get_final_pareto_front_indices]
-
 
 
 class OptimizationResultProcessor:
@@ -251,7 +269,7 @@ class OptimizationResultProcessor:
     def get_pareto_front(self) -> dict:
         """Extract Pareto-optimal solutions with original key naming"""
         X_pareto, F_pareto = self.result.get_pareto_front()
-        indices = self.result _get_final_pareto_front_indices()]
+        indices = self.result.pareto_indices
 
         return {
             # Pareto-optimal decision variables

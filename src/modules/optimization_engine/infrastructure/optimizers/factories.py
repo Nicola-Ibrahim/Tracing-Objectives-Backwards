@@ -19,20 +19,10 @@ class OptimizerFactory:
         """
         Creates an optimizer instance from a type string and configuration data.
         """
-        try:
-            optimizer_class = OPTIMIZER_REGISTRY[config.get("type", "minimizer")]
+        optimizer_class = OPTIMIZER_REGISTRY[config.get("type", "minimizer")]
 
-            return optimizer_class(
-                problem=problem,
-                algorithm=algorithm,
-                config=MinimizerConfig(**config),
-            )
-
-        except KeyError:
-            raise ValueError(f"Available types are: {list(OPTIMIZER_REGISTRY.keys())}")
-
-        except Exception as e:
-            raise ValueError(
-                f"Failed to create optimizer of type '{optimizer_class}' "
-                f"with config '{config}'. Error: {e}"
-            )
+        return optimizer_class(
+            problem=problem,
+            algorithm=algorithm,
+            config=MinimizerConfig(**config),
+        )

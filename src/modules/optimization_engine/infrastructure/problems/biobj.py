@@ -67,28 +67,28 @@ class COCOBiObjectiveProblem(BaseProblem):
 
     This class wraps a COCO problem instance and adapts it to work with pymoo's
     optimization framework while maintaining the BaseProblem interface.
-
     """
 
     def __init__(self, config: BiObjProblemConfig):
         """
         Initialize the BiObjectiveProblem with a COCO problem instance.
         Args:
-            problem: A COCO problem instance that implements the callable interface.
-            lower_bounds: Lower bounds for the decision variables.
-            upper_bounds: Upper bounds for the decision variables.
+            config: Configuration for the bi-objective problem.
         """
         self.coco_problem = get_coco_problem(
             "bbob-biobj", function_indices=config.problem_id
         )
-
         super().__init__(
             n_var=config.n_var,
             n_obj=config.n_obj,
             n_constr=config.n_constr,
-            xl=np.array(self.coco_problem.xl),
-            xu=np.array(self.coco_problem.xu),
+            xl=np.array(self.coco_problem.lower_bounds),
+            xu=np.array(self.coco_problem.upper_bounds),
         )
+
+        self.exclude_from_serialization = [
+            "coco_problem"
+        ]  # This tells pymoo to ignore this attribute during deepcopy.
 
     def _evaluate(self, X: np.ndarray, out: dict, *args, **kwargs) -> None:
         """Evaluate the COCO problem for multiple solutions"""

@@ -17,13 +17,14 @@ class OptimizerType(str, Enum):
 
 class ApplicationProblemConfig(BaseModel):
     problem_id: int = Field(
-        5,
+        ...,
         ge=1,
-        description="The problem ID used within the COCO framework. Must be >= 55.",
-        example=55,
+        le=56,
+        description="The problem ID used within the COCO framework.",
+        example=5,
     )
     type: ProblemType = Field(
-        default=ProblemType.biobj,
+        ...,
         description="The type of optimization problem to solve.",
         example="biobj",
     )
@@ -31,31 +32,38 @@ class ApplicationProblemConfig(BaseModel):
 
 class ApplicationAlgorithmConfig(BaseModel):
     type: AlgorithmType = Field(
-        default=AlgorithmType.nsga2,
-        description="The optimization algorithm to be used.",
+        ...,
+        description="The optimization algorithm to be used for solving the problem.",
         example="nsga2",
     )
-    population_size: int = Field(200, gt=0, description="Size of the population")
+    population_size: int = Field(
+        ..., gt=0, description="Size of the population in each generation.", example=200
+    )
 
 
 class ApplicationOptimizerConfig(BaseModel):
     type: OptimizerType = Field(
-        default=OptimizerType.minimizer,
+        ...,
         description="The optimizer runner strategy.",
         example="minimizer",
     )
 
     generations: int = Field(
-        default=16,
+        ...,
         gt=1,
-        description="Number of generations for the optimization.",
+        description="Number of generations for the optimization process.",
         example=16,
     )
 
     save_history: bool = Field(
-        default=False,
+        ...,
         description="Whether to save the optimization history.",
         example=False,
+    )
+    verbose: bool = Field(
+        ...,
+        description="Whether to print verbose output during optimization.",
+        example=True,
     )
 
 

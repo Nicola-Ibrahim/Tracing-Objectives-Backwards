@@ -5,7 +5,7 @@ from .biobj import BiObjProblemConfig, COCOBiObjectiveProblem
 class ProblemFactory:
     def create(self, config: dict) -> BaseProblem:
         problem_type = config["type"]
-        problem_id = config["id"]
+        problem_id = config["problem_id"]
 
         if problem_type == "biobj":
             config = BiObjProblemConfig(

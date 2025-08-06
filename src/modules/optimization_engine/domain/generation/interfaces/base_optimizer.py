@@ -11,7 +11,7 @@ class BaseOptimizer(ABC):
         self,
         problem: BaseProblem,
         algorithm: BaseAlgorithm,
-        config: dict[str, Any],
+        config: Any,
     ):
         self.problem = problem
         self.algorithm = algorithm

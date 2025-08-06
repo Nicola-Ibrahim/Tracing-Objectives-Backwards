@@ -16,27 +16,32 @@ class NPZParetoDataRepository(BaseParetoDataRepository):
     def save(self, data: ParetoDataModel, filename: str) -> Path:
         """
         Save Pareto set/front data with metadata in numpy format.
-
+        Now includes optional historical data.
         """
 
         # Ensure directory exists
         save_path = self.base_path / filename
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Prepare data dictionary to be saved
+        data_to_save = {
+            "pareto_set": data.pareto_set,
+            "pareto_front": data.pareto_front,
+            "historical_solutions": data.historical_solutions,
+            "historical_objectives": data.historical_objectives,
+            "problem_name": data.problem_name,
+            "metadata": data.metadata if data.metadata else {},
+        }
+
         # Save as compressed numpy archive
-        np.savez_compressed(
-            save_path,
-            pareto_set=data.pareto_set,
-            pareto_front=data.pareto_front,
-            problem_name=data.problem_name,
-            metadata=data.metadata if data.metadata else {},
-        )
+        np.savez_compressed(save_path, **data_to_save)
 
         return save_path
 
     def load(self, filename: str) -> ParetoDataModel:
         """
         Load Pareto set/front data from numpy archive.
+        Now supports loading optional historical data.
 
         Args:
             filename: Name of the file to load
@@ -52,9 +57,12 @@ class NPZParetoDataRepository(BaseParetoDataRepository):
             raise FileNotFoundError(f"No Pareto data found at {load_path}")
 
         with np.load(load_path, allow_pickle=True) as data:
+            # Use .get() to handle optional historical data and ensure backward compatibility
             pareto_data = ParetoDataModel(
                 pareto_set=data["pareto_set"],
                 pareto_front=data["pareto_front"],
+                historical_solutions=data.get("historical_solutions"),
+                historical_objectives=data.get("historical_objectives"),
                 problem_name=str(data["problem_name"]),
                 metadata=dict(data["metadata"].item()),
             )

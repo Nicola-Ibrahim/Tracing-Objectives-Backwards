@@ -34,6 +34,9 @@ class NSGA2Config(BaseModel):
             raise ValueError("Probabilities must not be None.")
         return values
 
+    class config:
+        arbitrary_types_allowed = True
+
 
 class NSGAII(BaseAlgorithm):
     """Wrapper class for NSGA-II algorithm with proper initialization"""
