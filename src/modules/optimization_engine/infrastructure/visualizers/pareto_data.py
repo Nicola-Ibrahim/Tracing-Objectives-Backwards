@@ -32,6 +32,16 @@ class ParetoData:
             "description": "Original objective function values (F) for Pareto optimal solutions. Shape (n_samples, n_objective_vars)."
         },
     )
+    historical_solutions: np.ndarray | None = field(
+        default_factory=lambda: np.array([]),
+        metadata={"description": "All decision variables (X) from all generations."},
+    )
+    historical_objectives: np.ndarray | None = field(
+        default_factory=lambda: np.array([]),
+        metadata={
+            "description": "All objective function values (F) from all generations."
+        },
+    )
 
     # Normalized Values (0-1 range) - Directly stored as attributes
     norm_f1: np.ndarray = field(
@@ -86,6 +96,11 @@ class ParetoData:
             "description": "2D interpolated data for multivariate relationships (surfaces)."
         },
     )
+    # Storing the scalers for consistent normalization of historical data
+    x1_scaler: MinMaxScaler | None = None
+    x2_scaler: MinMaxScaler | None = None
+    f1_scaler: MinMaxScaler | None = None
+    f2_scaler: MinMaxScaler | None = None
 
 
 class ParetoDataService:
@@ -142,6 +157,12 @@ class ParetoDataService:
         data = ParetoData(
             pareto_set=raw_pareto_data.pareto_set,
             pareto_front=raw_pareto_data.pareto_front,
+            historical_solutions=getattr(
+                raw_pareto_data, "historical_solutions", np.array([])
+            ),
+            historical_objectives=getattr(
+                raw_pareto_data, "historical_objectives", np.array([])
+            ),
         )
 
         if data.pareto_front.shape[1] < 2:
@@ -149,11 +170,19 @@ class ParetoDataService:
         if data.pareto_set.shape[1] < 2:
             raise ValueError("pareto_set must have at least 2 columns for x1 and x2.")
 
-        # Populate normalized attributes directly
-        data.norm_f1 = self._normalize_array(data.pareto_front[:, 0])
-        data.norm_f2 = self._normalize_array(data.pareto_front[:, 1])
-        data.norm_x1 = self._normalize_array(data.pareto_set[:, 0])
-        data.norm_x2 = self._normalize_array(data.pareto_set[:, 1])
+        # Populate normalized attributes directly, storing the scalers
+        data.norm_f1, data.f1_scaler = self._normalize_and_get_scaler(
+            data.pareto_front[:, 0]
+        )
+        data.norm_f2, data.f2_scaler = self._normalize_and_get_scaler(
+            data.pareto_front[:, 1]
+        )
+        data.norm_x1, data.x1_scaler = self._normalize_and_get_scaler(
+            data.pareto_set[:, 0]
+        )
+        data.norm_x2, data.x2_scaler = self._normalize_and_get_scaler(
+            data.pareto_set[:, 1]
+        )
 
         # Populate parallel coordinates data
         data.parallel_coordinates_data = np.hstack(
@@ -170,13 +199,25 @@ class ParetoDataService:
 
         return data
 
-    def _normalize_array(self, data_array: np.ndarray) -> np.ndarray:
-        """Normalize array to [0, 1] range using Min-Max scaling"""
+    def _normalize_and_get_scaler(
+        self, data_array: np.ndarray
+    ) -> tuple[np.ndarray, MinMaxScaler]:
+        """Normalize array to [0, 1] range and return the scaler."""
         if data_array.size == 0:
-            return np.array([])
+            return np.array([]), MinMaxScaler()
         scaler = MinMaxScaler()
         reshaped_data = data_array.reshape(-1, 1)
         normalized_data = scaler.fit_transform(reshaped_data)
+        return normalized_data.flatten(), scaler
+
+    def _normalize_with_scaler(
+        self, data_array: np.ndarray, scaler: MinMaxScaler
+    ) -> np.ndarray:
+        """Normalize new data with an existing scaler."""
+        if data_array is None or data_array.size == 0 or scaler is None:
+            return np.array([])
+        reshaped_data = data_array.reshape(-1, 1)
+        normalized_data = scaler.transform(reshaped_data)
         return normalized_data.flatten()
 
     def _preprocess_1d_data(
@@ -366,6 +407,8 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "Nearest Neighbor": "#F57C00",
         "Linear ND": "#FFEA07",
     }
+    _PARETO_COLOR = "#3498db"
+    _HISTORY_COLOR = "#D3D3D3"
 
     _SUBPLOT_CONFIG: dict[tuple[int, int], dict[str, Any]] = {
         (1, 1): {
@@ -376,10 +419,11 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "data_key": "pareto_set",
             "data_mapping": {"x": 0, "y": 1},
             "name": "Pareto Set",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 7,
             "showlegend": True,
+            "add_historical_data": "historical_solutions",
         },
         (1, 2): {
             "type": "scatter",
@@ -389,10 +433,11 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "data_key": "pareto_front",
             "data_mapping": {"x": 0, "y": 1},
             "name": "Pareto Front",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 7,
             "showlegend": True,
+            "add_historical_data": "historical_objectives",
         },
         (2, 1): {
             "type": "scatter",
@@ -402,10 +447,11 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "x_data_attr": "norm_x1",
             "y_data_attr": "norm_x2",
             "name": "Norm Pareto Set",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "diamond",
             "marker_size": 6,
             "showlegend": True,
+            "add_historical_data": "historical_solutions",
         },
         (2, 2): {
             "type": "scatter",
@@ -415,10 +461,11 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "x_data_attr": "norm_f1",
             "y_data_attr": "norm_f2",
             "name": "Norm Pareto Front",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "diamond",
             "marker_size": 6,
             "showlegend": True,
+            "add_historical_data": "historical_objectives",
         },
         (3, 1): {
             "type": "scatter",
@@ -430,7 +477,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "interpolation_source_key": "interpolations_1d",
             "interpolation_relationship_key": "x1_vs_x2",
             "name": "Data Points",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
@@ -445,7 +492,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "interpolation_source_key": "interpolations_1d",
             "interpolation_relationship_key": "f1_vs_f2",
             "name": "Data Points",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
@@ -460,7 +507,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "interpolation_source_key": "interpolations_1d",
             "interpolation_relationship_key": "f1_vs_x1",
             "name": "Data Points",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
@@ -475,7 +522,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "interpolation_source_key": "interpolations_1d",
             "interpolation_relationship_key": "f1_vs_x2",
             "name": "Data Points",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
@@ -490,7 +537,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "interpolation_source_key": "interpolations_1d",
             "interpolation_relationship_key": "f2_vs_x1",
             "name": "Data Points",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
@@ -505,7 +552,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             "interpolation_source_key": "interpolations_1d",
             "interpolation_relationship_key": "f2_vs_x2",
             "name": "Data Points",
-            "color": "#3498db",
+            "color": _PARETO_COLOR,
             "symbol": "circle",
             "marker_size": 6,
             "showlegend": False,
@@ -566,7 +613,6 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         "hovermode": "closest",
     }
 
-    # Description positions are updated for the new 6-row layout.
     _DESCRIPTION_POSITIONS = {
         "row": {1: 0.97, 2: 0.82, 3: 0.67, 4: 0.52, 5: 0.37, 6: 0.15},
         "col": {1: 0.25, 2: 0.75},
@@ -582,7 +628,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         super().__init__(save_path)
         self._added_legend_items = set()
         self._data_service = ParetoDataService()
-        self._save_path = False
+        self._save_path = save_path if save_path else False
 
     def plot(self, data: Any):
         """
@@ -592,7 +638,6 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
             dto (ParetoVisualizationDTO): Data Transfer Object containing all
                                           pre-processed data for visualization.
         """
-
         data = self._data_service.prepare_data(data)
 
         fig = self._create_figure_layout()
@@ -677,11 +722,64 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
     def _add_all_subplots_from_config(self, fig: go.Figure, data: ParetoData) -> None:
         """
         Iterates through _SUBPLOT_CONFIG and adds traces dynamically based on the ParetoData object.
+        Now includes a trace for historical data where specified, handling both raw and normalized versions.
         """
         for (row, col), config in self._SUBPLOT_CONFIG.items():
             plot_type = config.get("type")
 
             if plot_type == "scatter":
+                # --- Handle Historical Data Trace ---
+                historical_data_attr = config.get("add_historical_data")
+                if historical_data_attr:
+                    raw_historical_data = getattr(data, historical_data_attr, None)
+                    if raw_historical_data is not None and raw_historical_data.size > 0:
+                        x_data = raw_historical_data[:, 0]
+                        y_data = raw_historical_data[:, 1]
+
+                        is_normalized_plot = config.get("x_data_attr", "").startswith(
+                            "norm_"
+                        )
+
+                        if is_normalized_plot:
+                            if historical_data_attr == "historical_solutions":
+                                x_scaler = data.x1_scaler
+                                y_scaler = data.x2_scaler
+                            else:  # historical_objectives
+                                x_scaler = data.f1_scaler
+                                y_scaler = data.f2_scaler
+
+                            if x_scaler and y_scaler:
+                                x_data = self._data_service._normalize_with_scaler(
+                                    x_data, x_scaler
+                                )
+                                y_data = self._data_service._normalize_with_scaler(
+                                    y_data, y_scaler
+                                )
+
+                        if x_data.size > 0:
+                            # Use labels from the main plot config
+                            x_label = config.get("x_label")
+                            y_label = config.get("y_label")
+
+                            self._add_scatter_plot(
+                                fig,
+                                row,
+                                col,
+                                x_data,
+                                y_data,
+                                {
+                                    "name": "Historical Points",
+                                    "color": self._HISTORY_COLOR,
+                                    "symbol": "cross",
+                                    "marker_size": 4,
+                                    "showlegend": True,
+                                    "hovertemplate_name": "Historical Points",
+                                    "x_label": x_label,
+                                    "y_label": y_label,
+                                },
+                            )
+
+                # --- Handle Pareto Data Trace ---
                 if "data_key" in config:
                     data_source = getattr(data, config["data_key"], None)
                     x_data = self._get_data_from_indexed_source(
@@ -694,6 +792,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                     x_data = getattr(data, config.get("x_data_attr"), None)
                     y_data = getattr(data, config.get("y_data_attr"), None)
 
+                # Check for valid Pareto data before plotting
                 if (
                     x_data is None
                     or y_data is None
@@ -707,6 +806,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
 
                 self._add_scatter_plot(fig, row, col, x_data, y_data, config)
 
+                # --- Handle 1D Interpolations ---
                 if (
                     "interpolation_source_key" in config
                     and "interpolation_relationship_key" in config
@@ -809,6 +909,9 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         """
         Adds a single scatter plot based on config.
         """
+        name = config.get("name", "Data Points")
+        hovertemplate_name = config.get("hovertemplate_name", name)
+
         fig.add_trace(
             go.Scatter(
                 x=x,
@@ -820,9 +923,9 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                     color=config.get("color", "#3498db"),
                     symbol=config.get("symbol", "circle"),
                 ),
-                name=config.get("name", "Data Points"),
+                name=name,
                 showlegend=config.get("showlegend", True),
-                hovertemplate=f"{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<extra>{config['name']}</extra>",
+                hovertemplate=f"{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<extra>{hovertemplate_name}</extra>",
             ),
             row=row,
             col=col,
@@ -840,30 +943,26 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         config: dict[str, Any],
     ) -> None:
         """
-        Adds 1D interpolation lines for a scatter plot, iterating through all methods in the dict.
+        Adds traces for 1D interpolation lines to a specified subplot.
         """
+        x_label = config["x_label"]
+        y_label = config["y_label"]
         for method_name, (x_grid, y_grid) in interpolation_methods_dict.items():
-            show_legend_item = method_name not in self._added_legend_items
             fig.add_trace(
                 go.Scatter(
                     x=x_grid,
                     y=y_grid,
                     mode="lines",
-                    line=dict(
-                        color=self._INTERPOLATION_COLORS.get(method_name, "#000000"),
-                        width=2.5,
-                        dash="solid",
-                    ),
                     name=method_name,
-                    legendgroup=method_name,
-                    showlegend=show_legend_item,
-                    hovertemplate=f"Method: {method_name}<br>{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<extra></extra>",
+                    marker_color=self._INTERPOLATION_COLORS.get(method_name, "#000000"),
+                    legendgroup="interpolation_group",
+                    showlegend=method_name not in self._added_legend_items,
+                    hovertemplate=f"<b>{method_name}</b><br>{x_label}: %{{x:.4f}}<br>{y_label}: %{{y:.4f}}<extra></extra>",
                 ),
                 row=row,
                 col=col,
             )
-            if show_legend_item:
-                self._added_legend_items.add(method_name)
+            self._added_legend_items.add(method_name)
 
     def _add_scatter3d_plot(
         self,
@@ -875,13 +974,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         z: np.ndarray,
         config: dict[str, Any],
     ) -> None:
-        """
-        Adds a 3D scatter plot.
-        """
-        show_legend_points = (
-            config.get("name", "Original Points") not in self._added_legend_items
-        )
-
+        """Adds a 3D scatter plot trace to a specified subplot."""
         fig.add_trace(
             go.Scatter3d(
                 x=x,
@@ -890,94 +983,69 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
                 mode="markers",
                 marker=dict(
                     size=config.get("marker_size", 5),
-                    opacity=0.8,
                     color=config.get("color", "#1f77b4"),
+                    opacity=0.8,
                 ),
-                name=config.get("name", "Original Points"),
-                legendgroup="original_3d_points",
-                showlegend=show_legend_points,
-                hovertemplate=f"{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<br>{config['z_label']}: %{{z:.4f}}<extra>{config['name']}</extra>",
+                name=config.get("name", "Data Points"),
+                showlegend=True,
+                hovertemplate=f"<b>{config['name']}</b><br>{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<br>{config['z_label']}: %{{z:.4f}}<extra></extra>",
             ),
             row=row,
             col=col,
         )
-        if show_legend_points:
-            self._added_legend_items.add(config.get("name", "Original Points"))
-
-        fig.update_scenes(
-            xaxis_title_text=config["x_label"],
-            yaxis_title_text=config["y_label"],
-            zaxis_title_text=config["z_label"],
-            aspectmode="data",
-            row=row,
-            col=col,
-            camera=dict(eye=dict(x=1.25, y=1.25, z=1.25)),
-        )
+        self._set_axis_titles_3d(fig, row, col, config)
 
     def _add_2d_surface_traces(
         self,
         fig: go.Figure,
         row: int,
         col: int,
-        surface_methods_dict: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
+        interpolation_methods_dict: dict[
+            str, tuple[np.ndarray, np.ndarray, np.ndarray]
+        ],
         config: dict[str, Any],
     ) -> None:
-        """
-        Adds 3D surface interpolations, iterating through all methods in the dict.
-        """
-        for method_name, (X_grid, Y_grid, Z_grid) in surface_methods_dict.items():
-            show_in_legend = method_name not in self._added_legend_items
-
+        """Adds traces for 2D interpolation surfaces to a 3D subplot."""
+        for method_name, (x_grid, y_grid, z_grid) in interpolation_methods_dict.items():
             fig.add_trace(
                 go.Surface(
-                    x=X_grid,
-                    y=Y_grid,
-                    z=Z_grid,
+                    x=x_grid,
+                    y=y_grid,
+                    z=z_grid,
+                    name=f"Surface ({method_name})",
+                    opacity=0.5,
                     colorscale=[
-                        [0, self._INTERPOLATION_COLORS.get(method_name, "#000000")],
-                        [1, self._INTERPOLATION_COLORS.get(method_name, "#000000")],
+                        [0, self._INTERPOLATION_COLORS.get(method_name)],
+                        [1, self._INTERPOLATION_COLORS.get(method_name)],
                     ],
-                    opacity=0.7,
-                    name=method_name,
-                    showlegend=show_in_legend,
                     showscale=False,
-                    legendgroup=method_name,
-                    hovertemplate=f"Method: {method_name}<br>{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<br>{config['z_label']}: %{{z:.4f}}<extra></extra>",
+                    hovertemplate=f"<b>{method_name}</b><br>{config['x_label']}: %{{x:.4f}}<br>{config['y_label']}: %{{y:.4f}}<br>{config['z_label']}: %{{z:.4f}}<extra></extra>",
                 ),
                 row=row,
                 col=col,
             )
-            if show_in_legend:
-                self._added_legend_items.add(method_name)
 
     def _set_axis_limits(
-        self,
-        fig: go.Figure,
-        row: int,
-        col: int,
-        x_data: np.ndarray,
-        y_data: np.ndarray,
-        padding: float = 0.05,
+        self, fig: go.Figure, row: int, col: int, x: np.ndarray, y: np.ndarray
     ) -> None:
-        """
-        Sets axis limits with padding based on the data range.
-        """
-        if x_data.size == 0 or y_data.size == 0:
-            return
+        """Sets axis limits for a 2D subplot based on the data range."""
+        x_min, x_max = x.min(), x.max()
+        y_min, y_max = y.min(), y.max()
+        x_range = x_max - x_min
+        y_range = y_max - y_min
+        x_pad = x_range * 0.1 if x_range > 0 else 0.1
+        y_pad = y_range * 0.1 if y_range > 0 else 0.1
+        fig.update_xaxes(range=[x_min - x_pad, x_max + x_pad], row=row, col=col)
+        fig.update_yaxes(range=[y_min - y_pad, y_max + y_pad], row=row, col=col)
 
-        x_min, x_max = np.min(x_data), np.max(x_data)
-        y_min, y_max = np.min(y_data), np.max(y_data)
-
-        x_range = x_max - x_min if x_max != x_min else 1.0
-        y_range = y_max - y_min if y_max != y_min else 1.0
-
-        fig.update_xaxes(
-            range=[x_min - padding * x_range, x_max + padding * x_range],
-            row=row,
-            col=col,
-        )
-        fig.update_yaxes(
-            range=[y_min - padding * y_range, y_max + padding * y_range],
+    def _set_axis_titles_3d(
+        self, fig: go.Figure, row: int, col: int, config: dict
+    ) -> None:
+        """Sets axis titles for a 3D subplot based on config."""
+        fig.update_scenes(
+            xaxis_title=config.get("x_label"),
+            yaxis_title=config.get("y_label"),
+            zaxis_title=config.get("z_label"),
             row=row,
             col=col,
         )
