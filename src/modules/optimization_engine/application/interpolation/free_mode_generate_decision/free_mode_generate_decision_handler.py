@@ -16,6 +16,10 @@ from ....domain.objective.feasibility.scorers import (
 from ....infrastructure.problems.biobj import get_coco_problem
 from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
 
+# TODO: Move and relocate the error calculations parts to different method or class
+# TODO: Imporve the feasibility checker to be more flexible and accept more args from `FreeModeGenerateDecisionCommand`
+# TODO: Refine and enhance the info and error msgs
+
 
 class FreeModeGenerateDecisionCommandHandler:
     def __init__(
@@ -189,11 +193,11 @@ class FreeModeGenerateDecisionCommandHandler:
                     )[0]
                     # Dynamically format suggestions for N objectives
                     s_str = ", ".join(
-                        [f"f{i+1}: {val:.4f}" for i, val in enumerate(s_unnorm)]
+                        [f"f{i + 1}: {val:.4f}" for i, val in enumerate(s_unnorm)]
                     )
                     possibilities.append(f"\n   - {s_str}")
 
                 self._logger.log_error(
                     "   Nearby feasible objectives you can try (original scale):"
-                    f"{"".join(possibilities)}"
+                    f"{''.join(possibilities)}"
                 )

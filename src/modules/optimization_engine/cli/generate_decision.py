@@ -21,12 +21,9 @@ def main():
     Main function to generate a decision using hardcoded parameters.
     Modify the variables below to change the inputs.
     """
-    # Specify the type of interpolator to use.
-    interpolator_type_to_use = InverseDecisionMapperType.NEURAL_NETWORK_ND.value
 
     # Specify the target objective point (f1, f2, ...).
-    # Modify this list with your desired values.
-    target_objective_point = [415, 1400]
+    target_objective_point = [411, 1242]
 
     # Initialize the handler with the repository
     handler = FreeModeGenerateDecisionCommandHandler(
@@ -37,7 +34,7 @@ def main():
 
     # Create the command object using the hardcoded values
     command = FreeModeGenerateDecisionCommand(
-        interpolator_type=interpolator_type_to_use,
+        interpolator_type=InverseDecisionMapperType.KRIGING_ND.value,
         target_objective=target_objective_point,
         distance_tolerance=0.02,
         num_suggestions=5,
