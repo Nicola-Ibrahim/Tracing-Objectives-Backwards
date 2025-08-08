@@ -413,7 +413,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
     _SUBPLOT_CONFIG: dict[tuple[int, int], dict[str, Any]] = {
         (1, 1): {
             "type": "scatter",
-            "title": "Decision Space ($x_1$ vs $x_2$)",
+            "title": "Decision Space (x1 vs x2)",
             "x_label": "$x_1$",
             "y_label": "$x_2$",
             "data_key": "pareto_set",
@@ -427,7 +427,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (1, 2): {
             "type": "scatter",
-            "title": "Objective Space ($f_1$ vs $f_2$)",
+            "title": "Objective Space (f1 vs f2)",
             "x_label": "$f_1$",
             "y_label": "$f_2$",
             "data_key": "pareto_front",
@@ -469,7 +469,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (3, 1): {
             "type": "scatter",
-            "title": "$x_1$ vs $x_2$ (Interpolations)",
+            "title": "x1 vs x2 (Interpolations)",
             "x_label": "Normalized $x_1$",
             "y_label": "Normalized $x_2$",
             "x_data_attr": "norm_x1",
@@ -484,7 +484,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (3, 2): {
             "type": "scatter",
-            "title": "$f_1$ vs $f_2$ (Interpolations)",
+            "title": "f1 vs f2 (Interpolations)",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $f_2$",
             "x_data_attr": "norm_f1",
@@ -499,7 +499,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (4, 1): {
             "type": "scatter",
-            "title": "$f_1$ vs $x_1$ (Interpolations)",
+            "title": "f1 vs x1 (Interpolations)",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $x_1$",
             "x_data_attr": "norm_f1",
@@ -514,7 +514,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (4, 2): {
             "type": "scatter",
-            "title": "$f_1$ vs $x_2$ (Interpolations)",
+            "title": "f1 vs x2 (Interpolations)",
             "x_label": "Normalized $f_1$",
             "y_label": "Normalized $x_2$",
             "x_data_attr": "norm_f1",
@@ -529,7 +529,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (5, 1): {
             "type": "scatter",
-            "title": "$f_2$ vs $x_1$ (Interpolations)",
+            "title": "f2 vs x1 (Interpolations)",
             "x_label": "Normalized $f_2$",
             "y_label": "Normalized $x_1$",
             "x_data_attr": "norm_f2",
@@ -544,7 +544,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (5, 2): {
             "type": "scatter",
-            "title": "$f_2$ vs $x_2$ (Interpolations)",
+            "title": "f2 vs x2 (Interpolations)",
             "x_label": "Normalized $f_2$",
             "y_label": "Normalized $x_2$",
             "x_data_attr": "norm_f2",
@@ -559,7 +559,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (6, 1): {
             "type": "scatter3d",
-            "title": "3D: $f_1$, $f_2$, $x_1$",
+            "title": "3D: f1, f2, x1",
             "x_label": "$f_1$",
             "y_label": "$f_2$",
             "z_label": "$x_1$",
@@ -574,7 +574,7 @@ class PlotlyParetoDataVisualizer(BaseDataVisualizer):
         },
         (6, 2): {
             "type": "scatter3d",
-            "title": "3D: $f_1$, $f_2$, $x_2$",
+            "title": "3D: f1, f2, x2",
             "x_label": "$f_1$",
             "y_label": "$f_2$",
             "z_label": "$x_2$",
