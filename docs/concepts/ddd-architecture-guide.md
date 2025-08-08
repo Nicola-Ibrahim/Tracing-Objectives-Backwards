@@ -157,6 +157,53 @@ Copy
 Edit
 ```
 
+## 🗺 Mermaid Architecture Diagram
+
+```mermaid
+%%{init: {"theme": "default", "themeVariables": { "primaryColor": "#E3F2FD", "edgeLabelBackground": "#ffffff", "tertiaryColor": "#f8f8f8", "fontFamily": "Inter, Arial, sans-serif", "fontSize": "18px" }}}%%
+flowchart TD
+    classDef domain fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:#1B5E20
+    classDef application fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#E65100
+    classDef infrastructure fill:#FFEBEE,stroke:#E53935,stroke-width:2px,color:#B71C1C
+    classDef presentation fill:#E1F5FE,stroke:#039BE5,stroke-width:2px,color:#01579B
+
+    subgraph P["🖥️ Presentation Layer"]
+        P1["Controllers/Handlers<br>(API, CLI, UI)"]
+        P2["User Interfaces<br>(Web, Mobile, etc.)"]
+    end
+
+    subgraph A["⚙️ Application Layer"]
+        A1["Use Cases<br>(Workflows, Orchestrators)"]
+        A2["Port Interfaces<br>(e.g., LoggerInterface)"]
+    end
+
+    subgraph D["🏛 Domain Layer"]
+        D1["Entities<br>(Value Objects, Aggregates)"]
+        D2["Domain Services<br>(Business Logic)"]
+        D3["Domain Interfaces<br>(Strategies, Policies)"]
+    end
+    
+    subgraph I["🌐 Infrastructure Layer"]
+        I1["Framework Adapters<br>(FastAPI, CLI)"]
+        I2["Repositories<br>(DB, CSV, JSON)"]
+        I3["Logging & Monitoring<br>(WandbLogger)"]
+        I4["Concrete Implementations<br>(Adapters)"]
+        I5["Visualization Tools<br>(Plotly, Matplotlib)"]
+    end
+
+    P -->|User Input| A
+    A -->|Calls| D
+    A -->|Calls| I
+    I -.->|Implementation| A
+    D -.->|Used by| A
+
+    class P presentation
+    class A application
+    class D domain
+    class I infrastructure
+
+```
+
 ## 💡 Final Thought
 
 > **"Code should scream the domain." — Eric Evans**  
