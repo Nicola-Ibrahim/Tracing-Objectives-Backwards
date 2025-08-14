@@ -171,17 +171,69 @@ $$
 | Time Floor | $\hat{t} \geq \frac{d}{v_{max}}$ | 0.8 |
 
 ```mermaid
+%%{init: {
+  "theme": "default",
+  "themeVariables": {
+    "primaryColor": "#E3F2FD",
+    "primaryBorderColor": "#0091EA",
+    "primaryTextColor": "#1976D2",
+    "secondaryColor": "#E8F5E9",
+    "secondaryBorderColor": "#4CAF50",
+    "secondaryTextColor": "#1B5E20",
+    "tertiaryColor": "#FFFDE7",
+    "tertiaryBorderColor": "#FFC107",
+    "tertiaryTextColor": "#E65100",
+    "lineColor": "#607D8B",
+    "fontFamily": "Segoe UI, sans-serif",
+    "fontSize": "16px",
+    "nodeSpacing": 50,
+    "rankSpacing": 100
+  }
+}}%%
+graph TD
+    classDef input fill:#E0E0E0,stroke:#616161,stroke-width:2px;
+    classDef layer fill:#BBDEFB,stroke:#2196F3,stroke-width:2px;
+    classDef process fill:#C8E6C9,stroke:#4CAF50,stroke-width:2px;
+    classDef latent fill:#FFF9C4,stroke:#FFEB3B,stroke-width:2px;
+    classDef output fill:#FCE4EC,stroke:#E91E63,stroke-width:2px;
 
-graph TB
-    A[Training Data] --> B[Normalization]
-    B --> C[Encoder]
-    B --> D[Conditioner]
-    C --> E[Latent Distribution]
-    D --> E
-    E --> F[Sampling]
-    F --> G[Decoder]
-    D --> G
-    G --> H[Reconstruction]
-    H --> I[Loss Calculation]
-    I --> J[Backpropagation]
+    A("Input Data<br>(X)"):::input
+    
+    subgraph S1["<b>🧠 Encoder Network</b>"]
+        direction LR
+        B["Neural Network<br>(Maps X to Latent Space)"]:::layer
+        B --> C1["Mean (μ)"]:::latent
+        B --> C2["Log Variance (log σ²)"]:::latent
+    end
+    
+    subgraph S2["<b>⚡ Reparameterization Trick</b>"]
+        direction LR
+        E("z = μ + ε * exp(0.5 * log σ²)"):::latent
+        D("Sample from<br>Normal Dist. N(0,1)") --> E
+    end
+    
+    subgraph S3["<b>🎨 Decoder Network</b>"]
+        direction LR
+        F["Neural Network<br>(Maps z back to Data Space)"]:::layer
+        F --> G("Reconstructed Output<br>(X̂)"):::output
+    end
+
+    subgraph S4["<b>⚖️ Loss Function</b>"]
+        direction LR
+        H["KL Divergence Loss<br>(between Latent and Prior)"]:::process
+        I["Reconstruction Loss<br>(e.g., MSE or BCE)"]:::process
+        H --> J("Total Loss"):::process
+        I --> J
+    end
+    
+    A --> S1
+    S1 --> S2
+    S2 --> S3
+    
+    A -- Original Data --> I
+    G -- Reconstructed Data --> I
+    
+    S1 -- Latent Distribution --> H
+    
+    J --> K["Backpropagation<br>(Update Weights)"]:::process
 ```

@@ -14,21 +14,44 @@ Rather than solving the original optimization problem again, we leverage:
 ## 🚀 High-Level Flow
 
 ```mermaid
-flowchart TD
+%%{init: {
+    "theme": "default",
+    "themeVariables": {
+        "primaryColor": "#5C6BC0",
+        "primaryBorderColor": "#3949AB",
+        "primaryTextColor": "#FFFFFF",
+        "secondaryColor": "#81C784",
+        "secondaryBorderColor": "#4CAF50",
+        "secondaryTextColor": "#1B5E20",
+        "tertiaryColor": "#FFB74D",
+        "tertiaryBorderColor": "#FB8C00",
+        "tertiaryTextColor": "#E65100",
+        "lineColor": "#607D8B",
+        "fontFamily": "Segoe UI, sans-serif"
+    }
+}}%%
+graph TD
+    subgraph "🔷 Inverse Design Pipeline"
+        direction LR
+        A["🎯 Define Target Objective Y*"]
+        B["🔃 Normalize Y*"]
+        C["🧪 Soft Feasibility Check"]
+        D["🧠 Predict X* via Inverse Interpolator"]
+        E["📏 Denormalize X*"]
+        F["🎲 Evaluate f(X*) using Original Problem"]
+        G["📐 Compute Absolute & Relative Error"]
+        H["💡 Suggest Feasible Alternatives"]
+        I["🔁 Repeat with New Y*"]
 
-  subgraph "🔷 Inverse Design Pipeline"
-    A["🎯 Define Target Objective Y*"] --> B["🔃 Normalize Y*"]
-    B --> C["🧪 Soft Feasibility Check"]
-
-    C -->|✅ Feasible| D["🧠 Predict X* via Inverse Interpolator"]
-    D --> E["📏 Denormalize X*"]
-    E --> F["🎲 Evaluate f(X*) using Original Problem"]
-    F --> G["📐 Compute Absolute & Relative Error"]
-
-    C -->|❌ Infeasible| H["💡 Suggest Feasible Alternatives"]
-    H --> I["🔁 Repeat with New Y*"]
-  end
-
+        A --> B
+        B --> C
+        C -- "✅ Feasible" --> D
+        D --> E
+        E --> F
+        F --> G
+        C -- "❌ Infeasible" --> H
+        H --> I
+    end
 ```
 
 ## 🔍 Conceptual Blocks

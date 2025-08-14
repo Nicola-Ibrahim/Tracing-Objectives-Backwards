@@ -25,51 +25,51 @@
 flowchart TD
  subgraph Offline["<b>🧰 Offline: Mapper Training</b>"]
     direction TB
-        B["📥<br><b>Accept Pareto Points</b><br>(experiments or simulation)"]
-        B2_offline["🧹<br><b>Data Preparation</b>"]
-        B1["🧠<br><b>Train Inverse Mapper</b><br>(Y → X̂)"]
-        B3_offline(["📦<br><b>Validated Inverse Mapper</b>"])
+        acceptData["📥<br><b>Accept Pareto Points</b><br>(experiments or simulation)"]
+        dataPreparation["🧹<br><b>Data Preparation</b>"]
+        trainInverseMapper["🧠<br><b>Train Inverse Mapper</b><br>(Y → X̂)"]
+        inverseMapperModel(["📦<br><b>Validated Inverse Mapper</b>"])
   end
 
  subgraph Online["<b>💡 Online: User Interaction</b>"]
     direction TB
-        A("🎯<br><b>Define Target Objective (Y*)</b>")
-        C_Online{"📊<br><b>Pareto Region Guidance</b><br>How close is Y* to Pareto Front?"}
-        C1(["🟢<br><b>Y* is Near Pareto Front</b>"])
-        C2(["🔵<br><b>Y* is Far Preto <br>Suggest Refinement or Proceed</b>"])
-        D["🔁<br><b>Generate Candidate(s) X̂"]
-        E_all{"🔎<br><b>Forward Check:<br>Does X̂ → Ŷ ≈ Y*?</b>"}
-        D2["📊<br><b>Rank / Select Best Candidate(s)</b>"]
-        F[["👤🔄<br><b>User Feedback &amp; Refinement</b>"]]
+        defineTargetObjective("🎯<br><b>Define Target Objective (Y*)</b>")
+        paretoGuidance{"📊<br><b>Pareto Region Guidance</b><br>How close is Y* to Pareto Front?"}
+        nearPareto(["🟢<br><b>Y* is Near Pareto Front</b>"])
+        farPareto(["🔵<br><b>Y* is Far Preto <br>Suggest Refinement or Proceed</b>"])
+        generateCandidates["🔁<br><b>Generate Candidate(s) X̂"]
+        forwardCheck{"🔎<br><b>Forward Check:<br>Does X̂ → Ŷ ≈ Y*?</b>"}
+        rankCandidates["📊<br><b>Rank / Select Best Candidate(s)</b>"]
+        userFeedback[["👤🔄<br><b>User Feedback &amp; Refinement</b>"]]
   end
 
  subgraph SYS["<b>🧠 AI-Based Inverse Mapping System</b>"]
     direction TB
         Offline
-        F_Model["🧮<br><b>Forward Mapper<br>(X → Y)</b>"]
+        forwardMapperModel["🧮<br><b>Forward Mapper<br>(X → Y)</b>"]
         Online
   end
 
     %% Edges with labels
-    B -->|Preprocessing| B2_offline
-    B2_offline -->|Clean Data| B1
-    B1 -->|Validate & Export| B3_offline
+    acceptData -->|Preprocessing| dataPreparation
+    dataPreparation -->|Clean Data| trainInverseMapper
+    trainInverseMapper -->|Validate & Export| inverseMapperModel
 
-    A -->|Target Defined| C_Online
-    C_Online -- Yes --> C1
-    C_Online -- No --> C2
+    defineTargetObjective -->|Target Defined| paretoGuidance
+    paretoGuidance -- Yes --> nearPareto
+    paretoGuidance -- No --> farPareto
 
-    B3_offline -->|Inference Model Loaded| D
-    C1 -->|Use Target| D
-    C2 -->|Proceed Anyway| D
-    C2 -->|Refine Target| A
+    inverseMapperModel -->|Inference Model Loaded| generateCandidates
+    nearPareto -->|Use Target| generateCandidates
+    farPareto -->|Proceed Anyway| generateCandidates
+    farPareto -->|Refine Target| defineTargetObjective
 
-    D -->|"Candidate(s) X̂"| E_all
-    E_all -->|Validated Candidates & Metrics| D2
-    D2 --> F
-    F -.->|Adjust Y*| A
+    generateCandidates -->|"Candidate(s) X̂"| forwardCheck
+    forwardCheck -->|Validated Candidates & Metrics| rankCandidates
+    rankCandidates --> userFeedback
+    userFeedback -.->|Adjust Y*| defineTargetObjective
 
-    F_Model -->|Validate against| E_all
+    forwardMapperModel -->|Validate against| forwardCheck
 
     %% Class Styles
     classDef objective fill:#FFFBE5,stroke:#FFC107,stroke-width:3px,color:#333
@@ -85,19 +85,19 @@ flowchart TD
     classDef preprocessing fill:#E3F2FD,stroke:#42A5F5,stroke-width:2px,color:#1E88E5
     classDef model_ready fill:#EDE7F6,stroke:#7B1FA2,stroke-width:3px,color:#311B92
 
-    class A objective;
-    class B inputdata;
-    class B2_offline preprocessing;
-    class B1 training;
-    class B3_offline model_ready;
-    class C_Online decision;
-    class C1 feasible;
-    class C2 farregion;
-    class D processrun;
-    class D2 processrun;
-    class E_all validation;
-    class F feedback;
-    class F_Model forwardmodel;
+    class defineTargetObjective objective;
+    class acceptData inputdata;
+    class dataPreparation preprocessing;
+    class trainInverseMapper training;
+    class inverseMapperModel model_ready;
+    class paretoGuidance decision;
+    class nearPareto feasible;
+    class farPareto farregion;
+    class generateCandidates processrun;
+    class rankCandidates processrun;
+    class forwardCheck validation;
+    class userFeedback feedback;
+    class forwardMapperModel forwardmodel;
 
     style Offline fill:#EEF8EE,stroke:#2E7D32,stroke-width:2px
     style Online fill:#E1F5FE,stroke:#039BE5,stroke-width:2px
