@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from sklearn.metrics.pairwise import cosine_similarity as sk_cosine_similarity
 
-from ..domain.interpolation.interfaces.base_similarity import BaseSimilarityCalculator
+from ..domain.model_management.interfaces.base_similarity import BaseSimilarityCalculator
 
 
 class CosineSimilarityCalculator(BaseSimilarityCalculator):

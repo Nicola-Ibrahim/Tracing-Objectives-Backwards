@@ -1,5 +1,5 @@
 from ...domain.generation.interfaces.base_problem import BaseProblem
-from .biobj import BiObjProblemConfig, COCOBiObjectiveProblem
+from ...infrastructure.problems.biobj import BiObjProblemConfig, COCOBiObjectiveProblem
 
 
 class ProblemFactory:

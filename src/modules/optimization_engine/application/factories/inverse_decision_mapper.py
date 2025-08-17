@@ -1,22 +1,26 @@
 from typing import Any
 
-from ...domain.interpolation.enums.inverse_decision_mapper_type import (
+from ...domain.model_management.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
 )
-from ...domain.interpolation.interfaces.base_inverse_decision_mapper import (
+from ...domain.model_management.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
-from .deterministic.clough_tocher import CloughTocherInverseDecisionMapper
-from .deterministic.gaussian_process import GaussianProcessInverseDecisionMapper
-from .deterministic.kriging import KrigingInverseDecisionMapper
-from .deterministic.linear import LinearNDInverseDecisionMapper
-from .deterministic.nearest_neighbors import NearestNDInverseDecisionMapper
-from .deterministic.nn import NNInverseDecisionMapper
-from .deterministic.rbf import RBFInverseDecisionMapper
-from .deterministic.spline import SplineInverseDecisionMapper
-from .deterministic.svr import SVRInverseDecisionMapper
-from .probabilistic.cvae import CVAEInverseDecisionMapper
-from .probabilistic.mdn import MDNInverseDecisionMapper
+from ...infrastructure.inverse_decision_mappers.deterministic import (
+    CloughTocherInverseDecisionMapper,
+    GaussianProcessInverseDecisionMapper,
+    KrigingInverseDecisionMapper,
+    LinearNDInverseDecisionMapper,
+    NearestNDInverseDecisionMapper,
+    NNInverseDecisionMapper,
+    RBFInverseDecisionMapper,
+    SplineInverseDecisionMapper,
+    SVRInverseDecisionMapper,
+)
+from ...infrastructure.inverse_decision_mappers.probabilistic import (
+    CVAEInverseDecisionMapper,
+    MDNInverseDecisionMapper,
+)
 
 
 class InverseDecisionMapperFactory:

@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 import wandb
 
-from ...domain.interpolation.interfaces.base_logger import BaseLogger
+from ...domain.model_management.interfaces.base_logger import BaseLogger
 
 
 class WandbLogger(BaseLogger):

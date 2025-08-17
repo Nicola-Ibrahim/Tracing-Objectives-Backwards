@@ -18,7 +18,7 @@ from ..application.interpolation.train_single_interpolator.train_single_interpol
 from ..application.interpolation.train_single_interpolator.train_single_interpolator_handler import (
     TrainSingleInterpolatorCommandHandler,
 )
-from ..infrastructure.inverse_decision_mappers.factory import (
+from ..application.factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
 from ..infrastructure.loggers.cmd_logger import CMDLogger
@@ -27,7 +27,7 @@ from ..infrastructure.normalizers import NormalizerFactory
 from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
-from ..infrastructure.repositories.interpolation.pickle_interpolator_repo import (
+from ..infrastructure.repositories.model_management.pickle_model_artifact_repo import (
     PickleInterpolationModelRepository,
 )
 

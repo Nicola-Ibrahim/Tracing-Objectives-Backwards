@@ -1,5 +1,4 @@
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -8,7 +7,7 @@ from ...domain.analysis.interfaces.base_visualizer import (
 )
 
 
-class PlotlyIntrepolatorsMetricsVisualizer(BaseDataVisualizer):
+class PlotlyModelArtifactMetricsVisualizer(BaseDataVisualizer):
     """
     A concrete visualizer that uses Plotly Express to plot model performance.
     This is an infrastructure component.

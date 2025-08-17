@@ -4,14 +4,14 @@ from ..application.interpolation.free_mode_generate_decision.free_mode_generate_
 from ..application.interpolation.free_mode_generate_decision.free_mode_generate_decision_handler import (
     FreeModeGenerateDecisionCommandHandler,
 )
-from ..domain.interpolation.enums.inverse_decision_mapper_type import (
+from ..domain.model_management.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
 )
 from ..infrastructure.loggers.cmd_logger import CMDLogger
 from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
-from ..infrastructure.repositories.interpolation.pickle_interpolator_repo import (
+from ..infrastructure.repositories.model_management.pickle_model_artifact_repo import (
     PickleInterpolationModelRepository,
 )
 

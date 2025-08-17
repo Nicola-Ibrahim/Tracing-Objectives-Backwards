@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from ...domain.interpolation.interfaces.base_forward_decision_mapper import (
+from ...domain.model_management.interfaces.base_forward_decision_mapper import (
     BaseForwardDecisionMapper,
 )
 

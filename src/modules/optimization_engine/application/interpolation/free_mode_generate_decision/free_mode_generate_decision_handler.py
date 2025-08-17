@@ -1,8 +1,8 @@
 import numpy as np
 
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.interpolation.interfaces.base_logger import BaseLogger
-from ....domain.interpolation.interfaces.base_repository import (
+from ....domain.model_management.interfaces.base_logger import BaseLogger
+from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
 from ....domain.objective.feasibility.checker import ObjectiveFeasibilityChecker

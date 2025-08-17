@@ -1,6 +1,6 @@
-from .elbo import ELBOLossCalculator
-from .mse import MSELossCalculator
-from .nll import (
+from ...infrastructure.loss_calculators.elbo import ELBOLossCalculator
+from ...infrastructure.loss_calculators.mse import MSELossCalculator
+from ...infrastructure.loss_calculators.nll import (
     NegativeLogLikelihoodLossCalculator,
 )
 

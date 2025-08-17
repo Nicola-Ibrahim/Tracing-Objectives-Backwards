@@ -1,5 +1,5 @@
 from .biobj import COCOBiObjectiveProblem
 from .electric_vehicle_problem import EVControlProblem
-from .factoris import ProblemFactory
+from ...application.factories.problem import ProblemFactory
 
 __all__ = ["COCOBiObjectiveProblem", "EVControlProblem", "ProblemFactory"]

@@ -1,9 +1,9 @@
 import click
 
-from ..application.paretos.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
+from ..application.generation.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
     GenerateBiobjParetoDataCommandHandler,
 )
-from ..application.paretos.generate_biobj_pareto_data.generate_pareto_command import (
+from ..application.generation.generate_biobj_pareto_data.generate_pareto_command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,

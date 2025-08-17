@@ -1,12 +1,10 @@
-from typing import Any
-
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.metrics import (
     mean_squared_error as sk_mean_squared_error,
 )
 
-from ..domain.interpolation.interfaces.base_metric import BaseValidationMetric
+from ..domain.model_management.interfaces.base_metric import BaseValidationMetric
 
 
 class MeanSquaredErrorValidationMetric(BaseValidationMetric):
@@ -39,33 +37,3 @@ class MeanSquaredErrorValidationMetric(BaseValidationMetric):
             raise ValueError("y_true and y_pred must have the same shape.")
 
         return float(sk_mean_squared_error(y_true, y_pred))
-
-
-class MetricFactory:
-    """
-    Concrete factory for creating various validation metric instances.
-    """
-
-    def create(self, config: dict) -> BaseValidationMetric:
-        """
-        Creates and returns a concrete validation metric instance based on the given type and parameters.
-        """
-        metric_type = config.get("type")
-        params = config.get("params", {})
-
-        if metric_type == "MSE":
-            return MeanSquaredErrorValidationMetric(**params)
-
-        # elif metric_type == "MAE":
-        #     return MeanAbsoluteErrorValidationMetric(**params)
-
-        # elif metric_type == "R2":
-        #     return R2ScoreValidationMetric(**params)
-
-        # elif metric_type == "MAPE":
-        #     return MeanAbsolutePercentageErrorValidationMetric(**params)
-
-        # elif metric_type == "SMAPE":
-        #     return SymmetricMeanAbsolutePercentageErrorValidationMetric(**params)
-        else:
-            raise ValueError(f"Unknown metric type: {metric_type}")

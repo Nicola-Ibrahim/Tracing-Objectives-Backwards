@@ -6,23 +6,21 @@ from sklearn.model_selection import KFold
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.interpolation.entities.interpolator_model import TrainedModelArtifact
-from ....domain.interpolation.interfaces.base_logger import BaseLogger
-from ....domain.interpolation.interfaces.base_metric import BaseValidationMetric
-from ....domain.interpolation.interfaces.base_normalizer import (
-    BaseNormalizer,
+from ....domain.model_management.entities.model_artifact import (
+    ModelArtifact,
 )
-from ....domain.interpolation.interfaces.base_repository import (
+from ....domain.model_management.interfaces.base_logger import BaseLogger
+from ....domain.model_management.interfaces.base_metric import BaseValidationMetric
+from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
+from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
-from ....infrastructure.inverse_decision_mappers.factory import (
+from ...factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
 from ....infrastructure.metrics import MetricFactory
 from ....infrastructure.normalizers import NormalizerFactory
-from .train_cv_interpolator_command import (
-    TrainCvInterpolatorCommand,
-)
+from .train_cv_interpolator_command import TrainCvInterpolatorCommand
 
 
 class TrainCvInterpolatorCommandHandler:
@@ -214,10 +212,10 @@ class TrainCvInterpolatorCommandHandler:
         # Create and fit normalizers for the current fold to prevent data leakage
         objectives_norm_config, decisions_norm_config = normalizer_configs
         fold_objectives_normalizer: BaseNormalizer = self._normalizer_factory.create(
-            config=objectives_norm_config.model_dump()
+            config=objectives_norm_config
         )
         fold_decisions_normalizer: BaseNormalizer = self._normalizer_factory.create(
-            config=decisions_norm_config.model_dump()
+            config=decisions_norm_config
         )
         objectives_train_norm = fold_objectives_normalizer.fit_transform(
             objectives_train
@@ -326,7 +324,7 @@ class TrainCvInterpolatorCommandHandler:
             final_metrics_for_entity[f"cv_std_{metric_name}"] = np.std(values)
 
         # Construct the final model entity
-        trained_interpolator_model = TrainedModelArtifact(
+        trained_model_artifact = ModelArtifact(
             parameters=model_params,
             inverse_decision_mapper=final_model,
             metrics=final_metrics_for_entity,
@@ -337,7 +335,7 @@ class TrainCvInterpolatorCommandHandler:
         )
 
         # Save the model entity to the repository
-        self._trained_model_repository.save(trained_interpolator_model)
+        self._trained_model_repository.save(trained_model_artifact)
         self._logger.log_info("Interpolator model with CV results saved to repository.")
 
     def _log_final_model(

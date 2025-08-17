@@ -1,7 +1,7 @@
 import numpy as np
 
 # Adjust import path and use the new Base
-from ...domain.interpolation.interfaces.base_loss_calculator import (
+from ...domain.model_management.interfaces.base_loss_calculator import (
     ArrayLike,
     BaseLossCalculator,
     to_numpy,

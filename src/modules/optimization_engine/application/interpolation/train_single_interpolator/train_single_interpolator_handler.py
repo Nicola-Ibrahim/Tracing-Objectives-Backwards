@@ -4,17 +4,19 @@ from sklearn.model_selection import train_test_split
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.interpolation.entities.interpolator_model import TrainedModelArtifact
-from ....domain.interpolation.interfaces.base_inverse_decision_mapper import (
+from ....domain.model_management.entities.model_artifact import (
+    ModelArtifact,
+)
+from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
-from ....domain.interpolation.interfaces.base_logger import BaseLogger
-from ....domain.interpolation.interfaces.base_metric import BaseValidationMetric
-from ....domain.interpolation.interfaces.base_normalizer import BaseNormalizer
-from ....domain.interpolation.interfaces.base_repository import (
+from ....domain.model_management.interfaces.base_logger import BaseLogger
+from ....domain.model_management.interfaces.base_metric import BaseValidationMetric
+from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
+from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
-from ....infrastructure.inverse_decision_mappers.factory import (
+from ...factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
 from ....infrastructure.metrics import MetricFactory
@@ -212,7 +214,7 @@ class TrainSingleInterpolatorCommandHandler:
         metrics: dict[str, Any],
     ) -> None:
         """Constructs and saves the final model entity."""
-        trained_interpolator_model = TrainedModelArtifact(
+        trained_model_artifact = ModelArtifact(
             parameters=command.params.model_dump(),
             inverse_decision_mapper=inverse_decision_mapper,
             metrics=metrics,
@@ -220,8 +222,8 @@ class TrainSingleInterpolatorCommandHandler:
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )
-        self._trained_model_repository.save(trained_interpolator_model)
-        self._logger.log_info("Interpolator model saved to repository.")
+        self._trained_model_repository.save(trained_model_artifact)
+        self._logger.log_info("Model artifact saved to repository.")
 
     def _visualize_results(
         self,

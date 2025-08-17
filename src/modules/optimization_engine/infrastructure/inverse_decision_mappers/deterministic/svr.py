@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import SVR
 
-from ....domain.interpolation.interfaces.base_inverse_decision_mapper import (
+from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
 
