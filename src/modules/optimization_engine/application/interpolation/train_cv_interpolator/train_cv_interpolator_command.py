@@ -18,7 +18,7 @@ class TrainCvInterpolatorCommand(BaseModel):
     Command for training an interpolator model using K-fold cross-validation.
     """
 
-    params: InverseDecisionMapperParams = Field(
+    inverse_decision_mappers_params: InverseDecisionMapperParams = Field(
         ...,
         description="Parameters (hyperparameters, configuration) used to initialize/configure "
         "this specific interpolator instance for training.",
