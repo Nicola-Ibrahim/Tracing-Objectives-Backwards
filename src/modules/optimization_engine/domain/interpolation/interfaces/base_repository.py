@@ -1,36 +1,36 @@
 from abc import ABC, abstractmethod
 
-from ..entities.interpolator_model import InterpolatorModel
+from ..entities.interpolator_model import TrainedModelArtifact
 
 
 class BaseInterpolationModelRepository(ABC):
     """
     Abstract base class for a repository that handles persistence
-    of InterpolatorModel entities, supporting version tracking.
+    of TrainedModelArtifact entities, supporting version tracking.
     """
 
     @abstractmethod
-    def save(self, interpolator_model: InterpolatorModel) -> None:
+    def save(self, interpolator_model: TrainedModelArtifact) -> None:
         """
-        Saves a new InterpolatorModel entity (representing a specific training run/version).
+        Saves a new TrainedModelArtifact entity (representing a specific training run/version).
         Each version is saved in a unique directory identified by its ID.
 
         Args:
-            model_entity: The InterpolatorModel entity to save. Its 'id' field
+            model_entity: The TrainedModelArtifact entity to save. Its 'id' field
                           will determine the storage location.
         """
         pass
 
     @abstractmethod
-    def load(self, model_version_id: str) -> InterpolatorModel:
+    def load(self, model_version_id: str) -> TrainedModelArtifact:
         """
-        Retrieves a specific InterpolatorModel entity by its unique ID.
+        Retrieves a specific TrainedModelArtifact entity by its unique ID.
 
         Args:
             model_id: The unique identifier of the specific model version to load.
 
         Returns:
-            The loaded InterpolatorModel entity.
+            The loaded TrainedModelArtifact entity.
 
         Raises:
             FileNotFoundError: If the model with the specified ID is not found.
@@ -39,7 +39,7 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_versions(self, interpolator_type: str) -> list[InterpolatorModel]:
+    def get_all_versions(self, interpolator_type: str) -> list[TrainedModelArtifact]:
         """
         Retrieves all trained versions of a model based on its type.
 
@@ -47,12 +47,12 @@ class BaseInterpolationModelRepository(ABC):
             interpolator_type: The type of interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
-            A list of InterpolatorModel entities, sorted by version_number (highest first)
+            A list of TrainedModelArtifact entities, sorted by version_number (highest first)
         """
         pass
 
     @abstractmethod
-    def get_latest_version(self, interpolator_type: str) -> InterpolatorModel:
+    def get_latest_version(self, interpolator_type: str) -> TrainedModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
 
@@ -60,6 +60,6 @@ class BaseInterpolationModelRepository(ABC):
             interpolator_type: The type of interpolation model
 
         Returns:
-            The InterpolatorModel entity with the highest version_number
+            The TrainedModelArtifact entity with the highest version_number
         """
         pass

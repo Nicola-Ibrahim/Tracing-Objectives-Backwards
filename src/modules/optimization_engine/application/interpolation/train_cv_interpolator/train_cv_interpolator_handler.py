@@ -6,7 +6,7 @@ from sklearn.model_selection import KFold
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
+from ....domain.interpolation.entities.interpolator_model import TrainedModelArtifact
 from ....domain.interpolation.interfaces.base_logger import BaseLogger
 from ....domain.interpolation.interfaces.base_metric import BaseValidationMetric
 from ....domain.interpolation.interfaces.base_normalizer import (
@@ -326,7 +326,7 @@ class TrainCvInterpolatorCommandHandler:
             final_metrics_for_entity[f"cv_std_{metric_name}"] = np.std(values)
 
         # Construct the final model entity
-        trained_interpolator_model = InterpolatorModel(
+        trained_interpolator_model = TrainedModelArtifact(
             parameters=model_params,
             inverse_decision_mapper=final_model,
             metrics=final_metrics_for_entity,

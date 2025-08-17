@@ -8,7 +8,7 @@ from ..interfaces.base_inverse_decision_mapper import BaseInverseDecisionMapper
 from ..interfaces.base_normalizer import BaseNormalizer
 
 
-class InterpolatorModel(BaseModel):
+class TrainedModelArtifact(BaseModel):
     """
     Represents a trained interpolator model and its associated metadata.
     This entity encapsulates the actual fitted interpolator instance
@@ -60,7 +60,7 @@ class InterpolatorModel(BaseModel):
 
     def to_save_format(self) -> dict[str, Any]:
         """
-        Converts the InterpolatorModel entity into a serializable dictionary
+        Converts the TrainedModelArtifact entity into a serializable dictionary
         format suitable for saving to storage.
         """
         # Use model_dump, but hide this implementation detail from the repository.
@@ -82,7 +82,7 @@ class InterpolatorModel(BaseModel):
         decisions_normalizer: BaseNormalizer,
     ):
         """
-        Constructs an InterpolatorModel entity from saved metadata and a loaded mapper.
+        Constructs an TrainedModelArtifact entity from saved metadata and a loaded mapper.
         This method will be used by the repository's load() method.
         """
         # Note: Pydantic's constructor handles automatic deserialization of

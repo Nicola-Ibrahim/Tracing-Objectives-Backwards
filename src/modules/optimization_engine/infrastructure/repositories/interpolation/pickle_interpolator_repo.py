@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .....shared.config import ROOT_PATH
-from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
+from ....domain.interpolation.entities.interpolator_model import TrainedModelArtifact
 from ....domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
@@ -68,7 +68,7 @@ class PickleFileHandler:
 
 class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
     """
-    Manages the persistence of InterpolatorModel entities, including version tracking,
+    Manages the persistence of TrainedModelArtifact entities, including version tracking,
     using the file system for storage. Each model version (identified by its unique ID)
     is stored in its own dedicated directory.
     """
@@ -80,18 +80,18 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             parents=True, exist_ok=True
         )  # Ensure the base models directory exists
 
-    def save(self, interpolator_model: InterpolatorModel) -> None:
+    def save(self, interpolator_model: TrainedModelArtifact) -> None:
         """
-        Saves a new InterpolatorModel entity, representing a specific training version.
+        Saves a new TrainedModelArtifact entity, representing a specific training version.
         A dedicated directory is created for this model version using its unique ID.
 
         Args:
-            interpolator_model: The InterpolatorModel entity to save. Its 'id' field
+            interpolator_model: The TrainedModelArtifact entity to save. Its 'id' field
                                  is used to determine the storage location.
         """
         if not interpolator_model.id:
             raise ValueError(
-                "InterpolatorModel entity must have a unique 'id' for saving."
+                "TrainedModelArtifact entity must have a unique 'id' for saving."
             )
 
         # Create a subdirectory for the interpolator type
@@ -137,9 +137,11 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             metadata_file_path, model_metadata
         )
 
-    def load(self, interpolator_type: str, model_version_id: str) -> InterpolatorModel:
+    def load(
+        self, interpolator_type: str, model_version_id: str
+    ) -> TrainedModelArtifact:
         """
-        Retrieves a specific InterpolatorModel entity by its type and unique version ID.
+        Retrieves a specific TrainedModelArtifact entity by its type and unique version ID.
         This is a direct lookup, which is much more efficient than a global search.
 
         Args:
@@ -147,7 +149,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             model_version_id: The unique identifier of the specific model version to load.
 
         Returns:
-            The loaded InterpolatorModel entity.
+            The loaded TrainedModelArtifact entity.
 
         Raises:
             FileNotFoundError: If the model version with the specified ID is not found.
@@ -190,14 +192,14 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             objecitves_normalizer_artifact_path
         )
 
-        return InterpolatorModel.from_saved_format(
+        return TrainedModelArtifact.from_saved_format(
             saved_data=model_metadata,
             inverse_decision_mapper=inverse_decision_mapper,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )
 
-    def get_all_versions(self, interpolator_type: str) -> list[InterpolatorModel]:
+    def get_all_versions(self, interpolator_type: str) -> list[TrainedModelArtifact]:
         """
         Retrieves all trained versions of a model based on its 'type' from the parameters.
 
@@ -205,9 +207,9 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             interpolator_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
 
         Returns:
-            A list of InterpolatorModel entities, sorted by 'trained_at' timestamp in descending order (latest first).
+            A list of TrainedModelArtifact entities, sorted by 'trained_at' timestamp in descending order (latest first).
         """
-        found_model_versions: list[InterpolatorModel] = []
+        found_model_versions: list[TrainedModelArtifact] = []
         interpolators_directory = self._base_model_storage_path / interpolator_type
         if not interpolators_directory.exists():
             return []
@@ -234,7 +236,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         found_model_versions.sort(key=lambda model: model.trained_at, reverse=True)
         return found_model_versions
 
-    def get_latest_version(self, interpolator_type: str) -> InterpolatorModel:
+    def get_latest_version(self, interpolator_type: str) -> TrainedModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
         The 'latest' version is determined by the most recent 'trained_at' timestamp.
@@ -243,7 +245,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
             interpolator_type: The type of the interpolator model.
 
         Returns:
-            The InterpolatorModel entity representing the latest version.
+            The TrainedModelArtifact entity representing the latest version.
 
         Raises:
             FileNotFoundError: If no model versions are found for the given type.

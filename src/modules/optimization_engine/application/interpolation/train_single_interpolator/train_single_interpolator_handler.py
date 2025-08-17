@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
+from ....domain.interpolation.entities.interpolator_model import TrainedModelArtifact
 from ....domain.interpolation.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
 )
@@ -212,7 +212,7 @@ class TrainSingleInterpolatorCommandHandler:
         metrics: dict[str, Any],
     ) -> None:
         """Constructs and saves the final model entity."""
-        trained_interpolator_model = InterpolatorModel(
+        trained_interpolator_model = TrainedModelArtifact(
             parameters=command.params.model_dump(),
             inverse_decision_mapper=inverse_decision_mapper,
             metrics=metrics,
