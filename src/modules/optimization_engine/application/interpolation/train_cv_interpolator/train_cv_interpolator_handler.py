@@ -55,6 +55,9 @@ class TrainCvInterpolatorCommandHandler:
         """
         Executes the cross-validation training workflow for a given interpolator.
         """
+
+        model_params = command.inverse_decision_mappers_params.model_dump()
+
         self._logger.log_info(
             f"Starting K-Fold Cross-Validation with {command.cross_validation_config.n_splits} folds."
         )
@@ -65,25 +68,52 @@ class TrainCvInterpolatorCommandHandler:
             validation_metric,
             objectives_normalizer_global,
             decisions_normalizer_global,
-        ) = self._initialize_components(command)
+        ) = self._initialize_components(
+            command.validation_metric_config.model_dump(),
+            command.objectives_normalizer_config.model_dump(),
+            command.decisions_normalizer_config.model_dump(),
+        )
 
         # Step 2: Conduct cross-validation and collect fold metrics
         cv_metrics, fold_scores = self._run_cross_validation_procedure(
-            command, full_objectives, full_decisions, validation_metric
+            full_objectives=full_objectives,
+            full_decisions=full_decisions,
+            validation_metric=validation_metric,
+            model_params=model_params,
+            cv_config=command.cross_validation_config.model_dump(),
+            normalizer_configs=(
+                command.objectives_normalizer_config.model_dump(),
+                command.decisions_normalizer_config.model_dump(),
+            ),
+            generate_plots_per_fold=command.generate_plots_per_fold,
         )
 
         # Step 3: Train final production model on the entire dataset
         final_model, final_normalizers = self._train_final_model(
-            command,
-            full_objectives,
-            full_decisions,
-            objectives_normalizer_global,
-            decisions_normalizer_global,
+            full_objectives=full_objectives,
+            full_decisions=full_decisions,
+            model_params=model_params,
+            objectives_normalizer=objectives_normalizer_global,
+            decisions_normalizer=decisions_normalizer_global,
         )
 
         # Step 4: Persist and log the final model with its performance
-        self._persist_and_log_model_artifact(
-            command, final_model, final_normalizers, cv_metrics, fold_scores
+        self._persist_final_model(
+            final_model=final_model,
+            final_normalizers=final_normalizers,
+            model_params=model_params,
+            version_number=command.version_number,
+            cv_results=cv_metrics,
+            fold_scores=fold_scores,
+        )
+        self._log_final_model(
+            final_model=final_model,
+            final_normalizers=final_normalizers,
+            model_params=model_params,
+            version_number=command.version_number,
+            cv_metrics=cv_metrics,
+            fold_scores=fold_scores,
+            n_splits=command.cross_validation_config.n_splits,
         )
 
         self._logger.log_info("K-Fold Cross-Validation workflow completed.")
@@ -93,22 +123,22 @@ class TrainCvInterpolatorCommandHandler:
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
         full_objectives = raw_data.pareto_front
         full_decisions = raw_data.pareto_set
-
         self._logger.log_info("Raw Pareto data loaded.")
         return full_objectives, full_decisions
 
     def _initialize_components(
-        self, command: TrainCvInterpolatorCommand
+        self,
+        validation_metric_config: dict[str, Any],
+        objectives_normalizer_config: dict[str, Any],
+        decisions_normalizer_config: dict[str, Any],
     ) -> tuple[BaseValidationMetric, BaseNormalizer, BaseNormalizer]:
-        """Instantiates the performance metric and normalizers based on the command."""
-        validation_metric = self._metric_factory.create(
-            config=command.validation_metric_config.model_dump()
-        )
+        """Instantiates the performance metric and normalizers based on configurations."""
+        validation_metric = self._metric_factory.create(config=validation_metric_config)
         objectives_normalizer_global = self._normalizer_factory.create(
-            config=command.objectives_normalizer_config.model_dump()
+            config=objectives_normalizer_config
         )
         decisions_normalizer_global = self._normalizer_factory.create(
-            config=command.decisions_normalizer_config.model_dump()
+            config=decisions_normalizer_config
         )
         return (
             validation_metric,
@@ -118,53 +148,57 @@ class TrainCvInterpolatorCommandHandler:
 
     def _run_cross_validation_procedure(
         self,
-        command: TrainCvInterpolatorCommand,
         full_objectives: Any,
         full_decisions: Any,
         validation_metric: Any,
-    ) -> tuple[dict[str, Any], dict[str, list]]:
+        model_params: dict[str, Any],
+        cv_config: dict[str, Any],
+        normalizer_configs: tuple[Any, Any],
+        generate_plots_per_fold: bool,
+    ) -> tuple[dict[str, Any], defaultdict]:
         """Executes the K-fold validation loop and aggregates all fold scores."""
         k_folder = KFold(
-            n_splits=command.cross_validation_config.n_splits,
-            shuffle=command.cross_validation_config.shuffle,
-            random_state=command.cross_validation_config.random_state,
+            n_splits=cv_config["n_splits"],
+            shuffle=cv_config["shuffle"],
+            random_state=cv_config["random_state"],
         )
-
         fold_scores = defaultdict(list)
 
         for fold_idx, (train_indices, validation_indices) in enumerate(
             k_folder.split(full_objectives)
         ):
             self._logger.log_info(
-                f"Processing Fold {fold_idx + 1}/{command.cross_validation_config.n_splits}"
+                f"Processing Fold {fold_idx + 1}/{cv_config['n_splits']}"
             )
 
-            # Use dedicated helper method to execute each fold
             self._execute_single_fold(
-                command,
-                fold_idx,
-                train_indices,
-                validation_indices,
-                full_objectives,
-                full_decisions,
-                validation_metric,
-                fold_scores,
+                fold_idx=fold_idx,
+                train_indices=train_indices,
+                validation_indices=validation_indices,
+                full_objectives=full_objectives,
+                full_decisions=full_decisions,
+                validation_metric=validation_metric,
+                model_params=model_params,
+                normalizer_configs=normalizer_configs,
+                fold_scores=fold_scores,
+                generate_plots_per_fold=generate_plots_per_fold,
             )
 
-        # Aggregate metrics from all folds
         cv_metrics = self._aggregate_cv_metrics(fold_scores, validation_metric.name)
         return cv_metrics, fold_scores
 
     def _execute_single_fold(
         self,
-        command: TrainCvInterpolatorCommand,
         fold_idx: int,
         train_indices: np.ndarray,
         validation_indices: np.ndarray,
         full_objectives: Any,
         full_decisions: Any,
         validation_metric: Any,
+        model_params: dict[str, Any],
+        normalizer_configs: tuple[Any, Any],
         fold_scores: defaultdict,
+        generate_plots_per_fold: bool,
     ) -> None:
         """Trains and evaluates the model for a single cross-validation fold."""
         # Split data for the current fold
@@ -178,11 +212,12 @@ class TrainCvInterpolatorCommandHandler:
         )
 
         # Create and fit normalizers for the current fold to prevent data leakage
+        objectives_norm_config, decisions_norm_config = normalizer_configs
         fold_objectives_normalizer: BaseNormalizer = self._normalizer_factory.create(
-            config=command.objectives_normalizer_config.model_dump()
+            config=objectives_norm_config.model_dump()
         )
         fold_decisions_normalizer: BaseNormalizer = self._normalizer_factory.create(
-            config=command.decisions_normalizer_config.model_dump()
+            config=decisions_norm_config.model_dump()
         )
         objectives_train_norm = fold_objectives_normalizer.fit_transform(
             objectives_train
@@ -191,7 +226,7 @@ class TrainCvInterpolatorCommandHandler:
 
         # Instantiate and train the model for this fold
         inverse_decision_mapper = self._inverse_decision_factory.create(
-            params=command.params.model_dump(),
+            params=model_params,
         )
         inverse_decision_mapper.fit(
             objectives=objectives_train_norm, decisions=decisions_train_norm
@@ -210,7 +245,7 @@ class TrainCvInterpolatorCommandHandler:
         self._logger.log_info(f"Fold {fold_idx + 1} score: {score:.4f}")
 
         # Generate plots for the current fold if enabled
-        if command.generate_plots_per_fold and self._visualizer:
+        if generate_plots_per_fold and self._visualizer:
             self._logger.log_info(f"Generating plots for Fold {fold_idx + 1}...")
             self._visualizer.plot(
                 objectives_train=objectives_train_norm,
@@ -233,7 +268,6 @@ class TrainCvInterpolatorCommandHandler:
         cv_metrics[f"cv_mean_{metric_name}"] = float(mean_score)
         cv_metrics[f"cv_std_{metric_name}"] = float(std_score)
 
-        # This structure is great for storing the results, it's a good practice to separate the final metrics for logging from the detailed results
         detailed_cv_results = {
             metric_name: {
                 "folds": [float(v) for v in values],
@@ -241,7 +275,6 @@ class TrainCvInterpolatorCommandHandler:
                 "std": float(std_score),
             }
         }
-
         self._logger.log_info(
             f"Aggregated CV {metric_name}: Mean={mean_score:.4f}, Std={std_score:.4f}"
         )
@@ -249,44 +282,43 @@ class TrainCvInterpolatorCommandHandler:
 
     def _train_final_model(
         self,
-        command: TrainCvInterpolatorCommand,
         full_objectives: Any,
         full_decisions: Any,
-        objectives_normalizer_global: Any,
-        decisions_normalizer_global: Any,
+        model_params: dict[str, Any],
+        objectives_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
     ) -> tuple[Any, dict[str, Any]]:
         """Trains the final production model on the entire dataset."""
         self._logger.log_info("Training final model on full dataset for deployment.")
 
         # Fit normalizers on the full dataset
-        norm_full_objectives = objectives_normalizer_global.fit_transform(
-            full_objectives
-        )
-        norm_full_decisions = decisions_normalizer_global.fit_transform(full_decisions)
+        norm_full_objectives = objectives_normalizer.fit_transform(full_objectives)
+        norm_full_decisions = decisions_normalizer.fit_transform(full_decisions)
 
         # Create and fit the final interpolator
         final_interpolator = self._inverse_decision_factory.create(
-            params=command.params.model_dump(),
+            params=model_params,
         )
         final_interpolator.fit(norm_full_objectives, norm_full_decisions)
         self._logger.log_info("Final model trained on full dataset.")
 
         final_normalizers = {
-            "objectives_normalizer": objectives_normalizer_global,
-            "decisions_normalizer": decisions_normalizer_global,
+            "objectives_normalizer": objectives_normalizer,
+            "decisions_normalizer": decisions_normalizer,
         }
 
         return final_interpolator, final_normalizers
 
-    def _persist_and_log_model_artifact(
+    def _persist_final_model(
         self,
-        command: TrainCvInterpolatorCommand,
         final_model: Any,
         final_normalizers: dict[str, Any],
-        cv_metrics: dict[str, Any],
+        model_params: dict[str, Any],
+        version_number: str,
+        cv_results: dict[str, Any],
         fold_scores: defaultdict,
     ) -> None:
-        """Constructs, saves, and logs the final model entity with CV metrics."""
+        """Constructs and saves the final model entity with CV metrics."""
         # Calculate final aggregated metrics for the model entity
         final_metrics_for_entity = {}
         for metric_name, values in fold_scores.items():
@@ -295,29 +327,46 @@ class TrainCvInterpolatorCommandHandler:
 
         # Construct the final model entity
         trained_interpolator_model = InterpolatorModel(
-            parameters=command.params.model_dump(),
+            parameters=model_params,
             inverse_decision_mapper=final_model,
             metrics=final_metrics_for_entity,
-            cross_validation_results=cv_metrics,
-            version_number=command.version_number,
+            cross_validation_results=cv_results,
+            version_number=version_number,
             objectives_normalizer=final_normalizers["objectives_normalizer"],
             decisions_normalizer=final_normalizers["decisions_normalizer"],
         )
 
-        # Log the model artifact for version control and tracking
-        self._logger.log_model(
-            model=trained_interpolator_model.inverse_decision_mapper,
-            name=f"{command.params.get('model_type', 'Interpolator')}_v{command.version_number}_cv",
-            model_type=command.params.get("model_type", "Unknown"),
-            description=f"Interpolator model trained with {command.cross_validation_config.n_splits}-fold CV.",
-            parameters=command.params.model_dump(),
-            metrics=final_metrics_for_entity,
-            notes=f"Cross-validation results for version {command.version_number}.",
-            collection_name="cv_interpolator_models",
-            step=command.version_number,
-        )
-        self._logger.log_info("Interpolator model artifact logged.")
-
         # Save the model entity to the repository
         self._trained_model_repository.save(trained_interpolator_model)
         self._logger.log_info("Interpolator model with CV results saved to repository.")
+
+    def _log_final_model(
+        self,
+        final_model: Any,
+        final_normalizers: dict[str, Any],
+        model_params: dict[str, Any],
+        version_number: str,
+        cv_metrics: dict[str, Any],
+        fold_scores: defaultdict,
+        n_splits: int,
+    ) -> None:
+        """Logs the final model artifact to the tracking system."""
+        # Calculate final aggregated metrics for the log artifact
+        final_metrics_for_log = {}
+        for metric_name, values in fold_scores.items():
+            final_metrics_for_log[f"cv_mean_{metric_name}"] = np.mean(values)
+            final_metrics_for_log[f"cv_std_{metric_name}"] = np.std(values)
+
+        # Log the model artifact for version control and tracking
+        self._logger.log_model(
+            model=final_model,
+            name=f"{model_params.get('model_type', 'Interpolator')}_v{version_number}_cv",
+            model_type=model_params.get("model_type", "Unknown"),
+            description=f"Interpolator model trained with {n_splits}-fold CV.",
+            parameters=model_params,
+            metrics=final_metrics_for_log,
+            notes=f"Cross-validation results for version {version_number}.",
+            collection_name="cv_interpolator_models",
+            step=version_number,
+        )
+        self._logger.log_info("Interpolator model artifact logged.")
