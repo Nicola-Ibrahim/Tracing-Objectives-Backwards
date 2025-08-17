@@ -10,7 +10,7 @@ from ....domain.model_management.entities.model_artifact import (
     ModelArtifact,
 )
 from ....domain.model_management.interfaces.base_logger import BaseLogger
-from ....domain.model_management.interfaces.base_metric import BaseValidationMetric
+from ....domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
 from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
@@ -18,9 +18,9 @@ from ....domain.model_management.interfaces.base_repository import (
 from ...factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
-from ....infrastructure.metrics import MetricFactory
-from ....infrastructure.normalizers import NormalizerFactory
-from .train_cv_interpolator_command import TrainCvInterpolatorCommand
+from ...factories.mertics import MetricFactory
+from ...factories.normalizer import NormalizerFactory
+from .train_cv_model_command import TrainCvInterpolatorCommand
 
 
 class TrainCvInterpolatorCommandHandler:

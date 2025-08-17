@@ -4,7 +4,7 @@ from sklearn.metrics import (
     mean_squared_error as sk_mean_squared_error,
 )
 
-from ..domain.model_management.interfaces.base_metric import BaseValidationMetric
+from ..domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 
 
 class MeanSquaredErrorValidationMetric(BaseValidationMetric):

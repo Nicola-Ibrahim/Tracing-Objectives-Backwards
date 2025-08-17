@@ -1,4 +1,4 @@
-from ...domain.model_management.interfaces.base_metric import BaseValidationMetric
+from ...domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 from ...infrastructure.metrics import MeanSquaredErrorValidationMetric
 
 

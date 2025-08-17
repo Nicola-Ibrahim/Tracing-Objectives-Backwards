@@ -14,14 +14,14 @@ from ....domain.objective.feasibility.scorers import (
     MinDistanceScoreStrategy,
 )
 from ....infrastructure.problems.biobj import get_coco_problem
-from .free_mode_generate_decision_command import FreeModeGenerateDecisionCommand
+from .generate_decision_command import GenerateDecisionCommand
 
 # TODO: Move and relocate the error calculations parts to different method or class
-# TODO: Imporve the feasibility checker to be more flexible and accept more args from `FreeModeGenerateDecisionCommand`
+# TODO: Imporve the feasibility checker to be more flexible and accept more args from `GenerateDecisionCommand`
 # TODO: Refine and enhance the info and error msgs
 
 
-class FreeModeGenerateDecisionCommandHandler:
+class GenerateDecisionCommandHandler:
     def __init__(
         self,
         interpolation_model_repo: BaseInterpolationModelRepository,
@@ -32,7 +32,7 @@ class FreeModeGenerateDecisionCommandHandler:
         self._paret_data_repo = pareto_data_repo
         self._logger = logger
 
-    def execute(self, command: FreeModeGenerateDecisionCommand) -> np.ndarray:
+    def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         self._logger.log_info(
             f"Starting FreeMode decision generation for interpolator type: {command.interpolator_type}"
         )

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from ..dtos import InverseDecisionMapperParams, MetricConfig, NormalizerConfig
 
 
-class TrainSingleInterpolatorCommand(BaseModel):
+class TrainSingleModelCommand(BaseModel):
     """
     Pydantic Command to encapsulate all data required for training and saving
     an interpolator model. It specifies the interpolator type, its parameters,

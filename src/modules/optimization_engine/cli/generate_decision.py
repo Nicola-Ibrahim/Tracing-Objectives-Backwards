@@ -1,8 +1,8 @@
-from ..application.interpolation.free_mode_generate_decision.free_mode_generate_decision_command import (
-    FreeModeGenerateDecisionCommand,
+from ..application.model_management.generate_decision.generate_decision_command import (
+    GenerateDecisionCommand,
 )
-from ..application.interpolation.free_mode_generate_decision.free_mode_generate_decision_handler import (
-    FreeModeGenerateDecisionCommandHandler,
+from ..application.model_management.generate_decision.generate_decision_handler import (
+    GenerateDecisionCommandHandler,
 )
 from ..domain.model_management.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
@@ -26,14 +26,14 @@ def main():
     target_objective_point = [411, 1242]
 
     # Initialize the handler with the repository
-    handler = FreeModeGenerateDecisionCommandHandler(
+    handler = GenerateDecisionCommandHandler(
         interpolation_model_repo=PickleInterpolationModelRepository(),
         pareto_data_repo=NPZParetoDataRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )
 
     # Create the command object using the hardcoded values
-    command = FreeModeGenerateDecisionCommand(
+    command = GenerateDecisionCommand(
         interpolator_type=InverseDecisionMapperType.KRIGING_ND.value,
         target_objective=target_objective_point,
         distance_tolerance=0.02,

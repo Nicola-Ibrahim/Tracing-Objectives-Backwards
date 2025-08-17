@@ -11,7 +11,7 @@ from ....domain.model_management.interfaces.base_inverse_decision_mapper import 
     BaseInverseDecisionMapper,
 )
 from ....domain.model_management.interfaces.base_logger import BaseLogger
-from ....domain.model_management.interfaces.base_metric import BaseValidationMetric
+from ....domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
 from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
@@ -19,14 +19,14 @@ from ....domain.model_management.interfaces.base_repository import (
 from ...factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
-from ....infrastructure.metrics import MetricFactory
-from ....infrastructure.normalizers import NormalizerFactory
-from .train_single_interpolator_command import TrainSingleInterpolatorCommand
+from ...factories.mertics import MetricFactory
+from ...factories.normalizer import NormalizerFactory
+from .train_single_model_command import TrainSingleModelCommand
 
 
-class TrainSingleInterpolatorCommandHandler:
+class TrainSingleModelCommandHandler:
     """
-    Handler for the TrainSingleInterpolatorCommand.
+    Handler for the TrainSingleModelCommand.
     Orchestrates the interpolator training, validation, logging, and persistence processes.
     Dependencies are injected via the constructor.
     """
@@ -49,7 +49,7 @@ class TrainSingleInterpolatorCommandHandler:
         self._metric_factory = metric_factory
         self._visualizer = visualizer
 
-    def execute(self, command: TrainSingleInterpolatorCommand) -> None:
+    def execute(self, command: TrainSingleModelCommand) -> None:
         """
         Executes the training workflow for a given interpolator using the command's data.
         """
@@ -107,7 +107,7 @@ class TrainSingleInterpolatorCommandHandler:
         self._logger.log_info("Interpolator training workflow completed.")
 
     def _initialize_components(
-        self, command: TrainSingleInterpolatorCommand
+        self, command: TrainSingleModelCommand
     ) -> tuple[Any, Any, Any, Any]:
         """Initializes components using their respective factories."""
         inverse_decision_mapper = self._inverse_decision_factory.create(
@@ -132,7 +132,7 @@ class TrainSingleInterpolatorCommandHandler:
 
     def _prepare_data(
         self,
-        command: TrainSingleInterpolatorCommand,
+        command: TrainSingleModelCommand,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
     ) -> tuple[
@@ -207,7 +207,7 @@ class TrainSingleInterpolatorCommandHandler:
 
     def _save_model(
         self,
-        command: TrainSingleInterpolatorCommand,
+        command: TrainSingleModelCommand,
         inverse_decision_mapper: BaseInverseDecisionMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,

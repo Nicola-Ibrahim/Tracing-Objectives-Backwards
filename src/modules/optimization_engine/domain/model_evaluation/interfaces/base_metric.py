@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import BaseModel
+
+
+class MetricResult(BaseModel):
+    name: str
+    value: float
+    details: dict[str, Any] = None
 
 
 class BaseValidationMetric(ABC):

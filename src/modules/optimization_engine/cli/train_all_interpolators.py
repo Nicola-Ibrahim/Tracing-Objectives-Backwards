@@ -1,6 +1,9 @@
 import time
 
-from ..application.interpolation.dtos import (
+from ..application.factories.inverse_decision_mapper import (
+    InverseDecisionMapperFactory,
+)
+from ..application.model_management.dtos import (
     GaussianProcessInverseDecisionMapperParams,
     KrigingInverseDecisionMapperParams,
     MDNInverseDecisionMapperParams,
@@ -10,16 +13,13 @@ from ..application.interpolation.dtos import (
     SplineInverseDecisionMapperParams,
     SVRInverseDecisionMapperParams,
 )
-from ..application.interpolation.train_single_interpolator.train_single_interpolator_command import (
+from ..application.model_management.train_model.train_single_model_command import (
     MetricConfig,
     NormalizerConfig,
-    TrainSingleInterpolatorCommand,
+    TrainSingleModelCommand,
 )
-from ..application.interpolation.train_single_interpolator.train_single_interpolator_handler import (
-    TrainSingleInterpolatorCommandHandler,
-)
-from ..application.factories.inverse_decision_mapper import (
-    InverseDecisionMapperFactory,
+from ..application.model_management.train_model.train_single_model_handler import (
+    TrainSingleModelCommandHandler,
 )
 from ..infrastructure.loggers.cmd_logger import CMDLogger
 from ..infrastructure.metrics import MetricFactory
@@ -33,7 +33,7 @@ from ..infrastructure.repositories.model_management.pickle_model_artifact_repo i
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
-    command_handler = TrainSingleInterpolatorCommandHandler(
+    command_handler = TrainSingleModelCommandHandler(
         pareto_data_repo=NPZParetoDataRepository(),
         inverse_decision_factory=InverseDecisionMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             interpolator_params_instance = param_class()
 
             # Construct the command with the appropriate parameters
-            command = TrainSingleInterpolatorCommand(
+            command = TrainSingleModelCommand(
                 params=interpolator_params_instance,
                 version_number=version_number,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
