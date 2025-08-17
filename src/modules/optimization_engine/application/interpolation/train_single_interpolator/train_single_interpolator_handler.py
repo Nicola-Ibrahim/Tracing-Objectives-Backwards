@@ -1,9 +1,16 @@
+from typing import Any
+
 from sklearn.model_selection import train_test_split
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ....domain.interpolation.entities.interpolator_model import InterpolatorModel
+from ....domain.interpolation.interfaces.base_inverse_decision_mapper import (
+    BaseInverseDecisionMapper,
+)
 from ....domain.interpolation.interfaces.base_logger import BaseLogger
+from ....domain.interpolation.interfaces.base_metric import BaseValidationMetric
+from ....domain.interpolation.interfaces.base_normalizer import BaseNormalizer
 from ....domain.interpolation.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
@@ -43,81 +50,168 @@ class TrainSingleInterpolatorCommandHandler:
     def execute(self, command: TrainSingleInterpolatorCommand) -> None:
         """
         Executes the training workflow for a given interpolator using the command's data.
-
-        Args:
-            command (TrainSingleInterpolatorCommand): The Pydantic command containing
-                                               all necessary training parameters and metadata.
         """
         self._logger.log_info("Starting single train/test split interpolator training.")
 
-        # Create the decision mapper using the factory
+        # Step 1: Initialize all necessary components based on the command
+        (
+            inverse_decision_mapper,
+            objectives_normalizer,
+            decisions_normalizer,
+            validation_metric,
+        ) = self._initialize_components(command)
+
+        # Step 2: Load and prepare the data
+        (
+            objectives_train_norm,
+            objectives_val_norm,
+            decisions_train_norm,
+            decisions_val_norm,
+            decisions_val,
+        ) = self._prepare_data(command, objectives_normalizer, decisions_normalizer)
+
+        # Step 3: Train the model
+        self._train_model(
+            inverse_decision_mapper, objectives_train_norm, decisions_train_norm
+        )
+
+        # Step 4: Validate the model and calculate metrics
+        metrics = self._validate_model(
+            inverse_decision_mapper,
+            decisions_normalizer,
+            validation_metric,
+            objectives_val_norm,
+            decisions_val,
+        )
+
+        # Step 5: Save the trained model and its metadata
+        self._save_model(
+            command,
+            inverse_decision_mapper,
+            objectives_normalizer,
+            decisions_normalizer,
+            metrics,
+        )
+
+        # Step 6: Visualize results if a visualizer is provided
+        self._visualize_results(
+            objectives_train_norm,
+            objectives_val_norm,
+            decisions_train_norm,
+            decisions_val_norm,
+            inverse_decision_mapper,
+        )
+
+        self._logger.log_info("Interpolator training workflow completed.")
+
+    def _initialize_components(
+        self, command: TrainSingleInterpolatorCommand
+    ) -> tuple[Any, Any, Any, Any]:
+        """Initializes components using their respective factories."""
         inverse_decision_mapper = self._inverse_decision_factory.create(
-            params=command.params.model_dump(),
+            params=command.params.model_dump()
         )
-
         objectives_normalizer = self._normalizer_factory.create(
-            normalizer_type=command.objectives_normalizer_config.type,
-            **command.objectives_normalizer_config.params,
+            config=command.objectives_normalizer_config.model_dump()
         )
-
         decisions_normalizer = self._normalizer_factory.create(
-            normalizer_type=command.decisions_normalizer_config.type,
-            **command.decisions_normalizer_config.params,
+            config=command.decisions_normalizer_config.model_dump()
         )
-
-        # Create validation metric using the metric factory, based on command config
         validation_metric = self._metric_factory.create(
-            metric_type=command.validation_metric_config.type,
-            **command.validation_metric_config.params,
+            config=command.validation_metric_config.model_dump()
+        )
+        self._logger.log_info("All components initialized.")
+        return (
+            inverse_decision_mapper,
+            objectives_normalizer,
+            decisions_normalizer,
+            validation_metric,
         )
 
-        # Load raw data using the injected archiver
+    def _prepare_data(
+        self,
+        command: TrainSingleInterpolatorCommand,
+        objectives_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
+    ) -> tuple[
+        Any, Any, Any, Any, Any
+    ]:  # Replace Any with actual data types, e.g., np.ndarray
+        """Loads, splits, and normalizes the data."""
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
         self._logger.log_info("Raw Pareto data loaded.")
 
-        # Split data into train and validation sets
-        objectives_train, objectives_val, decisions_train, decisions_val = (
-            train_test_split(
-                raw_data.pareto_front,
-                raw_data.pareto_set,
-                test_size=command.test_size,
-                random_state=command.random_state,
-            )
+        (
+            objectives_train,
+            objectives_val,
+            decisions_train,
+            decisions_val,
+        ) = train_test_split(
+            raw_data.pareto_front,
+            raw_data.pareto_set,
+            test_size=command.test_size,
+            random_state=command.random_state,
         )
         self._logger.log_info(
             f"Data split into training ({len(objectives_train)} samples) and validation ({len(objectives_val)} samples) sets."
         )
 
-        # Normalize training and validation data
         objectives_train_norm = objectives_normalizer.fit_transform(objectives_train)
         objectives_val_norm = objectives_normalizer.transform(objectives_val)
 
         decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
         decisions_val_norm = decisions_normalizer.transform(decisions_val)
+        self._logger.log_info("Data normalized.")
 
-        # Fit the interpolator instance on normalized data
+        return (
+            objectives_train_norm,
+            objectives_val_norm,
+            decisions_train_norm,
+            decisions_val_norm,
+            decisions_val,
+        )
+
+    def _train_model(
+        self,
+        inverse_decision_mapper: BaseInverseDecisionMapper,
+        objectives_train_norm: Any,
+        decisions_train_norm: Any,
+    ) -> None:
+        """Fits the model on the training data."""
         inverse_decision_mapper.fit(
             objectives=objectives_train_norm, decisions=decisions_train_norm
         )
         self._logger.log_info("Inverse decision mapper model fitted on training data.")
 
-        # Predict decision values on the validation set
+    def _validate_model(
+        self,
+        inverse_decision_mapper: BaseInverseDecisionMapper,
+        decisions_normalizer: BaseNormalizer,
+        validation_metric: BaseValidationMetric,
+        objectives_val_norm: Any,
+        decisions_val: Any,
+    ) -> dict[str, Any]:
+        """Predicts and calculates validation metrics."""
         decisions_pred_val_norm = inverse_decision_mapper.predict(objectives_val_norm)
-
-        # Inverse-transform predictions to original scale
         decisions_pred_val = decisions_normalizer.inverse_transform(
             decisions_pred_val_norm
         )
-
-        # Calculate validation metrics using the injected metric
-        metrics = {
+        metrics: dict[str, Any] = {
             validation_metric.name: validation_metric.calculate(
                 y_true=decisions_val, y_pred=decisions_pred_val
             )
         }
         self._logger.log_metrics(f"Validation Metrics: {metrics}")
+        return metrics
 
-        # Construct the InterpolatorModel entity with all its metadata
+    def _save_model(
+        self,
+        command: TrainSingleInterpolatorCommand,
+        inverse_decision_mapper: BaseInverseDecisionMapper,
+        objectives_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
+        metrics: dict[str, Any],
+    ) -> None:
+        """Constructs and saves the final model entity."""
         trained_interpolator_model = InterpolatorModel(
             parameters=command.params.model_dump(),
             inverse_decision_mapper=inverse_decision_mapper,
@@ -126,14 +220,22 @@ class TrainSingleInterpolatorCommandHandler:
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )
-
-        # Save the InterpolatorModel entity to the repository
         self._trained_model_repository.save(trained_interpolator_model)
         self._logger.log_info("Interpolator model saved to repository.")
 
+    def _visualize_results(
+        self,
+        objectives_train_norm: Any,
+        objectives_val_norm: Any,
+        decisions_train_norm: Any,
+        decisions_val_norm: Any,
+        inverse_decision_mapper: Any,
+    ) -> None:
+        """Generates plots if a visualizer is available."""
         if self._visualizer:
-            # The visualizer expects an object with pareto_front and pareto_set.
-            # We pass the validation data and predictions for plotting.
+            decisions_pred_val_norm = inverse_decision_mapper.predict(
+                objectives_val_norm
+            )
             self._visualizer.plot(
                 objectives_train=objectives_train_norm,
                 objectives_val=objectives_val_norm,
@@ -141,5 +243,4 @@ class TrainSingleInterpolatorCommandHandler:
                 decisions_val=decisions_val_norm,
                 decisions_pred_val=decisions_pred_val_norm,
             )
-
             self._logger.log_info("Plots generated.")
