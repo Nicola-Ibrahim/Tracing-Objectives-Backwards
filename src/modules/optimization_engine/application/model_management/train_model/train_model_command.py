@@ -1,9 +1,13 @@
 from pydantic import BaseModel, Field
 
-from ..dtos import InverseDecisionMapperParams, MetricConfig, NormalizerConfig
+from ..dtos import (
+    InverseDecisionMapperParams,
+    ModelPerformanceMetricConfig,
+    NormalizerConfig,
+)
 
 
-class TrainSingleModelCommand(BaseModel):
+class TrainModelCommand(BaseModel):
     """
     Pydantic Command to encapsulate all data required for training and saving
     an interpolator model. It specifies the interpolator type, its parameters,
@@ -24,8 +28,8 @@ class TrainSingleModelCommand(BaseModel):
         None,
         description="Configuration for the normalizer applied to decisions (input data).",
     )
-    validation_metric_config: MetricConfig = Field(
-        MetricConfig(type="MSE"),
+    model_performance_metric_config: ModelPerformanceMetricConfig = Field(
+        ModelPerformanceMetricConfig(type="MSE"),
         description="Configuration for the validation metric.",
     )
     test_size: float = Field(

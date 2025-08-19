@@ -3,6 +3,8 @@ import time
 from ..application.factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
+from ..application.factories.mertics import MetricFactory
+from ..application.factories.normalizer import NormalizerFactory
 from ..application.model_management.dtos import (
     GaussianProcessInverseDecisionMapperParams,
     KrigingInverseDecisionMapperParams,
@@ -13,17 +15,15 @@ from ..application.model_management.dtos import (
     SplineInverseDecisionMapperParams,
     SVRInverseDecisionMapperParams,
 )
-from ..application.model_management.train_model.train_single_model_command import (
-    MetricConfig,
+from ..application.model_management.train_model.train_model_command import (
+    ModelPerformanceMetricConfig,
     NormalizerConfig,
-    TrainSingleModelCommand,
+    TrainModelCommand,
 )
-from ..application.model_management.train_model.train_single_model_handler import (
-    TrainSingleModelCommandHandler,
+from ..application.model_management.train_model.train_model_handler import (
+    TrainModelCommandHandler,
 )
 from ..infrastructure.loggers.cmd_logger import CMDLogger
-from ..infrastructure.metrics import MetricFactory
-from ..infrastructure.normalizers import NormalizerFactory
 from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
@@ -33,7 +33,7 @@ from ..infrastructure.repositories.model_management.pickle_model_artifact_repo i
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
-    command_handler = TrainSingleModelCommandHandler(
+    command_handler = TrainModelCommandHandler(
         pareto_data_repo=NPZParetoDataRepository(),
         inverse_decision_factory=InverseDecisionMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             interpolator_params_instance = param_class()
 
             # Construct the command with the appropriate parameters
-            command = TrainSingleModelCommand(
+            command = TrainModelCommand(
                 params=interpolator_params_instance,
                 version_number=version_number,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
@@ -89,7 +89,7 @@ if __name__ == "__main__":
                     type="MinMaxScaler",
                     params={"feature_range": (0, 1)},
                 ),
-                validation_metric_config=MetricConfig(
+                model_performance_metric_config=ModelPerformanceMetricConfig(
                     type="MSE",
                     params={},  # No specific params for MSE
                 ),

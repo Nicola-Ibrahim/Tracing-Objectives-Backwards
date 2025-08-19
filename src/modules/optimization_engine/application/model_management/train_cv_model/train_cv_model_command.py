@@ -1,19 +1,13 @@
 from pydantic import BaseModel, Field
 
-from ..dtos import InverseDecisionMapperParams, MetricConfig, NormalizerConfig
+from ..dtos import (
+    InverseDecisionMapperParams,
+    ModelPerformanceMetricConfig,
+    NormalizerConfig,
+)
 
 
-class CrossValidationConfig(BaseModel):
-    n_splits: int = Field(5, description="Number of folds for K-fold cross-validation.")
-    shuffle: bool = Field(
-        True, description="Whether to shuffle the data before splitting into folds."
-    )
-    random_state: int = Field(
-        None, description="Random state for shuffling, if shuffle is True."
-    )
-
-
-class TrainCvInterpolatorCommand(BaseModel):
+class TrainCvModelCommand(BaseModel):
     """
     Command for training an interpolator model using K-fold cross-validation.
     """
@@ -32,18 +26,19 @@ class TrainCvInterpolatorCommand(BaseModel):
         None,
         description="Configuration for the normalizer applied to decisions (input data).",
     )
-    validation_metric_config: MetricConfig = Field(
-        MetricConfig(type="MSE"),
+    model_performance_metric_config: ModelPerformanceMetricConfig = Field(
+        ModelPerformanceMetricConfig(type="MSE"),
         description="Configuration for the validation metric.",
     )
 
     version_number: int = Field(..., description="The number of training run")
 
-    cross_validation_config: CrossValidationConfig = Field(
-        ..., description="Configuration for K-fold cross-validation."
+    n_splits: int = Field(5, description="Number of folds for K-fold cross-validation.")
+    shuffle: bool = Field(
+        True, description="Whether to shuffle the data before splitting into folds."
     )
-    generate_plots_per_fold: bool = Field(
-        False, description="Whether to generate plots for each cross-validation fold."
+    random_state: int = Field(
+        None, description="Random state for shuffling, if shuffle is True."
     )
 
     class Config:

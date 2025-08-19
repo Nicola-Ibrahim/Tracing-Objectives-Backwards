@@ -6,11 +6,11 @@ from sklearn.model_selection import KFold
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
+from ....domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 from ....domain.model_management.entities.model_artifact import (
     ModelArtifact,
 )
 from ....domain.model_management.interfaces.base_logger import BaseLogger
-from ....domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
 from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
@@ -20,12 +20,12 @@ from ...factories.inverse_decision_mapper import (
 )
 from ...factories.mertics import MetricFactory
 from ...factories.normalizer import NormalizerFactory
-from .train_cv_model_command import TrainCvInterpolatorCommand
+from .train_cv_model_command import TrainCvModelCommand
 
 
-class TrainCvInterpolatorCommandHandler:
+class TrainCvModelCommandHandler:
     """
-    Handler for the TrainCvInterpolatorCommand.
+    Handler for the TrainCvModelCommand.
     Orchestrates the interpolator training, validation, logging, and persistence processes
     using K-fold cross-validation.
     Dependencies are injected via the constructor.
@@ -49,7 +49,7 @@ class TrainCvInterpolatorCommandHandler:
         self._metric_factory = metric_factory
         self._visualizer = visualizer
 
-    def execute(self, command: TrainCvInterpolatorCommand) -> None:
+    def execute(self, command: TrainCvModelCommand) -> None:
         """
         Executes the cross-validation training workflow for a given interpolator.
         """
@@ -67,7 +67,7 @@ class TrainCvInterpolatorCommandHandler:
             objectives_normalizer_global,
             decisions_normalizer_global,
         ) = self._initialize_components(
-            command.validation_metric_config.model_dump(),
+            command.model_performance_metric_config.model_dump(),
             command.objectives_normalizer_config.model_dump(),
             command.decisions_normalizer_config.model_dump(),
         )
@@ -126,12 +126,14 @@ class TrainCvInterpolatorCommandHandler:
 
     def _initialize_components(
         self,
-        validation_metric_config: dict[str, Any],
+        model_performance_metric_config: dict[str, Any],
         objectives_normalizer_config: dict[str, Any],
         decisions_normalizer_config: dict[str, Any],
     ) -> tuple[BaseValidationMetric, BaseNormalizer, BaseNormalizer]:
         """Instantiates the performance metric and normalizers based on configurations."""
-        validation_metric = self._metric_factory.create(config=validation_metric_config)
+        validation_metric = self._metric_factory.create(
+            config=model_performance_metric_config
+        )
         objectives_normalizer_global = self._normalizer_factory.create(
             config=objectives_normalizer_config
         )

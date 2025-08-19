@@ -288,7 +288,7 @@ class NormalizerConfig(BaseModel):
     )
 
 
-class MetricConfig(BaseModel):
+class ModelPerformanceMetricConfig(BaseModel):
     """
     Configuration for a validation metric.
     """
