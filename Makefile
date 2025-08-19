@@ -1,3 +1,7 @@
+# ====================================================================================
+# General & Configuration
+# ====================================================================================
+
 # Catch all targets and store them in a variable. This makes the `help` command self-documenting.
 COMMANDS := $(shell grep -E '^[a-zA-Z0-9_-]+:.*' Makefile | sed 's/:.*//')
 
@@ -8,16 +12,16 @@ YELLOW := \033[33m
 BLUE   := \033[34m
 RESET  := \033[0m
 
-# ====================================================================================
-# General & Helper Commands
-# ====================================================================================
-
 # Helper command to run Python scripts within the 'uv' virtual environment.
 # 'uv run' executes a script, while 'uvx' runs an arbitrary command.
-UV := uv run
+PYTHON := uv run python
+
+# ====================================================================================
+# Project Management
+# ====================================================================================
 
 .PHONY: help
-help:  # List all available commands and their descriptions
+help:  # Display this help menu with all available commands
 	@echo "$(YELLOW)================================================================$(RESET)"
 	@echo "$(YELLOW)                   🚀 Project Commands 🚀                    $(RESET)"
 	@echo "$(YELLOW)================================================================$(RESET)"
@@ -30,81 +34,75 @@ help:  # List all available commands and their descriptions
 	@echo "$(YELLOW)================================================================$(RESET)"
 
 .PHONY: install
-install:  # Install project dependencies using the uv lock file
+install:  # Install all project dependencies from the lock file
 	@echo "$(BLUE)Installing project dependencies...$(RESET)"
 	uv pip install -r requirements.txt
 	@echo "$(GREEN)Dependencies installed successfully!$(RESET)"
 
-# ====================================================================================
-# Data Pipeline Commands
-# ====================================================================================
-
-.PHONY: data-generate
-data-generate:  # Generate synthetic Pareto front data for a specified problem
-	@echo "$(BLUE)Generating synthetic data...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.generate_data --problem-id 5
-	@echo "$(GREEN)Data generation complete.$(RESET)"
-
-.PHONY: data-analyze
-data-analyze:  # Analyze and visualize the generated synthetic data
-	@echo "$(BLUE)Analyzing generated data...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.analyze_data
-	@echo "$(GREEN)Data analysis complete.$(RESET)"
-
-.PHONY: data-process
-data-process: data-generate data-analyze  # Run the full data generation and analysis pipeline
-	@echo "$(GREEN)✔️ Full data processing pipeline completed successfully.$(RESET)"
-
-# ====================================================================================
-# Model Training & Inference Commands
-# ====================================================================================
-
-.PHONY: train-interpolator
-train-interpolator:  # Train an inverse decision mapper using the synthetic data
-	@echo "$(BLUE)Training interpolator model...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.train_interpolator
-	@echo "$(GREEN)Interpolator training complete.$(RESET)"
-
-.PHONY: train-all-interpolators
-train-all-interpolators:  # Train an inverse decision mapper using the synthetic data
-	@echo "$(BLUE)Training interpolator model...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.train_all_interpolators
-	@echo "$(GREEN)Interpolator training complete.$(RESET)"
-
-.PHONY: generate-decision
-generate-decision:  # Generate a decision from a trained model for a hardcoded target objective
-	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.generate_decision
-	@echo "$(GREEN)Decision generation complete.$(RESET)"
-	
-.PHONY: analyze-performance
-analyze-performance:  # Analyze and visualize the performance metrics of trained models
-	@echo "$(BLUE)Analyzing model performance...$(RESET)"
-	$(UV) python -m src.modules.optimization_engine.cli.analyze_performance
-	@echo "$(GREEN)Performance analysis complete.$(RESET)"
-	
-# ====================================================================================
-# Maintenance Commands
-# ====================================================================================
-
 .PHONY: clean
-clean:  # Clean up generated data, cache files, and trained models
+clean:  # Remove all generated data, trained models, and cache files
 	@echo "$(RED)Cleaning up generated files...$(RESET)"
-	rm -rf src/data/raw/synthetic/*
+	rm -rf src/data/raw/synthetic/
 	rm -rf models/
 	find . -name "*.pyc" -delete
 	find . -name "__pycache__" -type d -exec rm -r {} +
 	@echo "$(GREEN)Cleanup complete.$(RESET)"
 
 # ====================================================================================
-# Default & All Targets
+# Data & Training Pipeline
+# ====================================================================================
+
+.PHONY: data-generate
+data-generate:  # Generate synthetic Pareto front data for a specified problem
+	@echo "$(BLUE)Generating synthetic data...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.generate_data --problem-id 5
+	@echo "$(GREEN)Data generation complete.$(RESET)"
+
+.PHONY: data-visualize
+data-visualize:  # Visualize the generated data
+	@echo "$(BLUE)Visualizing generated data...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualize_data
+	@echo "$(GREEN)Data visualization complete.$(RESET)"
+
+.PHONY: data-process
+data-process: data-generate data-visualize # Run the full data generation pipeline
+	@echo "$(BLUE)Analyzing and visualizing generated data...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.analyze_data
+	@echo "$(GREEN)Data processing complete.$(RESET)"
+
+.PHONY: model-train-single
+model-train-single:  # Train a single inverse decision mapper on the processed data
+	@echo "$(BLUE)Training a single interpolator model...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.train_single_model
+	@echo "$(GREEN)Model training complete.$(RESET)"
+
+.PHONY: model-train-all
+model-train-all:  # Train all inverse decision mappers defined in configuration
+	@echo "$(BLUE)Training all configured interpolator models...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.train_all_models
+	@echo "$(GREEN)All models trained successfully.$(RESET)"
+
+.PHONY: model-generate-decision
+model-generate-decision:  # Use a trained model to generate a decision for a target objective
+	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.generate_decision
+	@echo "$(GREEN)Decision generation complete.$(RESET)"
+
+.PHONY: model-visualize-performance
+model-visualize-performance:  # Visualize the performance of trained models
+	@echo "$(BLUE)Analyzing and visualizing model performance...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualize_models_performance
+	@echo "$(GREEN)Performance analysis complete.$(RESET)"
+
+# ====================================================================================
+# Default Targets
 # ====================================================================================
 
 .PHONY: all
-all: data-process train-interpolator  # Run the entire data processing and training workflow
-
-# Declare all targets as PHONY to prevent conflicts with files of the same name
-.PHONY: $(COMMANDS)
+all: data-process model-train-all # Run the complete data and training workflow
 
 # Set the default goal to 'help' if no target is specified
 .DEFAULT_GOAL := help
+
+# Declare all targets as PHONY to prevent conflicts with files of the same name
+.PHONY: $(COMMANDS)
