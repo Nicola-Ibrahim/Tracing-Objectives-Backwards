@@ -1,8 +1,8 @@
 import numpy as np
+import numpy.typing as npt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from numpy.typing import NDArray
 from torch.distributions import Categorical, Independent, MixtureSameFamily, Normal
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
@@ -90,7 +90,7 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
         self._model: MDN | None = None  # Initialize model as None, to be set in fit
 
     def fit(
-        self, objectives: NDArray[np.float64], decisions: NDArray[np.float64]
+        self, objectives: npt.NDArray[np.float64], decisions: npt.NDArray[np.float64]
     ) -> None:
         """
         Fits the MDN model to the provided objectives and decisions.
@@ -126,13 +126,17 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
             loss.backward()  # Backpropagation
             optimizer.step()  # Update model parameters
 
-    def predict(self, target_objectives: NDArray[np.float64]) -> NDArray[np.float64]:
+    def predict(
+        self, target_objectives: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """
         Predicts decisions for given target objectives by sampling from the learned
         mixture distribution.
 
         Args:
             target_objectives (NDArray[np.float64]): The objectives for which to predict decisions.
+            mode (str): The mode of prediction ("sampled", "map", or "expected").
+            num_samples (int): The number of samples to draw if mode is "sampled".
 
         Returns:
             NDArray[np.float64]: The sampled decisions corresponding to the target objectives.
@@ -149,6 +153,9 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
             )  # Forward pass to get distribution parameters
             # Recreate the MixtureSameFamily distribution
             dist = MixtureSameFamily(Categorical(pi), Independent(Normal(mu, sigma), 1))
-            samples = dist.sample()  # Sample decisions from the learned distribution
 
-        return samples.numpy()  # Convert sampled decisions back to a numpy array
+            samples = dist.sample(
+                (10,)
+            )  # Sample decisions from the learned distribution (n_samples, N, d_x)
+
+            return samples.numpy()  # Convert sampled decisions back to a numpy array

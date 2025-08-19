@@ -10,7 +10,7 @@ class BaseInterpolationModelRepository(ABC):
     """
 
     @abstractmethod
-    def save(self, interpolator_model: ModelArtifact) -> None:
+    def save(self, model_artifact: ModelArtifact) -> None:
         """
         Saves a new ModelArtifact entity (representing a specific training run/version).
         Each version is saved in a unique directory identified by its ID.
@@ -39,12 +39,12 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_versions(self, interpolator_type: str) -> list[ModelArtifact]:
+    def get_all_versions(self, model_type: str) -> list[ModelArtifact]:
         """
         Retrieves all trained versions of a model based on its type.
 
         Args:
-            interpolator_type: The type of interpolation model (e.g., 'gaussian_process_nd')
+             model_type: The type of interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
             A list of ModelArtifact entities, sorted by version_number (highest first)
@@ -52,12 +52,12 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_latest_version(self, interpolator_type: str) -> ModelArtifact:
+    def get_latest_version(self, model_type: str) -> ModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
 
         Args:
-            interpolator_type: The type of interpolation model
+             model_type: The type of interpolation model
 
         Returns:
             The ModelArtifact entity with the highest version_number

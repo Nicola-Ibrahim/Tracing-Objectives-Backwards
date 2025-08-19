@@ -44,16 +44,13 @@ if __name__ == "__main__":
     )
 
     command = TrainModelCommand(
-        params=MDNInverseDecisionMapperParams(),
-        version_number=1,
-        should_generate_plots=True,
+        inverse_decision_mapper_params=MDNInverseDecisionMapperParams(),
         objectives_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
         decisions_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
-        model_performance_metric_config=ModelPerformanceMetricConfig(type="MSE"),
     )
 
     # Execute the command handler

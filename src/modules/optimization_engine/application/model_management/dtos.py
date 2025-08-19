@@ -293,7 +293,7 @@ class ModelPerformanceMetricConfig(BaseModel):
     Configuration for a validation metric.
     """
 
-    type: Literal["MSE"] = Field(..., description="The type of the metric to use.")
+    type: str = Field(..., description="The type of the metric to use.")
     params: dict[str, Any] = Field(
         {}, description="Parameters specific to the metric type."
     )

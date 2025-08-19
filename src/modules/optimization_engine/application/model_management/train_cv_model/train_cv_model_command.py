@@ -31,8 +31,6 @@ class TrainCvModelCommand(BaseModel):
         description="Configuration for the validation metric.",
     )
 
-    version_number: int = Field(..., description="The number of training run")
-
     n_splits: int = Field(5, description="Number of folds for K-fold cross-validation.")
     shuffle: bool = Field(
         True, description="Whether to shuffle the data before splitting into folds."

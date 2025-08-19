@@ -38,8 +38,8 @@ class ModelArtifact(BaseModel):
         description="The fitted normalizer for the output/objective space (y_train).",
     )
 
-    metrics: dict[str, Any] = Field(
-        default_factory=dict,
+    metrics: list[dict[str, Any]] = Field(
+        default_factory=list,
         description="Performance metrics specific to this training run.",
     )
     trained_at: datetime = Field(
@@ -47,7 +47,10 @@ class ModelArtifact(BaseModel):
         description="Timestamp indicating when this model version was trained.",
     )
 
-    version_number: int = Field(..., description="The number of training run")
+    version_number: int | None = Field(
+        None,
+        description="Automatically assigned sequential version number for the training run",
+    )
 
     class Config:
         arbitrary_types_allowed = True

@@ -1,5 +1,6 @@
 from typing import Any
 
+import numpy as np
 from sklearn.model_selection import train_test_split
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
@@ -60,84 +61,93 @@ class TrainModelCommandHandler:
             inverse_decision_mapper,
             objectives_normalizer,
             decisions_normalizer,
-            validation_metric,
-        ) = self._initialize_components(command)
+        ) = self._initialize_components(
+            command.inverse_decision_mapper_params.model_dump(),
+            command.objectives_normalizer_config.model_dump(),
+            command.decisions_normalizer_config.model_dump(),
+        )
 
         # Step 2: Load and prepare the data
         (
             objectives_train_norm,
             objectives_val_norm,
-            decisions_train_norm,
-            decisions_val_norm,
+            decisions_train,
             decisions_val,
-        ) = self._prepare_data(command, objectives_normalizer, decisions_normalizer)
+        ) = self._prepare_data(
+            command.test_size,
+            command.random_state,
+            objectives_normalizer,
+            decisions_normalizer,
+        )
 
         # Step 3: Train the model
         self._train_model(
-            inverse_decision_mapper, objectives_train_norm, decisions_train_norm
+            inverse_decision_mapper, objectives_train_norm, decisions_train
         )
 
         # Step 4: Validate the model and calculate metrics
         metrics = self._validate_model(
             inverse_decision_mapper,
             decisions_normalizer,
-            validation_metric,
             objectives_val_norm,
             decisions_val,
+            command.model_performance_metric_configs,
         )
 
-        # Step 5: Save the trained model and its metadata
+        # Step 5: Save the trained model and its metadata (version assigned by repository)
+        # Convert metrics mapping to list-of-dicts for artifact storage
+        metrics_list = [{k: v} for k, v in metrics.items()]
+
         self._save_model(
-            command,
+            command.inverse_decision_mapper_params.model_dump(),
             inverse_decision_mapper,
             objectives_normalizer,
             decisions_normalizer,
-            metrics,
+            metrics_list,
         )
 
         # Step 6: Visualize results if a visualizer is provided
         self._visualize_results(
             objectives_train_norm,
             objectives_val_norm,
-            decisions_train_norm,
-            decisions_val_norm,
+            decisions_train,
+            decisions_val,
             inverse_decision_mapper,
+            decisions_normalizer,
         )
 
         self._logger.log_info("Interpolator training workflow completed.")
 
     def _initialize_components(
-        self, command: TrainModelCommand
-    ) -> tuple[Any, Any, Any, Any]:
+        self,
+        model_params_config: Any,
+        objectives_normalizer_config: Any,
+        decisions_normalizer_config: Any,
+    ) -> tuple[BaseInverseDecisionMapper, BaseNormalizer, BaseNormalizer]:
         """Initializes components using their respective factories."""
-        inverse_decision_mapper = self._inverse_decision_factory.create(
-            params=command.params.model_dump()
+        inverse_decision_mapper: BaseInverseDecisionMapper = (
+            self._inverse_decision_factory.create(params=model_params_config)
         )
-        objectives_normalizer = self._normalizer_factory.create(
-            config=command.objectives_normalizer_config.model_dump()
+        objectives_normalizer: BaseNormalizer = self._normalizer_factory.create(
+            config=objectives_normalizer_config
         )
-        decisions_normalizer = self._normalizer_factory.create(
-            config=command.decisions_normalizer_config.model_dump()
-        )
-        validation_metric = self._metric_factory.create(
-            config=command.model_performance_metric_config.model_dump()
+        decisions_normalizer: BaseNormalizer = self._normalizer_factory.create(
+            config=decisions_normalizer_config
         )
         self._logger.log_info("All components initialized.")
         return (
             inverse_decision_mapper,
             objectives_normalizer,
             decisions_normalizer,
-            validation_metric,
         )
 
     def _prepare_data(
         self,
-        command: TrainModelCommand,
+        test_size: float,
+        random_state: int,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
-    ) -> tuple[
-        Any, Any, Any, Any, Any
-    ]:  # Replace Any with actual data types, e.g., np.ndarray
+    ) -> tuple[Any, Any, Any, Any]:
         """Loads, splits, and normalizes the data."""
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
         self._logger.log_info("Raw Pareto data loaded.")
@@ -150,8 +160,8 @@ class TrainModelCommandHandler:
         ) = train_test_split(
             raw_data.pareto_front,
             raw_data.pareto_set,
-            test_size=command.test_size,
-            random_state=command.random_state,
+            test_size=test_size,
+            random_state=random_state,
         )
         self._logger.log_info(
             f"Data split into training ({len(objectives_train)} samples) and validation ({len(objectives_val)} samples) sets."
@@ -161,14 +171,13 @@ class TrainModelCommandHandler:
         objectives_val_norm = objectives_normalizer.transform(objectives_val)
 
         decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
-        decisions_val_norm = decisions_normalizer.transform(decisions_val)
+
         self._logger.log_info("Data normalized.")
 
         return (
             objectives_train_norm,
             objectives_val_norm,
             decisions_train_norm,
-            decisions_val_norm,
             decisions_val,
         )
 
@@ -188,37 +197,57 @@ class TrainModelCommandHandler:
         self,
         inverse_decision_mapper: BaseInverseDecisionMapper,
         decisions_normalizer: BaseNormalizer,
-        validation_metric: BaseValidationMetric,
         objectives_val_norm: Any,
         decisions_val: Any,
+        metric_configs: list[Any],
     ) -> dict[str, Any]:
-        """Predicts and calculates validation metrics."""
+        """Predicts and calculates validation metrics for all specified configurations."""
         decisions_pred_val_norm = inverse_decision_mapper.predict(objectives_val_norm)
+
+        # Handle probabilistic predictors that return samples with shape
+        # (n_samples, n_points, n_decisions). Reduce to (n_points, n_decisions).
+        if (
+            isinstance(decisions_pred_val_norm, np.ndarray)
+            and decisions_pred_val_norm.ndim >= 3
+        ):
+            decisions_pred_val_norm = decisions_pred_val_norm.mean(axis=0)
+        elif (
+            isinstance(decisions_pred_val_norm, np.ndarray)
+            and decisions_pred_val_norm.ndim == 1
+        ):
+            decisions_pred_val_norm = decisions_pred_val_norm.reshape(-1, 1)
+
         decisions_pred_val = decisions_normalizer.inverse_transform(
             decisions_pred_val_norm
         )
-        metrics: dict[str, Any] = {
-            validation_metric.name: validation_metric.calculate(
+
+        metrics: dict[str, Any] = {}
+        for config in metric_configs:
+            cfg = config.model_dump() if hasattr(config, "model_dump") else config
+            validation_metric: BaseValidationMetric = self._metric_factory.create(
+                config=cfg
+            )
+            score = validation_metric.calculate(
                 y_true=decisions_val, y_pred=decisions_pred_val
             )
-        }
+            metrics[validation_metric.name] = score
+
         self._logger.log_metrics(f"Validation Metrics: {metrics}")
         return metrics
 
     def _save_model(
         self,
-        command: TrainModelCommand,
+        model_params: dict[str, Any],
         inverse_decision_mapper: BaseInverseDecisionMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
-        metrics: dict[str, Any],
+        metrics: list[dict[str, Any]],
     ) -> None:
-        """Constructs and saves the final model entity."""
+        """Constructs and saves the final model entity. The repository will assign version_number."""
         trained_model_artifact = ModelArtifact(
-            parameters=command.params.model_dump(),
+            parameters=model_params,
             inverse_decision_mapper=inverse_decision_mapper,
             metrics=metrics,
-            version_number=command.version_number,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )
@@ -230,19 +259,36 @@ class TrainModelCommandHandler:
         objectives_train_norm: Any,
         objectives_val_norm: Any,
         decisions_train_norm: Any,
-        decisions_val_norm: Any,
-        inverse_decision_mapper: Any,
+        decisions_val: Any,
+        inverse_decision_mapper: BaseInverseDecisionMapper,
+        decisions_normalizer: BaseNormalizer,
     ) -> None:
         """Generates plots if a visualizer is available."""
         if self._visualizer:
             decisions_pred_val_norm = inverse_decision_mapper.predict(
                 objectives_val_norm
             )
+
+            if (
+                isinstance(decisions_pred_val_norm, np.ndarray)
+                and decisions_pred_val_norm.ndim >= 3
+            ):
+                decisions_pred_val_norm = decisions_pred_val_norm.mean(axis=0)
+            elif (
+                isinstance(decisions_pred_val_norm, np.ndarray)
+                and decisions_pred_val_norm.ndim == 1
+            ):
+                decisions_pred_val_norm = decisions_pred_val_norm.reshape(-1, 1)
+
+            decisions_pred_val = decisions_normalizer.inverse_transform(
+                decisions_pred_val_norm
+            )
+
             self._visualizer.plot(
                 objectives_train=objectives_train_norm,
                 objectives_val=objectives_val_norm,
                 decisions_train=decisions_train_norm,
-                decisions_val=decisions_val_norm,
-                decisions_pred_val=decisions_pred_val_norm,
+                decisions_val=decisions_val,
+                decisions_pred_val=decisions_pred_val,
             )
             self._logger.log_info("Plots generated.")

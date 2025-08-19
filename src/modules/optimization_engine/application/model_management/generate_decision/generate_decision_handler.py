@@ -34,16 +34,16 @@ class GenerateDecisionCommandHandler:
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         self._logger.log_info(
-            f"Starting FreeMode decision generation for interpolator type: {command.interpolator_type}"
+            f"Starting FreeMode decision generation for interpolator type: {command. model_type}"
         )
 
         # Load interpolation model and normalizers
         model = self._interpolation_model_repo.get_latest_version(
-            interpolator_type=command.interpolator_type
+            model_type=command.model_type
         )
         self._logger.log_info(
             f"Loaded interpolation model version {model.version_number} "
-            f"of type {command.interpolator_type}."
+            f"of type {command. model_type}."
         )
 
         inverse_decision_mapper = model.inverse_decision_mapper

@@ -14,7 +14,7 @@ class TrainModelCommand(BaseModel):
     and metadata for the resulting trained model.
     """
 
-    params: InverseDecisionMapperParams = Field(
+    inverse_decision_mapper_params: InverseDecisionMapperParams = Field(
         ...,
         description="Parameters (hyperparameters, configuration) used to initialize/configure "
         "this specific interpolator instance for training.",
@@ -28,10 +28,14 @@ class TrainModelCommand(BaseModel):
         None,
         description="Configuration for the normalizer applied to decisions (input data).",
     )
-    model_performance_metric_config: ModelPerformanceMetricConfig = Field(
-        ModelPerformanceMetricConfig(type="MSE"),
-        description="Configuration for the validation metric.",
+    model_performance_metric_configs: list[ModelPerformanceMetricConfig] = Field(
+        [
+            ModelPerformanceMetricConfig(type="MSE"),
+            ModelPerformanceMetricConfig(type="MAE"),
+        ],
+        description="Configurations for the validation metrics.",
     )
+
     test_size: float = Field(
         0.2,
         description="The proportion of the dataset to include in the test split for validation.",
@@ -44,7 +48,7 @@ class TrainModelCommand(BaseModel):
         "Pass an int for reproducible output across multiple function calls.",
     )
 
-    version_number: int = Field(..., description="The number of training run")
+    # version_number is assigned automatically by the repository when saving
 
     class Config:
         arbitrary_types_allowed = True

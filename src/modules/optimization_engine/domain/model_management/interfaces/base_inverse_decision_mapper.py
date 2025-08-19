@@ -88,4 +88,4 @@ class BaseInverseDecisionMapper(ABC):
         Returns:
             NDArray[np.float64]: Predicted values in the 'dependent' space.
         """
-        raise NotImplementedError  # No implementation in the abstract class
+        raise NotImplementedError("Predict method not implemented")

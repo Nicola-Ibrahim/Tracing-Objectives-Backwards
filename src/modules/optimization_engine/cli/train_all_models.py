@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     # Loop through each interpolator type
     for param_class in interpolator_param_classes:
-        interpolator_type_name = param_class.__name__.replace(
+        model_type_name = param_class.__name__.replace(
             "InverseDecisionMapperParams", ""
         )
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         for i in range(num_runs_per_type):
             version_number = i + 1
             print(
-                f"  > Run {version_number}/{num_runs_per_type} for {interpolator_type_name}"
+                f"  > Run {version_number}/{num_runs_per_type} for { model_type_name}"
             )
 
             # Instantiate the parameters for the current interpolator type
@@ -78,8 +78,7 @@ if __name__ == "__main__":
 
             # Construct the command with the appropriate parameters
             command = TrainModelCommand(
-                params=interpolator_params_instance,
-                version_number=version_number,
+                inverse_decision_mapper_params=interpolator_params_instance,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
                 objectives_normalizer_config=NormalizerConfig(
                     type="MinMaxScaler",
@@ -89,15 +88,17 @@ if __name__ == "__main__":
                     type="MinMaxScaler",
                     params={"feature_range": (0, 1)},
                 ),
-                model_performance_metric_config=ModelPerformanceMetricConfig(
-                    type="MSE",
-                    params={},  # No specific params for MSE
-                ),
+                model_performance_metric_configs=[
+                    ModelPerformanceMetricConfig(
+                        type="MSE",
+                        params={},  # No specific params for MSE
+                    )
+                ],
             )
 
             # Execute the command handler
             command_handler.execute(command)
             print(
-                f"  Successfully completed run {version_number} for {interpolator_type_name}"
+                f"  Successfully completed run {version_number} for { model_type_name}"
             )
             time.sleep(1)

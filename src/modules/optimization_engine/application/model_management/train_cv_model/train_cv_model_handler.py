@@ -100,15 +100,14 @@ class TrainCvModelCommandHandler:
             final_model=final_model,
             final_normalizers=final_normalizers,
             model_params=model_params,
-            version_number=command.version_number,
             cv_results=cv_metrics,
             fold_scores=fold_scores,
         )
+        # Logging will not rely on a pre-specified version_number; repository assigns it
         self._log_final_model(
             final_model=final_model,
             final_normalizers=final_normalizers,
             model_params=model_params,
-            version_number=command.version_number,
             cv_metrics=cv_metrics,
             fold_scores=fold_scores,
             n_splits=command.cross_validation_config.n_splits,
@@ -235,6 +234,17 @@ class TrainCvModelCommandHandler:
         # Evaluate the model on the validation set
         objectives_val_norm = fold_objectives_normalizer.transform(objectives_val)
         decisions_norm_pred = inverse_decision_mapper.predict(objectives_val_norm)
+        if (
+            isinstance(decisions_norm_pred, np.ndarray)
+            and decisions_norm_pred.ndim >= 3
+        ):
+            decisions_norm_pred = decisions_norm_pred.mean(axis=0)
+        elif (
+            isinstance(decisions_norm_pred, np.ndarray)
+            and decisions_norm_pred.ndim == 1
+        ):
+            decisions_norm_pred = decisions_norm_pred.reshape(-1, 1)
+
         decisions_pred = fold_decisions_normalizer.inverse_transform(
             decisions_norm_pred
         )
@@ -314,7 +324,6 @@ class TrainCvModelCommandHandler:
         final_model: Any,
         final_normalizers: dict[str, Any],
         model_params: dict[str, Any],
-        version_number: str,
         cv_results: dict[str, Any],
         fold_scores: defaultdict,
     ) -> None:
@@ -325,13 +334,15 @@ class TrainCvModelCommandHandler:
             final_metrics_for_entity[f"cv_mean_{metric_name}"] = np.mean(values)
             final_metrics_for_entity[f"cv_std_{metric_name}"] = np.std(values)
 
+        # Convert metrics mapping to list-of-dicts
+        metrics_list = [{k: v} for k, v in final_metrics_for_entity.items()]
+
         # Construct the final model entity
         trained_model_artifact = ModelArtifact(
             parameters=model_params,
             inverse_decision_mapper=final_model,
-            metrics=final_metrics_for_entity,
+            metrics=metrics_list,
             cross_validation_results=cv_results,
-            version_number=version_number,
             objectives_normalizer=final_normalizers["objectives_normalizer"],
             decisions_normalizer=final_normalizers["decisions_normalizer"],
         )
@@ -345,7 +356,6 @@ class TrainCvModelCommandHandler:
         final_model: Any,
         final_normalizers: dict[str, Any],
         model_params: dict[str, Any],
-        version_number: str,
         cv_metrics: dict[str, Any],
         fold_scores: defaultdict,
         n_splits: int,
@@ -358,15 +368,15 @@ class TrainCvModelCommandHandler:
             final_metrics_for_log[f"cv_std_{metric_name}"] = np.std(values)
 
         # Log the model artifact for version control and tracking
+        # Version is assigned by the repository; we omit it here from logger arguments
         self._logger.log_model(
             model=final_model,
-            name=f"{model_params.get('model_type', 'Interpolator')}_v{version_number}_cv",
+            name=f"{model_params.get('model_type', 'Interpolator')}_cv",
             model_type=model_params.get("model_type", "Unknown"),
             description=f"Interpolator model trained with {n_splits}-fold CV.",
             parameters=model_params,
             metrics=final_metrics_for_log,
-            notes=f"Cross-validation results for version {version_number}.",
-            collection_name="cv_interpolator_models",
-            step=version_number,
+            notes="Cross-validation results.",
+            collection_name="cv_ model_artifacts",
         )
         self._logger.log_info("Interpolator model artifact logged.")

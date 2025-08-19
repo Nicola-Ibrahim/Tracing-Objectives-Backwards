@@ -34,7 +34,7 @@ def main():
 
     # Create the command object using the hardcoded values
     command = GenerateDecisionCommand(
-        interpolator_type=InverseDecisionMapperType.KRIGING_ND.value,
+        model_type=InverseDecisionMapperType.KRIGING_ND.value,
         target_objective=target_objective_point,
         distance_tolerance=0.02,
         num_suggestions=5,

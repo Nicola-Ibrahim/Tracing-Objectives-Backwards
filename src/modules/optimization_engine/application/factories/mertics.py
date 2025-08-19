@@ -1,11 +1,19 @@
 from ...domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
-from ...infrastructure.metrics import MeanSquaredErrorValidationMetric
+from ...infrastructure.metrics import (
+    MeanAbsoluteErrorValidationMetric,
+    MeanSquaredErrorValidationMetric,
+)
 
 
 class MetricFactory:
     """
     Concrete factory for creating various validation metric instances.
     """
+
+    _registry = {
+        "MSE": MeanSquaredErrorValidationMetric,
+        "MAE": MeanAbsoluteErrorValidationMetric,
+    }
 
     def create(self, config: dict) -> BaseValidationMetric:
         """
@@ -14,19 +22,7 @@ class MetricFactory:
         metric_type = config.get("type")
         params = config.get("params", {})
 
-        if metric_type == "MSE":
-            return MeanSquaredErrorValidationMetric(**params)
+        if metric_type in self._registry:
+            return self._registry[metric_type](**params)
 
-        # elif metric_type == "MAE":
-        #     return MeanAbsoluteErrorValidationMetric(**params)
-
-        # elif metric_type == "R2":
-        #     return R2ScoreValidationMetric(**params)
-
-        # elif metric_type == "MAPE":
-        #     return MeanAbsolutePercentageErrorValidationMetric(**params)
-
-        # elif metric_type == "SMAPE":
-        #     return SymmetricMeanAbsolutePercentageErrorValidationMetric(**params)
-        else:
-            raise ValueError(f"Unknown metric type: {metric_type}")
+        raise ValueError(f"Unknown metric type: {metric_type}")
