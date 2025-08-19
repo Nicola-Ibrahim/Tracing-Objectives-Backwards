@@ -13,23 +13,26 @@ class NormalizerFactory:
     Concrete factory for creating various normalizer instances.
     """
 
+    _registry = {
+        "MinMaxScaler": MinMaxScalerNormalizer,
+        "HypercubeNormalizer": HypercubeNormalizer,
+        "StandardNormalizer": StandardNormalizer,
+        "UnitVectorNormalizer": UnitVectorNormalizer,
+        "LogNormalizer": LogNormalizer,
+    }
+
     def create(self, config: dict) -> BaseNormalizer:
         """
         Creates and returns a concrete normalizer instance based on the given type and parameters.
         """
         normalizer_type = config.get("type")
+
+        if not normalizer_type:
+            raise ValueError("Normalizer type must be specified in the config.")
+
         params = config.get("params", {})
 
-        if normalizer_type == "MinMaxScaler":
-            return MinMaxScalerNormalizer(**params)
-        elif normalizer_type == "HypercubeNormalizer":
-            return HypercubeNormalizer(**params)
-        elif normalizer_type == "StandardNormalizer":
-            return StandardNormalizer(**params)
-        elif normalizer_type == "UnitVectorNormalizer":
-            return UnitVectorNormalizer(**params)
-        elif normalizer_type == "LogNormalizer":
-            return LogNormalizer(**params)
-
-        else:
+        if normalizer_type not in self._registry:
             raise ValueError(f"Unknown normalizer type: {normalizer_type}")
+
+        return self._registry[normalizer_type](**params)

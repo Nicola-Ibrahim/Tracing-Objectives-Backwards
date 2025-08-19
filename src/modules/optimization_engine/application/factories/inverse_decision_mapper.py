@@ -69,12 +69,11 @@ class InverseDecisionMapperFactory:
 
         mapper_class_type = params.pop("type", None)
 
-        mapper_class = self._registry.get(mapper_class_type)
-
-        if mapper_class is None:
+        if mapper_class_type not in self._registry:
             raise ValueError(
                 f"Unknown or unsupported interpolator type: {mapper_class_type}"
             )
 
+        mapper_class = self._registry[mapper_class_type]
         # Instantiate the class using the parameters from the dictionary
         return mapper_class(**params)

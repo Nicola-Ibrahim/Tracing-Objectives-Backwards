@@ -24,7 +24,7 @@ class MetricFactory:
         metric_type = config.get("type")
         params = config.get("params", {})
 
-        if metric_type in self._registry:
-            return self._registry[metric_type](**params)
+        if metric_type not in self._registry:
+            raise ValueError(f"Unknown metric type: {metric_type}")
 
-        raise ValueError(f"Unknown metric type: {metric_type}")
+        return self._registry[metric_type](**params)
