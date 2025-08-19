@@ -116,7 +116,7 @@ class TrainModelCommandHandler:
             decisions_normalizer,
         )
 
-        self._logger.log_info("Interpolator training workflow completed.")
+        self._logger.log_info("Model training workflow completed.")
 
     def _initialize_components(
         self,
@@ -134,7 +134,6 @@ class TrainModelCommandHandler:
         decisions_normalizer: BaseNormalizer = self._normalizer_factory.create(
             config=decisions_normalizer_config
         )
-        self._logger.log_info("All components initialized.")
         return (
             inverse_decision_mapper,
             objectives_normalizer,
@@ -150,7 +149,6 @@ class TrainModelCommandHandler:
     ) -> tuple[Any, Any, Any, Any]:
         """Loads, splits, and normalizes the data."""
         raw_data = self._pareto_data_repo.load(filename="pareto_data")
-        self._logger.log_info("Raw Pareto data loaded.")
 
         (
             objectives_train,
@@ -171,8 +169,6 @@ class TrainModelCommandHandler:
         objectives_val_norm = objectives_normalizer.transform(objectives_val)
 
         decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
-
-        self._logger.log_info("Data normalized.")
 
         return (
             objectives_train_norm,
@@ -232,7 +228,6 @@ class TrainModelCommandHandler:
             )
             metrics[validation_metric.name] = score
 
-        self._logger.log_metrics(f"Validation Metrics: {metrics}")
         return metrics
 
     def _save_model(
@@ -291,4 +286,3 @@ class TrainModelCommandHandler:
                 decisions_val=decisions_val,
                 decisions_pred_val=decisions_pred_val,
             )
-            self._logger.log_info("Plots generated.")

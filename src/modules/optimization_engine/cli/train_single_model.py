@@ -51,6 +51,11 @@ if __name__ == "__main__":
         decisions_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
+        model_performance_metric_configs=[
+            ModelPerformanceMetricConfig(type="MSE"),
+            ModelPerformanceMetricConfig(type="MAE"),
+            ModelPerformanceMetricConfig(type="R2"),
+        ],
     )
 
     # Execute the command handler

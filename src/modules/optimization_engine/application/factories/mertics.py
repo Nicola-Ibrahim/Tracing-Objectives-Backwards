@@ -2,6 +2,7 @@ from ...domain.model_evaluation.interfaces.base_metric import BaseValidationMetr
 from ...infrastructure.metrics import (
     MeanAbsoluteErrorValidationMetric,
     MeanSquaredErrorValidationMetric,
+    R2ScoreValidationMetric,
 )
 
 
@@ -13,6 +14,7 @@ class MetricFactory:
     _registry = {
         "MSE": MeanSquaredErrorValidationMetric,
         "MAE": MeanAbsoluteErrorValidationMetric,
+        "R2": R2ScoreValidationMetric,
     }
 
     def create(self, config: dict) -> BaseValidationMetric:
