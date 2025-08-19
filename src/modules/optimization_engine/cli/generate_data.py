@@ -1,5 +1,8 @@
 import click
 
+from ..application.factories.algorithm import AlgorithmFactory
+from ..application.factories.optimizer import OptimizerFactory
+from ..application.factories.problem import ProblemFactory
 from ..application.generation.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
     GenerateBiobjParetoDataCommandHandler,
 )
@@ -12,9 +15,6 @@ from ..application.generation.generate_biobj_pareto_data.generate_pareto_command
     OptimizerType,
     ProblemType,
 )
-from ..infrastructure.algorithms import AlgorithmFactory
-from ..infrastructure.optimizers import OptimizerFactory
-from ..infrastructure.problems import ProblemFactory
 from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )

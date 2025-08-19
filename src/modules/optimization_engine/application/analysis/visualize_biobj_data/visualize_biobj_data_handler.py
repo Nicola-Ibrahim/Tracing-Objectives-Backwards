@@ -4,12 +4,12 @@ from ....domain.analysis.interfaces.base_visualizer import (
 from ....domain.generation.interfaces.base_repository import (
     BaseParetoDataRepository,
 )
-from .analyzing_biobj_data_command import AnalyzeBiobjDataCommand
+from .visualize_biobj_data_command import VisualizeBiobjDataCommand
 
 
-class AnalyzeBiobjDataCommandHandler:
+class VisulizeBiobjDataCommandHandler:
     """
-    Handles the AnalyzeBiobjDataCommand by using the ParetoDataService
+    Handles the VisualizeBiobjDataCommand by using the ParetoDataService
     to retrieve data and then visualizing it.
     """
 
@@ -28,7 +28,7 @@ class AnalyzeBiobjDataCommandHandler:
         self._pareto_data_repo = pareto_data_repo
         self._visualizer = visualizer
 
-    def execute(self, command: AnalyzeBiobjDataCommand) -> None:
+    def execute(self, command: VisualizeBiobjDataCommand) -> None:
         """
         Executes the command to analyze and visualize biobjective data.
 
@@ -38,6 +38,7 @@ class AnalyzeBiobjDataCommandHandler:
         Args:
             command: The command containing the identifier for the data to analyze.
         """
+
         # Retrieve the dataset using the repository
         pareto_data = self._pareto_data_repo.load(filename=command.data_file_name)
 

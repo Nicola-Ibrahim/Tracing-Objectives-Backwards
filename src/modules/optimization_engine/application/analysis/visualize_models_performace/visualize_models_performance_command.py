@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 
-class AnalyzeIntrepolatorsPerformanceCommand(BaseModel):
+class VisualizeModelsPerformanceCommand(BaseModel):
     """
     Command to request fetching and visualizing model performance data.
     Uses Pydantic for robust data validation.

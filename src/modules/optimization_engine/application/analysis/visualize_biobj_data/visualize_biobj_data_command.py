@@ -1,5 +1,5 @@
 from pydantic import BaseModel
 
 
-class AnalyzeBiobjDataCommand(BaseModel):
+class VisualizeBiobjDataCommand(BaseModel):
     data_file_name: str = "pareto_data"

@@ -1,8 +1,8 @@
-from ..application.analysis.analyze_interpolators_performace.analyze_interpolators_performance_command import (
-    AnalyzeIntrepolatorsPerformanceCommand,
+from ..application.analysis.visualize_models_performace.visualize_models_performance_command import (
+    VisualizeModelsPerformanceCommand,
 )
-from ..application.analysis.analyze_interpolators_performace.analyze_interpolators_performance_handler import (
-    AnalyzeModelPerformanceCommandHandler,
+from ..application.analysis.visualize_models_performace.visualize_models_performance_handler import (
+    VisualizeModelsPerformanceCommandHandler,
 )
 from ..domain.analysis.loaders.interpolator_metrics import InterpolatorMetricsLoader
 from ..infrastructure.visualizers.model_artifcat_metrics import (
@@ -22,12 +22,12 @@ def main():
     performance_visualizer = PlotlyModelArtifactMetricsVisualizer()
 
     # 3. Instantiate Application Layer components, injecting dependencies
-    performance_handler = AnalyzeModelPerformanceCommandHandler(
+    performance_handler = VisualizeModelsPerformanceCommandHandler(
         metrics_loader=metrics_loader, visualizer=performance_visualizer
     )
 
     # 4. Create the command to be handled, now using Pydantic's instantiation
-    command = AnalyzeIntrepolatorsPerformanceCommand(dir_name="models")
+    command = VisualizeModelsPerformanceCommand(dir_name="models")
 
     # Execute the command by calling the handler.
     performance_handler.handle(command)

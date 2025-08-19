@@ -2,12 +2,12 @@ from ....domain.analysis.interfaces.base_visualizer import (
     BaseDataVisualizer,
 )
 from ....domain.analysis.loaders.interpolator_metrics import InterpolatorMetricsLoader
-from .analyze_interpolators_performance_command import (
-    AnalyzeIntrepolatorsPerformanceCommand,
+from .visualize_models_performance_command import (
+    VisualizeModelsPerformanceCommand,
 )
 
 
-class AnalyzeModelPerformanceCommandHandler:
+class VisualizeModelsPerformanceCommandHandler:
     """
     An orchestrator that handles the end-to-end workflow of fetching metrics,
     grouping them by method, and visualizing their distribution.
@@ -26,12 +26,12 @@ class AnalyzeModelPerformanceCommandHandler:
         self.metrics_loader = metrics_loader
         self.visualizer = visualizer
 
-    def handle(self, command: AnalyzeIntrepolatorsPerformanceCommand) -> None:
+    def handle(self, command: VisualizeModelsPerformanceCommand) -> None:
         """
         Executes the full command workflow.
 
         Args:
-            command (AnalyzeIntrepolatorsPerformanceCommand): The command containing the model directory.
+            command (VisualizeModelsPerformanceCommand): The command containing the model directory.
         """
 
         metrics = self.metrics_loader.fetch(dir_name=command.dir_name)

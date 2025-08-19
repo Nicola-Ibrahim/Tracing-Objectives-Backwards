@@ -56,14 +56,50 @@ class NPZParetoDataRepository(BaseParetoDataRepository):
         if not load_path.exists():
             raise FileNotFoundError(f"No Pareto data found at {load_path}")
 
+        def _unpack(value, default=None):
+            """Helper to extract python objects from numpy 0-d arrays saved with allow_pickle.
+
+            If value is a zero-dim numpy array (common when saving Python objects),
+            return its item(); otherwise return value as-is. If value is None, return default.
+            """
+            if value is None:
+                return default
+            # numpy zero-d arrays that hold pickled Python objects
+            if isinstance(value, np.ndarray) and value.shape == ():
+                try:
+                    return value.item()
+                except Exception:
+                    return default
+            return value
+
         with np.load(load_path, allow_pickle=True) as data:
-            # Use .get() to handle optional historical data and ensure backward compatibility
+            pareto_set = data["pareto_set"]
+            pareto_front = data["pareto_front"]
+
+            historical_solutions = _unpack(data.get("historical_solutions"), None)
+            historical_objectives = _unpack(data.get("historical_objectives"), None)
+
+            raw_problem = _unpack(data.get("problem_name"), "")
+            problem_name = str(raw_problem) if raw_problem is not None else ""
+
+            raw_metadata = _unpack(data.get("metadata"), {})
+            if raw_metadata is None:
+                metadata = {}
+            elif isinstance(raw_metadata, dict):
+                metadata = raw_metadata
+            else:
+                # Try to coerce mapping-like objects into dict safely
+                try:
+                    metadata = dict(raw_metadata)
+                except Exception:
+                    metadata = {}
+
             pareto_data = ParetoDataModel(
-                pareto_set=data["pareto_set"],
-                pareto_front=data["pareto_front"],
-                historical_solutions=data.get("historical_solutions"),
-                historical_objectives=data.get("historical_objectives"),
-                problem_name=str(data["problem_name"]),
-                metadata=dict(data["metadata"].item()),
+                pareto_set=pareto_set,
+                pareto_front=pareto_front,
+                historical_solutions=historical_solutions,
+                historical_objectives=historical_objectives,
+                problem_name=problem_name,
+                metadata=metadata,
             )
         return pareto_data

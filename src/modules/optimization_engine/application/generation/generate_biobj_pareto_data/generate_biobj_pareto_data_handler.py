@@ -2,9 +2,9 @@ from pathlib import Path
 
 from ....domain.generation.entities.pareto_data import ParetoDataModel
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....infrastructure.algorithms import AlgorithmFactory
-from ....infrastructure.optimizers import OptimizerFactory
-from ....infrastructure.problems import ProblemFactory
+from ...factories.algorithm import AlgorithmFactory
+from ...factories.optimizer import OptimizerFactory
+from ...factories.problem import ProblemFactory
 from .generate_pareto_command import GenerateParetoCommand
 
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from pymoo.optimize import minimize
 
-from ...domain.generation.interfaces.base_optimizer import BaseOptimizer
+from ...domain.generation.interfaces.base_optimizer import ProblemAwareOptimizer
 from .result import OptimizationResult
 
 
@@ -24,8 +24,11 @@ class MinimizerConfig(BaseModel):
             raise ValueError("Too many generations, may exhaust memory")
         return v
 
+    class Config:
+        arbitrary_types_allowed = True
 
-class Minimizer(BaseOptimizer):
+
+class Minimizer(ProblemAwareOptimizer):
     def run(self) -> OptimizationResult:
         result = minimize(
             problem=self.problem,

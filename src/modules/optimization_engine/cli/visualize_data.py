@@ -1,8 +1,8 @@
-from ..application.analysis.analyze_biobj_data.analyzing_biobj_data_command import (
-    AnalyzeBiobjDataCommand,
+from ..application.analysis.visualize_biobj_data.visualize_biobj_data_command import (
+    VisualizeBiobjDataCommand,
 )
-from ..application.analysis.analyze_biobj_data.analyzing_biobj_data_handler import (
-    AnalyzeBiobjDataCommandHandler,
+from ..application.analysis.visualize_biobj_data.visualize_biobj_data_handler import (
+    VisulizeBiobjDataCommandHandler,
 )
 from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
@@ -11,8 +11,8 @@ from ..infrastructure.visualizers.pareto_data import PlotlyParetoDataVisualizer
 
 
 def analyze_data():
-    command = AnalyzeBiobjDataCommand()
-    handler = AnalyzeBiobjDataCommandHandler(
+    command = VisualizeBiobjDataCommand()
+    handler = VisulizeBiobjDataCommandHandler(
         pareto_data_repo=NPZParetoDataRepository(),
         visualizer=PlotlyParetoDataVisualizer(),
     )
