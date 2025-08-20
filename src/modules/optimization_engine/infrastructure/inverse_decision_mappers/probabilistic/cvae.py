@@ -121,30 +121,26 @@ class CVAEInverseDecisionMapper(BaseInverseDecisionMapper):
         self._y_dim: int | None = None  # Dimensionality of objectives (y)
         self._x_dim: int | None = None  # Dimensionality of decisions (x)
 
-    def fit(
-        self, objectives: NDArray[np.float64], decisions: NDArray[np.float64]
-    ) -> None:
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         """
-        Fits the CVAE model to the provided objectives and decisions.
+        Fits the CVAE model to the provided training features (X) and targets (y).
 
-        The CVAE is trained to reconstruct decisions (X) conditioned on objectives (Y),
-        while also ensuring the latent space follows a prior distribution (e.g., a standard normal).
+        The CVAE is trained to reconstruct targets (y) conditioned on features (X),
+        while also ensuring the latent space follows a prior distribution.
 
         Args:
-            objectives (NDArray[np.float64]): The input objective values (conditions Y).
-            decisions (NDArray[np.float64]): The target decision values (data X).
+            X (NDArray[np.float64]): Training input features.
+            y (NDArray[np.float64]): Training targets.
         """
-        super().fit(objectives, decisions)  # Call parent class fit method if necessary
+        super().fit(X, y)  # Call parent class fit method
 
         # Determine the dimensions of the objective and decision spaces
-        self._y_dim = objectives.shape[1]
-        self._x_dim = decisions.shape[1]
+        self._y_dim = X.shape[1]
+        self._x_dim = y.shape[1]
 
         # Convert numpy arrays to PyTorch tensors
-        X = torch.tensor(decisions, dtype=torch.float32)  # Decisions are X
-        Y = torch.tensor(
-            objectives, dtype=torch.float32
-        )  # Objectives are Y (conditions)
+        X_tensor = torch.tensor(X, dtype=torch.float32)
+        Y_tensor = torch.tensor(y, dtype=torch.float32)
 
         # Initialize the encoder and decoder modules
         self._encoder = CVAEEncoder(self._y_dim, self._x_dim, self._latent_dim)
@@ -158,39 +154,37 @@ class CVAEInverseDecisionMapper(BaseInverseDecisionMapper):
 
         # Training loop
         for epoch in range(self._epochs):
-            self._encoder.train()  # Set to training mode
-            self._decoder.train()  # Set to training mode
+            self._encoder.train()
+            self._decoder.train()
 
-            optimizer.zero_grad()  # Zero the gradients
+            optimizer.zero_grad()
 
             # Encoder forward pass: get mean and log-variance of the latent distribution
-            mu, logvar = self._encoder(Y)
+            mu, logvar = self._encoder(Y_tensor)
 
             # Reparameterization trick: sample z from the latent distribution
-            std = torch.exp(
-                0.5 * logvar
-            )  # Calculate standard deviation from log-variance
-            z = mu + std * torch.randn_like(std)  # Sample z
+            std = torch.exp(0.5 * logvar)
+            z = mu + std * torch.randn_like(std)
 
-            # Decoder forward pass: reconstruct X from z and Y
-            recon_x = self._decoder(z, Y)
+            # Decoder forward pass: reconstruct y from z and Y (conditioning)
+            recon_y = self._decoder(z, Y_tensor)
 
             # Calculate Reconstruction Loss (Mean Squared Error)
-            recon_loss = F.mse_loss(recon_x, X)
+            recon_loss = F.mse_loss(recon_y, X_tensor)
 
             # Calculate KL Divergence Loss
-            # KL divergence between the learned latent distribution q(z|x,y)
-            # and the prior p(z) (assumed to be a standard normal distribution)
-            # The formula for KL divergence for diagonal Gaussians is:
-            # KL(q || p) = 0.5 * sum(1 + logvar - mu^2 - exp(logvar))
-            kl_div = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / X.size(0)
+            kl_div = (
+                -0.5
+                * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+                / X_tensor.size(0)
+            )
 
             # Total loss is the sum of reconstruction loss and KL divergence
             loss = recon_loss + kl_div
-            loss.backward()  # Backpropagation
-            optimizer.step()  # Update model parameters
+            loss.backward()
+            optimizer.step()
 
-    def predict(self, target_objectives: NDArray[np.float64]) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """
         Generates decisions for given target objectives by sampling from the CVAE's decoder.
 
@@ -212,15 +206,11 @@ class CVAEInverseDecisionMapper(BaseInverseDecisionMapper):
         self._encoder.eval()  # Set encoder to evaluation mode
         self._decoder.eval()  # Set decoder to evaluation mode
 
-        # Convert target objectives to PyTorch tensor
-        Y = torch.tensor(target_objectives, dtype=torch.float32)
+        # Convert input features to PyTorch tensor
+        Y_tensor = torch.tensor(X, dtype=torch.float32)
 
-        with torch.no_grad():  # Disable gradient calculation for inference
-            # Sample a random vector from a standard normal distribution for the latent space
-            # The number of samples corresponds to the number of target objectives
-            z = torch.randn(Y.shape[0], self._latent_dim)
-            # Decode the latent sample and the target objectives to generate decisions
-            X_pred = self._decoder(z, Y)
+        with torch.no_grad():
+            z = torch.randn(Y_tensor.shape[0], self._latent_dim)
+            y_pred = self._decoder(z, Y_tensor)
 
-        # Convert the predicted decisions back to a numpy array
-        return X_pred.numpy()
+        return y_pred.numpy()

@@ -32,13 +32,9 @@ class KrigingInverseDecisionMapper(BaseInverseDecisionMapper):
         self.variogram_model = variogram_model
         self.n_neighbors = n_neighbors
 
-    def fit(
-        self,
-        objectives: NDArray[np.float64],
-        decisions: NDArray[np.float64],
-    ) -> None:
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         # 1. Call the parent's fit method for universal validation
-        super().fit(objectives, decisions)
+        super().fit(X, y)
 
         # 2. Perform specific validation
         if self._objective_dim != 2:
@@ -51,37 +47,32 @@ class KrigingInverseDecisionMapper(BaseInverseDecisionMapper):
         self._kriging_models = []
         for i in range(self._decision_dim):
             model = krige.OrdinaryKriging(
-                x=objectives[:, 0],
-                y=objectives[:, 1],
-                z=decisions[:, i],  # Pass only one decision dimension as the output
+                x=X[:, 0],
+                y=X[:, 1],
+                z=y[:, i],  # Pass only one target dimension as the output
                 variogram_model=self.variogram_model,
                 coordinates_type="euclidean",
             )
             self._kriging_models.append(model)
 
-    def predict(
-        self,
-        target_objectives: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         # Perform validation specific to this method
         if self._kriging_models is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
-        if target_objectives.ndim == 1:
-            target_objectives = target_objectives.reshape(-1, 1)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
 
-        if target_objectives.shape[1] != self._objective_dim:
+        if X.shape[1] != self._objective_dim:
             raise ValueError(
                 f"Target objectives must have {self._objective_dim} dimensions, "
-                f"but got {target_objectives.shape[1]} dimensions."
+                f"but got {X.shape[1]} dimensions."
             )
 
         # Call each fitted Kriging model and stack the results
         predictions = []
         for model in self._kriging_models:
-            pred_values, _ = model.execute(
-                "points", target_objectives[:, 0], target_objectives[:, 1]
-            )
+            pred_values, _ = model.execute("points", X[:, 0], X[:, 1])
             predictions.append(pred_values)
 
         return np.column_stack(predictions)

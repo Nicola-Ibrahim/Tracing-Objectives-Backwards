@@ -10,26 +10,26 @@ class BaseForwardDecisionMapper(ABC):
     """
 
     @abstractmethod
-    def predict(self, target_decision: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """
-        Abstract method to predict the performance (objectives) from a given target decision.
+        Abstract method to predict targets from input features.
 
         Args:
-            target_decision: The input decision (numpy array).
+            X: Input features (numpy array).
 
         Returns:
-            The predicted objectives (numpy array).
+            Predicted targets (numpy array).
         """
         pass
 
     @abstractmethod
-    def fit(self, decisions: np.ndarray, objectives: np.ndarray):
+    def fit(self, X: np.ndarray, y: np.ndarray):
         """
         Abstract method for training the forward mapper.
-        This method will typically be implemented only for learnable mappers (e.g., neural networks).
+        This method will typically be implemented for learnable mappers (e.g., neural networks).
 
         Args:
-            decisions: Training data for decisions (numpy array).
-            objectives: Training data for objectives (numpy array).
+            X: Training features (numpy array).
+            y: Training targets (numpy array).
         """
         pass

@@ -72,19 +72,19 @@ class CocoexFunctionForwardDecisionMapper(BaseForwardDecisionMapper):
                 "COCO problem object is None after initialization attempt."
             )
 
-    def predict(self, target_decision: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predicts objectives using the initialized cocoex problem.
 
         Args:
-            target_decision: The input decision (numpy array). Expected to be 1D for a single sample
+            X: The input decision (numpy array). Expected to be 1D for a single sample
                or 2D (batch_size, n_features) for multiple samples.
 
         Returns:
             The predicted objectives (numpy array). Will be 2D (batch_size, 1) for scalar objectives.
         """
         # Ensure input is float64 as cocoex functions typically expect it
-        processed_decision = target_decision.astype(np.float64)
+        processed_decision = X.astype(np.float64)
 
         if processed_decision.ndim == 2:
             # Apply the COCO problem function to each row in the batch
@@ -103,11 +103,7 @@ class CocoexFunctionForwardDecisionMapper(BaseForwardDecisionMapper):
                 f"Unsupported input dimensions for COCO problem: {processed_decision.ndim}. Expected 1D or 2D (batch)."
             )
 
-    def fit(
-        self,
-        decisions: np.ndarray,
-        objectives: np.ndarray,
-    ):
+    def fit(self, X: np.ndarray, y: np.ndarray):
         """
         This mapper does not require fitting as it's based on a predefined function.
         A warning is issued if this method is called.

@@ -11,7 +11,7 @@ from ....domain.model_management.interfaces.base_inverse_decision_mapper import 
 class SVRInverseDecisionMapper(BaseInverseDecisionMapper):
     """
     Inverse Decision Mapper using Scikit-learn's Support Vector Regressor (SVR)
-    with a MultiOutputRegressor wrapper to handle multi-dimensional decisions.
+    with a MultiOutputRegressor wrapper to handle multi-dimensional y.
     """
 
     # Now we store a single wrapped model
@@ -37,38 +37,35 @@ class SVRInverseDecisionMapper(BaseInverseDecisionMapper):
 
     def fit(
         self,
-        objectives: NDArray[np.float64],
-        decisions: NDArray[np.float64],
+        X: NDArray[np.float64],
+        y: NDArray[np.float64],
     ) -> None:
         # 1. Call the parent's fit method for universal validation
-        super().fit(objectives, decisions)
+        super().fit(X, y)
 
         # 2. Create a single SVR model to be wrapped
         base_svr = SVR(kernel=self.kernel, C=self.C, epsilon=self.epsilon)
 
         # 3. Wrap the single SVR model in a MultiOutputRegressor
-        # This allows it to handle the multi-dimensional `decisions` output.
+        # This allows it to handle the multi-dimensional `y` output.
         self._svr_model = MultiOutputRegressor(estimator=base_svr)
 
-        # 4. Fit the single wrapped model on the objectives and multi-dimensional decisions
-        self._svr_model.fit(objectives, decisions)
+        # 4. Fit the single wrapped model on the X and multi-dimensional y
+        self._svr_model.fit(X, y)
 
-    def predict(
-        self,
-        target_objectives: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         # Perform validation specific to this method
         if self._svr_model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
-        if target_objectives.ndim == 1:
-            target_objectives = target_objectives.reshape(-1, 1)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
 
-        if target_objectives.shape[1] != self._objective_dim:
+        if X.shape[1] != self._objective_dim:
             raise ValueError(
-                f"Target objectives must have {self._objective_dim} dimensions, "
-                f"but got {target_objectives.shape[1]} dimensions."
+                f"Target X must have {self._objective_dim} dimensions, "
+                f"but got {X.shape[1]} dimensions."
             )
 
         # Call the predict method on the single wrapped model
-        return self._svr_model.predict(target_objectives)
+        return self._svr_model.predict(X)

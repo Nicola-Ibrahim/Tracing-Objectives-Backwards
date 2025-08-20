@@ -67,22 +67,22 @@ class GaussianProcessInverseDecisionMapper(BaseInverseDecisionMapper):
 
     def fit(
         self,
-        objectives: NDArray[np.float64],
-        decisions: NDArray[np.float64],
+        X: NDArray[np.float64],
+        y: NDArray[np.float64],
     ) -> None:
         """
         Fits the Gaussian Process Regressor model to the provided data.
 
         Args:
-            objectives (NDArray[np.float64]): Training data in the input space (X).
-            decisions (NDArray[np.float64]): Training data in the output space (y).
+            X (NDArray[np.float64]): Training data in the input space (features).
+            y (NDArray[np.float64]): Training data in the output space (targets).
         """
         # 1. Call the parent's fit method for universal data validation
-        super().fit(objectives, decisions)
+        super().fit(X, y)
 
         # 2. Instantiate and fit the GPR model
         # The GPR handles multi-output regression by fitting a separate model for each output dimension
-        # when `decisions` has more than one column.
+        # when `y` has more than one column.
         self._gpr_model = GaussianProcessRegressor(
             kernel=self.kernel,
             alpha=self._alpha,
@@ -90,17 +90,14 @@ class GaussianProcessInverseDecisionMapper(BaseInverseDecisionMapper):
             random_state=self._random_state,
         )
 
-        self._gpr_model.fit(objectives, decisions)
+        self._gpr_model.fit(X, y)
 
-    def predict(
-        self,
-        target_objectives: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """
         Predicts corresponding 'dependent' values using the fitted GPR model.
 
         Args:
-            target_objectives (NDArray[np.float64]): The points for which to predict values.
+            X (NDArray[np.float64]): The points for which to predict values.
 
         Returns:
             NDArray[np.float64]: Predicted values.
@@ -109,16 +106,13 @@ class GaussianProcessInverseDecisionMapper(BaseInverseDecisionMapper):
         if self._gpr_model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
-        if target_objectives.ndim == 1:
-            target_objectives = target_objectives.reshape(-1, 1)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
 
-        if target_objectives.shape[1] != self._objective_dim:
+        if X.shape[1] != self._objective_dim:
             raise ValueError(
-                f"Target objectives must have {self._objective_dim} dimensions, "
-                f"but got {target_objectives.shape[1]} dimensions."
+                f"Input must have {self._objective_dim} dimensions, but got {X.shape[1]} dimensions."
             )
 
         # 2. Call the fitted GPR's predict method
-        # By default, GPR predicts the mean. It can also return the standard deviation
-        # if `return_std=True` is passed.
-        return self._gpr_model.predict(target_objectives)
+        return self._gpr_model.predict(X)

@@ -89,21 +89,19 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
         self._learning_rate = learning_rate
         self._model: MDN | None = None  # Initialize model as None, to be set in fit
 
-    def fit(
-        self, objectives: npt.NDArray[np.float64], decisions: npt.NDArray[np.float64]
-    ) -> None:
+    def fit(self, X: npt.NDArray[np.float64], y: npt.NDArray[np.float64]) -> None:
         """
         Fits the MDN model to the provided objectives and decisions.
 
         Args:
-            objectives (NDArray[np.float64]): The input objective values (features X).
-            decisions (NDArray[np.float64]): The target decision values (targets Y).
+            X (NDArray[np.float64]): The input feature values.
+            y (NDArray[np.float64]): The target values.
         """
-        super().fit(objectives, decisions)  # Call parent class fit method if necessary
+        super().fit(X, y)  # Call parent class fit method
 
         # Convert numpy arrays to PyTorch tensors
-        X = torch.tensor(objectives, dtype=torch.float32)
-        Y = torch.tensor(decisions, dtype=torch.float32)
+        X = torch.tensor(X, dtype=torch.float32)
+        Y = torch.tensor(y, dtype=torch.float32)
 
         # Initialize the MDN model with appropriate input and output dimensions
         self._model = MDN(
@@ -126,26 +124,22 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
             loss.backward()  # Backpropagation
             optimizer.step()  # Update model parameters
 
-    def predict(
-        self, target_objectives: npt.NDArray[np.float64]
-    ) -> npt.NDArray[np.float64]:
+    def predict(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """
         Predicts decisions for given target objectives by sampling from the learned
         mixture distribution.
 
         Args:
-            target_objectives (NDArray[np.float64]): The objectives for which to predict decisions.
-            mode (str): The mode of prediction ("sampled", "map", or "expected").
-            num_samples (int): The number of samples to draw if mode is "sampled".
+            X (NDArray[np.float64]): The feature points for which to predict targets.
 
         Returns:
-            NDArray[np.float64]: The sampled decisions corresponding to the target objectives.
+            NDArray[np.float64]: Sampled decisions corresponding to the given features.
         """
         if self._model is None:
             raise RuntimeError("The model has not been fit yet. Call 'fit' first.")
 
         self._model.eval()  # Set the model to evaluation mode
-        X = torch.tensor(target_objectives, dtype=torch.float32)
+        X = torch.tensor(X, dtype=torch.float32)
 
         with torch.no_grad():  # Disable gradient calculation for inference
             pi, mu, sigma = self._model(

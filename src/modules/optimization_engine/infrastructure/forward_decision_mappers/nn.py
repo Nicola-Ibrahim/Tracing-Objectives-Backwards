@@ -105,37 +105,35 @@ class NNForwardDecisionMapper(BaseForwardDecisionMapper):
         self.model.to(self.device)
         print(f"NNForwardDecisionMapper model moved to: {self.device}")
 
-    def predict(self, target_decision: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """
-        Predicts objectives using the trained PyTorch Neural Network.
+        Predicts y using the trained PyTorch Neural Network.
 
         Args:
-            target_decision: The input decision (numpy array).
+            X: The input decision (numpy array).
 
         Returns:
-            The predicted objectives (numpy array).
+            The predicted y (numpy array).
         """
         # Convert numpy array to torch.Tensor and move to device
-        target_decision_tensor = torch.tensor(target_decision, dtype=torch.float32).to(
-            self.device
-        )
+        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
 
         # Add batch dimension if a single sample is provided
-        if target_decision_tensor.ndim == 1:
-            target_decision_tensor = target_decision_tensor.unsqueeze(0)
+        if X_tensor.ndim == 1:
+            X_tensor = X_tensor.unsqueeze(0)
 
         # Ensure model is in evaluation mode for prediction
         self.model.eval()
         with torch.no_grad():
-            predicted_objectives_tensor = self.model(target_decision_tensor)
+            predicted_objectives_tensor = self.model(X_tensor)
 
         # Convert result back to numpy array and ensure float32
         return predicted_objectives_tensor.cpu().numpy().astype(np.float32)
 
     def fit(
         self,
-        decisions: np.ndarray,
-        objectives: np.ndarray,
+        X: np.ndarray,
+        y: np.ndarray,
         epochs: int = 100,
         batch_size: int = 32,
         learning_rate: float = 1e-3,
@@ -146,8 +144,8 @@ class NNForwardDecisionMapper(BaseForwardDecisionMapper):
         Trains the neural network model.
 
         Args:
-            decisions: Training data for decisions (numpy array).
-            objectives: Training data for objectives (numpy array).
+            X: Training data for X (numpy array).
+            y: Training data for y (numpy array).
             epochs (int): Number of training epochs.
             batch_size (int): Batch size for training.
             learning_rate (float): Learning rate for the optimizer.
@@ -155,10 +153,8 @@ class NNForwardDecisionMapper(BaseForwardDecisionMapper):
             loss_fn: The PyTorch loss function (e.g., torch.nn.MSELoss()).
         """
         # Convert numpy arrays to torch.Tensor and move to device
-        decisions_tensor = torch.tensor(decisions, dtype=torch.float32).to(self.device)
-        objectives_tensor = torch.tensor(objectives, dtype=torch.float32).to(
-            self.device
-        )
+        decisions_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
+        objectives_tensor = torch.tensor(y, dtype=torch.float32).to(self.device)
 
         # Ensure objectives_tensor has the correct shape (e.g., (N, 1) for scalar outputs)
         if objectives_tensor.ndim == 1 and self.model.output_dim == 1:

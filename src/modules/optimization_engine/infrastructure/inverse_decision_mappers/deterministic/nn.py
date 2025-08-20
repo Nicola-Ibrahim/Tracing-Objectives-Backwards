@@ -26,22 +26,20 @@ class Decoder(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
 
-    def forward(self, objectives: torch.Tensor) -> torch.Tensor:
-        return self.net(objectives)
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
+        return self.net(X)
 
     def prepare_tensors(
-        self, objectives: np.ndarray, decisions: np.ndarray
+        self, X: np.ndarray, y: np.ndarray
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        objectives_tensor = torch.tensor(objectives, dtype=torch.float32).to(
-            self.device
-        )
-        decisions_tensor = torch.tensor(decisions, dtype=torch.float32).to(self.device)
-        return objectives_tensor, decisions_tensor
+        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
+        y_tensor = torch.tensor(y, dtype=torch.float32).to(self.device)
+        return X_tensor, y_tensor
 
     def train_model(
         self,
-        objectives: np.ndarray,
-        decisions: np.ndarray,
+        X: np.ndarray,
+        y: np.ndarray,
         epochs: int = 1000,
         lr: float = 0.001,
         verbose: bool = False,
@@ -49,14 +47,12 @@ class Decoder(nn.Module):
         self.train()
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         loss_fn = nn.MSELoss()
-        objectives_tensor, decisions_tensor = self.prepare_tensors(
-            objectives, decisions
-        )
+        X_tensor, y_tensor = self.prepare_tensors(X, y)
         losses = []
         for epoch in range(epochs):
             optimizer.zero_grad()
-            outputs = self(objectives_tensor)
-            loss = loss_fn(outputs, decisions_tensor)
+            outputs = self(X_tensor)
+            loss = loss_fn(outputs, y_tensor)
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
@@ -92,16 +88,12 @@ class NNInverseDecisionMapper(BaseInverseDecisionMapper):
         # Call the parent's constructor to initialize shared state
         super().__init__()
 
-    def fit(
-        self,
-        objectives: NDArray[np.float64],
-        decisions: NDArray[np.float64],
-    ) -> None:
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         """
-        Fits the neural network decoder to learn the direct mapping from objectives to decisions.
+        Fits the neural network decoder to learn the direct mapping from X to y.
         """
         # Call the parent's fit to perform universal data validation and store dimensions.
-        super().fit(objectives, decisions)
+        super().fit(X, y)
 
         # Check if the decoder's input/output dimensions match the data.
         if (
@@ -110,37 +102,28 @@ class NNInverseDecisionMapper(BaseInverseDecisionMapper):
         ):
             raise ValueError(
                 f"Decoder dimensions do not match data. Decoder expects input={self.decoder.net[0].in_features}, output={self.decoder.net[-1].out_features}. "
-                f"Data has objectives={self._objective_dim}, decisions={self._decision_dim}."
+                f"Data has inputs={self._objective_dim}, outputs={self._decision_dim}."
                 "Please instantiate the Decoder with matching dimensions before fitting."
             )
 
-        # Train the decoder using the provided objectives and decisions
+        # Train the decoder using the provided X and y
         self.decoder.train_model(
-            objectives=objectives,
-            decisions=decisions,
-            epochs=self.epochs,
-            lr=self.learning_rate,
-            verbose=False,
+            X, y, epochs=self.epochs, lr=self.learning_rate, verbose=False
         )
 
-    def predict(self, target_objectives: NDArray[np.float64]) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """
-        Predicts decision vectors for given target objective points using the trained network.
+        Predicts decision vectors for given input feature points using the trained network.
         """
-        # Perform validation specific to this method.
-        # This check is crucial and must be here because this method is independent of the fit method
-        # for validation purposes.
         if self._objective_dim is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
-        if target_objectives.ndim == 1:
-            target_objectives = target_objectives.reshape(-1, 1)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
 
-        if target_objectives.shape[1] != self._objective_dim:
+        if X.shape[1] != self._objective_dim:
             raise ValueError(
-                f"Target objectives must have {self._objective_dim} dimensions, "
-                f"but got {target_objectives.shape[1]} dimensions."
+                f"Input must have {self._objective_dim} dimensions, but got {X.shape[1]} dimensions."
             )
 
-        # Use the decoder to predict for the given target objectives
-        return self.decoder.predict(target_objectives)
+        return self.decoder.predict(X)

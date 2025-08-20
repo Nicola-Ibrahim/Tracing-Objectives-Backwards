@@ -44,8 +44,8 @@ class BaseInverseDecisionMapper(ABC):
 
     def fit(
         self,
-        objectives: npt.NDArray[np.float64],
-        decisions: npt.NDArray[np.float64],
+        X: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
     ) -> None:
         """
         Fits the mapper with its knowledge base of known points.
@@ -55,37 +55,34 @@ class BaseInverseDecisionMapper(ABC):
         own `fit` method before performing their specific fitting logic.
 
         Args:
-            objectives (NDArray[np.float64]): Known points in the 'independent' space.
-            decisions (NDArray[np.float64]): Corresponding points in the 'dependent' space.
+            X (NDArray[np.float64]): Known points in the 'independent' space (features).
+            y (NDArray[np.float64]): Corresponding points in the 'dependent' space (targets).
         """
-        if objectives.ndim == 1:
-            objectives = objectives.reshape(-1, 1)
-        if decisions.ndim == 1:
-            decisions = decisions.reshape(-1, 1)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        if y.ndim == 1:
+            y = y.reshape(-1, 1)
 
-        if objectives.shape[0] != decisions.shape[0]:
-            raise ValueError(
-                "objectives and decisions must have the same number of samples."
-            )
-        if objectives.shape[0] == 0:
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y must have the same number of samples.")
+        if X.shape[0] == 0:
             raise ValueError("Input data cannot be empty for fitting the mapper.")
 
         # Store dimensions, which will be used by the dimensionality property
-        self._objective_dim = objectives.shape[1]
-        self._decision_dim = decisions.shape[1]
+        self._objective_dim = X.shape[1]
+        self._decision_dim = y.shape[1]
 
     @abstractmethod
     def predict(
         self,
-        target_objectives: npt.NDArray[np.float64],
+        X: npt.NDArray[np.float64],
     ) -> npt.NDArray[np.float64]:
         """
-        Predicts corresponding 'dependent' values for given 'independent' target points.
+        Predicts corresponding 'dependent' values for given feature points.
 
         Args:
-            target_objectives (NDArray[np.float64]): The points in the 'independent' space
-                                                          for which to predict 'dependent' values.
+            X (NDArray[np.float64]): The feature points for which to predict targets.
         Returns:
-            NDArray[np.float64]: Predicted values in the 'dependent' space.
+            NDArray[np.float64]: Predicted target values.
         """
         raise NotImplementedError("Predict method not implemented")

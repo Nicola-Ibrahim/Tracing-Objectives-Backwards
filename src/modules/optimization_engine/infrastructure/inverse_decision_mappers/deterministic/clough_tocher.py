@@ -10,47 +10,35 @@ from ....domain.model_management.interfaces.base_inverse_decision_mapper import 
 class CloughTocherInverseDecisionMapper(BaseInverseDecisionMapper):
     def __init__(self) -> None:
         super().__init__()
-        self._interp_func: CloughTocher2DInterpolator = None
+        self._interp_func: CloughTocher2DInterpolator | None = None
 
-    def fit(
-        self,
-        objectives: NDArray[np.float64],
-        decisions: NDArray[np.float64],
-    ) -> None:
-        # Call the parent's fit method for shared validation and dimension storage
-        super().fit(objectives, decisions)
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
+        """Fit the interpolator using features X and targets y."""
+        super().fit(X, y)
 
-        # Perform specific validation for this interpolator
-        if objectives.shape[1] != 2:
+        if X.shape[1] != 2:
             raise ValueError(
                 "CloughTocherInverseDecisionMapper requires 2D objective data."
             )
-        if len(objectives) < 4:
+        if len(X) < 4:
             raise ValueError(
                 "CloughTocherInverseDecisionMapper requires at least 4 data points for fitting."
             )
 
-        # Perform specific fitting logic
         self._interp_func = CloughTocher2DInterpolator(
-            points=objectives, values=decisions, fill_value="extrapolate"
+            points=X, values=y, fill_value="extrapolate"
         )
 
-    def predict(
-        self,
-        target_objectives: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
-        # Perform validation specific to this method
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         if self._interp_func is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
-        if target_objectives.ndim == 1:
-            target_objectives = target_objectives.reshape(-1, 1)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
 
-        if target_objectives.shape[1] != self._objective_dim:
+        if X.shape[1] != self._objective_dim:
             raise ValueError(
-                f"Target objectives must have {self._objective_dim} dimensions, "
-                f"but got {target_objectives.shape[1]} dimensions."
+                f"Target objectives must have {self._objective_dim} dimensions, but got {X.shape[1]} dimensions."
             )
 
-        # Call the fitted interpolation function
-        return self._interp_func(target_objectives)
+        return self._interp_func(X)
