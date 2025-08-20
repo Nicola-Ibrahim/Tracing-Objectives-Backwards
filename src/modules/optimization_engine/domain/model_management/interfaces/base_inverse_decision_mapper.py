@@ -72,6 +72,12 @@ class BaseInverseDecisionMapper(ABC):
         self._objective_dim = X.shape[1]
         self._decision_dim = y.shape[1]
 
+
+class DeterministicInverseDecisionMapper(BaseInverseDecisionMapper):
+    """
+    A deterministic inverse decision mapper that uses a fixed mapping strategy.
+    """
+
     @abstractmethod
     def predict(
         self,
@@ -82,6 +88,21 @@ class BaseInverseDecisionMapper(ABC):
 
         Args:
             X (NDArray[np.float64]): The feature points for which to predict targets.
+        Returns:
+            NDArray[np.float64]: Predicted target values.
+        """
+        raise NotImplementedError("Predict method not implemented")
+
+
+class ProbabilisticInverseDecisionMapper(BaseInverseDecisionMapper):
+    @abstractmethod
+    def predict(self, X: npt.NDArray[np.float64], mode: str) -> npt.NDArray[np.float64]:
+        """
+        Predicts corresponding 'dependent' values for given feature points.
+
+        Args:
+            X (NDArray[np.float64]): The feature points for which to predict targets.
+            mode (str): The prediction mode (e.g., "mean", "sample").
         Returns:
             NDArray[np.float64]: Predicted target values.
         """

@@ -3,11 +3,11 @@ from numpy.typing import NDArray
 from scipy.interpolate import NearestNDInterpolator
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class NearestNDInverseDecisionMapper(BaseInverseDecisionMapper):
+class NearestNDInverseDecisionMapper(DeterministicInverseDecisionMapper):
     _interp_func: NearestNDInterpolator | None = None
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:

@@ -11,6 +11,8 @@ from ....domain.model_management.entities.model_artifact import (
 )
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
     BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
+    ProbabilisticInverseDecisionMapper,
 )
 from ....domain.model_management.interfaces.base_logger import BaseLogger
 from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
@@ -94,16 +96,12 @@ class TrainModelCommandHandler:
             command.model_performance_metric_configs,
         )
 
-        # Step 5: Save the trained model and its metadata (version assigned by repository)
-        # Convert metrics mapping to list-of-dicts for artifact storage
-        metrics_list = [{k: v} for k, v in metrics.items()]
-
         self._save_model(
             command.inverse_decision_mapper_params.model_dump(),
             inverse_decision_mapper,
             objectives_normalizer,
             decisions_normalizer,
-            metrics_list,
+            metrics,
         )
 
         # Step 6: Visualize results if a visualizer is provided
@@ -184,9 +182,7 @@ class TrainModelCommandHandler:
         decisions_train_norm: Any,
     ) -> None:
         """Fits the model on the training data."""
-        inverse_decision_mapper.fit(
-            objectives=objectives_train_norm, decisions=decisions_train_norm
-        )
+        inverse_decision_mapper.fit(X=objectives_train_norm, y=decisions_train_norm)
         self._logger.log_info("Inverse decision mapper model fitted on training data.")
 
     def _validate_model(
@@ -198,7 +194,16 @@ class TrainModelCommandHandler:
         metric_configs: list[Any],
     ) -> dict[str, Any]:
         """Predicts and calculates validation metrics for all specified configurations."""
-        decisions_pred_val_norm = inverse_decision_mapper.predict(objectives_val_norm)
+
+        if isinstance(inverse_decision_mapper, ProbabilisticInverseDecisionMapper):
+            decisions_pred_val_norm = inverse_decision_mapper.predict(
+                objectives_val_norm, mode="mean"
+            )
+
+        elif isinstance(inverse_decision_mapper, DeterministicInverseDecisionMapper):
+            decisions_pred_val_norm = inverse_decision_mapper.predict(
+                objectives_val_norm
+            )
 
         # Handle probabilistic predictors that return samples with shape
         # (n_samples, n_points, n_decisions). Reduce to (n_points, n_decisions).
@@ -236,13 +241,13 @@ class TrainModelCommandHandler:
         inverse_decision_mapper: BaseInverseDecisionMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
-        metrics: list[dict[str, Any]],
+        metrics: dict[str, Any],
     ) -> None:
         """Constructs and saves the final model entity. The repository will assign version_number."""
         trained_model_artifact = ModelArtifact(
             parameters=model_params,
             inverse_decision_mapper=inverse_decision_mapper,
-            metrics=metrics,
+            metrics=[{k: v} for k, v in metrics.items()],
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )

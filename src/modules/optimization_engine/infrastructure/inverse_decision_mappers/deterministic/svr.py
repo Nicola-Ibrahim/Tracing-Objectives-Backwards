@@ -4,11 +4,11 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import SVR
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class SVRInverseDecisionMapper(BaseInverseDecisionMapper):
+class SVRInverseDecisionMapper(DeterministicInverseDecisionMapper):
     """
     Inverse Decision Mapper using Scikit-learn's Support Vector Regressor (SVR)
     with a MultiOutputRegressor wrapper to handle multi-dimensional y.

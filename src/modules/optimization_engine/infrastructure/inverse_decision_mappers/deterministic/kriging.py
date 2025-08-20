@@ -3,11 +3,11 @@ import pykrige.ok as krige
 from numpy.typing import NDArray
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class KrigingInverseDecisionMapper(BaseInverseDecisionMapper):
+class KrigingInverseDecisionMapper(DeterministicInverseDecisionMapper):
     """
     Inverse Decision Mapper using PyKrige's OrdinaryKriging for 2D objective spaces.
 

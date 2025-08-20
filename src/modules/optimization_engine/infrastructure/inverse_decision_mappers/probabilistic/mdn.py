@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical, Independent, MixtureSameFamily, Normal
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    ProbabilisticInverseDecisionMapper,
 )
 
 
@@ -62,7 +62,7 @@ class MDN(nn.Module):
         return pi, mu, sigma
 
 
-class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
+class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
     """
     An inverse mapper that uses a Mixture Density Network (MDN) to model the
     inverse relationship from objectives to decisions.
@@ -124,32 +124,55 @@ class MDNInverseDecisionMapper(BaseInverseDecisionMapper):
             loss.backward()  # Backpropagation
             optimizer.step()  # Update model parameters
 
-    def predict(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def predict(
+        self,
+        X: npt.NDArray[np.float64],
+        mode: str = "samples",
+        n_samples: int = 10,
+    ) -> npt.NDArray[np.float64]:
         """
-        Predicts decisions for given target objectives by sampling from the learned
-        mixture distribution.
+        Predicts decisions for given target objectives using the learned mixture distribution.
 
         Args:
             X (NDArray[np.float64]): The feature points for which to predict targets.
+            mode (str): Type of prediction to return:
+                - "samples": return sampled decisions from the mixture
+                - "map": return the most likely output (mean of the most probable component)
+                - "mean": return the expected output (mixture-weighted mean)
+            n_samples (int): Number of samples to draw if mode="samples".
 
         Returns:
-            NDArray[np.float64]: Sampled decisions corresponding to the given features.
+            NDArray[np.float64]: Predictions (samples, MAP, or mean) corresponding to the given features.
         """
         if self._model is None:
             raise RuntimeError("The model has not been fit yet. Call 'fit' first.")
 
-        self._model.eval()  # Set the model to evaluation mode
-        X = torch.tensor(X, dtype=torch.float32)
+        self._model.eval()
+        X_tensor = torch.tensor(X, dtype=torch.float32)
 
-        with torch.no_grad():  # Disable gradient calculation for inference
-            pi, mu, sigma = self._model(
-                X
-            )  # Forward pass to get distribution parameters
-            # Recreate the MixtureSameFamily distribution
-            dist = MixtureSameFamily(Categorical(pi), Independent(Normal(mu, sigma), 1))
+        with torch.no_grad():
+            pi, mu, sigma = self._model(X_tensor)  # (N, K), (N, K, d), (N, K, d)
 
-            samples = dist.sample(
-                (10,)
-            )  # Sample decisions from the learned distribution (n_samples, N, d_x)
+            # categorical distribution over components
+            cat = Categorical(pi)
+            # mixture of Gaussians
+            dist = MixtureSameFamily(cat, Independent(Normal(mu, sigma), 1))
 
-            return samples.numpy()  # Convert sampled decisions back to a numpy array
+            if mode == "samples":
+                samples = dist.sample((n_samples,))  # (n_samples, N, d)
+                return samples.numpy()
+
+            elif mode == "map":
+                # MAP: pick mean of the most probable component
+                k_star = torch.argmax(pi, dim=1)  # (N,)
+                # gather the corresponding means
+                y_hat = mu[torch.arange(mu.size(0)), k_star, :]  # (N, d)
+                return y_hat.numpy()
+
+            elif mode == "mean":
+                # Expected value = sum_k pi_k * mu_k
+                weighted_mean = torch.sum(pi.unsqueeze(-1) * mu, dim=1)  # (N, d)
+                return weighted_mean.numpy()
+
+            else:
+                raise ValueError(f"Unknown mode '{mode}'")

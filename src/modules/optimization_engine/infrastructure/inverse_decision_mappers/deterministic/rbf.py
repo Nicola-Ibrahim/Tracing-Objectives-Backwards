@@ -3,11 +3,11 @@ from numpy.typing import NDArray
 from scipy.interpolate import RBFInterpolator
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class RBFInverseDecisionMapper(BaseInverseDecisionMapper):
+class RBFInverseDecisionMapper(DeterministicInverseDecisionMapper):
     _interp_func: RBFInterpolator | None = None
 
     def __init__(

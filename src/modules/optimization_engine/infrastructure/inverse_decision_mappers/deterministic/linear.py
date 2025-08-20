@@ -3,11 +3,11 @@ from numpy.typing import NDArray
 from scipy.interpolate import LinearNDInterpolator
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class LinearNDInverseDecisionMapper(BaseInverseDecisionMapper):
+class LinearNDInverseDecisionMapper(DeterministicInverseDecisionMapper):
     def __init__(self) -> None:
         super().__init__()
         self._interp_func: LinearNDInterpolator | None = None

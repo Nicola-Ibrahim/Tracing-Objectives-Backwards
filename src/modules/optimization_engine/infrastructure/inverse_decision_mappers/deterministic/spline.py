@@ -3,11 +3,11 @@ from numpy.typing import NDArray
 from scipy.interpolate import SmoothBivariateSpline
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class SplineInverseDecisionMapper(BaseInverseDecisionMapper):
+class SplineInverseDecisionMapper(DeterministicInverseDecisionMapper):
     """
     Inverse Decision Mapper using SciPy's SmoothBivariateSpline for 2D objective spaces.
     """

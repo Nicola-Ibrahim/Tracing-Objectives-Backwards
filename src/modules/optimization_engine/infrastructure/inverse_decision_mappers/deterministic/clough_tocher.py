@@ -3,11 +3,11 @@ from numpy.typing import NDArray
 from scipy.interpolate import CloughTocher2DInterpolator
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+    DeterministicInverseDecisionMapper,
 )
 
 
-class CloughTocherInverseDecisionMapper(BaseInverseDecisionMapper):
+class CloughTocherInverseDecisionMapper(DeterministicInverseDecisionMapper):
     def __init__(self) -> None:
         super().__init__()
         self._interp_func: CloughTocher2DInterpolator | None = None
