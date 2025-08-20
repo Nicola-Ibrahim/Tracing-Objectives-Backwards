@@ -10,9 +10,12 @@ class ProblemFactory:
     }
 
     def create(self, config: dict) -> BaseProblem:
-        problem_type = config["type"]
+        problem_type = config.get("type")
 
-        if problem_type not in self._registry:
-            raise ValueError(f"Unsupported problem type: {problem_type}")
+        try:
+            problem_ctor = self._registry[problem_type]
 
-        return self._registry[problem_type](config)
+        except KeyError as e:
+            raise ValueError(f"Unsupported problem type: {problem_type}") from e
+
+        return problem_ctor(config)

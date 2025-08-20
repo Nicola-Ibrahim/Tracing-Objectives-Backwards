@@ -8,9 +8,11 @@ class AlgorithmFactory:
     }
 
     def create(self, config: dict) -> BaseAlgorithm:
-        algo_type = config.pop("type", None)
+        algo_type = config.get("type")
 
-        if algo_type.lower() not in self._registry:
-            raise ValueError(f"Unsupported algorithm: {algo_type}")
+        try:
+            algo_ctor = self._registry[algo_type.lower()]
+        except KeyError as e:
+            raise ValueError(f"Unsupported algorithm: {algo_type}") from e
 
-        return self._registry[algo_type.lower()](config)
+        return algo_ctor(config)

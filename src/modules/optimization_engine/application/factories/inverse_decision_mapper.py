@@ -61,19 +61,16 @@ class InverseDecisionMapperFactory:
         Raises:
             ValueError: If the provided type is not registered in the factory.
         """
-        # Look up the class in the registry dictionary
-        if "type" not in params:
-            raise ValueError(
-                "The 'type' key must be present in the parameters dictionary."
-            )
 
-        mapper_class_type = params.pop("type", None)
+        mapper_class_type = params.get("type")
 
-        if mapper_class_type not in self._registry:
+        try:
+            mapper_ctor = self._registry[mapper_class_type]
+        except KeyError as e:
             raise ValueError(
                 f"Unknown or unsupported interpolator type: {mapper_class_type}"
-            )
+            ) from e
 
-        mapper_class = self._registry[mapper_class_type]
-        # Instantiate the class using the parameters from the dictionary
-        return mapper_class(**params)
+        # Create a shallow copy of params without mutating the caller's dict
+        ctor_params = {k: v for k, v in params.items() if k != "type"}
+        return mapper_ctor(**ctor_params)

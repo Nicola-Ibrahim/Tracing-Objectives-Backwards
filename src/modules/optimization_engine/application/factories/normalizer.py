@@ -26,13 +26,11 @@ class NormalizerFactory:
         Creates and returns a concrete normalizer instance based on the given type and parameters.
         """
         normalizer_type = config.get("type")
-
-        if not normalizer_type:
-            raise ValueError("Normalizer type must be specified in the config.")
-
         params = config.get("params", {})
 
-        if normalizer_type not in self._registry:
-            raise ValueError(f"Unknown normalizer type: {normalizer_type}")
+        try:
+            normalizer_ctor = self._registry[normalizer_type]
+        except KeyError as e:
+            raise ValueError(f"Unknown normalizer type: {normalizer_type}") from e
 
-        return self._registry[normalizer_type](**params)
+        return normalizer_ctor(**params)

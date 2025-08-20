@@ -3,7 +3,7 @@ from ...infrastructure.optimizers.minimizer import Minimizer, MinimizerConfig
 
 
 class OptimizerFactory:
-    _registery = {
+    _registry = {
         "minimizer": lambda problem, algorithm, config: Minimizer(
             problem=problem,
             algorithm=algorithm,
@@ -12,14 +12,15 @@ class OptimizerFactory:
     }
 
     def create(self, config: dict, **kwargs) -> BaseOptimizer:
-        """
-        Creates an optimizer instance from a type string and configuration data.
+        """Creates an optimizer instance using the factory registry.
+
+        The config must include a 'type' key. If not provided, 'minimizer' is used.
         """
         optimizer_type = config.get("type", "minimizer")
 
-        if optimizer_type not in self._registery:
-            raise ValueError("Optimizer type must be specified in the config.")
+        try:
+            optimizer_ctor = self._registry[optimizer_type]
+        except KeyError as e:
+            raise ValueError(f"Unknown optimizer type: {optimizer_type}") from e
 
-        optimizer_class = self._registery[optimizer_type]
-
-        return optimizer_class(config=MinimizerConfig(**config), **kwargs)
+        return optimizer_ctor(config=MinimizerConfig(**config), **kwargs)

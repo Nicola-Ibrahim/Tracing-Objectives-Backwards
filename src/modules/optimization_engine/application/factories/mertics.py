@@ -18,13 +18,17 @@ class MetricFactory:
     }
 
     def create(self, config: dict) -> BaseValidationMetric:
-        """
-        Creates and returns a concrete validation metric instance based on the given type and parameters.
+        """Creates a validation metric instance using the factory registry.
+
+        The config must contain a 'type' key. If the type is not registered
+        a ValueError is raised.
         """
         metric_type = config.get("type")
         params = config.get("params", {})
 
-        if metric_type not in self._registry:
-            raise ValueError(f"Unknown metric type: {metric_type}")
+        try:
+            metric_ctor = self._registry[metric_type]
+        except KeyError as e:
+            raise ValueError(f"Unknown metric type: {metric_type}") from e
 
-        return self._registry[metric_type](**params)
+        return metric_ctor(**params)
