@@ -75,6 +75,10 @@ class CVAEDecoder(nn.Module):
         # Second fully connected layer to output the reconstructed decision
         self.fc2 = nn.Linear(32, x_dim)
 
+    @property
+    def type(self) -> str:
+        return "CVAE"
+
     def forward(self, z: torch.Tensor, y: torch.Tensor):
         """
         Forward pass of the decoder.

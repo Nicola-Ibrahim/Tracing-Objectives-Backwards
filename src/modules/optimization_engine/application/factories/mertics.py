@@ -32,3 +32,11 @@ class MetricFactory:
             raise ValueError(f"Unknown metric type: {metric_type}") from e
 
         return metric_ctor(**params)
+
+    def create_multiple(self, configs: list[dict]) -> list[BaseValidationMetric]:
+        """Creates multiple validation metric instances from a list of configs."""
+
+        metrics = []
+        for config in configs:
+            metrics.append(self.create(config))
+        return metrics

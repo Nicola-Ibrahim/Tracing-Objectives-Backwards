@@ -10,8 +10,8 @@ from ..interfaces.base_normalizer import BaseNormalizer
 
 class ModelArtifact(BaseModel):
     """
-    Represents a trained interpolator model and its associated metadata.
-    This entity encapsulates the actual fitted interpolator instance
+    Represents a trained model model and its associated metadata.
+    This entity encapsulates the actual fitted model instance
     along with essential identifying and descriptive information for a *specific training run*.
     """
 
@@ -20,9 +20,9 @@ class ModelArtifact(BaseModel):
         description="Unique identifier for this specific training run/model version.",
     )
 
-    parameters: dict[Any, Any] = Field(
+    parameters: dict[str, Any] = Field(
         ...,
-        description="The parameters used to initialize or configure this specific interpolator instance/run.",
+        description="The parameters used to initialize or configure this specific model instance/run.",
     )
     inverse_decision_mapper: BaseInverseDecisionMapper = Field(
         ...,
@@ -38,10 +38,11 @@ class ModelArtifact(BaseModel):
         description="The fitted normalizer for the output/objective space (y_train).",
     )
 
-    metrics: list[dict[str, Any]] = Field(
-        default_factory=list,
-        description="Performance metrics specific to this training run.",
+    metrics: dict[str, float] = Field(
+        default_factory=dict,
+        description="Performance metrics for this training run. For CV, this is a dictionary of scores per fold.",
     )
+
     trained_at: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp indicating when this model version was trained.",

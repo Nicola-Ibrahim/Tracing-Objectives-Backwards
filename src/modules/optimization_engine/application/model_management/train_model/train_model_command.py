@@ -48,7 +48,11 @@ class TrainModelCommand(BaseModel):
         "Pass an int for reproducible output across multiple function calls.",
     )
 
-    # version_number is assigned automatically by the repository when saving
+    cv_splits: int | None = Field(
+        None,
+        gt=1,
+        description="Number of cross-validation splits. If specified, a full cross-validation workflow is executed. Otherwise, a single train-test split is used.",
+    )
 
     class Config:
         arbitrary_types_allowed = True

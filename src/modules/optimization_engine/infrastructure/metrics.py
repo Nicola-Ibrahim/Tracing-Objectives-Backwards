@@ -13,6 +13,10 @@ class MeanSquaredErrorValidationMetric(BaseValidationMetric):
     Leverages scikit-learn's mean_squared_error for robust calculation.
     """
 
+    @property
+    def name(self) -> str:
+        return "MSE"
+
     def calculate(
         self,
         y_true: NDArray[np.floating],
@@ -44,6 +48,10 @@ class MeanAbsoluteErrorValidationMetric(BaseValidationMetric):
     Concrete implementation of BaseValidationMetric for Mean Absolute Error (MAE).
     Leverages scikit-learn's mean_absolute_error for robust calculation.
     """
+
+    @property
+    def name(self) -> str:
+        return "MAE"
 
     def calculate(
         self,
@@ -77,6 +85,10 @@ class R2ScoreValidationMetric(BaseValidationMetric):
     Concrete implementation of BaseValidationMetric for R^2 Score.
     Leverages scikit-learn's r2_score for robust calculation.
     """
+
+    @property
+    def name(self) -> str:
+        return "R2"
 
     def calculate(
         self,

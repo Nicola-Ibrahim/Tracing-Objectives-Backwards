@@ -1,3 +1,5 @@
+import enum
+import inspect
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -13,11 +15,18 @@ class BaseInverseDecisionMapper(ABC):
     and requiring subclasses to implement core functionality.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         """
         Initializes the base inverse decision mapper.
         Subclasses should call this constructor via super().__init__().
         """
+
+        # Save constructor args for metadata
+        sig = inspect.signature(self.__class__.__init__)
+        bound = sig.bind_partial(self, **kwargs)
+        bound.apply_defaults()
+        self._init_params = {k: v for k, v in bound.arguments.items() if k != "self"}
+
         self._objective_dim: int | None = None
         self._decision_dim: int | None = None
 
@@ -71,6 +80,24 @@ class BaseInverseDecisionMapper(ABC):
         # Store dimensions, which will be used by the dimensionality property
         self._objective_dim = X.shape[1]
         self._decision_dim = y.shape[1]
+
+    def to_dict(self):
+        return {k: self._serialize(v) for k, v in self._init_params.items()}
+
+    @classmethod
+    def _serialize(cls, v):
+        if isinstance(v, enum.Enum):
+            return v.value
+        elif isinstance(v, np.ndarray):
+            return v.tolist()
+        elif isinstance(v, BaseInverseDecisionMapper):
+            return v.to_dict()
+        elif isinstance(v, list):
+            return [cls._serialize(i) for i in v]
+        elif isinstance(v, dict):
+            return {kk: cls._serialize(vv) for kk, vv in v.items()}
+        else:
+            return v
 
 
 class DeterministicInverseDecisionMapper(BaseInverseDecisionMapper):

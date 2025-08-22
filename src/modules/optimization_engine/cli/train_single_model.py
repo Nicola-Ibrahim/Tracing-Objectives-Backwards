@@ -40,7 +40,7 @@ if __name__ == "__main__":
         trained_model_repository=PickleInterpolationModelRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
-        visualizer=PlotlyTrainingPerformanceVisualizer(),
+        visualizer=None,
     )
 
     command = TrainModelCommand(

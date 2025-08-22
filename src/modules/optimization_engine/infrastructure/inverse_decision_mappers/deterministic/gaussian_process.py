@@ -65,6 +65,10 @@ class GaussianProcessInverseDecisionMapper(DeterministicInverseDecisionMapper):
                 "Kernel must be a string ('RBF', 'Matern') or a scikit-learn Kernel object."
             )
 
+    @property
+    def type(self) -> str:
+        return "GaussianProcess"
+
     def fit(
         self,
         X: NDArray[np.float64],

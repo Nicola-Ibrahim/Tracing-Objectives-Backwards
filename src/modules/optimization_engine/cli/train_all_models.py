@@ -101,4 +101,4 @@ if __name__ == "__main__":
             print(
                 f"  Successfully completed run {version_number} for { model_type_name}"
             )
-            time.sleep(1)
+            time.sleep(0.8)

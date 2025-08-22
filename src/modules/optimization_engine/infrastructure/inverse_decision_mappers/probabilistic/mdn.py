@@ -162,7 +162,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         epochs: int = 500,
         learning_rate: float = 1e-3,
         early_stopping_patience: int = 10,
-        distribution_family: DistributionFamily = DistributionFamily.NORMAL,
+        distribution_family: DistributionFamily | str = DistributionFamily.NORMAL,
         gmm_boost: bool = False,
         hidden_layers: list[int] = [64],
         hidden_activation_fn: ActivationFunction = ActivationFunction.RELU,
@@ -188,6 +188,10 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         self._model: MDN | None = None
         self._clusterer = None
         self._best_model_state_dict = None
+
+    @property
+    def type(self) -> str:
+        return "MDN"
 
     def _determine_num_mixtures(self, X_y: npt.NDArray[np.float64]) -> int:
         lowest_bic = np.infty
