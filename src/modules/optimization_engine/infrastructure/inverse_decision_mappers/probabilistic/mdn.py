@@ -19,6 +19,7 @@ from torch.distributions import (
     MixtureSameFamily,
     Normal,
 )
+from tqdm import tqdm
 from umap import UMAP
 
 from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
@@ -69,14 +70,6 @@ class MDN(nn.Module):
     ):
         """
         Initialize the Mixture Density Network (MDN) module.
-
-        Args:
-            input_dim (int): The dimensionality of the input space.
-            output_dim (int): The dimensionality of the output space.
-            num_mixtures (int): The number of mixture components.
-            hidden_layers (list[int]): The sizes of the hidden layers.
-            hidden_activation (ActivationFunction): The activation function for hidden layers.
-            final_activation (ActivationFunction): The activation function for the output layer.
         """
         super().__init__()
 
@@ -85,7 +78,6 @@ class MDN(nn.Module):
         self.hidden_activation = self._get_activation(hidden_activation)
         self.final_activation = self._get_activation(final_activation)
 
-        # Build the main body of the network
         layers = []
         in_size = input_dim
         for hidden_size in hidden_layers:
@@ -98,7 +90,6 @@ class MDN(nn.Module):
 
         self.hidden_stack = nn.Sequential(*layers)
 
-        # Output layers for mixture parameters
         final_hidden_size = hidden_layers[-1] if hidden_layers else input_dim
         self.fc_pi = nn.Linear(final_hidden_size, num_mixtures)
         self.fc_mu = nn.Linear(final_hidden_size, num_mixtures * output_dim)
@@ -108,7 +99,6 @@ class MDN(nn.Module):
         """
         Get the activation function based on the specified activation function name.
         """
-
         activation_fns = {
             ActivationFunction.RELU: nn.ReLU(),
             ActivationFunction.TANH: nn.Tanh(),
@@ -120,7 +110,6 @@ class MDN(nn.Module):
         try:
             return activation_fns[activation_fn]
         except KeyError:
-            # This case should not be reachable if ActivationFunction is used
             raise ValueError(f"Unsupported activation function: {activation_fn.value}")
 
     @staticmethod
@@ -148,7 +137,6 @@ class MDN(nn.Module):
         try:
             return distribution_families[distribution_family]
         except KeyError:
-            # This case should not be reachable if DistributionFamily is used
             raise ValueError(
                 f"Unsupported distribution family: {distribution_family.value}"
             )
@@ -180,21 +168,10 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         hidden_activation_fn: ActivationFunction = ActivationFunction.RELU,
         final_activation_fn: ActivationFunction = ActivationFunction.RELU,
         optimizer_fn: OptimizerFunction = OptimizerFunction.ADAM,
+        verbose: bool = False,
     ):
         """
         Initialize the MDNInverseDecisionMapper.
-
-        Args:
-            num_mixtures: The number of mixtures for the MDN.
-            epochs: The number of training epochs.
-            learning_rate: The learning rate for the optimizer.
-            early_stopping_patience: The patience for early stopping.
-            distribution_family: The distribution family to use.
-            gmm_boost: Whether to use GMM boosting.
-            hidden_layers: The hidden layers for the MDN.
-            hidden_activation_fn: The activation function for the hidden layers.
-            final_activation_fn: The activation function for the final layer.
-            optimizer_fn: The optimizer function to use.
         """
         super().__init__()
         self._num_mixtures = num_mixtures
@@ -207,6 +184,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         self._hidden_activation_fn = hidden_activation_fn
         self._final_activation_fn = final_activation_fn
         self._optimizer_fn = optimizer_fn
+        self._verbose = verbose
         self._model: MDN | None = None
         self._clusterer = None
         self._best_model_state_dict = None
@@ -246,7 +224,6 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             )
             input_dim = X_tensor.shape[1]
 
-        # Pass the Enum members directly to MDN's constructor
         self._model = MDN(
             input_dim=input_dim,
             output_dim=output_dim,
@@ -265,7 +242,6 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             OptimizerFunction.GRADIENT_DESCENT: torch.optim.SGD,
         }
 
-        # Use self._optimizer_fn directly from the class instance
         optimizer_class = optimizers.get(self._optimizer_fn)
         if optimizer_class is None:
             raise ValueError(f"Unknown optimizer: {self._optimizer_fn}")
@@ -275,13 +251,17 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         super().fit(X, y)
 
         X_tensor, Y_tensor = self._prepare_data_and_model(X, y)
-
         optimizer_fn = self._get_optimizer_fn()
         optimizer = optimizer_fn(self._model.parameters(), lr=self._learning_rate)
         best_loss = float("inf")
         patience_counter = 0
 
-        for epoch in range(self._epochs):
+        # Conditional tqdm based on the verbose flag
+        epochs_range = range(self._epochs)
+        if self._verbose:
+            epochs_range = tqdm(epochs_range, unit="epoch")
+
+        for epoch in epochs_range:
             self._model.train()
             optimizer.zero_grad()
             pi, mu, sigma = self._model(X_tensor)
@@ -292,6 +272,10 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             loss.backward()
             optimizer.step()
 
+            # Update the progress bar if verbose is enabled
+            if self._verbose:
+                epochs_range.set_postfix(loss=f"{loss.item():.4f}")
+
             if loss < best_loss:
                 best_loss = loss
                 patience_counter = 0
@@ -299,9 +283,10 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             else:
                 patience_counter += 1
                 if patience_counter >= self._early_stopping_patience:
-                    print(
-                        f"Early stopping at epoch {epoch}. Best loss: {best_loss:.4f}"
-                    )
+                    if self._verbose:
+                        print(
+                            f"Early stopping at epoch {epoch}. Best loss: {best_loss:.4f}"
+                        )
                     if self._best_model_state_dict:
                         self._model.load_state_dict(self._best_model_state_dict)
                     break
