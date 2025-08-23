@@ -19,6 +19,7 @@ from torch.distributions import (
     MixtureSameFamily,
     Normal,
 )
+from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 from umap import UMAP
 
@@ -32,9 +33,9 @@ class ActivationFunction(Enum):
 
     RELU = "relu"
     TANH = "tanh"
-    LEAKY_RELU = "leaky_relu"
     SIGMOID = "sigmoid"
-    NONE = "none"
+    SOFTPLUS = "softplus"
+    IDENTITY = "identity"
 
 
 class DistributionFamily(Enum):
@@ -57,6 +58,29 @@ class OptimizerFunction(Enum):
 class MDN(nn.Module):
     """
     A Mixture Density Network (MDN) module with configurable architecture.
+
+        Architecture Overview:
+        Input (input_dim)
+           │
+           ▼
+    ┌─────────────────────────────┐
+    │  Hidden Stack (configurable)│
+    │  e.g., Linear → ReLU → ...  │
+    └─────────────────────────────┘
+           │
+           ▼
+    Final Hidden Representation (H)
+           │
+           ├──> π-head:  Linear(H → num_mixtures)
+           │              → Softmax over mixtures
+           │
+           ├──> μ-head:  Linear(H → num_mixtures*output_dim)
+           │              → reshape to (num_mixtures, output_dim)
+           │
+           └──> σ-head:  Linear(H → num_mixtures*output_dim)
+                          → Softplus (or exp) for positivity
+                          → reshape to (num_mixtures, output_dim)
+
     """
 
     def __init__(
@@ -64,37 +88,46 @@ class MDN(nn.Module):
         input_dim: int,
         output_dim: int,
         num_mixtures: int = 5,
-        hidden_layers: list[int] = [64],
-        hidden_activation: ActivationFunction = ActivationFunction.RELU,
-        final_activation: ActivationFunction = ActivationFunction.RELU,
+        hidden_layers: list[int] = [64, 32],
+        hidden_activation_fn: ActivationFunction = ActivationFunction.RELU,
     ):
         """
-        Initialize the Mixture Density Network (MDN) module.
+        Initialize the Mixture Density Network (MDN).
         """
         super().__init__()
 
         self.num_mixtures = num_mixtures
         self.output_dim = output_dim
-        self.hidden_activation = self._get_activation(hidden_activation)
-        self.final_activation = self._get_activation(final_activation)
 
+        # Get activation function
+        self.hidden_activation_fn = self._get_activation(hidden_activation_fn)
+
+        # ----- Build hidden stack -----
         layers = []
         in_size = input_dim
         for hidden_size in hidden_layers:
             layers.append(nn.Linear(in_size, hidden_size))
-            layers.append(self.hidden_activation)
+            layers.append(self.hidden_activation_fn)
             in_size = hidden_size
 
-        if layers:
+        if layers:  # remove last activation to let heads apply their own logic
             layers.pop()
 
         self.hidden_stack = nn.Sequential(*layers)
 
         final_hidden_size = hidden_layers[-1] if hidden_layers else input_dim
+
+        # ----- Output heads -----
+        # Mixture weights (π) → Softmax later
         self.fc_pi = nn.Linear(final_hidden_size, num_mixtures)
+
+        # Means (μ) → shape (num_mixtures, output_dim)
         self.fc_mu = nn.Linear(final_hidden_size, num_mixtures * output_dim)
+
+        # Standard deviations (σ) → positive via softplus/exp
         self.fc_sigma = nn.Linear(final_hidden_size, num_mixtures * output_dim)
 
+    # ------- Utility Functions -------
     def _get_activation(self, activation_fn: ActivationFunction):
         """
         Get the activation function based on the specified activation function name.
@@ -102,9 +135,9 @@ class MDN(nn.Module):
         activation_fns = {
             ActivationFunction.RELU: nn.ReLU(),
             ActivationFunction.TANH: nn.Tanh(),
-            ActivationFunction.LEAKY_RELU: nn.LeakyReLU(),
             ActivationFunction.SIGMOID: nn.Sigmoid(),
-            ActivationFunction.NONE: nn.Identity(),
+            ActivationFunction.SOFTPLUS: nn.Softplus(),
+            ActivationFunction.IDENTITY: nn.Identity(),
         }
 
         try:
@@ -141,12 +174,62 @@ class MDN(nn.Module):
                 f"Unsupported distribution family: {distribution_family.value}"
             )
 
+    def summary(self, input_size=(1,)):
+        """
+        Prints a summary of the architecture with tqdm visualization.
+        """
+        x = torch.zeros(1, *input_size)
+        print("\nMixture Density Network (MDN) Summary\n" + "=" * 50)
+
+        layers = []
+        layers.append(("Input", x.shape))
+
+        # Go through hidden stack
+        tmp_x = x
+        for i, layer in enumerate(
+            tqdm(self.hidden_stack, desc="Building Summary", unit="layer")
+        ):
+            tmp_x = layer(tmp_x)
+            layers.append((layer.__class__.__name__, tmp_x.shape))
+
+        # Heads
+        pi = torch.softmax(self.fc_pi(tmp_x), dim=-1)
+        mu = self.fc_mu(tmp_x).view(-1, self.num_mixtures, self.output_dim)
+        sigma = torch.exp(self.fc_sigma(tmp_x)).view(
+            -1, self.num_mixtures, self.output_dim
+        )
+
+        layers.append(("π (mixture weights)", pi.shape))
+        layers.append(("μ (means)", mu.shape))
+        layers.append(("σ (stddev)", sigma.shape))
+
+        # Print results
+        for name, shape in layers:
+            print(f"{name:<25} │ Output Shape: {list(shape)}")
+
+        print("=" * 50)
+
+    # ----- Forward Pass -----
+
     def forward(self, x: torch.Tensor):
-        h = self.hidden_stack(x)
-        h = self.final_activation(h)
-        pi = F.softmax(self.fc_pi(h), dim=1)
-        mu = self.fc_mu(h).view(-1, self.num_mixtures, self.output_dim)
-        sigma = torch.exp(self.fc_sigma(h)).view(-1, self.num_mixtures, self.output_dim)
+        # Apply activation to the output of the first fully connected layer
+        # Shared hidden representation
+        h = self.hidden_stack(x)  # [batch_size, final_hidden_size]
+
+        # Calculate mixing coefficients (pi) and apply softmax for normalization
+        pi = self.fc_pi(h)  # [batch_size, num_mixtures]
+        pi = F.softmax(pi, dim=-1)
+
+        # Calculate means (mu) and reshape to (batch_size, num_mixtures, output_dim)
+        mu = self.fc_mu(h)  # [batch_size, num_mixtures * output_dim]
+        mu = mu.view(-1, self.num_mixtures, self.output_dim)
+
+        # Calculate standard deviations (sigma) by exponentiating the output
+        # and reshape to (batch_size, num_mixtures, output_dim)
+        sigma = self.fc_sigma(h)  # [batch_size, num_mixtures * output_dim]
+        sigma = F.softplus(sigma) + 1e-6
+        sigma = sigma.view(-1, self.num_mixtures, self.output_dim)
+
         return pi, mu, sigma
 
 
@@ -162,11 +245,10 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         epochs: int = 500,
         learning_rate: float = 1e-3,
         early_stopping_patience: int = 10,
-        distribution_family: DistributionFamily | str = DistributionFamily.NORMAL,
+        distribution_family: DistributionFamily = DistributionFamily.NORMAL,
         gmm_boost: bool = False,
         hidden_layers: list[int] = [64],
         hidden_activation_fn: ActivationFunction = ActivationFunction.RELU,
-        final_activation_fn: ActivationFunction = ActivationFunction.RELU,
         optimizer_fn: OptimizerFunction = OptimizerFunction.ADAM,
         verbose: bool = False,
     ):
@@ -182,7 +264,6 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         self._gmm_boost = gmm_boost
         self._hidden_layers = hidden_layers
         self._hidden_activation_fn = hidden_activation_fn
-        self._final_activation_fn = final_activation_fn
         self._optimizer_fn = optimizer_fn
         self._verbose = verbose
         self._model: MDN | None = None
@@ -194,7 +275,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         return "MDN"
 
     def _determine_num_mixtures(self, X_y: npt.NDArray[np.float64]) -> int:
-        lowest_bic = np.infty
+        lowest_bic = np.inf
         best_gmm = None
         n_components_range = range(1, 7)
         for n_components in n_components_range:
@@ -233,8 +314,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             output_dim=output_dim,
             num_mixtures=self._num_mixtures,
             hidden_layers=self._hidden_layers,
-            hidden_activation=self._hidden_activation_fn,
-            final_activation=self._final_activation_fn,
+            hidden_activation_fn=self._hidden_activation_fn,
         )
         return X_tensor, Y_tensor
 
@@ -257,6 +337,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         X_tensor, Y_tensor = self._prepare_data_and_model(X, y)
         optimizer_fn = self._get_optimizer_fn()
         optimizer = optimizer_fn(self._model.parameters(), lr=self._learning_rate)
+
         best_loss = float("inf")
         patience_counter = 0
 
@@ -274,6 +355,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             )
             loss = -dist.log_prob(Y_tensor).mean()
             loss.backward()
+
             optimizer.step()
 
             # Update the progress bar if verbose is enabled

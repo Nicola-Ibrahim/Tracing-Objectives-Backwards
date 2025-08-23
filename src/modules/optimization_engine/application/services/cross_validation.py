@@ -12,22 +12,29 @@ from ...domain.model_management.interfaces.base_inverse_decision_mapper import (
 
 def _clone(estimator: BaseInverseDecisionMapper) -> BaseInverseDecisionMapper:
     """
-    Clone an estimator by re-instantiating it with the same __init__ parameters.
-    Similar to sklearn.base.clone, but lightweight and framework-agnostic.
+    Clones an estimator by re-instantiating it with the same __init__ parameters.
     """
     klass = estimator.__class__
 
-    # Get the signature of __init__ and bound args from the instance
+    # Get the signature of __init__
     sig = inspect.signature(klass.__init__)
     bound_args = {}
 
     for name, param in sig.parameters.items():
         if name == "self":
             continue
-        if hasattr(estimator, name):  # if the estimator stores the arg as attribute
-            bound_args[name] = getattr(estimator, name)
 
-    # Create a new instance with the same params
+        # Check if the attribute exists with the same name
+        if hasattr(estimator, name):
+            bound_args[name] = getattr(estimator, name)
+        # Check if the attribute exists as a private variable (e.g., _num_mixtures)
+        elif hasattr(estimator, f"_{name}"):
+            bound_args[name] = getattr(estimator, f"_{name}")
+        # If not found, fall back to the default parameter value
+        else:
+            bound_args[name] = param.default
+
+    # Create a new instance with the copied parameters
     return klass(**bound_args)
 
 
@@ -55,6 +62,7 @@ def cross_validate(
     Returns:
         dict[str, list[float]]: Scores from each fold.
     """
+
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     all_scores = {scorer_name: [] for scorer_name in validation_metrics.keys()}
 

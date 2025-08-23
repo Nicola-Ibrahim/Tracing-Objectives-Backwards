@@ -40,7 +40,7 @@ if __name__ == "__main__":
     )
 
     command = TrainModelCommand(
-        inverse_decision_mapper_params=GaussianProcessInverseDecisionMapperParams(),
+        inverse_decision_mapper_params=MDNInverseDecisionMapperParams(),
         objectives_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),

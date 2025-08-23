@@ -64,6 +64,7 @@ class TrainModelCommandHandler:
         inverse_decision_mapper = self._inverse_decision_factory.create(
             params=command.inverse_decision_mapper_params.model_dump()
         )
+
         validation_metrics = self._validation_metric_factory.create_multiple(
             configs=[
                 config.model_dump()
@@ -77,10 +78,10 @@ class TrainModelCommandHandler:
         if command.cv_splits is not None:
             self._logger.log_info("Starting cross-validation training workflow.")
             self._execute_cv_workflow(
-                command,
-                inverse_decision_mapper,
-                raw_data,
-                validation_metrics,
+                command=command,
+                inverse_decision_mapper=inverse_decision_mapper,
+                raw_data=raw_data,
+                validation_metrics=validation_metrics,
             )
         else:
             self._logger.log_info("Starting single train/test split training workflow.")
@@ -162,6 +163,7 @@ class TrainModelCommandHandler:
 
         # Run the cross-validation service to get evaluation metrics
         self._logger.log_info("Running cross-validation to assess model performance...")
+
         cv_scores = cross_validate(
             estimator=inverse_decision_mapper,
             X=raw_data.pareto_front,
