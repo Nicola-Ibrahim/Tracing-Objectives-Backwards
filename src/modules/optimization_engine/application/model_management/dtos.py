@@ -21,7 +21,7 @@ class CloughTocherInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class NeuralNetworkInverserDecisionMapperParams(InverseDecisionMapperParams):
+class NeuralNetworkInverseDecisionMapperParams(InverseDecisionMapperParams):
     type: str = Field(
         InverseDecisionMapperType.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
@@ -52,7 +52,7 @@ class GeodesicInterpolatorParams(InverseDecisionMapperParams):
         extra = "forbid"
 
 
-class NearestNeighborInverseDecisoinMapperParams(InverseDecisionMapperParams):
+class NearestNeighborInverseDecisionMapperParams(InverseDecisionMapperParams):
     type: str = Field(
         InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value,
         description="Type of the nearest neighbor interpolation method.",
@@ -288,7 +288,7 @@ class NormalizerConfig(BaseModel):
     )
 
 
-class ModelPerformanceMetricConfig(BaseModel):
+class ValidationMetricConfig(BaseModel):
     """
     Configuration for a validation metric.
     """

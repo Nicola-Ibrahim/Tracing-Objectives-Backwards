@@ -35,6 +35,10 @@ class SVRInverseDecisionMapper(DeterministicInverseDecisionMapper):
         self.C = C
         self.epsilon = epsilon
 
+    @property
+    def type(self) -> str:
+        return "SVR"
+
     def fit(
         self,
         X: NDArray[np.float64],

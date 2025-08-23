@@ -25,16 +25,16 @@ class GenerateDecisionCommandHandler:
     def __init__(
         self,
         interpolation_model_repo: BaseInterpolationModelRepository,
-        pareto_data_repo: BaseParetoDataRepository,
+        data_repository: BaseParetoDataRepository,
         logger: BaseLogger,
     ):
         self._interpolation_model_repo = interpolation_model_repo
-        self._paret_data_repo = pareto_data_repo
+        self._data_repository = data_repository
         self._logger = logger
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         self._logger.log_info(
-            f"Starting FreeMode decision generation for interpolator type: {command. model_type}"
+            f"Starting FreeMode decision generation for interpolator type: {command.model_type}"
         )
 
         # Load interpolation model and normalizers
@@ -43,7 +43,7 @@ class GenerateDecisionCommandHandler:
         )
         self._logger.log_info(
             f"Loaded interpolation model version {model.version_number} "
-            f"of type {command. model_type}."
+            f"of type {command.model_type}."
         )
 
         inverse_decision_mapper = model.inverse_decision_mapper
@@ -51,7 +51,7 @@ class GenerateDecisionCommandHandler:
         objectives_normalizer = model.objectives_normalizer
 
         # Load Pareto data
-        raw_data = self._paret_data_repo.load("pareto_data")
+        raw_data = self._data_repository.load("pareto_data")
 
         # Load original COCO problem for ground-truth objective evaluation
         # Assuming get_coco_problem returns a callable that takes a decision and returns objectives

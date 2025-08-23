@@ -2,8 +2,8 @@ from pydantic import BaseModel, Field
 
 from ..dtos import (
     InverseDecisionMapperParams,
-    ModelPerformanceMetricConfig,
     NormalizerConfig,
+    ValidationMetricConfig,
 )
 
 
@@ -28,10 +28,10 @@ class TrainModelCommand(BaseModel):
         None,
         description="Configuration for the normalizer applied to decisions (input data).",
     )
-    model_performance_metric_configs: list[ModelPerformanceMetricConfig] = Field(
+    model_performance_metric_configs: list[ValidationMetricConfig] = Field(
         [
-            ModelPerformanceMetricConfig(type="MSE"),
-            ModelPerformanceMetricConfig(type="MAE"),
+            ValidationMetricConfig(type="MSE"),
+            ValidationMetricConfig(type="MAE"),
         ],
         description="Configurations for the validation metrics.",
     )

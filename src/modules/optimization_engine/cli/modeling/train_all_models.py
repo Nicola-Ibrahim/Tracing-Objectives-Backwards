@@ -1,40 +1,36 @@
 import time
 
-from ..application.factories.inverse_decision_mapper import (
+from ...application.factories.inverse_decision_mapper import (
     InverseDecisionMapperFactory,
 )
-from ..application.factories.mertics import MetricFactory
-from ..application.factories.normalizer import NormalizerFactory
-from ..application.model_management.dtos import (
+from ...application.factories.mertics import MetricFactory
+from ...application.factories.normalizer import NormalizerFactory
+from ...application.model_management.dtos import (
     GaussianProcessInverseDecisionMapperParams,
-    KrigingInverseDecisionMapperParams,
     MDNInverseDecisionMapperParams,
-    NearestNeighborInverseDecisoinMapperParams,
-    NeuralNetworkInverserDecisionMapperParams,
+    NeuralNetworkInverseDecisionMapperParams,
     RBFInverseDecisionMapperParams,
-    SplineInverseDecisionMapperParams,
-    SVRInverseDecisionMapperParams,
 )
-from ..application.model_management.train_model.train_model_command import (
-    ModelPerformanceMetricConfig,
+from ...application.model_management.train_model.train_model_command import (
     NormalizerConfig,
     TrainModelCommand,
+    ValidationMetricConfig,
 )
-from ..application.model_management.train_model.train_model_handler import (
+from ...application.model_management.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
-from ..infrastructure.loggers.cmd_logger import CMDLogger
-from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
+from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
-from ..infrastructure.repositories.model_management.pickle_model_artifact_repo import (
+from ...infrastructure.repositories.model_management.pickle_model_artifact_repo import (
     PickleInterpolationModelRepository,
 )
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
     command_handler = TrainModelCommandHandler(
-        pareto_data_repo=NPZParetoDataRepository(),
+        data_repository=NPZParetoDataRepository(),
         inverse_decision_factory=InverseDecisionMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         trained_model_repository=PickleInterpolationModelRepository(),
@@ -42,29 +38,25 @@ if __name__ == "__main__":
         metric_factory=MetricFactory(),
     )
 
-    # Define the interpolator parameter classes we want to test
-    # These are the DTOs for each interpolator type
-    interpolator_param_classes = [
+    # Define the model parameter classes we want to test
+    # These are the DTOs for each model type
+    model_param_classes = [
         GaussianProcessInverseDecisionMapperParams,
-        NearestNeighborInverseDecisoinMapperParams,
-        NeuralNetworkInverserDecisionMapperParams,
+        NeuralNetworkInverseDecisionMapperParams,
         RBFInverseDecisionMapperParams,
-        KrigingInverseDecisionMapperParams,
-        SVRInverseDecisionMapperParams,
-        SplineInverseDecisionMapperParams,
         MDNInverseDecisionMapperParams,
     ]
 
     # Define how many times to train each interpolator type
     num_runs_per_type = 15  # Train each interpolator type 3 times
 
-    # Loop through each interpolator type
-    for param_class in interpolator_param_classes:
+    # Loop through each model type
+    for param_class in model_param_classes:
         model_type_name = param_class.__name__.replace(
             "InverseDecisionMapperParams", ""
         )
 
-        # Loop multiple times for each interpolator type
+        # Loop multiple times for each model type
         for i in range(num_runs_per_type):
             version_number = i + 1
             print(
@@ -74,25 +66,22 @@ if __name__ == "__main__":
             # Instantiate the parameters for the current interpolator type
             # You might want to pass specific args/kwargs if these DTOs have required params
             # For simplicity, we assume they can be instantiated without args here.
-            interpolator_params_instance = param_class()
+            model_params_instance = param_class()
 
             # Construct the command with the appropriate parameters
             command = TrainModelCommand(
-                inverse_decision_mapper_params=interpolator_params_instance,
+                inverse_decision_mapper_params=model_params_instance,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
                 objectives_normalizer_config=NormalizerConfig(
-                    type="MinMaxScaler",
-                    params={"feature_range": (0, 1)},
+                    type="MinMaxScaler", params={"feature_range": (0, 1)}
                 ),
                 decisions_normalizer_config=NormalizerConfig(
-                    type="MinMaxScaler",
-                    params={"feature_range": (0, 1)},
+                    type="MinMaxScaler", params={"feature_range": (0, 1)}
                 ),
                 model_performance_metric_configs=[
-                    ModelPerformanceMetricConfig(
-                        type="MSE",
-                        params={},  # No specific params for MSE
-                    )
+                    ValidationMetricConfig(type="MSE", params={}),
+                    ValidationMetricConfig(type="MAE", params={}),
+                    ValidationMetricConfig(type="R2", params={}),
                 ],
             )
 

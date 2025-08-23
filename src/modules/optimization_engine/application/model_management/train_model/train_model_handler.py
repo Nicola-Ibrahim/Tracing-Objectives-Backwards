@@ -1,5 +1,3 @@
-import inspect
-from os import name
 from typing import Any
 
 import numpy as np
@@ -40,7 +38,7 @@ class TrainModelCommandHandler:
 
     def __init__(
         self,
-        pareto_data_repo: BaseParetoDataRepository,
+        data_repository: BaseParetoDataRepository,
         inverse_decision_factory: InverseDecisionMapperFactory,
         logger: BaseLogger,
         trained_model_repository: BaseInterpolationModelRepository,
@@ -48,32 +46,32 @@ class TrainModelCommandHandler:
         metric_factory: MetricFactory,
         visualizer: BaseDataVisualizer | None = None,
     ):
-        self._pareto_data_repo = pareto_data_repo
+        self._data_repository = data_repository
         self._inverse_decision_factory = inverse_decision_factory
         self._logger = logger
         self._trained_model_repository = trained_model_repository
         self._normalizer_factory = normalizer_factory
-        self._metric_factory = metric_factory
+        self._validation_metric_factory = metric_factory
         self._visualizer = visualizer
 
     def execute(self, command: TrainModelCommand) -> None:
         """
         Executes the training workflow for a given interpolator using the command's data.
         """
-        raw_data = self._pareto_data_repo.load(filename="pareto_data")
+        raw_data = self._data_repository.load(filename="pareto_data")
 
         # Initialize components once
         inverse_decision_mapper = self._inverse_decision_factory.create(
             params=command.inverse_decision_mapper_params.model_dump()
         )
-        metrices = self._metric_factory.create_multiple(
+        validation_metrics = self._validation_metric_factory.create_multiple(
             configs=[
                 config.model_dump()
                 for config in command.model_performance_metric_configs
             ]
         )
-        # Create a dictionary of metrices, mapping name to instance
-        metrices = {metric.name: metric for metric in metrices}
+        # Create a dictionary of validation metrics, mapping name to instance
+        validation_metrics = {metric.name: metric for metric in validation_metrics}
 
         # Decide on the workflow
         if command.cv_splits is not None:
@@ -82,15 +80,15 @@ class TrainModelCommandHandler:
                 command,
                 inverse_decision_mapper,
                 raw_data,
-                metrices,
+                validation_metrics,
             )
         else:
             self._logger.log_info("Starting single train/test split training workflow.")
             self._execute_single_split_workflow(
-                command,
-                inverse_decision_mapper,
-                raw_data,
-                metrices,
+                command=command,
+                inverse_decision_mapper=inverse_decision_mapper,
+                raw_data=raw_data,
+                validation_metrics=validation_metrics,
             )
 
     def _execute_single_split_workflow(
@@ -98,7 +96,7 @@ class TrainModelCommandHandler:
         command: TrainModelCommand,
         inverse_decision_mapper: BaseInverseDecisionMapper,
         raw_data: ParetoDataModel,
-        metrics: dict[str, BaseValidationMetric],
+        validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
         """Handles the original single train/test split workflow."""
         objectives_normalizer: BaseNormalizer = self._normalizer_factory.create(
@@ -125,20 +123,21 @@ class TrainModelCommandHandler:
             inverse_decision_mapper, objectives_train_norm, decisions_train
         )
 
-        metrics = self._validate_model(
-            inverse_decision_mapper,
-            decisions_normalizer,
-            objectives_val_norm,
-            decisions_val,
-            metrics,
+        train_scores = self._validate_model(
+            inverse_decision_mapper=inverse_decision_mapper,
+            decisions_normalizer=decisions_normalizer,
+            objectives_val_norm=objectives_val_norm,
+            decisions_val=decisions_val,
+            validation_metrics=validation_metrics,
         )
 
         self._save_model(
-            command.inverse_decision_mapper_params.model_dump(),
-            inverse_decision_mapper,
-            objectives_normalizer,
-            decisions_normalizer,
-            metrics,
+            model_params=command.inverse_decision_mapper_params.model_dump(),
+            inverse_decision_mapper=inverse_decision_mapper,
+            objectives_normalizer=objectives_normalizer,
+            decisions_normalizer=decisions_normalizer,
+            train_scores=train_scores,
+            cv_scores={},
         )
 
         self._visualize_results(
@@ -157,20 +156,20 @@ class TrainModelCommandHandler:
         command: TrainModelCommand,
         inverse_decision_mapper: BaseInverseDecisionMapper,
         raw_data: ParetoDataModel,
-        metrics: dict[str, BaseValidationMetric],
+        validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
         """Handles the cross-validation workflow, evaluating performance and saving a final model."""
 
         # Run the cross-validation service to get evaluation metrics
         self._logger.log_info("Running cross-validation to assess model performance...")
-        cv_results = cross_validate(
+        cv_scores = cross_validate(
             estimator=inverse_decision_mapper,
             X=raw_data.pareto_front,
             y=raw_data.pareto_set,
-            metrics=metrics,
+            validation_metrics=validation_metrics,
             n_splits=command.cv_splits,
             random_state=command.random_state,
-            verbose=True,
+            verbose=False,
         )
 
         # Retrain a final model on the full dataset
@@ -190,13 +189,22 @@ class TrainModelCommandHandler:
         final_mapper_instance = _clone(inverse_decision_mapper)
         final_mapper_instance.fit(X=objectives_norm, y=decisions_norm)
 
+        train_scores = self._validate_model(
+            inverse_decision_mapper=final_mapper_instance,
+            decisions_normalizer=final_decisions_normalizer,
+            objectives_val_norm=objectives_norm,
+            decisions_val=raw_data.pareto_set,
+            validation_metrics=validation_metrics,
+        )
+
         # Save the final model with the aggregated CV metrics
         self._save_model(
-            command.inverse_decision_mapper_params.model_dump(),
-            final_mapper_instance,
-            final_objectives_normalizer,
-            final_decisions_normalizer,
-            cv_results,
+            model_params=command.inverse_decision_mapper_params.model_dump(),
+            inverse_decision_mapper=final_mapper_instance,
+            objectives_normalizer=final_objectives_normalizer,
+            decisions_normalizer=final_decisions_normalizer,
+            train_scores=train_scores,
+            cv_scores=cv_scores,
         )
 
         self._visualize_results(
@@ -260,7 +268,7 @@ class TrainModelCommandHandler:
         decisions_normalizer: BaseNormalizer,
         objectives_val_norm: Any,
         decisions_val: Any,
-        metrics: dict[str, BaseValidationMetric],
+        validation_metrics: dict[str, BaseValidationMetric],
     ) -> dict[str, Any]:
         """Predicts and calculates validation metrics."""
 
@@ -290,7 +298,7 @@ class TrainModelCommandHandler:
         )
 
         metrics_list: dict[str, Any] = {}
-        for metric_name, validation_metric in metrics.items():
+        for metric_name, validation_metric in validation_metrics.items():
             score = validation_metric.calculate(
                 y_true=decisions_val, y_pred=decisions_pred_val
             )
@@ -304,7 +312,8 @@ class TrainModelCommandHandler:
         inverse_decision_mapper: BaseInverseDecisionMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
-        metrics: dict[str, list[float]],
+        train_scores: dict[str, list[float]],
+        cv_scores: dict[str, list[float]],
     ) -> None:
         """Constructs and saves the final model entity."""
 
@@ -316,7 +325,8 @@ class TrainModelCommandHandler:
         trained_model_artifact = ModelArtifact(
             parameters=inverse_decision_mapper_attrs,
             inverse_decision_mapper=inverse_decision_mapper,
-            metrics=metrics,
+            train_scores=train_scores,
+            cv_scores=cv_scores,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )

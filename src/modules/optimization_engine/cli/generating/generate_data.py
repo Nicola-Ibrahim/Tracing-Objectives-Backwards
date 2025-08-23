@@ -1,12 +1,12 @@
 import click
 
-from ..application.factories.algorithm import AlgorithmFactory
-from ..application.factories.optimizer import OptimizerFactory
-from ..application.factories.problem import ProblemFactory
-from ..application.generation.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
+from ...application.factories.algorithm import AlgorithmFactory
+from ...application.factories.optimizer import OptimizerFactory
+from ...application.factories.problem import ProblemFactory
+from ...application.generation.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
     GenerateBiobjParetoDataCommandHandler,
 )
-from ..application.generation.generate_biobj_pareto_data.generate_pareto_command import (
+from ...application.generation.generate_biobj_pareto_data.generate_pareto_command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
@@ -15,7 +15,7 @@ from ..application.generation.generate_biobj_pareto_data.generate_pareto_command
     OptimizerType,
     ProblemType,
 )
-from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
+from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
 

@@ -1,17 +1,17 @@
-from ..application.model_management.generate_decision.generate_decision_command import (
+from ...application.model_management.generate_decision.generate_decision_command import (
     GenerateDecisionCommand,
 )
-from ..application.model_management.generate_decision.generate_decision_handler import (
+from ...application.model_management.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
 )
-from ..domain.model_management.enums.inverse_decision_mapper_type import (
+from ...domain.model_management.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
 )
-from ..infrastructure.loggers.cmd_logger import CMDLogger
-from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
+from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
-from ..infrastructure.repositories.model_management.pickle_model_artifact_repo import (
+from ...infrastructure.repositories.model_management.pickle_model_artifact_repo import (
     PickleInterpolationModelRepository,
 )
 
@@ -28,7 +28,7 @@ def main():
     # Initialize the handler with the repository
     handler = GenerateDecisionCommandHandler(
         interpolation_model_repo=PickleInterpolationModelRepository(),
-        pareto_data_repo=NPZParetoDataRepository(),
+        data_repository=NPZParetoDataRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )
 

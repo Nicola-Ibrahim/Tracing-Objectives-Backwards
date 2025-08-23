@@ -1,14 +1,11 @@
-# src/application/losses/elbo_loss_calculator.py
 from typing import Any, Dict, Union
 
-import numpy as np
-import numpy.typing as npt
 import torch
 import torch.nn.functional as F  # Import F for mse_loss
 from torch import Tensor
 
 # Adjust import path
-from src.domain.interpolation.interfaces.base_loss_calculator import (
+from ...domain.model_management.interfaces.base_loss_calculator import (
     ArrayLike,  # Still used for targets
     BaseLossCalculator,
     to_tensor,  # Used for targets if they are numpy

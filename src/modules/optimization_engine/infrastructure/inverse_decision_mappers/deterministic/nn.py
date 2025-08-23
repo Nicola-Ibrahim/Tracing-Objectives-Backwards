@@ -88,6 +88,10 @@ class NNInverseDecisionMapper(DeterministicInverseDecisionMapper):
         # Call the parent's constructor to initialize shared state
         super().__init__()
 
+    @property
+    def type(self) -> str:
+        return "NNInverseDecisionMapper"
+
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         """
         Fits the neural network decoder to learn the direct mapping from X to y.

@@ -1,13 +1,13 @@
-from ..application.analysis.visualize_biobj_data.visualize_biobj_data_command import (
+from ...application.analysis.visualize_biobj_data.visualize_biobj_data_command import (
     VisualizeBiobjDataCommand,
 )
-from ..application.analysis.visualize_biobj_data.visualize_biobj_data_handler import (
+from ...application.analysis.visualize_biobj_data.visualize_biobj_data_handler import (
     VisulizeBiobjDataCommandHandler,
 )
-from ..infrastructure.repositories.generation.npz_pareto_data_repo import (
+from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
-from ..infrastructure.visualizers.pareto_data import PlotlyParetoDataVisualizer
+from ...infrastructure.visualizers.pareto_data import PlotlyParetoDataVisualizer
 
 
 def analyze_data():

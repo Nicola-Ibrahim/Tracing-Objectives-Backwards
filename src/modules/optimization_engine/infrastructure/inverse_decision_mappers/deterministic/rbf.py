@@ -36,6 +36,10 @@ class RBFInverseDecisionMapper(DeterministicInverseDecisionMapper):
         if n_neighbors < 1:
             raise ValueError("Neighbors must be at least 1.")
 
+    @property
+    def type(self) -> str:
+        return "RBF"
+
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         super().fit(X, y)
 

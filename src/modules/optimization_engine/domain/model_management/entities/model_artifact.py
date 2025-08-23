@@ -38,9 +38,13 @@ class ModelArtifact(BaseModel):
         description="The fitted normalizer for the output/objective space (y_train).",
     )
 
-    metrics: dict[str, float] = Field(
+    train_scores: dict[str, float] = Field(
         default_factory=dict,
-        description="Performance metrics for this training run. For CV, this is a dictionary of scores per fold.",
+        description="Performance metrics for a single training run (e.g., from a train-test split).",
+    )
+    cv_scores: dict[str, list[float]] = Field(
+        default_factory=dict,
+        description="Aggregated performance metrics (mean and std) from cross-validation. Only present for CV runs.",
     )
 
     trained_at: datetime = Field(

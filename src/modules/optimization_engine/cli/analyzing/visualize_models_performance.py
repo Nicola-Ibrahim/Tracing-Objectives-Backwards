@@ -1,11 +1,11 @@
-from ..application.analysis.visualize_models_performace.visualize_models_performance_command import (
+from ...application.analysis.visualize_models_performace.visualize_models_performance_command import (
     VisualizeModelsPerformanceCommand,
 )
-from ..application.analysis.visualize_models_performace.visualize_models_performance_handler import (
+from ...application.analysis.visualize_models_performace.visualize_models_performance_handler import (
     VisualizeModelsPerformanceCommandHandler,
 )
-from ..domain.analysis.loaders.interpolator_metrics import InterpolatorMetricsLoader
-from ..infrastructure.visualizers.model_artifcat_metrics import (
+from ...domain.analysis.loaders.interpolator_metrics import InterpolatorMetricsLoader
+from ...infrastructure.visualizers.model_artifcat_metrics import (
     PlotlyModelArtifactMetricsVisualizer,
 )
 

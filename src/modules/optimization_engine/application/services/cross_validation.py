@@ -35,7 +35,7 @@ def cross_validate(
     estimator: BaseInverseDecisionMapper,
     X: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
-    metrics: dict[str, BaseValidationMetric],
+    validation_metrics: dict[str, BaseValidationMetric],
     n_splits: int = 5,
     random_state: int | None = 42,
     verbose: bool = True,
@@ -47,7 +47,7 @@ def cross_validate(
         mapper: An estimator object with fit/predict methods.
         X: Independent variables (features).
         y: Dependent variables (targets).
-        metrics: dict mapping scorer names to scoring functions.
+        validation_metrics: dict mapping scorer names to scoring functions.
         n_splits: Number of folds.
         random_state: Seed for reproducibility.
         verbose: If True, prints progress/results.
@@ -56,7 +56,7 @@ def cross_validate(
         dict[str, list[float]]: Scores from each fold.
     """
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-    all_scores = {scorer_name: [] for scorer_name in metrics.keys()}
+    all_scores = {scorer_name: [] for scorer_name in validation_metrics.keys()}
 
     if verbose:
         print(
@@ -87,8 +87,8 @@ def cross_validate(
             raise TypeError("Estimator must implement a predict method.")
 
         # Score
-        for metric_name, metric_func in metrics.items():
-            score = metric_func(y_val, y_pred)
+        for metric_name, metric_fn in validation_metrics.items():
+            score = metric_fn.calculate(y_val, y_pred)
             all_scores[metric_name].append(score)
             if verbose:
                 print(f"  {metric_name}: {score:.4f}")
