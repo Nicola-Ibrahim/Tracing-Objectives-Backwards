@@ -8,10 +8,10 @@ from ...domain.model_management.enums.inverse_decision_mapper_type import (
     InverseDecisionMapperType,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
-    NPZParetoDataRepository,
+from ...infrastructure.repositories.generation.data_model_repo import (
+    FileSystemDataModelRepository,
 )
-from ...infrastructure.repositories.model_management.pickle_model_artifact_repo import (
+from ...infrastructure.repositories.model_management.model_artifact_repo import (
     FileSystemModelArtifcatRepository,
 )
 
@@ -28,7 +28,7 @@ def main():
     # Initialize the handler with the repository
     handler = GenerateDecisionCommandHandler(
         interpolation_model_repo=FileSystemModelArtifcatRepository(),
-        data_repository=NPZParetoDataRepository(),
+        data_repository=FileSystemDataModelRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )
 

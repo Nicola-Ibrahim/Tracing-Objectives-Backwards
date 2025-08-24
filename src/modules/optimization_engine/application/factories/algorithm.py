@@ -1,5 +1,5 @@
 from ...domain.generation.interfaces.base_algorithm import BaseAlgorithm
-from ...infrastructure.algorithms.nsga2 import NSGAII, NSGA2Config
+from ...infrastructure.generation.algorithms.nsga2 import NSGAII, NSGA2Config
 
 
 class AlgorithmFactory:

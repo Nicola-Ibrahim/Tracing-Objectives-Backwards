@@ -67,7 +67,7 @@ class ApplicationOptimizerConfig(BaseModel):
     )
 
 
-class GenerateParetoCommand(BaseModel):
+class GenerateBiobjDataCommand(BaseModel):
     problem_config: ApplicationProblemConfig = Field(
         ..., description="Configuration of the optimization problem."
     )

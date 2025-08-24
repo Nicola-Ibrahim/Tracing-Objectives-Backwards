@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ....optimization_engine.domain.generation.entities.pareto_data import (
-    ParetoDataModel,
+from ...domain.generation.entities.data_model import (
+    DataModel,
 )
 from ....optimization_engine.domain.services.pareto_generation_service import (
     ParetoGenerationService,
@@ -64,13 +64,13 @@ class GenerationDataACL:
             Exception: Any other exception from the underlying service.
         """
         # Call the service from the optimization bounded context
-        raw_pareto_data: ParetoDataModel = self._pareto_service.retrieve_pareto_data(
+        raw_pareto_data: DataModel = self._pareto_service.retrieve_pareto_data(
             data_identifier
         )
 
         # --- Anti-Corruption / Translation Logic ---
         # This is where the core ACL work happens.
-        # We map the ParetoDataModel from the 'optimization' context
+        # We map the DataModel from the 'optimization' context
         # to the AnalysisResultDTO specific to the 'analyzing' context.
         # If the 'analyzing' context needed different names for fields,
         # or aggregated data, this is where that transformation would occur.
@@ -83,6 +83,6 @@ class GenerationDataACL:
             original_metadata=raw_pareto_data.metadata,
         )
         print(
-            f"ACL: Transformed ParetoDataModel ({data_identifier}) to AnalysisResultDTO for analysis."
+            f"ACL: Transformed DataModel ({data_identifier}) to AnalysisResultDTO for analysis."
         )
         return transformed_data

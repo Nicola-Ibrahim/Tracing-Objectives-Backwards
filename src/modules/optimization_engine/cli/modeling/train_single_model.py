@@ -18,10 +18,10 @@ from ...application.model_management.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
-    NPZParetoDataRepository,
+from ...infrastructure.repositories.generation.data_model_repo import (
+    FileSystemDataModelRepository,
 )
-from ...infrastructure.repositories.model_management.pickle_model_artifact_repo import (
+from ...infrastructure.repositories.model_management.model_artifact_repo import (
     FileSystemModelArtifcatRepository,
 )
 from ...infrastructure.visualizers.training_performace import (
@@ -30,7 +30,7 @@ from ...infrastructure.visualizers.training_performace import (
 
 if __name__ == "__main__":
     handler = TrainModelCommandHandler(
-        data_repository=NPZParetoDataRepository(),
+        data_repository=FileSystemDataModelRepository(),
         inverse_decision_factory=InverseDecisionMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         trained_model_repository=FileSystemModelArtifcatRepository(),

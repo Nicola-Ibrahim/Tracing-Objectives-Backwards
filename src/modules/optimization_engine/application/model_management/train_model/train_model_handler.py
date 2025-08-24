@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
-from ....domain.generation.entities.pareto_data import ParetoDataModel
+from ....domain.generation.entities.data_model import DataModel
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ....domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
 from ....domain.model_management.entities.model_artifact import (
@@ -58,7 +58,7 @@ class TrainModelCommandHandler:
         """
         Executes the training workflow for a given interpolator using the command's data.
         """
-        raw_data: ParetoDataModel = self._data_repository.load(filename="pareto_data")
+        raw_data: DataModel = self._data_repository.load(filename="pareto_data")
 
         # Initialize components once
         inverse_decision_mapper = self._inverse_decision_factory.create(
@@ -96,7 +96,7 @@ class TrainModelCommandHandler:
         self,
         command: TrainModelCommand,
         inverse_decision_mapper: BaseInverseDecisionMapper,
-        raw_data: ParetoDataModel,
+        raw_data: DataModel,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
         """Handles the original single train/test split workflow."""
@@ -156,7 +156,7 @@ class TrainModelCommandHandler:
         self,
         command: TrainModelCommand,
         inverse_decision_mapper: BaseInverseDecisionMapper,
-        raw_data: ParetoDataModel,
+        raw_data: DataModel,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
         """Handles the cross-validation workflow, evaluating performance and saving a final model."""
@@ -220,7 +220,7 @@ class TrainModelCommandHandler:
 
     def _prepare_data(
         self,
-        raw_data: ParetoDataModel,
+        raw_data: DataModel,
         test_size: float,
         random_state: int,
         objectives_normalizer: BaseNormalizer,

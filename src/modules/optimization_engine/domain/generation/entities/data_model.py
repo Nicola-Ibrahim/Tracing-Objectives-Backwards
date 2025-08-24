@@ -1,11 +1,13 @@
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-class ParetoDataModel(BaseModel):
+class DataModel(BaseModel):
     """Pydantic model for storing Pareto front/set data with metadata."""
+
+    name: str = Field(..., description="The name of the Pareto data.")
 
     pareto_set: np.ndarray = Field(
         ..., description="The decision variables of the final Pareto set."
@@ -18,9 +20,6 @@ class ParetoDataModel(BaseModel):
     )
     historical_objectives: np.ndarray | None = Field(
         None, description="Raw historical objective values from all generations."
-    )
-    problem_name: str | None = Field(
-        None, description="An optional name for the problem."
     )
     metadata: dict[str, Any] = Field(
         {}, description="A dictionary for any additional metadata."
@@ -57,6 +56,39 @@ class ParetoDataModel(BaseModel):
                     "historical_solutions and historical_objectives must have the same number of rows if provided"
                 )
         return self
+
+    @classmethod
+    def create(
+        cls,
+        name: str,
+        pareto_set: np.ndarray,
+        pareto_front: np.ndarray,
+        historical_solutions: np.ndarray | None,
+        historical_objectives: np.ndarray | None,
+        metadata: dict[str, Any],
+    ) -> Self:
+        """
+        Factory method to create a DataModel instance.
+
+        Args:
+            name (str): The name of the Pareto data.
+            pareto_set (np.ndarray): The decision variables of the final Pareto set.
+            pareto_front (np.ndarray): The objective values of the final Pareto front.
+            historical_solutions (np.ndarray | None): Raw historical decision variables from all generations.
+            historical_objectives (np.ndarray | None): Raw historical objective values from all generations.
+            metadata (dict[str, Any]): A dictionary for any additional metadata.
+
+        Returns:
+            DataModel: A new instance of the DataModel.
+        """
+        return cls(
+            name=name,
+            pareto_set=pareto_set,
+            pareto_front=pareto_front,
+            historical_solutions=historical_solutions,
+            historical_objectives=historical_objectives,
+            metadata=metadata,
+        )
 
     @property
     def num_solutions(self) -> int:

@@ -3,20 +3,20 @@ import click
 from ...application.factories.algorithm import AlgorithmFactory
 from ...application.factories.optimizer import OptimizerFactory
 from ...application.factories.problem import ProblemFactory
-from ...application.generation.generate_biobj_pareto_data.generate_biobj_pareto_data_handler import (
-    GenerateBiobjParetoDataCommandHandler,
-)
-from ...application.generation.generate_biobj_pareto_data.generate_pareto_command import (
+from ...application.generation.generate_biobj_data.generate_biobj_data_command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
     ApplicationProblemConfig,
-    GenerateParetoCommand,
+    GenerateBiobjDataCommand,
     OptimizerType,
     ProblemType,
 )
-from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
-    NPZParetoDataRepository,
+from ...application.generation.generate_biobj_data.generate_biobj_data_handler import (
+    GenerateBiobjDataCommandHandler,
+)
+from ...infrastructure.repositories.generation.data_model_repo import (
+    FileSystemDataModelRepository,
 )
 
 
@@ -41,18 +41,18 @@ def generate_data(problem_id: int):
     )
 
     # Build command from CLI arguments
-    command = GenerateParetoCommand(
+    command = GenerateBiobjDataCommand(
         problem_config=problem_config,
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)
-    handler = GenerateBiobjParetoDataCommandHandler(
+    handler = GenerateBiobjDataCommandHandler(
         problem_factory=ProblemFactory(),
         algorithm_factory=AlgorithmFactory(),
         optimizer_factory=OptimizerFactory(),
-        archiver=NPZParetoDataRepository(),
+        data_model_repository=FileSystemDataModelRepository(),
     )
 
     # Execute

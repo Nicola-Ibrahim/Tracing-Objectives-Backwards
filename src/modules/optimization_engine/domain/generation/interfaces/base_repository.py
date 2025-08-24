@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from .....shared.config import ROOT_PATH
-from ..entities.pareto_data import ParetoDataModel
+from ..entities.data_model import DataModel
 
 
 class BaseParetoDataRepository(ABC):
@@ -17,7 +17,7 @@ class BaseParetoDataRepository(ABC):
         self.base_path = ROOT_PATH / file_path
 
     @abstractmethod
-    def save(self, data: ParetoDataModel, filename: str) -> Path: ...
+    def save(self, data: DataModel) -> Path: ...
 
     @abstractmethod
-    def load(self, filename: str) -> ParetoDataModel: ...
+    def load(self, filename: str) -> DataModel: ...

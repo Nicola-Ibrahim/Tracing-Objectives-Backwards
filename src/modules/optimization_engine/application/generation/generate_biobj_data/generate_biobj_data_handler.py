@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from ....domain.generation.entities.pareto_data import ParetoDataModel
+from ....domain.generation.entities.data_model import DataModel
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
 from ...factories.algorithm import AlgorithmFactory
 from ...factories.optimizer import OptimizerFactory
 from ...factories.problem import ProblemFactory
-from .generate_pareto_command import GenerateParetoCommand
+from .generate_biobj_data_command import GenerateBiobjDataCommand
 
 
-class GenerateBiobjParetoDataCommandHandler:
+class GenerateBiobjDataCommandHandler:
     """
     Command handler for generating biobjective Pareto data.
     This handler now directly orchestrates the core generation logic,
@@ -20,23 +20,23 @@ class GenerateBiobjParetoDataCommandHandler:
         problem_factory: ProblemFactory,
         algorithm_factory: AlgorithmFactory,
         optimizer_factory: OptimizerFactory,
-        archiver: BaseParetoDataRepository,
+        data_model_repository: BaseParetoDataRepository,
     ):
         """
-        Initializes the command handler with necessary factories and an archiver.
+        Initializes the command handler with necessary factories and an data_model_repository.
 
         Args:
             problem_factory: Factory to create problem instances.
             algorithm_factory: Factory to create algorithm instances.
             optimizer_factory: Factory to create optimizer runner instances.
-            archiver: Component responsible for saving and loading Pareto data.
+            data_model_repository: Component responsible for saving and loading Pareto data.
         """
         self._problem_factory = problem_factory
         self._algorithm_factory = algorithm_factory
         self._optimizer_factory = optimizer_factory
-        self._archiver = archiver
+        self._data_model_repository = data_model_repository
 
-    def execute(self, command: GenerateParetoCommand) -> Path:
+    def execute(self, command: GenerateBiobjDataCommand) -> Path:
         """
         Executes the command by directly orchestrating the Pareto data generation.
 
@@ -64,11 +64,11 @@ class GenerateBiobjParetoDataCommandHandler:
         # Execute the optimization process
         result = optimizer.run()
 
-        # Build the ParetoDataModel from the optimization results and original configurations
-        data = ParetoDataModel(
+        # Build the DataModel from the optimization results and original configurations
+        data = DataModel(
+            name=algorithm_config.get("type", "UnknownAlgorithm"),
             pareto_set=result.pareto_set,
             pareto_front=result.pareto_front,
-            problem_name=algorithm_config.get("type", "UnknownAlgorithm"),
             historical_solutions=result.all_historical_solutions,
             historical_objectives=result.all_historical_objectives,
             metadata={
@@ -78,5 +78,5 @@ class GenerateBiobjParetoDataCommandHandler:
             },
         )
 
-        # Save the results using the archiver and return the saved path
-        return self._archiver.save(data=data, filename="pareto_data")
+        # Save the results using the data model repository and return the saved path
+        return self._data_model_repository.save(data=data)
