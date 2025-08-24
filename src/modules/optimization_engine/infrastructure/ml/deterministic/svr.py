@@ -65,9 +65,9 @@ class SVRMlMapper(DeterministicMlMapper):
         if X.ndim == 1:
             X = X.reshape(-1, 1)
 
-        if X.shape[1] != self._objective_dim:
+        if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Target X must have {self._objective_dim} dimensions, "
+                f"Target X must have {self._X_dim} dimensions, "
                 f"but got {X.shape[1]} dimensions."
             )
 

@@ -40,7 +40,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseDataVisualizer):
         residuals_dim2 = decisions_val[:, 1] - decisions_pred_val[:, 1]
 
         # Check the number of objective dimensions for plotting
-        num_objective_dims = objectives_val.shape[1]
+        num_X_dims = objectives_val.shape[1]
         num_rows = 5
         subplot_titles_list = [
             "Model Performance: Actual vs. Predicted Decisions",  # (1,1)
@@ -55,14 +55,14 @@ class PlotlyTrainingPerformanceVisualizer(BaseDataVisualizer):
 
         # Dynamically add titles for Error Magnitude vs. Objective Dimensions
         error_magnitude_titles = []
-        for i in range(num_objective_dims):
+        for i in range(num_X_dims):
             error_magnitude_titles.append(
                 f"Error Magnitude vs. Objective Dimension {i + 1}"
             )
 
         # Determine the number of rows needed for the error magnitude plots
         num_error_mag_rows = (
-            num_objective_dims + 1
+            num_X_dims + 1
         ) // 2  # 1 row for 1-2 dims, 2 for 3-4, etc.
         num_rows += num_error_mag_rows
 
@@ -283,7 +283,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseDataVisualizer):
 
         # Dynamically add scatter plots for each objective dimension
         current_row = 5
-        for i in range(num_objective_dims):
+        for i in range(num_X_dims):
             col = (i % 2) + 1  # 1, 2, 1, 2...
 
             fig.add_trace(
@@ -337,7 +337,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseDataVisualizer):
         fig.update_yaxes(title_text="Count", row=4, col=2)
 
         # Dynamically update axes titles for the new error magnitude plots
-        for i in range(num_objective_dims):
+        for i in range(num_X_dims):
             current_row = 5 + i // 2
             col = (i % 2) + 1
             fig.update_xaxes(
@@ -466,7 +466,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseDataVisualizer):
         ]
 
         # Dynamically add annotations for the new error magnitude plots
-        for i in range(num_objective_dims):
+        for i in range(num_X_dims):
             current_row_index = 4 + i // 2
             col = (i % 2) + 1
             x_pos = center_x_col1 if col == 1 else center_x_col2

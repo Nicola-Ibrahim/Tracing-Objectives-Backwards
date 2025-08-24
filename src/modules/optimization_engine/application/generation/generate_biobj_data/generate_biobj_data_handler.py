@@ -66,7 +66,7 @@ class GenerateBiobjDataCommandHandler:
 
         # Build the DataModel from the optimization results and original configurations
         data = DataModel(
-            name=algorithm_config.get("type", "UnknownAlgorithm"),
+            name="pareto_data",
             pareto_set=result.pareto_set,
             pareto_front=result.pareto_front,
             historical_solutions=result.all_historical_solutions,

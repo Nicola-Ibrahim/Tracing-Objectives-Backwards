@@ -32,7 +32,7 @@ class SplineMlMapper(DeterministicMlMapper):
         super().fit(X, y)
 
         # 2. Perform specific validation for this interpolator
-        if self._objective_dim != 2:
+        if self._X_dim != 2:
             raise ValueError(
                 "SplineMlMapper requires features X with exactly 2 dimensions (x, y)."
             )
@@ -40,7 +40,7 @@ class SplineMlMapper(DeterministicMlMapper):
         # 3. Fit a separate spline for each output dimension.
         # This is necessary because SmoothBivariateSpline can only handle a single output (z).
         self._spline_funcs = []
-        for i in range(self._decision_dim):
+        for i in range(self._y_dim):
             # SmoothBivariateSpline expects 1D arrays for x, y, z
             spline_func = SmoothBivariateSpline(
                 x=X[:, 0],
@@ -59,9 +59,9 @@ class SplineMlMapper(DeterministicMlMapper):
         if X.ndim == 1:
             X = X.reshape(1, -1)
 
-        if X.shape[1] != self._objective_dim:
+        if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Input X must have {self._objective_dim} dimensions, "
+                f"Input X must have {self._X_dim} dimensions, "
                 f"but got {X.shape[1]} dimensions."
             )
 

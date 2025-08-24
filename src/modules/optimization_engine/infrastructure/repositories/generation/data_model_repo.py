@@ -4,7 +4,7 @@ import numpy as np
 
 from ....domain.generation.entities.data_model import DataModel
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ...processing.files.npz import NPZFileHandler
+from ...processing.files.pickle import PickleFileHandler
 
 
 class FileSystemDataModelRepository(BaseParetoDataRepository):
@@ -15,13 +15,13 @@ class FileSystemDataModelRepository(BaseParetoDataRepository):
 
     def __init__(self):
         super().__init__()
-        self._file_handler = NPZFileHandler()
+        self._file_handler = PickleFileHandler()
 
     def save(self, data: DataModel) -> Path:
         """
-        Save Pareto set/front data with metadata in numpy format.
+        Save Pareto set/front data with metadata in pickle format.
         """
-        save_path = self.base_path / f"{data.name}.npz"
+        save_path = self.base_path / data.name
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._file_handler.save(data.model_dump(), file_path=save_path)
@@ -31,8 +31,7 @@ class FileSystemDataModelRepository(BaseParetoDataRepository):
         """
         Load Pareto set/front data from a numpy archive.
         """
-        load_path = self.base_path / f"{filename}.npz"
-        print(load_path)
+        load_path = self.base_path / filename
         loaded_data = self._file_handler.load(load_path)
 
         # Handle potential None values and coercion from loaded data

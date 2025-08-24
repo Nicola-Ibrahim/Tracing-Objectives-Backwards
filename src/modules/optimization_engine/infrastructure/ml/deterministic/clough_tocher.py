@@ -34,9 +34,9 @@ class CloughTocherMlMapper(DeterministicMlMapper):
         if X.ndim == 1:
             X = X.reshape(-1, 1)
 
-        if X.shape[1] != self._objective_dim:
+        if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Target objectives must have {self._objective_dim} dimensions, but got {X.shape[1]} dimensions."
+                f"Target objectives must have {self._X_dim} dimensions, but got {X.shape[1]} dimensions."
             )
 
         return self._interp_func(X)

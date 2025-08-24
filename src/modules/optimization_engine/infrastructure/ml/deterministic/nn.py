@@ -101,12 +101,12 @@ class NNMlMapper(DeterministicMlMapper):
 
         # Check if the decoder's input/output dimensions match the data.
         if (
-            self.decoder.net[0].in_features != self._objective_dim
-            or self.decoder.net[-1].out_features != self._decision_dim
+            self.decoder.net[0].in_features != self._X_dim
+            or self.decoder.net[-1].out_features != self._y_dim
         ):
             raise ValueError(
                 f"Decoder dimensions do not match data. Decoder expects input={self.decoder.net[0].in_features}, output={self.decoder.net[-1].out_features}. "
-                f"Data has inputs={self._objective_dim}, outputs={self._decision_dim}."
+                f"Data has inputs={self._X_dim}, outputs={self._y_dim}."
                 "Please instantiate the Decoder with matching dimensions before fitting."
             )
 
@@ -119,15 +119,15 @@ class NNMlMapper(DeterministicMlMapper):
         """
         Predicts decision vectors for given input feature points using the trained network.
         """
-        if self._objective_dim is None:
+        if self._X_dim is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
         if X.ndim == 1:
             X = X.reshape(-1, 1)
 
-        if X.shape[1] != self._objective_dim:
+        if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Input must have {self._objective_dim} dimensions, but got {X.shape[1]} dimensions."
+                f"Input must have {self._X_dim} dimensions, but got {X.shape[1]} dimensions."
             )
 
         return self.decoder.predict(X)

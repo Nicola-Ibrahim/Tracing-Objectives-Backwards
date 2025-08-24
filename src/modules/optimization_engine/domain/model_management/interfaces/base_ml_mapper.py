@@ -28,7 +28,7 @@ class BaseMlMapper(ABC):
         self._init_params = {k: v for k, v in bound.arguments.items() if k != "self"}
 
         self._X_dim: int | None = None
-        self._decision_dim: int | None = None
+        self._y_dim: int | None = None
 
     @property
     def dimensionality(self) -> str:

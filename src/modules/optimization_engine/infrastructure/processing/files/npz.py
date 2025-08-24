@@ -25,6 +25,8 @@ class NPZFileHandler(BaseFileHandler):
         return unpack_helper
 
     def save(self, obj: Any, file_path: Path):
+        file_path = file_path.with_suffix(".npz")
+
         try:
             np.savez_compressed(file_path, **obj)
         except Exception as e:

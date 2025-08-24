@@ -13,6 +13,8 @@ class PickleFileHandler(BaseFileHandler):
 
     def save(self, obj: Any, file_path: Path):
         """Saves a Python object to a specified file path using pickle."""
+
+        file_path = file_path.with_suffix(".pkl")
         try:
             with open(file_path, "wb") as f:
                 pickle.dump(obj, f)
@@ -21,6 +23,8 @@ class PickleFileHandler(BaseFileHandler):
 
     def load(self, file_path: Path) -> Any:
         """Loads a Python object from a specified file path using pickle."""
+
+        file_path = file_path.with_suffix(".pkl")
         if not file_path.exists():
             raise FileNotFoundError(f"Artifact not found at {file_path}")
         try:

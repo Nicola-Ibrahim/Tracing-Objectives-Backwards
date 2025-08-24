@@ -37,7 +37,7 @@ class KrigingMlMapper(DeterministicMlMapper):
         super().fit(X, y)
 
         # 2. Perform specific validation
-        if self._objective_dim != 2:
+        if self._X_dim != 2:
             raise ValueError(
                 "KrigingMlMapper requires objectives with exactly 2 dimensions (x, y)."
             )
@@ -45,7 +45,7 @@ class KrigingMlMapper(DeterministicMlMapper):
         # 3. Fit a separate Kriging model for each output dimension.
         # This is necessary because pykrige.OrdinaryKriging can only handle one output (z) at a time.
         self._kriging_models = []
-        for i in range(self._decision_dim):
+        for i in range(self._y_dim):
             model = krige.OrdinaryKriging(
                 x=X[:, 0],
                 y=X[:, 1],
@@ -63,9 +63,9 @@ class KrigingMlMapper(DeterministicMlMapper):
         if X.ndim == 1:
             X = X.reshape(-1, 1)
 
-        if X.shape[1] != self._objective_dim:
+        if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Target objectives must have {self._objective_dim} dimensions, "
+                f"Target objectives must have {self._X_dim} dimensions, "
                 f"but got {X.shape[1]} dimensions."
             )
 
