@@ -33,7 +33,7 @@ def generate_data(problem_id: int):
     )
     optimizer_config = ApplicationOptimizerConfig(
         type=OptimizerType.minimizer,
-        generations=100,
+        generations=16,
         seed=42,
         save_history=True,
         verbose=False,

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from pymoo.optimize import minimize
+from pymoo.termination import get_termination
 
 from ....domain.generation.interfaces.base_optimizer import ProblemAwareOptimizer
 from .result import OptimizationResult
@@ -30,9 +31,11 @@ class MinimizerConfig(BaseModel):
 
 class Minimizer(ProblemAwareOptimizer):
     def run(self) -> OptimizationResult:
+        termination = get_termination("n_gen", self.config.generations)
         result = minimize(
             problem=self.problem,
             algorithm=self.algorithm,
+            termination=termination,
             generations=self.config.generations,
             seed=self.config.seed,
             save_history=self.config.save_history,

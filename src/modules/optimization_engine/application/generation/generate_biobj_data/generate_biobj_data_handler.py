@@ -64,13 +64,16 @@ class GenerateBiobjDataCommandHandler:
         # Execute the optimization process
         result = optimizer.run()
 
+        print(result.historical_pareto_set.shape, result.historical_pareto_front.shape)
+        print(result.pareto_set.shape, result.pareto_front.shape)
+
         # Build the DataModel from the optimization results and original configurations
         data = DataModel(
             name="pareto_data",
             pareto_set=result.pareto_set,
             pareto_front=result.pareto_front,
-            historical_solutions=result.all_historical_solutions,
-            historical_objectives=result.all_historical_objectives,
+            historical_solutions=result.historical_pareto_set,
+            historical_objectives=result.historical_pareto_front,
             metadata={
                 "algorithm": algorithm_config,
                 "optimizer": optimizer_config,

@@ -113,11 +113,11 @@ class TrainModelCommandHandler:
             decisions_train,
             decisions_val,
         ) = self._prepare_data(
-            raw_data,
-            command.test_size,
-            command.random_state,
-            objectives_normalizer,
-            decisions_normalizer,
+            raw_data=raw_data,
+            test_size=command.test_size,
+            random_state=command.random_state,
+            objectives_normalizer=objectives_normalizer,
+            decisions_normalizer=decisions_normalizer,
         )
 
         self._train_model(
@@ -166,8 +166,8 @@ class TrainModelCommandHandler:
 
         cv_scores = cross_validate(
             estimator=inverse_decision_mapper,
-            X=raw_data.pareto_front,
-            y=raw_data.pareto_set,
+            X=raw_data.historical_objectives,
+            y=raw_data.historical_solutions,
             validation_metrics=validation_metrics,
             n_splits=command.cv_splits,
             random_state=command.random_state,
@@ -184,9 +184,11 @@ class TrainModelCommandHandler:
         )
 
         objectives_norm = final_objectives_normalizer.fit_transform(
-            raw_data.pareto_front
+            raw_data.historical_objectives
         )
-        decisions_norm = final_decisions_normalizer.fit_transform(raw_data.pareto_set)
+        decisions_norm = final_decisions_normalizer.fit_transform(
+            raw_data.historical_solutions
+        )
 
         final_mapper_instance = _clone(inverse_decision_mapper)
         final_mapper_instance.fit(X=objectives_norm, y=decisions_norm)
@@ -195,7 +197,7 @@ class TrainModelCommandHandler:
             inverse_decision_mapper=final_mapper_instance,
             decisions_normalizer=final_decisions_normalizer,
             objectives_val_norm=objectives_norm,
-            decisions_val=raw_data.pareto_set,
+            decisions_val=raw_data.historical_solutions,
             validation_metrics=validation_metrics,
         )
 
@@ -212,8 +214,8 @@ class TrainModelCommandHandler:
         self._visualize_results(
             objectives_train_norm=objectives_norm,
             objectives_val_norm=objectives_norm,
-            decisions_train=raw_data.pareto_set,
-            decisions_val=raw_data.pareto_set,
+            decisions_train=raw_data.historical_solutions,
+            decisions_val=raw_data.historical_solutions,
             inverse_decision_mapper=final_mapper_instance,
             decisions_normalizer=final_decisions_normalizer,
         )
@@ -233,8 +235,8 @@ class TrainModelCommandHandler:
             decisions_train,
             decisions_val,
         ) = train_test_split(
-            raw_data.pareto_front,
-            raw_data.pareto_set,
+            raw_data.historical_objectives,
+            raw_data.historical_solutions,
             test_size=test_size,
             random_state=random_state,
         )
