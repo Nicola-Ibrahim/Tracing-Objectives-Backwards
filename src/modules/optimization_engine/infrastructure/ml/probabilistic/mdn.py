@@ -23,8 +23,8 @@ from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 from umap import UMAP
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    ProbabilisticInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    ProbabilisticMlMapper,
 )
 
 
@@ -233,7 +233,7 @@ class MDN(nn.Module):
         return pi, mu, sigma
 
 
-class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
+class MDNMlMapper(ProbabilisticMlMapper):
     """
     An inverse mapper that uses a Mixture Density Network (MDN) to model the
     inverse relationship from objectives to decisions.
@@ -253,7 +253,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         verbose: bool = False,
     ):
         """
-        Initialize the MDNInverseDecisionMapper.
+        Initialize the MDNMlMapper.
         """
         super().__init__()
         self._num_mixtures = num_mixtures
@@ -440,7 +440,7 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
 
 
 def plot_predict_dist(
-    model: MDNInverseDecisionMapper,
+    model: MDNMlMapper,
     X: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
     non_linear: bool = False,
@@ -449,7 +449,7 @@ def plot_predict_dist(
     Plots the conditional mixture distributions using Plotly Express.
 
     Args:
-        model: The trained MDNInverseDecisionMapper model.
+        model: The trained MDNMlMapper model.
         X: The input data (e.g., objectives).
         y: The output data (e.g., decisions).
         non_linear: Whether to use UMAP (True) or PCA (False) for dimensionality reduction.
@@ -494,7 +494,7 @@ def plot_predict_dist(
 
 
 def plot_samples_vs_true(
-    model: MDNInverseDecisionMapper,
+    model: MDNMlMapper,
     X: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
     non_linear: bool = False,
@@ -503,7 +503,7 @@ def plot_samples_vs_true(
     Plots generated samples against true data using Plotly Express.
 
     Args:
-        model: The trained MDNInverseDecisionMapper model.
+        model: The trained MDNMlMapper model.
         X: The input data (e.g., objectives).
         y: The output data (e.g., decisions).
         non_linear: Whether to use UMAP (True) or PCA (False) for dimensionality reduction.

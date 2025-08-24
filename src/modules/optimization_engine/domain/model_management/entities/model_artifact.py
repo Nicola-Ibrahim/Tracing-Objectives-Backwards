@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from ..interfaces.base_inverse_decision_mapper import BaseInverseDecisionMapper
+from ..interfaces.base_ml_mapper import BaseMlMapper
 from ..interfaces.base_normalizer import BaseNormalizer
 
 
@@ -25,7 +25,7 @@ class ModelArtifact(BaseModel):
         ...,
         description="The parameters used to initialize or configure this specific model instance/run.",
     )
-    inverse_decision_mapper: BaseInverseDecisionMapper = Field(
+    inverse_decision_mapper: BaseMlMapper = Field(
         ...,
         description="The actual fitted inverse decision mapper instance from this run.",
     )
@@ -96,7 +96,7 @@ class ModelArtifact(BaseModel):
         cv_scores: dict[str, list[float]],
         trained_at: datetime,
         version: int | None,
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
     ) -> "ModelArtifact":

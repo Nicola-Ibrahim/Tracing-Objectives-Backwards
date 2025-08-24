@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from ..dtos import (
-    InverseDecisionMapperParams,
+    MlMapperParams,
     NormalizerConfig,
     ValidationMetricConfig,
 )
@@ -14,7 +14,7 @@ class TrainModelCommand(BaseModel):
     and metadata for the resulting trained model.
     """
 
-    inverse_decision_mapper_params: InverseDecisionMapperParams = Field(
+    inverse_decision_mapper_params: MlMapperParams = Field(
         ...,
         description="Parameters (hyperparameters, configuration) used to initialize/configure "
         "this specific interpolator instance for training.",

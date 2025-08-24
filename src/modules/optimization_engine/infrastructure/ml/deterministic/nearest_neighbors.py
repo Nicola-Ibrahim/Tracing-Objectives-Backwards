@@ -2,12 +2,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import NearestNDInterpolator
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    DeterministicInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    DeterministicMlMapper,
 )
 
 
-class NearestNDInverseDecisionMapper(DeterministicInverseDecisionMapper):
+class NearestNDMlMapper(DeterministicMlMapper):
     _interp_func: NearestNDInterpolator | None = None
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
@@ -17,7 +17,7 @@ class NearestNDInverseDecisionMapper(DeterministicInverseDecisionMapper):
         super().fit(X, y)  # Call parent validation
         if len(X) < 1:
             raise ValueError(
-                "NearestNDInverseDecisionMapper requires at least 1 data point for fitting."
+                "NearestNDMlMapper requires at least 1 data point for fitting."
             )
         self._interp_func = NearestNDInterpolator(x=X, y=y)
 

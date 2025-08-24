@@ -5,12 +5,12 @@ import numpy.typing as npt
 from sklearn.model_selection import KFold
 
 from ...domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
-from ...domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
+from ...domain.model_management.interfaces.base_ml_mapper import (
+    BaseMlMapper,
 )
 
 
-def _clone(estimator: BaseInverseDecisionMapper) -> BaseInverseDecisionMapper:
+def _clone(estimator: BaseMlMapper) -> BaseMlMapper:
     """
     Clones an estimator by re-instantiating it with the same __init__ parameters.
     """
@@ -39,7 +39,7 @@ def _clone(estimator: BaseInverseDecisionMapper) -> BaseInverseDecisionMapper:
 
 
 def cross_validate(
-    estimator: BaseInverseDecisionMapper,
+    estimator: BaseMlMapper,
     X: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
     validation_metrics: dict[str, BaseValidationMetric],

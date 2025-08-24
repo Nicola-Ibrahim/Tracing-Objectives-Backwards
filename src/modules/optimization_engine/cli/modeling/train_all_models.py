@@ -1,15 +1,15 @@
 import time
 
-from ...application.factories.inverse_decision_mapper import (
-    InverseDecisionMapperFactory,
+from ...application.factories.ml_mapper import (
+    MlMapperFactory,
 )
 from ...application.factories.mertics import MetricFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.model_management.dtos import (
-    GaussianProcessInverseDecisionMapperParams,
-    MDNInverseDecisionMapperParams,
-    NeuralNetworkInverseDecisionMapperParams,
-    RBFInverseDecisionMapperParams,
+    GaussianProcessMlMapperParams,
+    MDNMlMapperParams,
+    NeuralNetworkMlMapperParams,
+    RBFMlMapperParams,
 )
 from ...application.model_management.train_model.train_model_command import (
     NormalizerConfig,
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
     command_handler = TrainModelCommandHandler(
         data_repository=FileSystemDataModelRepository(),
-        inverse_decision_factory=InverseDecisionMapperFactory(),
+        inverse_decision_factory=MlMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         trained_model_repository=FileSystemModelArtifcatRepository(),
         normalizer_factory=NormalizerFactory(),
@@ -41,10 +41,10 @@ if __name__ == "__main__":
     # Define the model parameter classes we want to test
     # These are the DTOs for each model type
     model_param_classes = [
-        GaussianProcessInverseDecisionMapperParams,
-        NeuralNetworkInverseDecisionMapperParams,
-        RBFInverseDecisionMapperParams,
-        MDNInverseDecisionMapperParams,
+        GaussianProcessMlMapperParams,
+        NeuralNetworkMlMapperParams,
+        RBFMlMapperParams,
+        MDNMlMapperParams,
     ]
 
     # Define how many times to train each interpolator type
@@ -52,9 +52,7 @@ if __name__ == "__main__":
 
     # Loop through each model type
     for param_class in model_param_classes:
-        model_type_name = param_class.__name__.replace(
-            "InverseDecisionMapperParams", ""
-        )
+        model_type_name = param_class.__name__.replace("MlMapperParams", "")
 
         # Loop multiple times for each model type
         for i in range(num_runs_per_type):

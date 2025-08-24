@@ -1,13 +1,13 @@
-from ...application.factories.inverse_decision_mapper import (
-    InverseDecisionMapperFactory,
+from ...application.factories.ml_mapper import (
+    MlMapperFactory,
 )
 from ...application.factories.mertics import MetricFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.model_management.dtos import (
-    GaussianProcessInverseDecisionMapperParams,
-    MDNInverseDecisionMapperParams,
-    NeuralNetworkInverseDecisionMapperParams,
-    RBFInverseDecisionMapperParams,
+    GaussianProcessMlMapperParams,
+    MDNMlMapperParams,
+    NeuralNetworkMlMapperParams,
+    RBFMlMapperParams,
 )
 from ...application.model_management.train_model.train_model_command import (
     NormalizerConfig,
@@ -31,7 +31,7 @@ from ...infrastructure.visualizers.training_performace import (
 if __name__ == "__main__":
     handler = TrainModelCommandHandler(
         data_repository=FileSystemDataModelRepository(),
-        inverse_decision_factory=InverseDecisionMapperFactory(),
+        inverse_decision_factory=MlMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         trained_model_repository=FileSystemModelArtifcatRepository(),
         normalizer_factory=NormalizerFactory(),
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     )
 
     command = TrainModelCommand(
-        inverse_decision_mapper_params=RBFInverseDecisionMapperParams(),
+        inverse_decision_mapper_params=RBFMlMapperParams(),
         objectives_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),

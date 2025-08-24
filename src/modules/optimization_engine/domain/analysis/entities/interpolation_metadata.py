@@ -11,9 +11,9 @@ class ModelMetadata(BaseModel):
     id: str
     name: str
     parameters: Union[
-        GaussianProcessInverseDecisionMapperParams,
-        RBFInverseDecisionMapperParams,
-        NearestNeighborsInverseDecisionMapperParams,
+        GaussianProcessMlMapperParams,
+        RBFMlMapperParams,
+        NearestNeighborsMlMapperParams,
     ] = Field(
         ...,
         discriminator="type",  # Use a discriminator to tell Pydantic which sub-model to use based on the 'type' field

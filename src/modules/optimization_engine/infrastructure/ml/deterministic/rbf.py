@@ -2,12 +2,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RBFInterpolator
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    DeterministicInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    DeterministicMlMapper,
 )
 
 
-class RBFInverseDecisionMapper(DeterministicInverseDecisionMapper):
+class RBFMlMapper(DeterministicMlMapper):
     _interp_func: RBFInterpolator | None = None
 
     def __init__(

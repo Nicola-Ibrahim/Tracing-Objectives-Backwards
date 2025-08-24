@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from numpy.typing import NDArray
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    DeterministicInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    DeterministicMlMapper,
 )
 
 
@@ -68,7 +68,7 @@ class Decoder(nn.Module):
             return output.cpu().numpy()
 
 
-class NNInverseDecisionMapper(DeterministicInverseDecisionMapper):
+class NNMlMapper(DeterministicMlMapper):
     """
     Interpolator that uses a neural network decoder to map directly from
     an objective space to a decision space.
@@ -90,7 +90,7 @@ class NNInverseDecisionMapper(DeterministicInverseDecisionMapper):
 
     @property
     def type(self) -> str:
-        return "NNInverseDecisionMapper"
+        return "NNMlMapper"
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         """

@@ -5,7 +5,7 @@ from ...application.model_management.generate_decision.generate_decision_handler
     GenerateDecisionCommandHandler,
 )
 from ...domain.model_management.enums.inverse_decision_mapper_type import (
-    InverseDecisionMapperType,
+    MlMapperType,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.generation.data_model_repo import (
@@ -34,7 +34,7 @@ def main():
 
     # Create the command object using the hardcoded values
     command = GenerateDecisionCommand(
-        model_type=InverseDecisionMapperType.KRIGING_ND.value,
+        model_type=MlMapperType.KRIGING_ND.value,
         target_objective=target_objective_point,
         distance_tolerance=0.02,
         num_suggestions=5,

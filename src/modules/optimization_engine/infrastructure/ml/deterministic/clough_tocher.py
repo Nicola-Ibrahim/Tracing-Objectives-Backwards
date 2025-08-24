@@ -2,12 +2,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import CloughTocher2DInterpolator
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    DeterministicInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    DeterministicMlMapper,
 )
 
 
-class CloughTocherInverseDecisionMapper(DeterministicInverseDecisionMapper):
+class CloughTocherMlMapper(DeterministicMlMapper):
     def __init__(self) -> None:
         super().__init__()
         self._interp_func: CloughTocher2DInterpolator | None = None
@@ -17,12 +17,10 @@ class CloughTocherInverseDecisionMapper(DeterministicInverseDecisionMapper):
         super().fit(X, y)
 
         if X.shape[1] != 2:
-            raise ValueError(
-                "CloughTocherInverseDecisionMapper requires 2D objective data."
-            )
+            raise ValueError("CloughTocherMlMapper requires 2D objective data.")
         if len(X) < 4:
             raise ValueError(
-                "CloughTocherInverseDecisionMapper requires at least 4 data points for fitting."
+                "CloughTocherMlMapper requires at least 4 data points for fitting."
             )
 
         self._interp_func = CloughTocher2DInterpolator(

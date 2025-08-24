@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 
 
-class BaseInverseDecisionMapper(ABC):
+class BaseMlMapper(ABC):
     """
     Base class for Inverse Decision Mappers (and general interpolators in this context).
     It defines the common interface for fitting the mapper and making predictions.
@@ -27,7 +27,7 @@ class BaseInverseDecisionMapper(ABC):
         bound.apply_defaults()
         self._init_params = {k: v for k, v in bound.arguments.items() if k != "self"}
 
-        self._objective_dim: int | None = None
+        self._X_dim: int | None = None
         self._decision_dim: int | None = None
 
     @property
@@ -36,9 +36,9 @@ class BaseInverseDecisionMapper(ABC):
         Returns the dimensionality handled by the mapper.
         This is determined from the input data during fitting.
         """
-        if self._objective_dim is None:
+        if self._X_dim is None:
             return "Unfitted"  # A better state than 'ND'
-        elif self._objective_dim == 1:
+        elif self._X_dim == 1:
             return "1D"
         else:
             return "ND"
@@ -78,8 +78,8 @@ class BaseInverseDecisionMapper(ABC):
             raise ValueError("Input data cannot be empty for fitting the mapper.")
 
         # Store dimensions, which will be used by the dimensionality property
-        self._objective_dim = X.shape[1]
-        self._decision_dim = y.shape[1]
+        self._X_dim = X.shape[1]
+        self._y_dim = y.shape[1]
 
     def to_dict(self):
         return {k: self._serialize(v) for k, v in self._init_params.items()}
@@ -90,7 +90,7 @@ class BaseInverseDecisionMapper(ABC):
             return v.value
         elif isinstance(v, np.ndarray):
             return v.tolist()
-        elif isinstance(v, BaseInverseDecisionMapper):
+        elif isinstance(v, BaseMlMapper):
             return v.to_dict()
         elif isinstance(v, list):
             return [cls._serialize(i) for i in v]
@@ -100,7 +100,7 @@ class BaseInverseDecisionMapper(ABC):
             return v
 
 
-class DeterministicInverseDecisionMapper(BaseInverseDecisionMapper):
+class DeterministicMlMapper(BaseMlMapper):
     """
     A deterministic inverse decision mapper that uses a fixed mapping strategy.
     """
@@ -121,7 +121,7 @@ class DeterministicInverseDecisionMapper(BaseInverseDecisionMapper):
         raise NotImplementedError("Predict method not implemented")
 
 
-class ProbabilisticInverseDecisionMapper(BaseInverseDecisionMapper):
+class ProbabilisticMlMapper(BaseMlMapper):
     @abstractmethod
     def predict(self, X: npt.NDArray[np.float64], mode: str) -> npt.NDArray[np.float64]:
         """

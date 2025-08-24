@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from numpy.typing import NDArray
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    ProbabilisticInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    ProbabilisticMlMapper,
 )
 
 
@@ -97,7 +97,7 @@ class CVAEDecoder(nn.Module):
         return self.fc2(h)
 
 
-class CVAEInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
+class CVAEMlMapper(ProbabilisticMlMapper):
     """
     An inverse mapper that uses a Conditional Variational Autoencoder (CVAE)
     to model the inverse relationship from objectives to decisions.

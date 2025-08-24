@@ -32,7 +32,7 @@ class FileSystemDataModelRepository(BaseParetoDataRepository):
         Load Pareto set/front data from a numpy archive.
         """
         load_path = self.base_path / f"{filename}.npz"
-
+        print(load_path)
         loaded_data = self._file_handler.load(load_path)
 
         # Handle potential None values and coercion from loaded data

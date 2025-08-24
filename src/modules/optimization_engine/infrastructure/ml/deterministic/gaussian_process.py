@@ -8,12 +8,12 @@ from sklearn.gaussian_process.kernels import (
     Matern,
 )
 
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    DeterministicInverseDecisionMapper,
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    DeterministicMlMapper,
 )
 
 
-class GaussianProcessInverseDecisionMapper(DeterministicInverseDecisionMapper):
+class GaussianProcessMlMapper(DeterministicMlMapper):
     """
     Inverse Decision Mapper using Scikit-learn's GaussianProcessRegressor.
     This model is capable of both interpolation and extrapolation, and can provide

@@ -3,17 +3,17 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from ...domain.model_management.enums.inverse_decision_mapper_type import (
-    InverseDecisionMapperType,
+    MlMapperType,
 )
 
 
-class InverseDecisionMapperParams(BaseModel):
+class MlMapperParams(BaseModel):
     pass
 
 
-class CloughTocherInverseDecisionMapperParams(InverseDecisionMapperParams):
+class CloughTocherMlMapperParams(MlMapperParams):
     type: str = Field(
-        InverseDecisionMapperType.CLOUGH_TOCHER_ND.value,
+        MlMapperType.CLOUGH_TOCHER_ND.value,
         description="Type of the Clough-Tocher interpolation method.",
     )
 
@@ -21,9 +21,9 @@ class CloughTocherInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class NeuralNetworkInverseDecisionMapperParams(InverseDecisionMapperParams):
+class NeuralNetworkMlMapperParams(MlMapperParams):
     type: str = Field(
-        InverseDecisionMapperType.NEURAL_NETWORK_ND.value,
+        MlMapperType.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
     objective_dim: int = Field(2, description="The dimension of objective space")
@@ -41,7 +41,7 @@ class NeuralNetworkInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class GeodesicInterpolatorParams(InverseDecisionMapperParams):
+class GeodesicInterpolatorParams(MlMapperParams):
     num_paths: int = Field(100, gt=0, description="Number of geodesic paths to sample.")
     max_iterations: int = Field(
         50, gt=0, description="Max iterations for path finding."
@@ -52,9 +52,9 @@ class GeodesicInterpolatorParams(InverseDecisionMapperParams):
         extra = "forbid"
 
 
-class NearestNeighborInverseDecisionMapperParams(InverseDecisionMapperParams):
+class NearestNeighborMlMapperParams(MlMapperParams):
     type: str = Field(
-        InverseDecisionMapperType.NEAREST_NEIGHBORS_ND.value,
+        MlMapperType.NEAREST_NEIGHBORS_ND.value,
         description="Type of the nearest neighbor interpolation method.",
     )
 
@@ -62,9 +62,9 @@ class NearestNeighborInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"
 
 
-class LinearInverseDecisionMapperParams(InverseDecisionMapperParams):
+class LinearMlMapperParams(MlMapperParams):
     type: str = Field(
-        InverseDecisionMapperType.LINEAR_ND.value,
+        MlMapperType.LINEAR_ND.value,
         description="Type of the linear interpolation method.",
     )
 
@@ -72,14 +72,14 @@ class LinearInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"
 
 
-class RBFInverseDecisionMapperParams(InverseDecisionMapperParams):
+class RBFMlMapperParams(MlMapperParams):
     """
     Pydantic model to define and validate parameters for an
-    RBFInverseDecisionMapper.
+    RBFMlMapper.
     """
 
     type: str = Field(
-        InverseDecisionMapperType.RBF_ND.value,
+        MlMapperType.RBF_ND.value,
         description="Type of the radial basis function interpolation method.",
     )
     n_neighbors: int = Field(
@@ -114,14 +114,14 @@ class RBFInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class GaussianProcessInverseDecisionMapperParams(InverseDecisionMapperParams):
+class GaussianProcessMlMapperParams(MlMapperParams):
     """
     Pydantic model to define and validate parameters for a
-    GaussianProcessInverseDecisionMapper.
+    GaussianProcessMlMapper.
     """
 
     type: str = Field(
-        InverseDecisionMapperType.GAUSSIAN_PROCESS_ND.value,
+        MlMapperType.GAUSSIAN_PROCESS_ND.value,
         description="Type of the gaussian process interpolation method.",
     )
 
@@ -155,11 +155,11 @@ class GaussianProcessInverseDecisionMapperParams(InverseDecisionMapperParams):
         arbitrary_types_allowed = True
 
 
-class SplineInverseDecisionMapperParams(InverseDecisionMapperParams):
+class SplineMlMapperParams(MlMapperParams):
     """Pydantic model for SmoothBivariateSpline mapper parameters."""
 
     type: str = Field(
-        InverseDecisionMapperType.SPLINE_ND.value,
+        MlMapperType.SPLINE_ND.value,
         description="Type of the spline interpolation method.",
     )
 
@@ -173,11 +173,11 @@ class SplineInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class KrigingInverseDecisionMapperParams(InverseDecisionMapperParams):
+class KrigingMlMapperParams(MlMapperParams):
     """Pydantic model for OrdinaryKriging mapper parameters."""
 
     type: str = Field(
-        InverseDecisionMapperType.KRIGING_ND.value,
+        MlMapperType.KRIGING_ND.value,
         description="Type of the Kriging interpolation method.",
     )
 
@@ -196,11 +196,11 @@ class KrigingInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class SVRInverseDecisionMapperParams(InverseDecisionMapperParams):
+class SVRMlMapperParams(MlMapperParams):
     """Pydantic model for SVR mapper parameters."""
 
     type: str = Field(
-        InverseDecisionMapperType.SVR_ND.value,
+        MlMapperType.SVR_ND.value,
         description="Type of the SVR interpolation method.",
     )
 
@@ -222,14 +222,14 @@ class SVRInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class MDNInverseDecisionMapperParams(InverseDecisionMapperParams):
+class MDNMlMapperParams(MlMapperParams):
     """
     Pydantic model to define and validate parameters for an
-    MDNInverseDecisionMapper.
+    MDNMlMapper.
     """
 
     type: str = Field(
-        InverseDecisionMapperType.MDN_ND.value,
+        MlMapperType.MDN_ND.value,
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
@@ -244,14 +244,14 @@ class MDNInverseDecisionMapperParams(InverseDecisionMapperParams):
         extra = "forbid"
 
 
-class CVAEInverseDecisionMapperParams(InverseDecisionMapperParams):
+class CVAEMlMapperParams(MlMapperParams):
     """
     Pydantic model to define and validate parameters for a
-    CVAEInverseDecisionMapper.
+    CVAEMlMapper.
     """
 
     type: str = Field(
-        InverseDecisionMapperType.CVAE_ND.value,
+        MlMapperType.CVAE_ND.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
     latent_dim: int = Field(

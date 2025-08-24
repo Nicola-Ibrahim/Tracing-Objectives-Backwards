@@ -10,20 +10,20 @@ from ....domain.model_evaluation.interfaces.base_metric import BaseValidationMet
 from ....domain.model_management.entities.model_artifact import (
     ModelArtifact,
 )
-from ....domain.model_management.interfaces.base_inverse_decision_mapper import (
-    BaseInverseDecisionMapper,
-    DeterministicInverseDecisionMapper,
-    ProbabilisticInverseDecisionMapper,
-)
 from ....domain.model_management.interfaces.base_logger import BaseLogger
+from ....domain.model_management.interfaces.base_ml_mapper import (
+    BaseMlMapper,
+    DeterministicMlMapper,
+    ProbabilisticMlMapper,
+)
 from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
 from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
-from ...factories.inverse_decision_mapper import (
-    InverseDecisionMapperFactory,
-)
 from ...factories.mertics import MetricFactory
+from ...factories.ml_mapper import (
+    MlMapperFactory,
+)
 from ...factories.normalizer import NormalizerFactory
 from ...services.cross_validation import _clone, cross_validate
 from .train_model_command import TrainModelCommand
@@ -39,7 +39,7 @@ class TrainModelCommandHandler:
     def __init__(
         self,
         data_repository: BaseParetoDataRepository,
-        inverse_decision_factory: InverseDecisionMapperFactory,
+        inverse_decision_factory: MlMapperFactory,
         logger: BaseLogger,
         trained_model_repository: BaseInterpolationModelRepository,
         normalizer_factory: NormalizerFactory,
@@ -95,7 +95,7 @@ class TrainModelCommandHandler:
     def _execute_single_split_workflow(
         self,
         command: TrainModelCommand,
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         raw_data: DataModel,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
@@ -155,7 +155,7 @@ class TrainModelCommandHandler:
     def _execute_cv_workflow(
         self,
         command: TrainModelCommand,
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         raw_data: DataModel,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
@@ -256,7 +256,7 @@ class TrainModelCommandHandler:
 
     def _train_model(
         self,
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         objectives_train_norm: Any,
         decisions_train_norm: Any,
     ) -> None:
@@ -266,7 +266,7 @@ class TrainModelCommandHandler:
 
     def _validate_model(
         self,
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         decisions_normalizer: BaseNormalizer,
         objectives_val_norm: Any,
         decisions_val: Any,
@@ -274,12 +274,12 @@ class TrainModelCommandHandler:
     ) -> dict[str, Any]:
         """Predicts and calculates validation metrics."""
 
-        if isinstance(inverse_decision_mapper, ProbabilisticInverseDecisionMapper):
+        if isinstance(inverse_decision_mapper, ProbabilisticMlMapper):
             decisions_pred_val_norm = inverse_decision_mapper.predict(
                 objectives_val_norm, mode="mean"
             )
 
-        elif isinstance(inverse_decision_mapper, DeterministicInverseDecisionMapper):
+        elif isinstance(inverse_decision_mapper, DeterministicMlMapper):
             decisions_pred_val_norm = inverse_decision_mapper.predict(
                 objectives_val_norm
             )
@@ -311,7 +311,7 @@ class TrainModelCommandHandler:
     def _save_model(
         self,
         model_params: dict[str, Any],
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
         train_scores: dict[str, list[float]],
@@ -341,7 +341,7 @@ class TrainModelCommandHandler:
         objectives_val_norm: Any,
         decisions_train: Any,
         decisions_val: Any,
-        inverse_decision_mapper: BaseInverseDecisionMapper,
+        inverse_decision_mapper: BaseMlMapper,
         decisions_normalizer: BaseNormalizer,
     ) -> None:
         """Generates plots if a visualizer is available."""
