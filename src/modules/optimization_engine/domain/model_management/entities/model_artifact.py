@@ -1,8 +1,9 @@
+import pickle
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from ..interfaces.base_inverse_decision_mapper import BaseInverseDecisionMapper
 from ..interfaces.base_normalizer import BaseNormalizer
@@ -52,10 +53,30 @@ class ModelArtifact(BaseModel):
         description="Timestamp indicating when this model version was trained.",
     )
 
-    version_number: int | None = Field(
+    version: int | None = Field(
         None,
         description="Automatically assigned sequential version number for the training run",
     )
+
+    @field_serializer(
+        "inverse_decision_mapper", "objectives_normalizer", "decisions_normalizer"
+    )
+    def serialize_model_and_normalizers(self, obj: Any) -> bytes:
+        """Serializes the object to a byte stream using pickle."""
+        return pickle.dumps(obj)
+
+    @field_validator(
+        "inverse_decision_mapper",
+        "objectives_normalizer",
+        "decisions_normalizer",
+        mode="before",
+    )
+    @classmethod
+    def validate_and_deserialize_object(cls, obj: Any) -> Any:
+        """Deserializes the byte stream back into the original object."""
+        if isinstance(obj, bytes):
+            return pickle.loads(obj)
+        return obj
 
     class Config:
         arbitrary_types_allowed = True
@@ -66,37 +87,29 @@ class ModelArtifact(BaseModel):
             datetime: datetime.fromisoformat
         }  # Ensure datetime is deserialized from ISO format
 
-    def to_save_format(self) -> dict[str, Any]:
-        """
-        Converts the ModelArtifact entity into a serializable dictionary
-        format suitable for saving to storage.
-        """
-        # Use model_dump, but hide this implementation detail from the repository.
-        # Pydantic's dump handles datetime serialization to ISO format.
-        return self.model_dump(
-            exclude={
-                "inverse_decision_mapper",
-                "objectives_normalizer",
-                "decisions_normalizer",
-            }
-        )
-
     @classmethod
-    def from_saved_format(
+    def create(
         cls,
-        saved_data: dict[str, Any],
+        id: str,
+        parameters: dict[str, Any],
+        train_scores: dict[str, float],
+        cv_scores: dict[str, list[float]],
+        trained_at: datetime,
+        version: int | None,
         inverse_decision_mapper: BaseInverseDecisionMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
-    ):
+    ) -> "ModelArtifact":
         """
-        Constructs an ModelArtifact entity from saved metadata and a loaded mapper.
-        This method will be used by the repository's load() method.
+        Factory method to create a new ModelArtifact instance.
         """
-        # Note: Pydantic's constructor handles automatic deserialization of
-        # ISO-formatted datetime strings if the field is typed as datetime.
         return cls(
-            **saved_data,
+            id=id,
+            parameters=parameters,
+            train_scores=train_scores,
+            cv_scores=cv_scores,
+            trained_at=trained_at,
+            version=version,
             inverse_decision_mapper=inverse_decision_mapper,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,

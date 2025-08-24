@@ -42,7 +42,7 @@ class GenerateDecisionCommandHandler:
             model_type=command.model_type
         )
         self._logger.log_info(
-            f"Loaded interpolation model version {model.version_number} "
+            f"Loaded interpolation model version {model.version} "
             f"of type {command.model_type}."
         )
 

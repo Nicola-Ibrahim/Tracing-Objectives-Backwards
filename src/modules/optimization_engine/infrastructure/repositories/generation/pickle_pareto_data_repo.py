@@ -36,6 +36,7 @@ class PickleParetoDataRepository(BaseParetoDataRepository):
         """
         self.base_path.mkdir(exist_ok=True, parents=True)
         file_path = self.base_path / filename
+        
         with file_path.open("wb") as f:
             pickle.dump(data.model_dump(), f, protocol=pickle.HIGHEST_PROTOCOL)
         return file_path

@@ -22,7 +22,7 @@ from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
 from ...infrastructure.repositories.model_management.pickle_model_artifact_repo import (
-    PickleInterpolationModelRepository,
+    FileSystemModelArtifcatRepository,
 )
 from ...infrastructure.visualizers.training_performace import (
     PlotlyTrainingPerformanceVisualizer,
@@ -33,14 +33,14 @@ if __name__ == "__main__":
         data_repository=NPZParetoDataRepository(),
         inverse_decision_factory=InverseDecisionMapperFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        trained_model_repository=PickleInterpolationModelRepository(),
+        trained_model_repository=FileSystemModelArtifcatRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
         visualizer=None,
     )
 
     command = TrainModelCommand(
-        inverse_decision_mapper_params=MDNInverseDecisionMapperParams(),
+        inverse_decision_mapper_params=RBFInverseDecisionMapperParams(),
         objectives_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),

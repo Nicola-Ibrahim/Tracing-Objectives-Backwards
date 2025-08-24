@@ -47,7 +47,7 @@ class BaseInterpolationModelRepository(ABC):
              model_type: The type of interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
-            A list of ModelArtifact entities, sorted by version_number (highest first)
+            A list of ModelArtifact entities, sorted by version (highest first)
         """
         pass
 
@@ -60,6 +60,6 @@ class BaseInterpolationModelRepository(ABC):
              model_type: The type of interpolation model
 
         Returns:
-            The ModelArtifact entity with the highest version_number
+            The ModelArtifact entity with the highest version
         """
         pass

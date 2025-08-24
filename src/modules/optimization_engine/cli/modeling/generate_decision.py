@@ -12,7 +12,7 @@ from ...infrastructure.repositories.generation.npz_pareto_data_repo import (
     NPZParetoDataRepository,
 )
 from ...infrastructure.repositories.model_management.pickle_model_artifact_repo import (
-    PickleInterpolationModelRepository,
+    FileSystemModelArtifcatRepository,
 )
 
 
@@ -27,7 +27,7 @@ def main():
 
     # Initialize the handler with the repository
     handler = GenerateDecisionCommandHandler(
-        interpolation_model_repo=PickleInterpolationModelRepository(),
+        interpolation_model_repo=FileSystemModelArtifcatRepository(),
         data_repository=NPZParetoDataRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )

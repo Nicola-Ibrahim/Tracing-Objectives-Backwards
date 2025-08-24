@@ -89,7 +89,7 @@ class MDN(nn.Module):
         output_dim: int,
         num_mixtures: int = 5,
         hidden_layers: list[int] = [64, 32],
-        hidden_activation_fn: ActivationFunction = ActivationFunction.RELU,
+        hidden_activation_fn_name: ActivationFunction = ActivationFunction.RELU,
     ):
         """
         Initialize the Mixture Density Network (MDN).
@@ -100,14 +100,14 @@ class MDN(nn.Module):
         self.output_dim = output_dim
 
         # Get activation function
-        self.hidden_activation_fn = self._get_activation(hidden_activation_fn)
+        self.hidden_activation_fn_name = self._get_activation(hidden_activation_fn_name)
 
         # ----- Build hidden stack -----
         layers = []
         in_size = input_dim
         for hidden_size in hidden_layers:
             layers.append(nn.Linear(in_size, hidden_size))
-            layers.append(self.hidden_activation_fn)
+            layers.append(self.hidden_activation_fn_name)
             in_size = hidden_size
 
         if layers:  # remove last activation to let heads apply their own logic
@@ -248,8 +248,8 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         distribution_family: DistributionFamily = DistributionFamily.NORMAL,
         gmm_boost: bool = False,
         hidden_layers: list[int] = [64],
-        hidden_activation_fn: ActivationFunction = ActivationFunction.RELU,
-        optimizer_fn: OptimizerFunction = OptimizerFunction.ADAM,
+        hidden_activation_fn_name: ActivationFunction = ActivationFunction.RELU,
+        optimizer_fn_name: OptimizerFunction = OptimizerFunction.ADAM,
         verbose: bool = False,
     ):
         """
@@ -263,8 +263,8 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
         self._distribution_family = distribution_family
         self._gmm_boost = gmm_boost
         self._hidden_layers = hidden_layers
-        self._hidden_activation_fn = hidden_activation_fn
-        self._optimizer_fn = optimizer_fn
+        self._hidden_activation_fn_name = hidden_activation_fn_name
+        self._optimizer_fn_name = optimizer_fn_name
         self._verbose = verbose
         self._model: MDN | None = None
         self._clusterer = None
@@ -314,28 +314,28 @@ class MDNInverseDecisionMapper(ProbabilisticInverseDecisionMapper):
             output_dim=output_dim,
             num_mixtures=self._num_mixtures,
             hidden_layers=self._hidden_layers,
-            hidden_activation_fn=self._hidden_activation_fn,
+            hidden_activation_fn_name=self._hidden_activation_fn_name,
         )
         return X_tensor, Y_tensor
 
-    def _get_optimizer_fn(self):
+    def _get_optimizer_fn(self, name: str):
         optimizers = {
             OptimizerFunction.SGD: torch.optim.SGD,
-            OptimizerFunction.ADAM: torch.optim.Adam,
+            OptimizerFunction.ADAM: torch.optim.Adam(),
             OptimizerFunction.RMSPROP: torch.optim.RMSprop,
             OptimizerFunction.GRADIENT_DESCENT: torch.optim.SGD,
         }
 
-        optimizer_class = optimizers.get(self._optimizer_fn)
+        optimizer_class = optimizers.get(name)
         if optimizer_class is None:
-            raise ValueError(f"Unknown optimizer: {self._optimizer_fn}")
+            raise ValueError(f"Unknown optimizer: {name}")
         return optimizer_class
 
     def fit(self, X: npt.NDArray[np.float64], y: npt.NDArray[np.float64]) -> None:
         super().fit(X, y)
 
         X_tensor, Y_tensor = self._prepare_data_and_model(X, y)
-        optimizer_fn = self._get_optimizer_fn()
+        optimizer_fn = self._get_optimizer_fn(self._optimizer_fn_name)
         optimizer = optimizer_fn(self._model.parameters(), lr=self._learning_rate)
 
         best_loss = float("inf")

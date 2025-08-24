@@ -58,7 +58,7 @@ class TrainModelCommandHandler:
         """
         Executes the training workflow for a given interpolator using the command's data.
         """
-        raw_data = self._data_repository.load(filename="pareto_data")
+        raw_data: ParetoDataModel = self._data_repository.load(filename="pareto_data")
 
         # Initialize components once
         inverse_decision_mapper = self._inverse_decision_factory.create(

@@ -1,226 +1,130 @@
-import datetime
 import json
-import os
-import pickle
 from pathlib import Path
-from typing import Any
 
 from .....shared.config import ROOT_PATH
 from ....domain.model_management.entities.model_artifact import ModelArtifact
 from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
+from ...processing.files.json import JsonFileHandler
+from ...processing.files.pickle import PickleFileHandler
 
 
-class DateTimeEncoder(json.JSONEncoder):
+class VersionManager:
+    def __init__(self, file_handler: JsonFileHandler):
+        self._file_handler = file_handler
+
+    def get_next_version(self, model_directory: Path) -> int:
+        """
+        Determines the next sequential version number for a model type.
+        """
+        existing_versions = []
+        if model_directory.exists():
+            for entry in model_directory.iterdir():
+                if entry.is_dir():
+                    try:
+                        metadata_path = entry / "metadata.json"
+                        if metadata_path.exists():
+                            meta = self._file_handler.load(metadata_path)
+                            vn = meta.get("version")
+                            if isinstance(vn, int):
+                                existing_versions.append(vn)
+                    except Exception:
+                        continue
+
+        return max(existing_versions) + 1 if existing_versions else 1
+
+
+class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
     """
-    Custom JSONEncoder to serialize datetime objects to ISO 8601 format.
-    """
-
-    def default(self, obj):
-        if isinstance(obj, (datetime.date, datetime.datetime)):
-            return obj.isoformat()
-        return super().default(obj)
-
-
-class PickleFileHandler:
-    """
-    Handles the serialization and deserialization of model artifacts (using pickle)
-    and their associated metadata (using JSON) to and from the file system.
-    """
-
-    def save(self, obj: Any, file_path: Path):
-        """Saves a Python object to a specified file path using pickle."""
-        try:
-            with open(file_path, "wb") as f:
-                pickle.dump(obj, f)
-        except Exception as e:
-            raise IOError(f"Failed to pickle object to {file_path}: {e}") from e
-
-    def load(self, file_path: Path) -> Any:
-        """Loads a Python object from a specified file path using pickle."""
-        if not file_path.exists():
-            raise FileNotFoundError(f"Artifact not found at {file_path}")
-        try:
-            with open(file_path, "rb") as f:
-                return pickle.load(f)
-        except Exception as e:
-            raise IOError(f"Failed to unpickle object from {file_path}: {e}") from e
-
-    def save_metadata(self, file_path: Path, metadata_content: dict[str, Any]):
-        """Saves model metadata as a JSON file to a specified path."""
-        try:
-            with open(file_path, "w") as f:
-                json.dump(metadata_content, f, indent=4, cls=DateTimeEncoder)
-        except Exception as e:
-            raise IOError(f"Failed to save metadata to {file_path}: {e}") from e
-
-    def load_metadata(self, file_path: Path) -> dict[str, Any]:
-        """Loads model metadata from a JSON file at a specified path."""
-        if not file_path.exists():
-            raise FileNotFoundError(f"Metadata file not found at {file_path}")
-        try:
-            with open(file_path, "r") as f:
-                return json.load(f)
-        except Exception as e:
-            raise IOError(f"Failed to load metadata from {file_path}: {e}") from e
-
-
-class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
-    """
-    Manages the persistence of ModelArtifact entities, including version tracking,
-    using the file system for storage. Each model version (identified by its unique ID)
-    is stored in its own dedicated directory.
+    Manages the persistence of ModelArtifact entities using the file system.
     """
 
     def __init__(self):
         self._base_model_storage_path = ROOT_PATH / "models"
-        self._inverse_decision_mapper_handler = PickleFileHandler()
-        self._base_model_storage_path.mkdir(
-            parents=True, exist_ok=True
-        )  # Ensure the base models directory exists
+        self._pickel_file_handler = PickleFileHandler()
+        self._json_file_handler = JsonFileHandler()
+        self._version_manager = VersionManager(self._json_file_handler)
+        self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
 
     def save(self, model_artifact: ModelArtifact) -> None:
-        """
-        Saves a new ModelArtifact entity, representing a specific training version.
-        A dedicated directory is created for this model version using its unique ID.
-
-        Args:
-             model_artifact: The ModelArtifact entity to save. Its 'id' field
-                                 is used to determine the storage location.
-        """
         if not model_artifact.id:
             raise ValueError("ModelArtifact entity must have a unique 'id' for saving.")
 
-        # Create a subdirectory for the interpolator type
-        interpolators_directory = (
-            self._base_model_storage_path / model_artifact.parameters.get("type")
+        model_type = model_artifact.parameters.get("type", "unknown")
+        models_directory = self._base_model_storage_path / model_type
+        models_directory.mkdir(parents=True, exist_ok=True)
+
+        # Let the VersionManager handle the logic of finding the next version
+        next_version = self._version_manager.get_next_version(models_directory)
+        model_artifact.version = next_version
+
+        # Create directory for this version
+        dir_name = (
+            f"v{next_version}-{model_artifact.trained_at.strftime('%Y-%m-%d_%H-%M-%S')}"
+        )
+        model_version_directory = models_directory / dir_name
+        model_version_directory.mkdir(exist_ok=True)
+
+        # Define file paths
+        mapper_path = model_version_directory / "inverse_decision_mapper.pkl"
+        dec_norm_path = model_version_directory / "decisions_normalizer.pkl"
+        obj_norm_path = model_version_directory / "objectives_normalizer.pkl"
+        metadata_path = model_version_directory / "metadata.json"
+
+        # Save all components using their dedicated handlers
+        self._pickel_file_handler.save(
+            model_artifact.inverse_decision_mapper, mapper_path
+        )
+        self._pickel_file_handler.save(
+            model_artifact.decisions_normalizer, dec_norm_path
+        )
+        self._pickel_file_handler.save(
+            model_artifact.objectives_normalizer, obj_norm_path
         )
 
-        interpolators_directory.mkdir(exist_ok=True)
+        # Prepare and save metadata
+        metadata = model_artifact.model_dump(
+            exclude={
+                "inverse_decision_mapper",
+                "decisions_normalizer",
+                "objectives_normalizer",
+            }
+        )
+        self._json_file_handler.save(metadata, metadata_path)
 
-        # Determine and assign a sequential version_number for this model type.
-        # Inspect existing versions stored under the interpolator type directory and
-        # set version_number to (max existing + 1) or 1 if none exist.
-        existing_versions = []
-        if interpolators_directory.exists():
-            for entry in interpolators_directory.iterdir():
-                if entry.is_dir():
-                    try:
-                        # Attempt to load metadata file to read version_number
-                        metadata_path = entry / "metadata.json"
-                        if metadata_path.exists():
-                            meta = self._inverse_decision_mapper_handler.load_metadata(
-                                metadata_path
-                            )
-                            vn = meta.get("version_number")
-                            if isinstance(vn, int):
-                                existing_versions.append(vn)
-                    except Exception:
-                        # Non-fatal: ignore unreadable entries
-                        continue
+    def load(self, model_type: str, version_id: str) -> ModelArtifact:
+        model_version_directory = (
+            self._base_model_storage_path / model_type / version_id
+        )
+        if not model_version_directory.exists():
+            raise FileNotFoundError(f"Model version '{version_id}' not found.")
 
-        next_version = max(existing_versions) + 1 if existing_versions else 1
-        # Inject computed version into the model artifact (mutate before saving)
-        model_artifact.version_number = next_version
+        # Define file paths
+        metadata_path = model_version_directory / "metadata.json"
+        mapper_path = model_version_directory / "inverse_decision_mapper.pkl"
+        dec_norm_path = model_version_directory / "decisions_normalizer.pkl"
+        obj_norm_path = model_version_directory / "objectives_normalizer.pkl"
 
-        # Then create a directory for the unique model ID within the type directory
-        interpolator_version_directory = (
-            interpolators_directory
-            / model_artifact.trained_at.strftime("%Y-%m-%d_%H-%M-%S")
-        )
-        os.makedirs(interpolator_version_directory, exist_ok=True)
+        # Use the correct handler for each file type
+        metadata = self._json_file_handler.load(metadata_path)
+        mapper = self._pickel_file_handler.load(mapper_path)
+        dec_norm = self._pickel_file_handler.load(dec_norm_path)
+        obj_norm = self._pickel_file_handler.load(obj_norm_path)
 
-        # Define file paths within the model's dedicated directory
-        mapper_artifact_path = (
-            interpolator_version_directory / "inverse_decision_mapper.pkl"
-        )
-        decisions_normalizer_artifact_path = (
-            interpolator_version_directory / "decisions_normalizer.pkl"
-        )
-        objecitves_normalizer_artifact_path = (
-            interpolator_version_directory / "objectives_normalizer.pkl"
-        )
-        metadata_file_path = interpolator_version_directory / "metadata.json"
-
-        # Save the inverse decision mapper instance, normalizers, and metadata
-        self._inverse_decision_mapper_handler.save(
-            model_artifact.inverse_decision_mapper, mapper_artifact_path
-        )
-        self._inverse_decision_mapper_handler.save(
-            model_artifact.decisions_normalizer, decisions_normalizer_artifact_path
-        )
-        self._inverse_decision_mapper_handler.save(
-            model_artifact.objectives_normalizer,
-            objecitves_normalizer_artifact_path,
-        )
-        # Prepare metadata and ensure version_number is included
-        model_metadata = model_artifact.to_save_format()
-        model_metadata["version_number"] = model_artifact.version_number
-
-        # Save metadata JSON
-        self._inverse_decision_mapper_handler.save_metadata(
-            metadata_file_path, model_metadata
-        )
-
-    def load(self, model_type: str, model_version_id: str) -> ModelArtifact:
-        """
-        Retrieves a specific ModelArtifact entity by its type and unique version ID.
-        This is a direct lookup, which is much more efficient than a global search.
-
-        Args:
-             model_type: The type of the interpolator (e.g., 'gaussian_process_nd').
-            model_version_id: The unique identifier of the specific model version to load.
-
-        Returns:
-            The loaded ModelArtifact entity.
-
-        Raises:
-            FileNotFoundError: If the model version with the specified ID is not found.
-            IOError: For other loading errors (e.g., corrupted files).
-        """
-        # Construct the path directly from the type and ID.
-        interpolator_version_directory = (
-            self._base_model_storage_path / model_type / model_version_id
-        )
-
-        if not interpolator_version_directory.exists():
-            raise FileNotFoundError(
-                f"Model version with ID '{model_version_id}' for type '{ model_type}' not found at {interpolator_version_directory}"
-            )
-
-        metadata_file_path = interpolator_version_directory / "metadata.json"
-        mapper_artifact_path = (
-            interpolator_version_directory / "inverse_decision_mapper.pkl"
-        )
-        decisions_normalizer_artifact_path = (
-            interpolator_version_directory / "decisions_normalizer.pkl"
-        )
-        objecitves_normalizer_artifact_path = (
-            interpolator_version_directory / "objectives_normalizer.pkl"
-        )
-
-        # Load metadata
-        model_metadata = self._inverse_decision_mapper_handler.load_metadata(
-            metadata_file_path
-        )
-
-        # Load the fitted artifacts
-        inverse_decision_mapper = self._inverse_decision_mapper_handler.load(
-            mapper_artifact_path
-        )
-        decisions_normalizer = self._inverse_decision_mapper_handler.load(
-            decisions_normalizer_artifact_path
-        )
-        objectives_normalizer = self._inverse_decision_mapper_handler.load(
-            objecitves_normalizer_artifact_path
-        )
-
-        return ModelArtifact.from_saved_format(
-            saved_data=model_metadata,
-            inverse_decision_mapper=inverse_decision_mapper,
-            objectives_normalizer=objectives_normalizer,
-            decisions_normalizer=decisions_normalizer,
+        # Reconstruct the Pydantic model
+        return ModelArtifact.create(
+            {
+                "id": metadata.get("id"),
+                "parameters": metadata.get("parameters"),
+                "train_scores": metadata.get("train_scores"),
+                "cv_scores": metadata.get("cv_scores"),
+                "version": metadata.get("version"),
+                "trained_at": metadata.get("trained_at"),
+                "inverse_decision_mapper": mapper,
+                "decisions_normalizer": dec_norm,
+                "objectives_normalizer": obj_norm,
+            }
         )
 
     def get_all_versions(self, model_type: str) -> list[ModelArtifact]:
@@ -228,23 +132,21 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         Retrieves all trained versions of a model based on its 'type' from the parameters.
 
         Args:
-             model_type: The type of the interpolator model (e.g., 'gaussian_process_nd').
+             model_type: The type of the model model (e.g., 'gaussian_process_nd').
 
         Returns:
             A list of ModelArtifact entities, sorted by 'trained_at' timestamp in descending order (latest first).
         """
         found_model_versions: list[ModelArtifact] = []
-        interpolators_directory = self._base_model_storage_path / model_type
-        if not interpolators_directory.exists():
+        models_directory = self._base_model_storage_path / model_type
+        if not models_directory.exists():
             return []
 
-        for interpolator_version_directory in interpolators_directory.iterdir():
-            if interpolator_version_directory.is_dir():
+        for model_version_directory in models_directory.iterdir():
+            if model_version_directory.is_dir():
                 try:
-                    # Pass the  model_type along with the directory name (the ID) to the load method.
-                    model_version = self.load(
-                        model_type, interpolator_version_directory.name
-                    )
+                    # Pass the model_type along with the directory name (the ID) to the load method.
+                    model_version = self.load(model_type, model_version_directory.name)
                     found_model_versions.append(model_version)
                 except (
                     FileNotFoundError,
@@ -253,7 +155,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
                     ValueError,
                 ) as e:
                     print(
-                        f"Warning: Could not process directory '{interpolator_version_directory.name}': {e}. Skipping."
+                        f"Warning: Could not process directory '{model_version_directory.name}': {e}. Skipping."
                     )
                     continue
 
@@ -266,7 +168,7 @@ class PickleInterpolationModelRepository(BaseInterpolationModelRepository):
         The 'latest' version is determined by the most recent 'trained_at' timestamp.
 
         Args:
-             model_type: The type of the interpolator model.
+             model_type: The type of the model model.
 
         Returns:
             The ModelArtifact entity representing the latest version.
