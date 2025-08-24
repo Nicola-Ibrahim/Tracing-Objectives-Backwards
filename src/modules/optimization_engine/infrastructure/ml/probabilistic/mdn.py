@@ -321,7 +321,7 @@ class MDNMlMapper(ProbabilisticMlMapper):
     def _get_optimizer_fn(self, name: str):
         optimizers = {
             OptimizerFunction.SGD: torch.optim.SGD,
-            OptimizerFunction.ADAM: torch.optim.Adam(),
+            OptimizerFunction.ADAM: torch.optim.Adam,
             OptimizerFunction.RMSPROP: torch.optim.RMSprop,
             OptimizerFunction.GRADIENT_DESCENT: torch.optim.SGD,
         }

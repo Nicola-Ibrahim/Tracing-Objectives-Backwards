@@ -1,9 +1,9 @@
 import time
 
+from ...application.factories.mertics import MetricFactory
 from ...application.factories.ml_mapper import (
     MlMapperFactory,
 )
-from ...application.factories.mertics import MetricFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.model_management.dtos import (
     GaussianProcessMlMapperParams,
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
             # Construct the command with the appropriate parameters
             command = TrainModelCommand(
-                inverse_decision_mapper_params=model_params_instance,
+                ml_mapper_params=model_params_instance,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
                 objectives_normalizer_config=NormalizerConfig(
                     type="MinMaxScaler", params={"feature_range": (0, 1)}

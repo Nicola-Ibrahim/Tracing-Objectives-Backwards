@@ -14,7 +14,7 @@ class TrainModelCommand(BaseModel):
     and metadata for the resulting trained model.
     """
 
-    inverse_decision_mapper_params: MlMapperParams = Field(
+    ml_mapper_params: MlMapperParams = Field(
         ...,
         description="Parameters (hyperparameters, configuration) used to initialize/configure "
         "this specific interpolator instance for training.",

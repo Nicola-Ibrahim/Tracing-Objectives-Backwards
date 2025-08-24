@@ -4,7 +4,7 @@ from ...application.model_management.generate_decision.generate_decision_command
 from ...application.model_management.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
 )
-from ...domain.model_management.enums.inverse_decision_mapper_type import (
+from ...domain.model_management.enums.ml_mapper_type import (
     MlMapperType,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger

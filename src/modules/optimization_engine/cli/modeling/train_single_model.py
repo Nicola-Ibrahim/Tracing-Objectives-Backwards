@@ -40,7 +40,7 @@ if __name__ == "__main__":
     )
 
     command = TrainModelCommand(
-        inverse_decision_mapper_params=GaussianProcessMlMapperParams(),
+        ml_mapper_params=RBFMlMapperParams(),
         objectives_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         ],
         test_size=0.2,
         random_state=42,
-        # cv_splits=5,
+        cv_splits=5,
     )
 
     # Execute the command handler

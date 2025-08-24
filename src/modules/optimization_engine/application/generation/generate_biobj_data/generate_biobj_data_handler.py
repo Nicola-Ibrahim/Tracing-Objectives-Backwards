@@ -2,6 +2,7 @@ from pathlib import Path
 
 from ....domain.generation.entities.data_model import DataModel
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
+from ....domain.model_management.interfaces.base_logger import BaseLogger
 from ...factories.algorithm import AlgorithmFactory
 from ...factories.optimizer import OptimizerFactory
 from ...factories.problem import ProblemFactory
@@ -21,6 +22,7 @@ class GenerateBiobjDataCommandHandler:
         algorithm_factory: AlgorithmFactory,
         optimizer_factory: OptimizerFactory,
         data_model_repository: BaseParetoDataRepository,
+        logger: BaseLogger,
     ):
         """
         Initializes the command handler with necessary factories and an data_model_repository.
@@ -35,6 +37,7 @@ class GenerateBiobjDataCommandHandler:
         self._algorithm_factory = algorithm_factory
         self._optimizer_factory = optimizer_factory
         self._data_model_repository = data_model_repository
+        self._logger = logger
 
     def execute(self, command: GenerateBiobjDataCommand) -> Path:
         """
@@ -64,8 +67,13 @@ class GenerateBiobjDataCommandHandler:
         # Execute the optimization process
         result = optimizer.run()
 
-        print(result.historical_pareto_set.shape, result.historical_pareto_front.shape)
-        print(result.pareto_set.shape, result.pareto_front.shape)
+        self._logger.log_info("Optimization run completed.")
+        self._logger.log_info(
+            f"Found {len(result.pareto_set) if result.pareto_set is not None else 0} Pareto-optimal solutions."
+        )
+        self._logger.log_info(
+            f"Historical Pareto set contains {len(result.historical_pareto_set) if result.historical_pareto_set is not None else 0} solutions."
+        )
 
         # Build the DataModel from the optimization results and original configurations
         data = DataModel(
@@ -82,4 +90,5 @@ class GenerateBiobjDataCommandHandler:
         )
 
         # Save the results using the data model repository and return the saved path
-        return self._data_model_repository.save(data=data)
+        saved_path = self._data_model_repository.save(data=data)
+        self._logger.log_info(f"Pareto data saved to: {saved_path}")

@@ -48,8 +48,28 @@ class RBFMlMapper(DeterministicMlMapper):
                 "RBF Inverse Decision Mapper requires at least 1 data point for fitting."
             )
 
+        # Combine X and y to find unique rows
+        combined_data = np.hstack((X, y))
+        unique_data, unique_indices = np.unique(
+            combined_data, axis=0, return_index=True
+        )
+
+        # Filter X and y to keep only unique data points
+        X_unique = X[unique_indices]
+        y_unique = y[unique_indices]
+
+        # Check if a singular matrix might still be an issue with a small number of points
+        if len(X_unique) < 2 and self.kernel in [
+            "thin_plate_spline",
+            "cubic",
+            "quintic",
+        ]:
+            raise ValueError(
+                f"Kernel '{self.kernel}' requires at least 2 unique data points."
+            )
+
         self._interp_func = RBFInterpolator(
-            y=X, d=y, neighbors=self.neighbors, kernel=self.kernel
+            y=X_unique, d=y_unique, neighbors=self.neighbors, kernel=self.kernel
         )
 
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:

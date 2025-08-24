@@ -67,14 +67,14 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
         model_version_directory.mkdir(exist_ok=True)
 
         # Define file paths
-        mapper_path = model_version_directory / "inverse_decision_mapper.pkl"
+        mapper_path = model_version_directory / "ml_mapper.pkl"
         dec_norm_path = model_version_directory / "decisions_normalizer.pkl"
         obj_norm_path = model_version_directory / "objectives_normalizer.pkl"
         metadata_path = model_version_directory / "metadata.json"
 
         # Save all components using their dedicated handlers
         self._pickel_file_handler.save(
-            model_artifact.inverse_decision_mapper, mapper_path
+            model_artifact.ml_mapper, mapper_path
         )
         self._pickel_file_handler.save(
             model_artifact.decisions_normalizer, dec_norm_path
@@ -86,7 +86,7 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
         # Prepare and save metadata
         metadata = model_artifact.model_dump(
             exclude={
-                "inverse_decision_mapper",
+                "ml_mapper",
                 "decisions_normalizer",
                 "objectives_normalizer",
             }
@@ -102,7 +102,7 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
 
         # Define file paths
         metadata_path = model_version_directory / "metadata.json"
-        mapper_path = model_version_directory / "inverse_decision_mapper.pkl"
+        mapper_path = model_version_directory / "ml_mapper.pkl"
         dec_norm_path = model_version_directory / "decisions_normalizer.pkl"
         obj_norm_path = model_version_directory / "objectives_normalizer.pkl"
 
@@ -121,7 +121,7 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
                 "cv_scores": metadata.get("cv_scores"),
                 "version": metadata.get("version"),
                 "trained_at": metadata.get("trained_at"),
-                "inverse_decision_mapper": mapper,
+                "ml_mapper": mapper,
                 "decisions_normalizer": dec_norm,
                 "objectives_normalizer": obj_norm,
             }

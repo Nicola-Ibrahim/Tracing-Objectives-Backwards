@@ -25,7 +25,7 @@ class ModelArtifact(BaseModel):
         ...,
         description="The parameters used to initialize or configure this specific model instance/run.",
     )
-    inverse_decision_mapper: BaseMlMapper = Field(
+    ml_mapper: BaseMlMapper = Field(
         ...,
         description="The actual fitted inverse decision mapper instance from this run.",
     )
@@ -58,15 +58,13 @@ class ModelArtifact(BaseModel):
         description="Automatically assigned sequential version number for the training run",
     )
 
-    @field_serializer(
-        "inverse_decision_mapper", "objectives_normalizer", "decisions_normalizer"
-    )
+    @field_serializer("ml_mapper", "objectives_normalizer", "decisions_normalizer")
     def serialize_model_and_normalizers(self, obj: Any) -> bytes:
         """Serializes the object to a byte stream using pickle."""
         return pickle.dumps(obj)
 
     @field_validator(
-        "inverse_decision_mapper",
+        "ml_mapper",
         "objectives_normalizer",
         "decisions_normalizer",
         mode="before",
@@ -96,7 +94,7 @@ class ModelArtifact(BaseModel):
         cv_scores: dict[str, list[float]],
         trained_at: datetime,
         version: int | None,
-        inverse_decision_mapper: BaseMlMapper,
+        ml_mapper: BaseMlMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
     ) -> "ModelArtifact":
@@ -110,7 +108,7 @@ class ModelArtifact(BaseModel):
             cv_scores=cv_scores,
             trained_at=trained_at,
             version=version,
-            inverse_decision_mapper=inverse_decision_mapper,
+            ml_mapper=ml_mapper,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
         )

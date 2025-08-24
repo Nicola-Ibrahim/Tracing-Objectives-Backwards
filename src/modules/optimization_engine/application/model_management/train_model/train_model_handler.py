@@ -61,8 +61,8 @@ class TrainModelCommandHandler:
         raw_data: DataModel = self._data_repository.load(filename="pareto_data")
 
         # Initialize components once
-        inverse_decision_mapper = self._inverse_decision_factory.create(
-            params=command.inverse_decision_mapper_params.model_dump()
+        ml_mapper = self._inverse_decision_factory.create(
+            params=command.ml_mapper_params.model_dump()
         )
 
         validation_metrics = self._validation_metric_factory.create_multiple(
@@ -79,7 +79,7 @@ class TrainModelCommandHandler:
             self._logger.log_info("Starting cross-validation training workflow.")
             self._execute_cv_workflow(
                 command=command,
-                inverse_decision_mapper=inverse_decision_mapper,
+                ml_mapper=ml_mapper,
                 raw_data=raw_data,
                 validation_metrics=validation_metrics,
             )
@@ -87,7 +87,7 @@ class TrainModelCommandHandler:
             self._logger.log_info("Starting single train/test split training workflow.")
             self._execute_single_split_workflow(
                 command=command,
-                inverse_decision_mapper=inverse_decision_mapper,
+                ml_mapper=ml_mapper,
                 raw_data=raw_data,
                 validation_metrics=validation_metrics,
             )
@@ -95,7 +95,7 @@ class TrainModelCommandHandler:
     def _execute_single_split_workflow(
         self,
         command: TrainModelCommand,
-        inverse_decision_mapper: BaseMlMapper,
+        ml_mapper: BaseMlMapper,
         raw_data: DataModel,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
@@ -110,8 +110,8 @@ class TrainModelCommandHandler:
         (
             objectives_train_norm,
             objectives_val_norm,
-            decisions_train,
-            decisions_val,
+            decisions_train_norm,
+            decisions_val_norm,
         ) = self._prepare_data(
             raw_data=raw_data,
             test_size=command.test_size,
@@ -120,21 +120,17 @@ class TrainModelCommandHandler:
             decisions_normalizer=decisions_normalizer,
         )
 
-        self._train_model(
-            inverse_decision_mapper, objectives_train_norm, decisions_train
-        )
+        self._train_model(ml_mapper, objectives_train_norm, decisions_train_norm)
 
         train_scores = self._validate_model(
-            inverse_decision_mapper=inverse_decision_mapper,
-            decisions_normalizer=decisions_normalizer,
-            objectives_val_norm=objectives_val_norm,
-            decisions_val=decisions_val,
+            ml_mapper=ml_mapper,
+            x_val=objectives_val_norm,
+            y_val=decisions_val_norm,
             validation_metrics=validation_metrics,
         )
 
         self._save_model(
-            model_params=command.inverse_decision_mapper_params.model_dump(),
-            inverse_decision_mapper=inverse_decision_mapper,
+            ml_mapper=ml_mapper,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
             train_scores=train_scores,
@@ -144,9 +140,9 @@ class TrainModelCommandHandler:
         self._visualize_results(
             objectives_train_norm,
             objectives_val_norm,
-            decisions_train,
-            decisions_val,
-            inverse_decision_mapper,
+            decisions_train_norm,
+            decisions_val_norm,
+            ml_mapper,
             decisions_normalizer,
         )
 
@@ -155,7 +151,7 @@ class TrainModelCommandHandler:
     def _execute_cv_workflow(
         self,
         command: TrainModelCommand,
-        inverse_decision_mapper: BaseMlMapper,
+        ml_mapper: BaseMlMapper,
         raw_data: DataModel,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> None:
@@ -165,7 +161,7 @@ class TrainModelCommandHandler:
         self._logger.log_info("Running cross-validation to assess model performance...")
 
         cv_scores = cross_validate(
-            estimator=inverse_decision_mapper,
+            estimator=ml_mapper,
             X=raw_data.historical_objectives,
             y=raw_data.historical_solutions,
             validation_metrics=validation_metrics,
@@ -190,21 +186,19 @@ class TrainModelCommandHandler:
             raw_data.historical_solutions
         )
 
-        final_mapper_instance = _clone(inverse_decision_mapper)
+        final_mapper_instance = _clone(ml_mapper)
         final_mapper_instance.fit(X=objectives_norm, y=decisions_norm)
 
         train_scores = self._validate_model(
-            inverse_decision_mapper=final_mapper_instance,
-            decisions_normalizer=final_decisions_normalizer,
-            objectives_val_norm=objectives_norm,
-            decisions_val=raw_data.historical_solutions,
+            ml_mapper=final_mapper_instance,
+            x_val=objectives_norm,
+            y_val=decisions_norm,
             validation_metrics=validation_metrics,
         )
 
         # Save the final model with the aggregated CV metrics
         self._save_model(
-            model_params=command.inverse_decision_mapper_params.model_dump(),
-            inverse_decision_mapper=final_mapper_instance,
+            ml_mapper=final_mapper_instance,
             objectives_normalizer=final_objectives_normalizer,
             decisions_normalizer=final_decisions_normalizer,
             train_scores=train_scores,
@@ -216,7 +210,7 @@ class TrainModelCommandHandler:
             objectives_val_norm=objectives_norm,
             decisions_train=raw_data.historical_solutions,
             decisions_val=raw_data.historical_solutions,
-            inverse_decision_mapper=final_mapper_instance,
+            ml_mapper=final_mapper_instance,
             decisions_normalizer=final_decisions_normalizer,
         )
 
@@ -231,9 +225,9 @@ class TrainModelCommandHandler:
         """Loads, splits, and normalizes the data."""
         (
             objectives_train,
-            objectives_val,
+            objectives_test,
             decisions_train,
-            decisions_val,
+            decisions_test_norm,
         ) = train_test_split(
             raw_data.historical_objectives,
             raw_data.historical_solutions,
@@ -241,79 +235,61 @@ class TrainModelCommandHandler:
             random_state=random_state,
         )
         self._logger.log_info(
-            f"Data split into training ({len(objectives_train)} samples) and validation ({len(objectives_val)} samples) sets."
+            f"Data split into training ({len(objectives_train)} samples) and validation ({len(objectives_test)} samples) sets."
         )
 
         objectives_train_norm = objectives_normalizer.fit_transform(objectives_train)
-        objectives_val_norm = objectives_normalizer.transform(objectives_val)
+        objectives_test_norm = objectives_normalizer.transform(objectives_test)
 
         decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
+        decisions_test_norm = decisions_normalizer.transform(decisions_test_norm)
 
         return (
             objectives_train_norm,
-            objectives_val_norm,
+            objectives_test_norm,
             decisions_train_norm,
-            decisions_val,
+            decisions_test_norm,
         )
 
     def _train_model(
         self,
-        inverse_decision_mapper: BaseMlMapper,
+        ml_mapper: BaseMlMapper,
         objectives_train_norm: Any,
         decisions_train_norm: Any,
     ) -> None:
         """Fits the model on the training data."""
-        inverse_decision_mapper.fit(X=objectives_train_norm, y=decisions_train_norm)
+        ml_mapper.fit(X=objectives_train_norm, y=decisions_train_norm)
         self._logger.log_info("Inverse decision mapper model fitted on training data.")
 
     def _validate_model(
         self,
-        inverse_decision_mapper: BaseMlMapper,
-        decisions_normalizer: BaseNormalizer,
-        objectives_val_norm: Any,
-        decisions_val: Any,
+        ml_mapper: BaseMlMapper,
+        x_val: Any,
+        y_val: Any,
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> dict[str, Any]:
         """Predicts and calculates validation metrics."""
+        if isinstance(ml_mapper, ProbabilisticMlMapper):
+            y_val_pred = ml_mapper.predict(x_val, mode="mean")
 
-        if isinstance(inverse_decision_mapper, ProbabilisticMlMapper):
-            decisions_pred_val_norm = inverse_decision_mapper.predict(
-                objectives_val_norm, mode="mean"
-            )
+        elif isinstance(ml_mapper, DeterministicMlMapper):
+            y_val_pred = ml_mapper.predict(x_val)
 
-        elif isinstance(inverse_decision_mapper, DeterministicMlMapper):
-            decisions_pred_val_norm = inverse_decision_mapper.predict(
-                objectives_val_norm
-            )
-
-        if (
-            isinstance(decisions_pred_val_norm, np.ndarray)
-            and decisions_pred_val_norm.ndim >= 3
-        ):
-            decisions_pred_val_norm = decisions_pred_val_norm.mean(axis=0)
-        elif (
-            isinstance(decisions_pred_val_norm, np.ndarray)
-            and decisions_pred_val_norm.ndim == 1
-        ):
-            decisions_pred_val_norm = decisions_pred_val_norm.reshape(-1, 1)
-
-        decisions_pred_val = decisions_normalizer.inverse_transform(
-            decisions_pred_val_norm
-        )
+        # if isinstance(y_val_pred, np.ndarray) and y_val_pred.ndim >= 3:
+        #     y_val_pred = y_val_pred.mean(axis=0)
+        # elif isinstance(y_val_pred, np.ndarray) and y_val_pred.ndim == 1:
+        #     y_val_pred = y_val_pred.reshape(-1, 1)
 
         metrics_list: dict[str, Any] = {}
         for metric_name, validation_metric in validation_metrics.items():
-            score = validation_metric.calculate(
-                y_true=decisions_val, y_pred=decisions_pred_val
-            )
+            score = validation_metric.calculate(y_true=y_val, y_pred=y_val_pred)
             metrics_list[metric_name] = score
 
         return metrics_list
 
     def _save_model(
         self,
-        model_params: dict[str, Any],
-        inverse_decision_mapper: BaseMlMapper,
+        ml_mapper: BaseMlMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
         train_scores: dict[str, list[float]],
@@ -321,14 +297,13 @@ class TrainModelCommandHandler:
     ) -> None:
         """Constructs and saves the final model entity."""
 
-        inverse_decision_mapper_attrs = {
-            **inverse_decision_mapper.to_dict(),
-            "type": inverse_decision_mapper.type,
+        ml_mapper_params = {
+            **ml_mapper.to_dict(),
+            "type": ml_mapper.type,
         }
-
         trained_model_artifact = ModelArtifact(
-            parameters=inverse_decision_mapper_attrs,
-            inverse_decision_mapper=inverse_decision_mapper,
+            parameters=ml_mapper_params,
+            ml_mapper=ml_mapper,
             train_scores=train_scores,
             cv_scores=cv_scores,
             objectives_normalizer=objectives_normalizer,
@@ -343,14 +318,12 @@ class TrainModelCommandHandler:
         objectives_val_norm: Any,
         decisions_train: Any,
         decisions_val: Any,
-        inverse_decision_mapper: BaseMlMapper,
+        ml_mapper: BaseMlMapper,
         decisions_normalizer: BaseNormalizer,
     ) -> None:
         """Generates plots if a visualizer is available."""
         if self._visualizer:
-            decisions_pred_val_norm = inverse_decision_mapper.predict(
-                objectives_val_norm
-            )
+            decisions_pred_val_norm = ml_mapper.predict(objectives_val_norm)
             if (
                 isinstance(decisions_pred_val_norm, np.ndarray)
                 and decisions_pred_val_norm.ndim >= 3

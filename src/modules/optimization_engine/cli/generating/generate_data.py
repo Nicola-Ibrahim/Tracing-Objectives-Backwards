@@ -15,6 +15,7 @@ from ...application.generation.generate_biobj_data.generate_biobj_data_command i
 from ...application.generation.generate_biobj_data.generate_biobj_data_handler import (
     GenerateBiobjDataCommandHandler,
 )
+from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.generation.data_model_repo import (
     FileSystemDataModelRepository,
 )
@@ -29,7 +30,7 @@ def generate_data(problem_id: int):
         problem_id=problem_id, type=ProblemType.biobj
     )
     algorithm_config = ApplicationAlgorithmConfig(
-        type=AlgorithmType.nsga2, population_size=200
+        type=AlgorithmType.nsga2, population_size=500
     )
     optimizer_config = ApplicationOptimizerConfig(
         type=OptimizerType.minimizer,
@@ -53,11 +54,11 @@ def generate_data(problem_id: int):
         algorithm_factory=AlgorithmFactory(),
         optimizer_factory=OptimizerFactory(),
         data_model_repository=FileSystemDataModelRepository(),
+        logger=CMDLogger(),
     )
 
     # Execute
-    output_path = handler.execute(command)
-    click.echo(f"Pareto data saved to: {output_path}")
+    handler.execute(command)
 
 
 if __name__ == "__main__":

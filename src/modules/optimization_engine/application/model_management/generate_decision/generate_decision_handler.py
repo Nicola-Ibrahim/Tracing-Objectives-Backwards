@@ -46,7 +46,7 @@ class GenerateDecisionCommandHandler:
             f"of type {command.model_type}."
         )
 
-        inverse_decision_mapper = model.inverse_decision_mapper
+        ml_mapper = model.ml_mapper
         decisions_normalizer = model.decisions_normalizer
         objectives_normalizer = model.objectives_normalizer
 
@@ -93,7 +93,7 @@ class GenerateDecisionCommandHandler:
             self._logger.log_info("✅ Target objective passed feasibility check.")
 
             # Predict normalized decision
-            decision_pred_norm = inverse_decision_mapper.predict(
+            decision_pred_norm = ml_mapper.predict(
                 target_objective_normalized
             )
             self._logger.log_info(

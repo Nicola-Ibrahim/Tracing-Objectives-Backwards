@@ -1,6 +1,6 @@
 from typing import Any
 
-from ...domain.model_management.enums.inverse_decision_mapper_type import (
+from ...domain.model_management.enums.ml_mapper_type import (
     MlMapperType,
 )
 from ...domain.model_management.interfaces.base_ml_mapper import (

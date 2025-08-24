@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from ...domain.model_management.enums.inverse_decision_mapper_type import (
+from ...domain.model_management.enums.ml_mapper_type import (
     MlMapperType,
 )
 
