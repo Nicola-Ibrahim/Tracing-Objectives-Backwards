@@ -4,6 +4,7 @@ from ...application.factories.ml_mapper import (
 )
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.model_management.dtos import (
+    CVAEMlMapperParams,
     GaussianProcessMlMapperParams,
     MDNMlMapperParams,
     NeuralNetworkMlMapperParams,
@@ -36,11 +37,11 @@ if __name__ == "__main__":
         trained_model_repository=FileSystemModelArtifcatRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
-        visualizer=None,
+        visualizer=PlotlyTrainingPerformanceVisualizer(),
     )
 
     command = TrainModelCommand(
-        ml_mapper_params=RBFMlMapperParams(),
+        ml_mapper_params=CVAEMlMapperParams(),
         objectives_normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
@@ -54,7 +55,6 @@ if __name__ == "__main__":
         ],
         test_size=0.2,
         random_state=42,
-        cv_splits=5,
     )
 
     # Execute the command handler

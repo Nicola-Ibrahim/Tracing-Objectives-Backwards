@@ -43,6 +43,10 @@ class ModelArtifact(BaseModel):
         default_factory=dict,
         description="Performance metrics for a single training run (e.g., from a train-test split).",
     )
+    test_scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="Performance metrics for the test set (if applicable).",
+    )
     cv_scores: dict[str, list[float]] = Field(
         default_factory=dict,
         description="Aggregated performance metrics (mean and std) from cross-validation. Only present for CV runs.",

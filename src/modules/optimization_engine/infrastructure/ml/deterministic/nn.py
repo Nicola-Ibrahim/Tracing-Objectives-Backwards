@@ -90,7 +90,7 @@ class NNMlMapper(DeterministicMlMapper):
 
     @property
     def type(self) -> str:
-        return "NNMlMapper"
+        return "Neural Network"
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         """

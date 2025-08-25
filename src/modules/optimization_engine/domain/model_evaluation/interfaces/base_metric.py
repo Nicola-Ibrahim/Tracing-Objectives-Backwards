@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 from pydantic import BaseModel
 
 
@@ -31,8 +30,8 @@ class BaseValidationMetric(ABC):
     @abstractmethod
     def calculate(
         self,
-        y_true: NDArray[np.floating],
-        y_pred: NDArray[np.floating],
+        y_true: np.typing.NDArray[np.floating],
+        y_pred: np.typing.NDArray[np.floating],
     ) -> float:
         """
         Calculates a validation metric given true and predicted values.

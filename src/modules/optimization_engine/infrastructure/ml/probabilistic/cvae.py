@@ -107,23 +107,29 @@ class CVAEMlMapper(ProbabilisticMlMapper):
     are likely to achieve the target objectives.
     """
 
-    def __init__(self, latent_dim: int = 8, epochs: int = 500, lr: float = 1e-3):
+    def __init__(
+        self, latent_dim: int = 8, epochs: int = 500, learning_rate: float = 1e-3
+    ):
         """
         Initializes the CVAEInverseMapper.
 
         Args:
             latent_dim (int): Dimensionality of the latent space in the CVAE.
             epochs (int): The number of training epochs.
-            lr (float): The learning rate for the Adam optimizer.
+            learning_rate (float): The learning rate for the Adam optimizer.
         """
         super().__init__()
         self._latent_dim = latent_dim
         self._epochs = epochs
-        self._lr = lr
+        self._learning_rate = learning_rate
         self._encoder: CVAEEncoder | None = None
         self._decoder: CVAEDecoder | None = None
         self._y_dim: int | None = None  # Dimensionality of objectives (y)
         self._x_dim: int | None = None  # Dimensionality of decisions (x)
+
+    @property
+    def type(self) -> str:
+        return "Conditional VAE"
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         """
@@ -153,7 +159,7 @@ class CVAEMlMapper(ProbabilisticMlMapper):
         # Initialize the Adam optimizer for both encoder and decoder parameters
         optimizer = torch.optim.Adam(
             list(self._encoder.parameters()) + list(self._decoder.parameters()),
-            lr=self._lr,
+            lr=self._learning_rate,
         )
 
         # Training loop
@@ -188,7 +194,7 @@ class CVAEMlMapper(ProbabilisticMlMapper):
             loss.backward()
             optimizer.step()
 
-    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64], mode: str) -> NDArray[np.float64]:
         """
         Generates decisions for given target objectives by sampling from the CVAE's decoder.
 

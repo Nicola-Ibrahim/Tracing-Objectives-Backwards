@@ -109,9 +109,9 @@ class TrainModelCommandHandler:
 
         (
             objectives_train_norm,
-            objectives_val_norm,
+            objectives_test_norm,
             decisions_train_norm,
-            decisions_val_norm,
+            decisions_test_norm,
         ) = self._prepare_data(
             raw_data=raw_data,
             test_size=command.test_size,
@@ -122,29 +122,42 @@ class TrainModelCommandHandler:
 
         self._train_model(ml_mapper, objectives_train_norm, decisions_train_norm)
 
+        # Calculate training metrics
         train_scores = self._validate_model(
             ml_mapper=ml_mapper,
-            x_val=objectives_val_norm,
-            y_val=decisions_val_norm,
+            X=objectives_train_norm,
+            y=decisions_train_norm,
             validation_metrics=validation_metrics,
         )
+        self._logger.log_info(f"Training scores: {train_scores}")
+
+        # Calculate validation metrics
+        test_scores = self._validate_model(
+            ml_mapper=ml_mapper,
+            X=objectives_test_norm,
+            y=decisions_test_norm,
+            validation_metrics=validation_metrics,
+        )
+        self._logger.log_info(f"Validation scores: {test_scores}")
 
         self._save_model(
             ml_mapper=ml_mapper,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
             train_scores=train_scores,
+            test_scores=test_scores,
             cv_scores={},
         )
 
-        self._visualize_results(
-            objectives_train_norm,
-            objectives_val_norm,
-            decisions_train_norm,
-            decisions_val_norm,
-            ml_mapper,
-            decisions_normalizer,
-        )
+        if self._visualizer:
+            self._visualize_results(
+                objectives_train_norm,
+                objectives_test_norm,
+                decisions_train_norm,
+                decisions_test_norm,
+                ml_mapper,
+                decisions_normalizer,
+            )
 
         self._logger.log_info("Model training workflow completed.")
 
@@ -159,7 +172,6 @@ class TrainModelCommandHandler:
 
         # Run the cross-validation service to get evaluation metrics
         self._logger.log_info("Running cross-validation to assess model performance...")
-
         cv_scores = cross_validate(
             estimator=ml_mapper,
             X=raw_data.historical_objectives,
@@ -189,12 +201,14 @@ class TrainModelCommandHandler:
         final_mapper_instance = _clone(ml_mapper)
         final_mapper_instance.fit(X=objectives_norm, y=decisions_norm)
 
+        # Calculate training metrics on the full dataset
         train_scores = self._validate_model(
             ml_mapper=final_mapper_instance,
-            x_val=objectives_norm,
-            y_val=decisions_norm,
+            X=objectives_norm,
+            y=decisions_norm,
             validation_metrics=validation_metrics,
         )
+        self._logger.log_info(f"Training scores: {train_scores}")
 
         # Save the final model with the aggregated CV metrics
         self._save_model(
@@ -202,17 +216,19 @@ class TrainModelCommandHandler:
             objectives_normalizer=final_objectives_normalizer,
             decisions_normalizer=final_decisions_normalizer,
             train_scores=train_scores,
+            test_scores={},  # No dedicated test set in this workflow
             cv_scores=cv_scores,
         )
 
-        self._visualize_results(
-            objectives_train_norm=objectives_norm,
-            objectives_val_norm=objectives_norm,
-            decisions_train=raw_data.historical_solutions,
-            decisions_val=raw_data.historical_solutions,
-            ml_mapper=final_mapper_instance,
-            decisions_normalizer=final_decisions_normalizer,
-        )
+        if self._visualizer:
+            self._visualize_results(
+                X_train=objectives_norm,
+                X_test=objectives_norm,
+                y_train=raw_data.historical_solutions,
+                y_test=raw_data.historical_solutions,
+                ml_mapper=final_mapper_instance,
+                decisions_normalizer=final_decisions_normalizer,
+            )
 
     def _prepare_data(
         self,
@@ -227,7 +243,7 @@ class TrainModelCommandHandler:
             objectives_train,
             objectives_test,
             decisions_train,
-            decisions_test_norm,
+            decisions_test,
         ) = train_test_split(
             raw_data.historical_objectives,
             raw_data.historical_solutions,
@@ -242,7 +258,7 @@ class TrainModelCommandHandler:
         objectives_test_norm = objectives_normalizer.transform(objectives_test)
 
         decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
-        decisions_test_norm = decisions_normalizer.transform(decisions_test_norm)
+        decisions_test_norm = decisions_normalizer.transform(decisions_test)
 
         return (
             objectives_train_norm,
@@ -264,25 +280,21 @@ class TrainModelCommandHandler:
     def _validate_model(
         self,
         ml_mapper: BaseMlMapper,
-        x_val: Any,
-        y_val: Any,
+        X: np.typing.NDArray[np.float64],
+        y: np.typing.NDArray[np.float64],
         validation_metrics: dict[str, BaseValidationMetric],
     ) -> dict[str, Any]:
         """Predicts and calculates validation metrics."""
+
         if isinstance(ml_mapper, ProbabilisticMlMapper):
-            y_val_pred = ml_mapper.predict(x_val, mode="mean")
+            y_pred = ml_mapper.predict(X, mode="mean")
 
         elif isinstance(ml_mapper, DeterministicMlMapper):
-            y_val_pred = ml_mapper.predict(x_val)
-
-        # if isinstance(y_val_pred, np.ndarray) and y_val_pred.ndim >= 3:
-        #     y_val_pred = y_val_pred.mean(axis=0)
-        # elif isinstance(y_val_pred, np.ndarray) and y_val_pred.ndim == 1:
-        #     y_val_pred = y_val_pred.reshape(-1, 1)
+            y_pred = ml_mapper.predict(X)
 
         metrics_list: dict[str, Any] = {}
         for metric_name, validation_metric in validation_metrics.items():
-            score = validation_metric.calculate(y_true=y_val, y_pred=y_val_pred)
+            score = validation_metric.calculate(y_true=y, y_pred=y_pred)
             metrics_list[metric_name] = score
 
         return metrics_list
@@ -292,8 +304,9 @@ class TrainModelCommandHandler:
         ml_mapper: BaseMlMapper,
         objectives_normalizer: BaseNormalizer,
         decisions_normalizer: BaseNormalizer,
-        train_scores: dict[str, list[float]],
-        cv_scores: dict[str, list[float]],
+        train_scores: dict[str, Any],
+        test_scores: dict[str, Any],
+        cv_scores: dict[str, Any],
     ) -> None:
         """Constructs and saves the final model entity."""
 
@@ -305,6 +318,7 @@ class TrainModelCommandHandler:
             parameters=ml_mapper_params,
             ml_mapper=ml_mapper,
             train_scores=train_scores,
+            test_scores=test_scores,
             cv_scores=cv_scores,
             objectives_normalizer=objectives_normalizer,
             decisions_normalizer=decisions_normalizer,
@@ -314,35 +328,35 @@ class TrainModelCommandHandler:
 
     def _visualize_results(
         self,
-        objectives_train_norm: Any,
-        objectives_val_norm: Any,
-        decisions_train: Any,
-        decisions_val: Any,
+        X_train: Any,
+        X_test: Any,
+        y_train: Any,
+        y_test: Any,
         ml_mapper: BaseMlMapper,
         decisions_normalizer: BaseNormalizer,
     ) -> None:
         """Generates plots if a visualizer is available."""
-        if self._visualizer:
-            decisions_pred_val_norm = ml_mapper.predict(objectives_val_norm)
-            if (
-                isinstance(decisions_pred_val_norm, np.ndarray)
-                and decisions_pred_val_norm.ndim >= 3
-            ):
-                decisions_pred_val_norm = decisions_pred_val_norm.mean(axis=0)
-            elif (
-                isinstance(decisions_pred_val_norm, np.ndarray)
-                and decisions_pred_val_norm.ndim == 1
-            ):
-                decisions_pred_val_norm = decisions_pred_val_norm.reshape(-1, 1)
 
-            decisions_pred_val = decisions_normalizer.inverse_transform(
-                decisions_pred_val_norm
-            )
+        decisions_pred_test_norm = ml_mapper.predict(X_test)
+        if (
+            isinstance(decisions_pred_test_norm, np.ndarray)
+            and decisions_pred_test_norm.ndim >= 3
+        ):
+            decisions_pred_test_norm = decisions_pred_test_norm.mean(axis=0)
+        elif (
+            isinstance(decisions_pred_test_norm, np.ndarray)
+            and decisions_pred_test_norm.ndim == 1
+        ):
+            decisions_pred_test_norm = decisions_pred_test_norm.reshape(-1, 1)
 
-            self._visualizer.plot(
-                objectives_train=objectives_train_norm,
-                objectives_val=objectives_val_norm,
-                decisions_train=decisions_train,
-                decisions_val=decisions_val,
-                decisions_pred_val=decisions_pred_val,
-            )
+        decisions_pred_test = decisions_normalizer.inverse_transform(
+            decisions_pred_test_norm
+        )
+
+        self._visualizer.plot(
+            objectives_train=X_train,
+            objectives_val=X_test,
+            decisions_train=y_train,
+            decisions_val=y_test,
+            decisions_pred_val=decisions_pred_test,
+        )

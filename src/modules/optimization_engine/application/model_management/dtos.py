@@ -263,9 +263,9 @@ class CVAEMlMapperParams(MlMapperParams):
     learning_rate: float = Field(
         1e-3, gt=0, description="Learning rate for the Adam optimizer."
     )
-    device: Literal["cpu", "cuda"] = Field(
-        "cpu", description="The device to run the CVAE model on ('cpu' or 'cuda')."
-    )
+    # device: Literal["cpu", "cuda"] = Field(
+    #     "cpu", description="The device to run the CVAE model on ('cpu' or 'cuda')."
+    # )
 
     class Config:
         extra = "forbid"
