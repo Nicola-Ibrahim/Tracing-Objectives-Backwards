@@ -1,10 +1,13 @@
 import numpy as np
 from numpy.typing import NDArray
+from scipy.stats import multivariate_normal
 from sklearn.metrics import mean_absolute_error as sk_mean_absolute_error
 from sklearn.metrics import mean_squared_error as sk_mean_squared_error
 from sklearn.metrics import r2_score as sk_r2_score
 
-from ..domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
+from ..domain.model_evaluation.interfaces.base_validation_metric import (
+    BaseValidationMetric,
+)
 
 
 class MeanSquaredErrorValidationMetric(BaseValidationMetric):
@@ -114,3 +117,72 @@ class R2ScoreValidationMetric(BaseValidationMetric):
             raise ValueError("y_true and y_pred must have the same shape.")
 
         return float(sk_r2_score(y_true, y_pred))
+
+
+class NegativeLogLikelihoodMetric(BaseValidationMetric):
+    """
+    Calculates the Negative Log-Likelihood (NLL) for a probabilistic model.
+    This is the appropriate metric for evaluating Mixture Density Networks.
+    """
+
+    @property
+    def name(self) -> str:
+        return "Negative Log-Likelihood"
+
+    def calculate(
+        self,
+        y_true: NDArray[np.float64],
+        y_pred: tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
+    ) -> float:
+        """
+        Calculates the NLL.
+
+        Args:
+            y_true: A NumPy array of true values, shape (n_samples, n_outputs).
+            y_pred: A tuple containing the MDN's output parameters:
+                - mixing_coeffs: (n_samples, n_mixtures)
+                - means: (n_samples, n_mixtures, n_outputs)
+                - variances: (n_samples, n_mixtures, n_outputs)
+
+        Returns:
+            The average Negative Log-Likelihood as a float.
+        """
+        mixing_coeffs, means, variances = y_pred
+
+        # Handle the 1D objective case where `y_true` might be (n_samples, 1)
+        if y_true.ndim == 1:
+            y_true = y_true.reshape(-1, 1)
+
+        n_samples = y_true.shape[0]
+        n_mixtures = mixing_coeffs.shape[1]
+
+        # Initialize an array to store the log-likelihood for each sample
+        sample_log_probs = np.zeros(n_samples)
+
+        for i in range(n_samples):
+            # The likelihood for a single sample is a weighted sum of the
+            # probability densities of each Gaussian component.
+            mixture_likelihood = 0.0
+            for j in range(n_mixtures):
+                # Get the parameters for this specific Gaussian component
+                mixture_weight = mixing_coeffs[i, j]
+                mixture_mean = means[i, j, :]
+                mixture_variance = variances[i, j, :]
+
+                # Use a multivariate Gaussian PDF
+                # We need to reshape the variance for the `multivariate_normal` function
+                # as it expects a 1D array for diagonal covariance.
+                pdf = multivariate_normal.pdf(
+                    y_true[i, :], mean=mixture_mean, cov=np.diag(mixture_variance)
+                )
+
+                mixture_likelihood += mixture_weight * pdf
+
+            # Add a small epsilon to avoid taking the log of zero
+            sample_log_probs[i] = np.log(mixture_likelihood + 1e-10)
+
+        # The NLL is the negative of the sum of the log-likelihoods
+        # (or the negative mean, if you want a per-sample average)
+        nll = -np.mean(sample_log_probs)
+
+        return nll
