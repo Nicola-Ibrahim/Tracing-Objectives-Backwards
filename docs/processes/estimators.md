@@ -1,6 +1,6 @@
-# Inverse Decision Mappers Documentation
+# Estimators Documentation
 
-This document provides an overview of the **inverse_decision_mappers** module, detailing its deterministic and probabilistic models, their objectives, loss functions, and associated mathematical formulations. The goal is to enable users to understand and implement these models effectively for inverse mapping tasks.
+This document provides an overview of the **ml_mappers** module, detailing its deterministic and probabilistic models, their objectives, loss functions, and associated mathematical formulations. The goal is to enable users to understand and implement these models effectively for inverse mapping tasks.
 
 ---
 
@@ -90,4 +90,4 @@ Probabilistic models capture uncertainty in predictions by modeling outputs as p
 
 ## Conclusion
 
-The `inverse_decision_mappers` module offers a comprehensive suite of models for inverse mapping tasks, ranging from simple interpolators (e.g., Nearest Neighbors) to complex probabilistic frameworks (e.g., CVAE). Users should choose models based on their specific requirements for accuracy, interpretability, and uncertainty quantification. For implementation details, refer to the source code in the respective Python files.
+The `ml_mappers` module offers a comprehensive suite of models for inverse mapping tasks, ranging from simple interpolators (e.g., Nearest Neighbors) to complex probabilistic frameworks (e.g., CVAE). Users should choose models based on their specific requirements for accuracy, interpretability, and uncertainty quantification. For implementation details, refer to the source code in the respective Python files.
