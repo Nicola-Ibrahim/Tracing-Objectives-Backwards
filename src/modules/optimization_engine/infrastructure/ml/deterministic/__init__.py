@@ -1,21 +1,21 @@
-from .clough_tocher import CloughTocherMlMapper
-from .gaussian_process import GaussianProcessMlMapper
-from .kriging import KrigingMlMapper
-from .linear import LinearNDMlMapper
-from .nearest_neighbors import NearestNDMlMapper
-from .nn import NNMlMapper
-from .rbf import RBFMlMapper
-from .spline import SplineMlMapper
-from .svr import SVRMlMapper
+from .clough_tocher import CloughTocherEstimator
+from .gaussian_process import GaussianProcessEstimator
+from .kriging import KrigingEstimator
+from .linear import LinearNDEstimator
+from .nearest_neighbors import NearestNDEstimator
+from .nn import NNEstimator
+from .rbf import RBFEstimator
+from .spline import SplineEstimator
+from .svr import SVREstimator
 
 __all__ = [
-    "CloughTocherMlMapper",
-    "GaussianProcessMlMapper",
-    "KrigingMlMapper",
-    "LinearNDMlMapper",
-    "NearestNDMlMapper",
-    "NNMlMapper",
-    "RBFMlMapper",
-    "SplineMlMapper",
-    "SVRMlMapper",
+    "CloughTocherEstimator",
+    "GaussianProcessEstimator",
+    "KrigingEstimator",
+    "LinearNDEstimator",
+    "NearestNDEstimator",
+    "NNEstimator",
+    "RBFEstimator",
+    "SplineEstimator",
+    "SVREstimator",
 ]

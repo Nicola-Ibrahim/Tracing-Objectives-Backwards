@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from numpy.typing import NDArray
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    DeterministicMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
 )
 
 
@@ -68,7 +68,7 @@ class Decoder(nn.Module):
             return output.cpu().numpy()
 
 
-class NNMlMapper(DeterministicMlMapper):
+class NNEstimator(DeterministicEstimator):
     """
     Interpolator that uses a neural network decoder to map directly from
     an objective space to a decision space.

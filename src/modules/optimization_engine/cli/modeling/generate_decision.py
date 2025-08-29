@@ -4,8 +4,8 @@ from ...application.model_management.generate_decision.generate_decision_command
 from ...application.model_management.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
 )
-from ...domain.model_management.enums.ml_mapper_type import (
-    MlMapperType,
+from ...domain.model_management.enums.estimator_type_enum import (
+    EstimatorTypeEnum,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.generation.data_model_repo import (
@@ -34,7 +34,7 @@ def main():
 
     # Create the command object using the hardcoded values
     command = GenerateDecisionCommand(
-        model_type=MlMapperType.KRIGING_ND.value,
+        model_type=EstimatorTypeEnum.KRIGING_ND.value,
         target_objective=target_objective_point,
         distance_tolerance=0.02,
         num_suggestions=5,

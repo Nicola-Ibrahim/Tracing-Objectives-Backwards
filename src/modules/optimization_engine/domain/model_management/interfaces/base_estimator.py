@@ -1,12 +1,13 @@
 import enum
 import inspect
 from abc import ABC, abstractmethod
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
 
 
-class BaseMlMapper(ABC):
+class BaseEstimator(ABC):
     """
     Base class for Inverse Decision Mappers (and general interpolators in this context).
     It defines the common interface for fitting the mapper and making predictions.
@@ -52,9 +53,7 @@ class BaseMlMapper(ABC):
         return self.__class__.__name__
 
     def fit(
-        self,
-        X: npt.NDArray[np.float64],
-        y: npt.NDArray[np.float64],
+        self, X: npt.NDArray[np.float64], y: npt.NDArray[np.float64], **kwargs
     ) -> None:
         """
         Fits the mapper with its knowledge base of known points.
@@ -67,6 +66,10 @@ class BaseMlMapper(ABC):
             X (NDArray[np.float64]): Known points in the 'independent' space (features).
             y (NDArray[np.float64]): Corresponding points in the 'dependent' space (targets).
         """
+
+        X = np.asarray(X, dtype=np.float64)
+        y = np.asarray(y, dtype=np.float64)
+
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         if y.ndim == 1:
@@ -90,7 +93,7 @@ class BaseMlMapper(ABC):
             return v.value
         elif isinstance(v, np.ndarray):
             return v.tolist()
-        elif isinstance(v, BaseMlMapper):
+        elif isinstance(v, BaseEstimator):
             return v.to_dict()
         elif isinstance(v, list):
             return [cls._serialize(i) for i in v]
@@ -99,8 +102,33 @@ class BaseMlMapper(ABC):
         else:
             return v
 
+    def clone(self) -> Self:
+        """
+        Clones an estimator by re-instantiating it with the same __init__ parameters.
+        """
+        klass = self.__class__
 
-class DeterministicMlMapper(BaseMlMapper):
+        # Get the signature of __init__
+        sig = inspect.signature(klass.__init__)
+        bound_args = {}
+
+        for name, param in sig.parameters.items():
+            if name == "self":
+                continue
+
+            # Check if the attribute exists with the same name or as a private variable
+            if hasattr(self, name):
+                bound_args[name] = getattr(self, name)
+            elif hasattr(self, f"_{name}"):
+                bound_args[name] = getattr(self, f"_{name}")
+            else:
+                bound_args[name] = param.default
+
+        # Create a new instance with the copied parameters
+        return klass(**bound_args)
+
+
+class DeterministicEstimator(BaseEstimator):
     """
     A deterministic inverse decision mapper that uses a fixed mapping strategy.
     """
@@ -121,9 +149,11 @@ class DeterministicMlMapper(BaseMlMapper):
         raise NotImplementedError("Predict method not implemented")
 
 
-class ProbabilisticMlMapper(BaseMlMapper):
+class ProbabilisticEstimator(BaseEstimator):
     @abstractmethod
-    def predict(self, X: npt.NDArray[np.float64], mode: str) -> npt.NDArray[np.float64]:
+    def predict(
+        self, X: npt.NDArray[np.float64], n_samples: int
+    ) -> npt.NDArray[np.float64]:
         """
         Predicts corresponding 'dependent' values for given feature points.
 

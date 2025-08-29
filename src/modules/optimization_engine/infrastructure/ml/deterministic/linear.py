@@ -2,12 +2,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import LinearNDInterpolator
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    DeterministicMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
 )
 
 
-class LinearNDMlMapper(DeterministicMlMapper):
+class LinearNDEstimator(DeterministicEstimator):
     def __init__(self) -> None:
         super().__init__()
         self._interp_func: LinearNDInterpolator | None = None
@@ -19,7 +19,7 @@ class LinearNDMlMapper(DeterministicMlMapper):
         # 2. Perform specific validation for this interpolator
         if len(X) < 3:
             raise ValueError(
-                "LinearNDMlMapper requires at least 3 data points for fitting."
+                "LinearNDEstimator requires at least 3 data points for fitting."
             )
 
         # 3. Perform specific fitting logic

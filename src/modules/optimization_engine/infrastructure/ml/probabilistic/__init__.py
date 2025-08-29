@@ -1,7 +1,7 @@
-from .cvae import CVAEMlMapper
-from .mdn import MDNMlMapper
+from .cvae import CVAEEstimator
+from .mdn import MDNEstimator
 
 __all__ = [
-    "CVAEMlMapper",
-    "MDNMlMapper",
+    "CVAEEstimator",
+    "MDNEstimator",
 ]

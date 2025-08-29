@@ -46,7 +46,7 @@ class GenerateDecisionCommandHandler:
             f"of type {command.model_type}."
         )
 
-        ml_mapper = model.ml_mapper
+        estimator = model.estimator
         decisions_normalizer = model.decisions_normalizer
         objectives_normalizer = model.objectives_normalizer
 
@@ -93,9 +93,7 @@ class GenerateDecisionCommandHandler:
             self._logger.log_info("✅ Target objective passed feasibility check.")
 
             # Predict normalized decision
-            decision_pred_norm = ml_mapper.predict(
-                target_objective_normalized
-            )
+            decision_pred_norm = estimator.predict(target_objective_normalized)
             self._logger.log_info(
                 f"Normalized predicted decision: {decision_pred_norm}."
             )

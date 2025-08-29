@@ -1,12 +1,32 @@
 import pickle
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Self
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from ..interfaces.base_ml_mapper import BaseMlMapper
+from ..interfaces.base_estimator import BaseEstimator
 from ..interfaces.base_normalizer import BaseNormalizer
+
+
+@dataclass
+class TrainingHistory:
+    """Epoch-level history for iterative models (optional)."""
+
+    epochs: list[int]
+    train_loss: list[float]
+    val_loss: list[float]
+
+
+@dataclass
+class LearningCurveRecord:
+    """One row in the learning curve (train fraction -> scores)."""
+
+    train_fraction: float
+    n_train: int
+    train_scores: dict[str, float]
+    val_scores: dict[str, float]
 
 
 class ModelArtifact(BaseModel):
@@ -25,16 +45,16 @@ class ModelArtifact(BaseModel):
         ...,
         description="The parameters used to initialize or configure this specific model instance/run.",
     )
-    ml_mapper: BaseMlMapper = Field(
+    estimator: BaseEstimator = Field(
         ...,
         description="The actual fitted inverse decision mapper instance from this run.",
     )
 
-    objectives_normalizer: BaseNormalizer = Field(
+    X_normalizer: BaseNormalizer = Field(
         ...,
         description="The fitted normalizer for the input/decision space (x_train).",
     )
-    decisions_normalizer: BaseNormalizer = Field(
+    y_normalizer: BaseNormalizer = Field(
         ...,
         description="The fitted normalizer for the output/objective space (y_train).",
     )
@@ -62,15 +82,29 @@ class ModelArtifact(BaseModel):
         description="Automatically assigned sequential version number for the training run",
     )
 
-    @field_serializer("ml_mapper", "objectives_normalizer", "decisions_normalizer")
+    training_history: TrainingHistory | None = Field(
+        None,
+        description="Epoch-level training history for iterative models.",
+    )
+    learning_curve: list[LearningCurveRecord] = Field(
+        default_factory=list,
+        description="Records from a learning curve analysis showing performance vs. training size.",
+    )
+
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata about the model training process.",
+    )
+
+    @field_serializer("estimator", "X_normalizer", "y_normalizer")
     def serialize_model_and_normalizers(self, obj: Any) -> bytes:
         """Serializes the object to a byte stream using pickle."""
         return pickle.dumps(obj)
 
     @field_validator(
-        "ml_mapper",
-        "objectives_normalizer",
-        "decisions_normalizer",
+        "estimator",
+        "y_normalizer",
+        "X_normalizer",
         mode="before",
     )
     @classmethod
@@ -98,10 +132,10 @@ class ModelArtifact(BaseModel):
         cv_scores: dict[str, list[float]],
         trained_at: datetime,
         version: int | None,
-        ml_mapper: BaseMlMapper,
-        objectives_normalizer: BaseNormalizer,
-        decisions_normalizer: BaseNormalizer,
-    ) -> "ModelArtifact":
+        estimator: BaseEstimator,
+        y_normalizer: BaseNormalizer,
+        X_normalizer: BaseNormalizer,
+    ) -> Self:
         """
         Factory method to create a new ModelArtifact instance.
         """
@@ -112,7 +146,7 @@ class ModelArtifact(BaseModel):
             cv_scores=cv_scores,
             trained_at=trained_at,
             version=version,
-            ml_mapper=ml_mapper,
-            objectives_normalizer=objectives_normalizer,
-            decisions_normalizer=decisions_normalizer,
+            estimator=estimator,
+            y_normalizer=y_normalizer,
+            X_normalizer=X_normalizer,
         )

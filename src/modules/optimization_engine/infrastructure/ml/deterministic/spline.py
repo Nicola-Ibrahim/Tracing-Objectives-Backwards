@@ -2,12 +2,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import SmoothBivariateSpline
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    DeterministicMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
 )
 
 
-class SplineMlMapper(DeterministicMlMapper):
+class SplineEstimator(DeterministicEstimator):
     """
     Inverse Decision Mapper using SciPy's SmoothBivariateSpline for 2D objective spaces.
     """
@@ -34,7 +34,7 @@ class SplineMlMapper(DeterministicMlMapper):
         # 2. Perform specific validation for this interpolator
         if self._X_dim != 2:
             raise ValueError(
-                "SplineMlMapper requires features X with exactly 2 dimensions (x, y)."
+                "SplineEstimator requires features X with exactly 2 dimensions (x, y)."
             )
 
         # 3. Fit a separate spline for each output dimension.

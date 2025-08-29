@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from numpy.typing import NDArray
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    ProbabilisticMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    ProbabilisticEstimator,
 )
 
 
@@ -97,7 +97,7 @@ class CVAEDecoder(nn.Module):
         return self.fc2(h)
 
 
-class CVAEMlMapper(ProbabilisticMlMapper):
+class CVAEEstimator(ProbabilisticEstimator):
     """
     An inverse mapper that uses a Conditional Variational Autoencoder (CVAE)
     to model the inverse relationship from objectives to decisions.
@@ -107,9 +107,7 @@ class CVAEMlMapper(ProbabilisticMlMapper):
     are likely to achieve the target objectives.
     """
 
-    def __init__(
-        self, latent_dim: int = 8, epochs: int = 500, learning_rate: float = 1e-3
-    ):
+    def __init__(self, latent_dim: int = 8, learning_rate: float = 1e-3):
         """
         Initializes the CVAEInverseMapper.
 
@@ -120,18 +118,20 @@ class CVAEMlMapper(ProbabilisticMlMapper):
         """
         super().__init__()
         self._latent_dim = latent_dim
-        self._epochs = epochs
         self._learning_rate = learning_rate
         self._encoder: CVAEEncoder | None = None
         self._decoder: CVAEDecoder | None = None
         self._y_dim: int | None = None  # Dimensionality of objectives (y)
         self._x_dim: int | None = None  # Dimensionality of decisions (x)
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._training_history = {"epochs": [], "recon_loss": [], "kl": []}
+
     @property
     def type(self) -> str:
         return "Conditional VAE"
 
-    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64], **kwargs) -> None:
         """
         Fits the CVAE model to the provided training features (X) and targets (y).
 
@@ -143,6 +143,10 @@ class CVAEMlMapper(ProbabilisticMlMapper):
             y (NDArray[np.float64]): Training targets.
         """
         super().fit(X, y)  # Call parent class fit method
+
+        # Unpack additional keyword arguments
+        epochs = kwargs.get("epochs", 100)
+        batch_size = kwargs.get("batch_size", 64)
 
         # Determine the dimensions of the objective and decision spaces
         self._y_dim = X.shape[1]
@@ -161,40 +165,44 @@ class CVAEMlMapper(ProbabilisticMlMapper):
             list(self._encoder.parameters()) + list(self._decoder.parameters()),
             lr=self._learning_rate,
         )
+        n = X_tensor.shape[0]
 
         # Training loop
-        for epoch in range(self._epochs):
+        for epoch in range(1, epochs + 1):
             self._encoder.train()
             self._decoder.train()
+            perm = torch.randperm(n)
+            epoch_recon = 0.0
+            epoch_kl = 0.0
+            for i in range(0, n, batch_size):
+                idx = perm[i : i + batch_size]
+                yc = X_tensor[idx]  # condition
+                xt = Y_tensor[idx]  # target to reconstruct
+                optimizer.zero_grad()
+                mu, logvar = self._encoder(
+                    xt
+                )  # note: your earlier code used Y as input; many CVAEs condition differently; adopt your desired mapping
+                std = torch.exp(0.5 * logvar)
+                z = mu + std * torch.randn_like(std)
+                recon = self._decoder(
+                    z, yt := yc
+                )  # reconstruct decisions given z and conditioning
+                recon_loss = F.mse_loss(recon, xt, reduction="mean")
+                kl = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+                loss = recon_loss + kl
+                loss.backward()
+                optimizer.step()
+                epoch_recon += float(recon_loss.detach().cpu().item()) * len(idx)
+                epoch_kl += float(kl.detach().cpu().item()) * len(idx)
+            epoch_recon /= n
+            epoch_kl /= n
+            self._training_history["epochs"].append(epoch)
+            self._training_history["recon_loss"].append(epoch_recon)
+            self._training_history["kl"].append(epoch_kl)
 
-            optimizer.zero_grad()
-
-            # Encoder forward pass: get mean and log-variance of the latent distribution
-            mu, logvar = self._encoder(Y_tensor)
-
-            # Reparameterization trick: sample z from the latent distribution
-            std = torch.exp(0.5 * logvar)
-            z = mu + std * torch.randn_like(std)
-
-            # Decoder forward pass: reconstruct y from z and Y (conditioning)
-            recon_y = self._decoder(z, Y_tensor)
-
-            # Calculate Reconstruction Loss (Mean Squared Error)
-            recon_loss = F.mse_loss(recon_y, X_tensor)
-
-            # Calculate KL Divergence Loss
-            kl_div = (
-                -0.5
-                * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-                / X_tensor.size(0)
-            )
-
-            # Total loss is the sum of reconstruction loss and KL divergence
-            loss = recon_loss + kl_div
-            loss.backward()
-            optimizer.step()
-
-    def predict(self, X: NDArray[np.float64], mode: str) -> NDArray[np.float64]:
+    def predict(
+        self, X: NDArray[np.float64], n_samples: int = 1
+    ) -> NDArray[np.float64]:
         """
         Generates decisions for given target objectives by sampling from the CVAE's decoder.
 
@@ -208,6 +216,7 @@ class CVAEMlMapper(ProbabilisticMlMapper):
         Returns:
             NDArray[np.float64]: The generated decisions corresponding to the target objectives.
         """
+
         if self._encoder is None or self._decoder is None:
             raise RuntimeError("The model has not been fit yet. Call 'fit' first.")
         if self._latent_dim is None:
@@ -217,10 +226,20 @@ class CVAEMlMapper(ProbabilisticMlMapper):
         self._decoder.eval()  # Set decoder to evaluation mode
 
         # Convert input features to PyTorch tensor
-        Y_tensor = torch.tensor(X, dtype=torch.float32)
-
+        X_tensor = torch.tensor(X, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            z = torch.randn(Y_tensor.shape[0], self._latent_dim)
-            y_pred = self._decoder(z, Y_tensor)
-
-        return y_pred.numpy()
+            batch = X_tensor.shape[0]
+            z = torch.randn(
+                batch, n_samples, self.latent_dim, device=self.device
+            )  # (batch, n_samples, latent)
+            # decode per sample
+            outs = []
+            for s in range(n_samples):
+                zs = z[:, s, :]
+                out = self._decoder(zs, X_tensor)  # (batch, x_dim)
+                outs.append(out.unsqueeze(1))
+            outs = torch.cat(outs, dim=1)  # (batch, n_samples, x_dim)
+            if n_samples == 1:
+                return outs[:, 0, :].cpu().numpy()
+            else:
+                return outs.cpu().numpy()

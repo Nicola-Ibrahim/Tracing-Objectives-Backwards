@@ -1,15 +1,15 @@
 import time
 
-from ...application.factories.mertics import MetricFactory
-from ...application.factories.ml_mapper import (
-    MlMapperFactory,
+from ...application.factories.estimator import (
+    EstimatorFactory,
 )
+from ...application.factories.mertics import MetricFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.model_management.dtos import (
-    GaussianProcessMlMapperParams,
-    MDNMlMapperParams,
-    NeuralNetworkMlMapperParams,
-    RBFMlMapperParams,
+    GaussianProcessEstimatorParams,
+    MDNEstimatorParams,
+    NeuralNetworkEstimatorParams,
+    RBFEstimatorParams,
 )
 from ...application.model_management.train_model.train_model_command import (
     NormalizerConfig,
@@ -31,9 +31,9 @@ if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
     command_handler = TrainModelCommandHandler(
         data_repository=FileSystemDataModelRepository(),
-        inverse_decision_factory=MlMapperFactory(),
+        estimator_factory=EstimatorFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        trained_model_repository=FileSystemModelArtifcatRepository(),
+        model_repository=FileSystemModelArtifcatRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
     )
@@ -41,10 +41,10 @@ if __name__ == "__main__":
     # Define the model parameter classes we want to test
     # These are the DTOs for each model type
     model_param_classes = [
-        GaussianProcessMlMapperParams,
-        NeuralNetworkMlMapperParams,
-        RBFMlMapperParams,
-        MDNMlMapperParams,
+        GaussianProcessEstimatorParams,
+        NeuralNetworkEstimatorParams,
+        RBFEstimatorParams,
+        MDNEstimatorParams,
     ]
 
     # Define how many times to train each interpolator type
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # Loop through each model type
     for param_class in model_param_classes:
-        model_type_name = param_class.__name__.replace("MlMapperParams", "")
+        model_type_name = param_class.__name__.replace("EstimatorParams", "")
 
         # Loop multiple times for each model type
         for i in range(num_runs_per_type):
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
             # Construct the command with the appropriate parameters
             command = TrainModelCommand(
-                ml_mapper_params=model_params_instance,
+                estimator_params=model_params_instance,
                 # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
                 objectives_normalizer_config=NormalizerConfig(
                     type="MinMaxScaler", params={"feature_range": (0, 1)}

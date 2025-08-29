@@ -2,18 +2,18 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from ...domain.model_management.enums.ml_mapper_type import (
-    MlMapperType,
+from ...domain.model_management.enums.estimator_type_enum import (
+    EstimatorTypeEnum,
 )
 
 
-class MlMapperParams(BaseModel):
+class EstimatorParams(BaseModel):
     pass
 
 
-class CloughTocherMlMapperParams(MlMapperParams):
+class CloughTocherEstimatorParams(EstimatorParams):
     type: str = Field(
-        MlMapperType.CLOUGH_TOCHER_ND.value,
+        EstimatorTypeEnum.CLOUGH_TOCHER_ND.value,
         description="Type of the Clough-Tocher interpolation method.",
     )
 
@@ -21,9 +21,9 @@ class CloughTocherMlMapperParams(MlMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class NeuralNetworkMlMapperParams(MlMapperParams):
+class NeuralNetworkEstimatorParams(EstimatorParams):
     type: str = Field(
-        MlMapperType.NEURAL_NETWORK_ND.value,
+        EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
     objective_dim: int = Field(2, description="The dimension of objective space")
@@ -41,7 +41,7 @@ class NeuralNetworkMlMapperParams(MlMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class GeodesicInterpolatorParams(MlMapperParams):
+class GeodesicInterpolatorParams(EstimatorParams):
     num_paths: int = Field(100, gt=0, description="Number of geodesic paths to sample.")
     max_iterations: int = Field(
         50, gt=0, description="Max iterations for path finding."
@@ -52,9 +52,9 @@ class GeodesicInterpolatorParams(MlMapperParams):
         extra = "forbid"
 
 
-class NearestNeighborMlMapperParams(MlMapperParams):
+class NearestNeighborEstimatorParams(EstimatorParams):
     type: str = Field(
-        MlMapperType.NEAREST_NEIGHBORS_ND.value,
+        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,
         description="Type of the nearest neighbor interpolation method.",
     )
 
@@ -62,9 +62,9 @@ class NearestNeighborMlMapperParams(MlMapperParams):
         extra = "forbid"
 
 
-class LinearMlMapperParams(MlMapperParams):
+class LinearEstimatorParams(EstimatorParams):
     type: str = Field(
-        MlMapperType.LINEAR_ND.value,
+        EstimatorTypeEnum.LINEAR_ND.value,
         description="Type of the linear interpolation method.",
     )
 
@@ -72,14 +72,14 @@ class LinearMlMapperParams(MlMapperParams):
         extra = "forbid"
 
 
-class RBFMlMapperParams(MlMapperParams):
+class RBFEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for an
-    RBFMlMapper.
+    RBFEstimator.
     """
 
     type: str = Field(
-        MlMapperType.RBF_ND.value,
+        EstimatorTypeEnum.RBF_ND.value,
         description="Type of the radial basis function interpolation method.",
     )
     n_neighbors: int = Field(
@@ -114,14 +114,14 @@ class RBFMlMapperParams(MlMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class GaussianProcessMlMapperParams(MlMapperParams):
+class GaussianProcessEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for a
-    GaussianProcessMlMapper.
+    GaussianProcessEstimator.
     """
 
     type: str = Field(
-        MlMapperType.GAUSSIAN_PROCESS_ND.value,
+        EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value,
         description="Type of the gaussian process interpolation method.",
     )
 
@@ -155,11 +155,11 @@ class GaussianProcessMlMapperParams(MlMapperParams):
         arbitrary_types_allowed = True
 
 
-class SplineMlMapperParams(MlMapperParams):
+class SplineEstimatorParams(EstimatorParams):
     """Pydantic model for SmoothBivariateSpline mapper parameters."""
 
     type: str = Field(
-        MlMapperType.SPLINE_ND.value,
+        EstimatorTypeEnum.SPLINE_ND.value,
         description="Type of the spline interpolation method.",
     )
 
@@ -173,11 +173,11 @@ class SplineMlMapperParams(MlMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class KrigingMlMapperParams(MlMapperParams):
+class KrigingEstimatorParams(EstimatorParams):
     """Pydantic model for OrdinaryKriging mapper parameters."""
 
     type: str = Field(
-        MlMapperType.KRIGING_ND.value,
+        EstimatorTypeEnum.KRIGING_ND.value,
         description="Type of the Kriging interpolation method.",
     )
 
@@ -196,11 +196,11 @@ class KrigingMlMapperParams(MlMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class SVRMlMapperParams(MlMapperParams):
+class SVREstimatorParams(EstimatorParams):
     """Pydantic model for SVR mapper parameters."""
 
     type: str = Field(
-        MlMapperType.SVR_ND.value,
+        EstimatorTypeEnum.SVR_ND.value,
         description="Type of the SVR interpolation method.",
     )
 
@@ -222,14 +222,14 @@ class SVRMlMapperParams(MlMapperParams):
         extra = "forbid"  # Forbid extra fields not defined
 
 
-class MDNMlMapperParams(MlMapperParams):
+class MDNEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for an
-    MDNMlMapper.
+    MDNEstimator.
     """
 
     type: str = Field(
-        MlMapperType.MDN_ND.value,
+        EstimatorTypeEnum.MDN_ND.value,
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
@@ -244,14 +244,14 @@ class MDNMlMapperParams(MlMapperParams):
         extra = "forbid"
 
 
-class CVAEMlMapperParams(MlMapperParams):
+class CVAEEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for a
-    CVAEMlMapper.
+    CVAEEstimator.
     """
 
     type: str = Field(
-        MlMapperType.CVAE_ND.value,
+        EstimatorTypeEnum.CVAE_ND.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
     latent_dim: int = Field(

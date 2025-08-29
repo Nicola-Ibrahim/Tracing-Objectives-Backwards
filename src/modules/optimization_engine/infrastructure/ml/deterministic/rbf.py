@@ -2,22 +2,21 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RBFInterpolator
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    DeterministicMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
 )
 
 
-class RBFMlMapper(DeterministicMlMapper):
-    _interp_func: RBFInterpolator | None = None
-
+class RBFEstimator(DeterministicEstimator):
     def __init__(
-        self, n_neighbors: int = 10, kernel: str = "thin_plate_spline"
+        self, kernel: str = "thin_plate_spline", n_neighbors: int = 10
     ) -> None:
         """Initialize the RBF Inverse Decision Mapper."""
         super().__init__()
-        self._interp_func: RBFInterpolator | None = None
+        self._model: RBFInterpolator
         self.neighbors = n_neighbors
         self.kernel = kernel
+        self._training_history: dict[str, list] | None = None
 
         valid_kernels = {
             "linear",
@@ -40,7 +39,7 @@ class RBFMlMapper(DeterministicMlMapper):
     def type(self) -> str:
         return "RBF"
 
-    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64], **kwargs) -> None:
         super().fit(X, y)
 
         if len(X) < 1:
@@ -68,12 +67,20 @@ class RBFMlMapper(DeterministicMlMapper):
                 f"Kernel '{self.kernel}' requires at least 2 unique data points."
             )
 
-        self._interp_func = RBFInterpolator(
+        self._model = RBFInterpolator(
             y=X_unique, d=y_unique, neighbors=self.neighbors, kernel=self.kernel
         )
 
+        pred = self.predict(X_unique)
+        mse = float(np.mean((pred - y_unique) ** 2))
+        self._training_history = {
+            "epochs": [0],
+            "train_loss": [mse],
+            "val_loss": [np.nan],
+        }
+
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
-        if self._interp_func is None:
+        if self._model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
         if X.ndim == 1:
@@ -85,4 +92,4 @@ class RBFMlMapper(DeterministicMlMapper):
                 f"but got {X.shape[1]} dimensions."
             )
 
-        return self._interp_func(X)
+        return self._model(X)

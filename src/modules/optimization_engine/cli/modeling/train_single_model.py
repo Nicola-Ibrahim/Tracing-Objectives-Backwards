@@ -1,14 +1,14 @@
-from ...application.factories.mertics import MetricFactory
-from ...application.factories.ml_mapper import (
-    MlMapperFactory,
+from ...application.factories.estimator import (
+    EstimatorFactory,
 )
+from ...application.factories.mertics import MetricFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.model_management.dtos import (
-    CVAEMlMapperParams,
-    GaussianProcessMlMapperParams,
-    MDNMlMapperParams,
-    NeuralNetworkMlMapperParams,
-    RBFMlMapperParams,
+    CVAEEstimatorParams,
+    GaussianProcessEstimatorParams,
+    MDNEstimatorParams,
+    NeuralNetworkEstimatorParams,
+    RBFEstimatorParams,
 )
 from ...application.model_management.train_model.train_model_command import (
     NormalizerConfig,
@@ -26,26 +26,25 @@ from ...infrastructure.repositories.model_management.model_artifact_repo import 
     FileSystemModelArtifcatRepository,
 )
 from ...infrastructure.visualizers.training_performace import (
-    PlotlyTrainingPerformanceVisualizer,
+    LearningCurveVisualizer,
 )
 
 if __name__ == "__main__":
     handler = TrainModelCommandHandler(
         data_repository=FileSystemDataModelRepository(),
-        inverse_decision_factory=MlMapperFactory(),
+        model_repository=FileSystemModelArtifcatRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        trained_model_repository=FileSystemModelArtifcatRepository(),
         normalizer_factory=NormalizerFactory(),
+        estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
-        visualizer=PlotlyTrainingPerformanceVisualizer(),
+        visualizer=LearningCurveVisualizer(
+            metric=MetricFactory().create(config={"type": "nll", "params": {}})
+        ),
     )
 
     command = TrainModelCommand(
-        ml_mapper_params=CVAEMlMapperParams(),
-        objectives_normalizer_config=NormalizerConfig(
-            type="MinMaxScaler", params={"feature_range": (0, 1)}
-        ),
-        decisions_normalizer_config=NormalizerConfig(
+        estimator_params=RBFEstimatorParams(),
+        normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
         model_performance_metric_configs=[
@@ -55,6 +54,7 @@ if __name__ == "__main__":
         ],
         test_size=0.2,
         random_state=42,
+        # cv_splits=10,
     )
 
     # Execute the command handler

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from ..dtos import (
-    MlMapperParams,
+    EstimatorParams,
     NormalizerConfig,
     ValidationMetricConfig,
 )
@@ -14,20 +14,17 @@ class TrainModelCommand(BaseModel):
     and metadata for the resulting trained model.
     """
 
-    ml_mapper_params: MlMapperParams = Field(
+    estimator_params: EstimatorParams = Field(
         ...,
         description="Parameters (hyperparameters, configuration) used to initialize/configure "
         "this specific interpolator instance for training.",
     )
 
-    objectives_normalizer_config: NormalizerConfig = Field(
+    normalizer_config: NormalizerConfig = Field(
         None,
         description="Configuration for the normalizer applied to objectives (output data).",
     )
-    decisions_normalizer_config: NormalizerConfig = Field(
-        None,
-        description="Configuration for the normalizer applied to decisions (input data).",
-    )
+
     model_performance_metric_configs: list[ValidationMetricConfig] = Field(
         [
             ValidationMetricConfig(type="MSE"),

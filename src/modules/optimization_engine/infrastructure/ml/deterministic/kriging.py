@@ -2,12 +2,12 @@ import numpy as np
 import pykrige.ok as krige
 from numpy.typing import NDArray
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    DeterministicMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
 )
 
 
-class KrigingMlMapper(DeterministicMlMapper):
+class KrigingEstimator(DeterministicEstimator):
     """
     Inverse Decision Mapper using PyKrige's OrdinaryKriging for 2D objective spaces.
 
@@ -39,7 +39,7 @@ class KrigingMlMapper(DeterministicMlMapper):
         # 2. Perform specific validation
         if self._X_dim != 2:
             raise ValueError(
-                "KrigingMlMapper requires objectives with exactly 2 dimensions (x, y)."
+                "KrigingEstimator requires objectives with exactly 2 dimensions (x, y)."
             )
 
         # 3. Fit a separate Kriging model for each output dimension.

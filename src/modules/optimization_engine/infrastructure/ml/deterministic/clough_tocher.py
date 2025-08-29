@@ -2,12 +2,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import CloughTocher2DInterpolator
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    DeterministicMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
 )
 
 
-class CloughTocherMlMapper(DeterministicMlMapper):
+class CloughTocherEstimator(DeterministicEstimator):
     def __init__(self) -> None:
         super().__init__()
         self._interp_func: CloughTocher2DInterpolator | None = None
@@ -17,10 +17,10 @@ class CloughTocherMlMapper(DeterministicMlMapper):
         super().fit(X, y)
 
         if X.shape[1] != 2:
-            raise ValueError("CloughTocherMlMapper requires 2D objective data.")
+            raise ValueError("CloughTocherEstimator requires 2D objective data.")
         if len(X) < 4:
             raise ValueError(
-                "CloughTocherMlMapper requires at least 4 data points for fitting."
+                "CloughTocherEstimator requires at least 4 data points for fitting."
             )
 
         self._interp_func = CloughTocher2DInterpolator(

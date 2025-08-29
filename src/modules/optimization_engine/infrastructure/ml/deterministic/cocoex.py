@@ -1,12 +1,12 @@
 import cocoex
 import numpy as np
 
-from ....domain.model_management.interfaces.base_ml_mapper import (
-    BaseMlMapper,
+from ....domain.model_management.interfaces.base_estimator import (
+    BaseEstimator,
 )
 
 
-class CocoexFunctionForwardDecisionMapper(BaseMlMapper):
+class CocoexFunctionForwardDecisionMapper(BaseEstimator):
     """
     An implementation of a forward mapper using functions from the cocoex library.
     This class handles the initialization of COCO problems internally.

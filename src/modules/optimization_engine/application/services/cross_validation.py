@@ -2,15 +2,18 @@ import inspect
 
 import numpy as np
 import numpy.typing as npt
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, train_test_split
 
-from ...domain.model_evaluation.interfaces.base_metric import BaseValidationMetric
-from ...domain.model_management.interfaces.base_ml_mapper import (
-    BaseMlMapper,
+from ...domain.model_evaluation.interfaces.base_validation_metric import (
+    BaseValidationMetric,
 )
+from ...domain.model_management.interfaces.base_estimator import (
+    BaseEstimator,
+)
+from .training import TrainerService
 
 
-def _clone(estimator: BaseMlMapper) -> BaseMlMapper:
+def _clone(estimator: BaseEstimator) -> BaseEstimator:
     """
     Clones an estimator by re-instantiating it with the same __init__ parameters.
     """
@@ -39,7 +42,7 @@ def _clone(estimator: BaseMlMapper) -> BaseMlMapper:
 
 
 def cross_validate(
-    estimator: BaseMlMapper,
+    estimator: BaseEstimator,
     X: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
     validation_metrics: dict[str, BaseValidationMetric],
@@ -63,6 +66,10 @@ def cross_validate(
         dict[str, list[float]]: Scores from each fold.
     """
 
+    pre_X_train, pre_X_test, pre_y_train, pre_y_test = train_test_split(
+        X, y, test_size=0.2, random_state=random_state
+    )
+
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     all_scores = {scorer_name: [] for scorer_name in validation_metrics.keys()}
 
@@ -72,8 +79,8 @@ def cross_validate(
         )
 
     for i, (train_index, val_index) in enumerate(kf.split(X)):
-        X_train, X_val = X[train_index], X[val_index]
-        y_train, y_val = y[train_index], y[val_index]
+        X_train, X_val = pre_X_train[train_index], pre_X_train[val_index]
+        y_train, y_val = pre_y_train[train_index], pre_y_train[val_index]
 
         # Clone the estimator fresh for each fold
         cloned_estimator = _clone(estimator)
@@ -110,5 +117,31 @@ def cross_validate(
             std_score = np.std(scores)
             print(f"  {scorer_name}: {mean_score:.4f} ± {std_score:.4f}")
         print("═" * 50)
+
+    # Use TrainerService to train on full normalized data and compute learning curve + training_history
+    artifact = TrainerService().train_and_evaluate(
+        mapper=_clone(estimator),  # train on a fresh instance to avoid side-effects
+        X=X_norm,
+        y=y_norm,
+        metrics=validation_metrics,
+        objectives_normalizer=objectives_norm,
+        decisions_normalizer=decisions_norm,
+        parameters=parameters,
+        test_size=0.0,  # training on full data, no internal split needed (or set small if you want)
+        random_state=random_state,
+        compute_learning_curve=True,
+        learning_curve_steps=10,
+        kwargs={"epochs": getattr(estimator, "_epochs", 50)},
+    )
+
+    # 4) Attach cross-validation scores into the artifact (we expect artifact to be your pydantic ModelArtifact)
+    # artifact.cv_scores is a dict[str, list[float]] in your ModelArtifact definition — set it directly.
+    try:
+        artifact.cv_scores = cv_scores
+    except Exception:
+        # If ModelArtifact is frozen / immutable, put cv_scores into metadata as fallback
+        meta = artifact.metadata or {}
+        meta.update({"cv_scores": cv_scores})
+        artifact.metadata = meta
 
     return all_scores

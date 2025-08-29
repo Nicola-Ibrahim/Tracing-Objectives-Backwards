@@ -67,28 +67,22 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
         model_version_directory.mkdir(exist_ok=True)
 
         # Define file paths
-        mapper_path = model_version_directory / "ml_mapper.pkl"
-        dec_norm_path = model_version_directory / "decisions_normalizer.pkl"
-        obj_norm_path = model_version_directory / "objectives_normalizer.pkl"
+        mapper_path = model_version_directory / "estimator.pkl"
+        dec_norm_path = model_version_directory / "y_normalizer.pkl"
+        obj_norm_path = model_version_directory / "X_normalizer.pkl"
         metadata_path = model_version_directory / "metadata.json"
 
         # Save all components using their dedicated handlers
-        self._pickel_file_handler.save(
-            model_artifact.ml_mapper, mapper_path
-        )
-        self._pickel_file_handler.save(
-            model_artifact.decisions_normalizer, dec_norm_path
-        )
-        self._pickel_file_handler.save(
-            model_artifact.objectives_normalizer, obj_norm_path
-        )
+        self._pickel_file_handler.save(model_artifact.estimator, mapper_path)
+        self._pickel_file_handler.save(model_artifact.y_normalizer, dec_norm_path)
+        self._pickel_file_handler.save(model_artifact.X_normalizer, obj_norm_path)
 
         # Prepare and save metadata
         metadata = model_artifact.model_dump(
             exclude={
-                "ml_mapper",
-                "decisions_normalizer",
-                "objectives_normalizer",
+                "estimator",
+                "y_normalizer",
+                "X_normalizer",
             }
         )
         self._json_file_handler.save(metadata, metadata_path)
@@ -102,9 +96,9 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
 
         # Define file paths
         metadata_path = model_version_directory / "metadata.json"
-        mapper_path = model_version_directory / "ml_mapper.pkl"
-        dec_norm_path = model_version_directory / "decisions_normalizer.pkl"
-        obj_norm_path = model_version_directory / "objectives_normalizer.pkl"
+        mapper_path = model_version_directory / "estimator.pkl"
+        dec_norm_path = model_version_directory / "y_normalizer.pkl"
+        obj_norm_path = model_version_directory / "X_normalizer.pkl"
 
         # Use the correct handler for each file type
         metadata = self._json_file_handler.load(metadata_path)
@@ -121,9 +115,9 @@ class FileSystemModelArtifcatRepository(BaseInterpolationModelRepository):
                 "cv_scores": metadata.get("cv_scores"),
                 "version": metadata.get("version"),
                 "trained_at": metadata.get("trained_at"),
-                "ml_mapper": mapper,
-                "decisions_normalizer": dec_norm,
-                "objectives_normalizer": obj_norm,
+                "estimator": mapper,
+                "y_normalizer": dec_norm,
+                "X_normalizer": obj_norm,
             }
         )
 
