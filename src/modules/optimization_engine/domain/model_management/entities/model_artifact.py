@@ -112,6 +112,7 @@ class ModelArtifact(BaseModel):
         X_normalizer: BaseNormalizer,
         parameters: dict[str, Any],
         train_scores: dict[str, float],
+        test_scores: dict[str, float],
         cv_scores: dict[str, list[float]],
         loss_history: dict[str, Any],
     ) -> Self:
@@ -124,6 +125,7 @@ class ModelArtifact(BaseModel):
             y_normalizer=y_normalizer,
             X_normalizer=X_normalizer,
             train_scores=train_scores,
+            test_scores=test_scores,
             cv_scores=cv_scores,
             loss_history=loss_history,
         )

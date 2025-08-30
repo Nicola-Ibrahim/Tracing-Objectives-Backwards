@@ -13,7 +13,7 @@ class RBFEstimator(DeterministicEstimator):
     ) -> None:
         """Initialize the RBF Inverse Decision Mapper."""
         super().__init__()
-        self._model: RBFInterpolator
+        self._model: RBFInterpolator = None
         self.neighbors = n_neighbors
         self.kernel = kernel
 
