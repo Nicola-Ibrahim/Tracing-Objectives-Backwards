@@ -235,7 +235,7 @@ class MDNEstimatorParams(EstimatorParams):
     num_mixtures: int = Field(
         5, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
-    epochs: int = Field(500, gt=0, description="Number of epochs for training the MDN.")
+    # epochs: int = Field(500, gt=0, description="Number of epochs for training the MDN.")
     learning_rate: float = Field(
         1e-3, gt=0, description="Learning rate for the Adam optimizer."
     )
@@ -257,9 +257,9 @@ class CVAEEstimatorParams(EstimatorParams):
     latent_dim: int = Field(
         8, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
-    epochs: int = Field(
-        500, gt=0, description="Number of epochs for training the CVAE."
-    )
+    # epochs: int = Field(
+    #     500, gt=0, description="Number of epochs for training the CVAE."
+    # )
     learning_rate: float = Field(
         1e-3, gt=0, description="Learning rate for the Adam optimizer."
     )

@@ -16,7 +16,6 @@ class RBFEstimator(DeterministicEstimator):
         self._model: RBFInterpolator
         self.neighbors = n_neighbors
         self.kernel = kernel
-        self._training_history: dict[str, list] | None = None
 
         valid_kernels = {
             "linear",
@@ -70,14 +69,6 @@ class RBFEstimator(DeterministicEstimator):
         self._model = RBFInterpolator(
             y=X_unique, d=y_unique, neighbors=self.neighbors, kernel=self.kernel
         )
-
-        pred = self.predict(X_unique)
-        mse = float(np.mean((pred - y_unique) ** 2))
-        self._training_history = {
-            "epochs": [0],
-            "train_loss": [mse],
-            "val_loss": [np.nan],
-        }
 
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         if self._model is None:

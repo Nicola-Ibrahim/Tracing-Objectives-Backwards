@@ -31,6 +31,8 @@ class BaseEstimator(ABC):
         self._X_dim: int | None = None
         self._y_dim: int | None = None
 
+        self._training_history: dict | None = None
+
     @property
     def dimensionality(self) -> str:
         """
@@ -126,6 +128,9 @@ class BaseEstimator(ABC):
 
         # Create a new instance with the copied parameters
         return klass(**bound_args)
+
+    def get_loss_history(self) -> dict[str, list]:
+        return self._training_history
 
 
 class DeterministicEstimator(BaseEstimator):

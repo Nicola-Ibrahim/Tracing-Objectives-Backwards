@@ -1,50 +1,51 @@
 import math
+from turtle import clone
 from typing import Any
 
 import numpy as np
-import numpy.typing as npt
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import (
+    KFold,
+    learning_curve,
+    train_test_split,
+)
 
 from ...domain.model_evaluation.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ...domain.model_management.entities.model_artifact import (
-    LearningCurveRecord,
-    ModelArtifact,
-    TrainingHistory,
-)
+from ...domain.model_management.entities.model_artifact import ModelArtifact
 from ...domain.model_management.interfaces.base_estimator import (
     BaseEstimator,
+    DeterministicEstimator,
     ProbabilisticEstimator,
 )
 from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
 
 
 class TrainerService:
-    def __init__(self):
-        """Initializes TrainerService."""
-        pass
+    """
+    TrainerService: trains estimators, computes metrics and a unified loss_history,
+    and returns a ModelArtifact.
+    """
 
-    # ---------- Helper methods (now part of the class) ----------
+    # ---------------- Helpers ----------------
 
-    def _predict_for_metrics(self, estimator: Any, X: np.ndarray) -> np.ndarray:
-        """Return a point prediction array for point metrics."""
-        if isinstance(estimator, ProbabilisticEstimator):
-            # For probabilistic estimators, we get the mean prediction
-            return estimator.predict(X, mode="mean")
-        return estimator.predict(X)
-
-    def _eval_using_base_metrics(
+    def _evaluate_point_metrics(
         self,
-        estimator: Any,
+        estimator: BaseEstimator,
         X: np.ndarray,
         y: np.ndarray,
         metrics: dict[str, BaseValidationMetric],
     ) -> dict[str, float]:
-        """Evaluate a dict of BaseValidationMetric objects on X/y using estimator predictions."""
+        """Evaluate a dict of metrics returning scalar scores."""
+
         if X is None or len(X) == 0:
-            return {name: float("nan") for name in metrics.keys()}
-        y_pred = self._predict_for_metrics(estimator, X)
+            return {name: float("nan") for name in metrics}
+
+        if isinstance(estimator, ProbabilisticEstimator):
+            y_pred = estimator.predict(X, mode="mean")
+        else:
+            y_pred = estimator.predict(X)
+
         results: dict[str, float] = {}
         for name, metric in metrics.items():
             try:
@@ -53,9 +54,123 @@ class TrainerService:
                 results[name] = float("nan")
         return results
 
-    # ----------------------
-    # Public methods
-    # ----------------------
+    # ------------------ loss_history builder ------------------
+
+    def _build_training_chunks_for_deterministic(
+        self,
+        estimator: DeterministicEstimator,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
+        *,
+        X_val: np.typing.NDArray = None,
+        y_val: np.typing.NDArray = None,
+        X_test: np.typing.NDArray = None,
+        y_test: np.typing.NDArray = None,
+        metrics: dict[str, BaseValidationMetric],
+        learning_curve_steps: int = 10,
+        random_state: int = 0,
+    ) -> dict[str, Any]:
+        """
+        Build canonical training_history for deterministic estimator by subsampling
+        training set at a grid of fractions and retraining clones.
+
+        Returns canonical dict:
+        {
+          "bin_type": "train_fraction",
+          "bins": [...fractions...],
+          "n_train": [...counts...],
+          "train_loss": [...],
+          "val_loss": [...],
+          "test_loss": [...],
+        }
+
+        Notes:
+         - Uses metric named "MSE" if present, otherwise the first provided metric key.
+         - train_loss/val_loss/test_loss are the chosen metric values (float) or None on failure.
+        """
+        # decide which metric to use as "loss" for plotting (prefer MSE)
+        if metrics is None or len(metrics) == 0:
+            raise ValueError("metrics dict must be provided and non-empty")
+
+        metric_names = list(metrics.keys())
+        loss_metric_name = "MSE" if "MSE" in metric_names else metric_names[0]
+
+        n_total = len(X_train)
+        fractions = list(np.linspace(0.1, 1.0, learning_curve_steps))
+        rng = np.random.RandomState(random_state)
+
+        bins: list[float] = []
+        n_train_list: list[int] = []
+        train_loss_list: list[float] = []
+        val_loss_list: list[float] = []
+        test_loss_list: list[float] = []
+
+        for frac in fractions:
+            n = max(1, int(math.floor(frac * n_total)))
+            bins.append(float(frac))
+            n_train_list.append(int(n))
+
+            # subsample
+            idx = rng.choice(np.arange(n_total), size=n, replace=False)
+            X_sub = X_train[idx]
+            y_sub = y_train[idx]
+
+            # clone and fit
+            clonned_estimator = estimator.clone()
+            try:
+                # deterministic estimators generally don't accept epochs/batch args
+                clonned_estimator.fit(X_sub, y_sub)
+            except TypeError:
+                # if clone.fit expects different args, try with kwargs-less call
+                clonned_estimator.fit(X_sub, y_sub)
+
+            # evaluate chosen loss metric on train subset
+            try:
+                train_scores_sub = self._evaluate_point_metrics(
+                    clonned_estimator, X_sub, y_sub, metrics
+                )
+                t_loss = float(train_scores_sub.get(loss_metric_name, np.nan))
+            except Exception:
+                t_loss = None
+            train_loss_list.append(t_loss)
+
+            # evaluate val (if provided) else None
+            if X_val is not None and y_val is not None:
+                try:
+                    val_scores_sub = self._evaluate_point_metrics(
+                        clonned_estimator, X_val, y_val, metrics
+                    )
+                    v_loss = float(val_scores_sub.get(loss_metric_name, np.nan))
+                except Exception:
+                    v_loss = None
+            else:
+                v_loss = None
+            val_loss_list.append(v_loss)
+
+            # evaluate test (if provided) else None
+            if X_test is not None and y_test is not None:
+                try:
+                    test_scores_sub = self._evaluate_point_metrics(
+                        clonned_estimator, X_test, y_test, metrics
+                    )
+                    ts_loss = float(test_scores_sub.get(loss_metric_name, np.nan))
+                except Exception:
+                    ts_loss = None
+            else:
+                ts_loss = None
+            test_loss_list.append(ts_loss)
+
+        return {
+            "bin_type": "train_fraction",
+            "bins": bins,
+            "n_train": n_train_list,
+            "train_loss": train_loss_list,
+            "val_loss": val_loss_list,
+            "test_loss": test_loss_list,
+        }
+
+    # ------------------ Public API ------------------
+
     def train_and_evaluate(
         self,
         estimator: BaseEstimator,
@@ -68,111 +183,98 @@ class TrainerService:
         parameters: dict[str, Any],
         test_size: float = 0.2,
         random_state: int = 0,
-        compute_learning_curve: bool = True,
-        train_sizes: list[float] | None = None,
-        learning_curve_steps: int = 5,
+        learning_curve_steps: int = 20,
         batch_size: int = 64,
-        kwargs: dict[str, Any] | None = None,
+        epochs: int = 100,
     ) -> ModelArtifact:
         """
-        Train 'estimator' on (X,y), compute metrics, learning curve and produce a ModelArtifact.
+        Train estimator on X/y (normalized), compute metrics and a unified loss_history,
+        and return a ModelArtifact.
         """
-        kwargs = kwargs or {}
-
-        # 0) Quick checks
-        X = np.asarray(X)
-        y = np.asarray(y)
+        # Basic checks
         if X.shape[0] != y.shape[0]:
             raise ValueError("X and y must have same number of rows")
 
-        # 1) Train/test split
-        X_train, X_test, y_train, y_test = train_test_split(
+        # 1) train/test split
+        X_train_raw, X_test_raw, y_train_raw, y_test_raw = train_test_split(
             X, y, test_size=test_size, random_state=random_state
         )
 
-        # 2) Normalize the data
-        X_normalizer.fit_transform(X_train)
-        X_normalizer.transform(X_test)
-        y_normalizer.fit_transform(y_train)
-        y_normalizer.transform(y_test)
+        # 2) normalize data
+        X_train = X_normalizer.fit_transform(X_train_raw)
+        X_test = X_normalizer.transform(X_test_raw)
+        y_train = y_normalizer.fit_transform(y_train_raw)
+        y_test = y_normalizer.transform(y_test_raw)
 
-        # 3) Fit estimator on full train set
-        actual_kwargs = dict(kwargs)
-        actual_kwargs.update(
-            {"X_val": X_test, "y_val": y_test, "batch_size": batch_size}
-        )
-        estimator.fit(X_train, y_train, **actual_kwargs)
+        # 3) train the model
+        if isinstance(estimator, ProbabilisticEstimator):
+            estimator.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
+            loss_history = estimator.get_loss_history()
+            # prefer estimator.get_loss_history() that returns per-epoch dict like {"epochs":[...],"train_loss":[...],"val_loss":[...]}
+            if hasattr(estimator, "get_loss_history"):
+                try:
+                    training_history = estimator.get_loss_history()
+                    # normalize to epoch-format: if the estimator produced per-epoch train/val losses we save them as-is
+                    training_history = {
+                        "bin_type": "epoch",
+                        "bins": list(
+                            training_history.get(
+                                "epochs",
+                                list(
+                                    range(len(training_history.get("train_loss", [])))
+                                ),
+                            )
+                        ),
+                        "n_train": [len(X_train)]
+                        * len(training_history.get("train_loss", [])),
+                        "train_loss": [
+                            float(x) for x in training_history.get("train_loss", [])
+                        ],
+                        "val_loss": [
+                            float(x) if x is not None else None
+                            for x in training_history.get("val_loss", [])
+                        ],
+                        "test_loss": [None]
+                        * len(training_history.get("train_loss", [])),
+                    }
+                except Exception:
+                    training_history = None
 
-        # 4) Training history (optional)
-        training_history = None
-        if hasattr(estimator, "get_training_history"):
-            th = estimator.get_training_history()
-            if th:
-                training_history = TrainingHistory(
-                    epochs=list(th.get("epochs", [])),
-                    train_loss=list(th.get("train_loss", [])),
-                    val_loss=list(th.get("val_loss", [])),
-                )
+        elif isinstance(estimator, DeterministicEstimator):
+            # deterministic estimators: fit on full train set, then create training chunks via clones
+            estimator.fit(X_train, y_train)
+            # build training_history by subsampling + retraining clones
+            training_history = self._build_training_chunks_for_deterministic(
+                estimator=estimator,
+                X_train=X_train,
+                y_train=y_train,
+                X_val=None,
+                y_val=None,
+                X_test=X_test,
+                y_test=y_test,
+                metrics=metrics,
+                learning_curve_steps=learning_curve_steps,
+                random_state=random_state,
+            )
+        else:
+            # unknown type: try generic fit and no detailed history
+            estimator.fit(X_train, y_train)
 
-        # 5) Compute train/test metrics
-        train_scores = self._eval_using_base_metrics(
+        # 4) Compute final scores
+        train_scores = self._evaluate_point_metrics(
             estimator, X_train, y_train, metrics
         )
-        test_scores = self._eval_using_base_metrics(estimator, X_test, y_test, metrics)
+        test_scores = self._evaluate_point_metrics(estimator, X_test, y_test, metrics)
 
-        # 6) Compute optional learning curve
-        learning_curve = []
-        if compute_learning_curve:
-            if train_sizes is None:
-                train_sizes = list(np.linspace(0.1, 1.0, learning_curve_steps))
-            lc_records = []
-            rng = np.random.RandomState(random_state)
-            n_total = len(X_train)
-
-            for frac in train_sizes:
-                n = max(1, int(math.floor(frac * n_total)))
-                idx = rng.choice(np.arange(n_total), size=n, replace=False)
-                X_sub = X_train[idx]
-                y_sub = y_train[idx]
-
-                # Create a fresh clone for retraining
-                estimator_cloned = estimator.clone()
-
-                # Fit clone on subset
-                estimator_cloned.fit(X_sub, y_sub, **actual_kwargs)
-
-                train_scores_sub = self._eval_using_base_metrics(
-                    estimator_cloned, X_sub, y_sub, metrics
-                )
-                val_scores_sub = self._eval_using_base_metrics(
-                    estimator_cloned, X_test, y_test, metrics
-                )
-
-                lc_records.append(
-                    LearningCurveRecord(
-                        train_fraction=float(frac),
-                        n_train=int(n),
-                        train_scores=train_scores_sub,
-                        val_scores=val_scores_sub,
-                    )
-                )
-            learning_curve = lc_records
-
-        # 7) Build and return ModelArtifact
-        artifact = ModelArtifact(
+        # 5) Build artifact
+        artifact = ModelArtifact.create(
             parameters=parameters,
             estimator=estimator,
-            train_scores=train_scores,
-            test_scores=test_scores,
-            cv_scores={},
             X_normalizer=X_normalizer,
             y_normalizer=y_normalizer,
-            metadata={
-                "learning_curve": [rec.__dict__ for rec in (learning_curve or [])],
-                "training_history": training_history.__dict__
-                if training_history is not None
-                else None,
-            },
+            train_scores=train_scores,
+            test_scores=test_scores,
+            loss_history=loss_history,
         )
 
         return artifact
@@ -180,8 +282,8 @@ class TrainerService:
     def cross_validate(
         self,
         estimator: BaseEstimator,
-        X: npt.NDArray[np.float64],
-        y: npt.NDArray[np.float64],
+        X: np.ndarray,
+        y: np.ndarray,
         validation_metrics: dict[str, BaseValidationMetric],
         *,
         X_normalizer: BaseNormalizer,
@@ -191,104 +293,97 @@ class TrainerService:
         test_size: float = 0.2,
         random_state: int | None = 42,
         verbose: bool = True,
-        kwargs: dict[str, Any] | None = None,
+        batch_size: int = 32,
+        epochs: int = 100,
     ) -> ModelArtifact:
         """
-        Performs k-fold cross-validation, then refits on the full training set
-        and returns a final ModelArtifact.
+        Perform k-fold CV on training portion, retrain final estimator on full training set,
+        and return ModelArtifact with cv_scores and canonical loss_history for final model.
         """
-        kwargs = kwargs or {}
 
-        # 1) Correctly perform the initial train/test split
-        X_train_full, X_test, y_train_full, y_test = train_test_split(
+        # 1) initial holdout split + normalization
+        X_train_full_raw, X_test_raw, y_train_full_raw, y_test_raw = train_test_split(
             X, y, test_size=test_size, random_state=random_state
         )
 
-        # 2) Normalize data once for all steps
-        X_normalizer.fit_transform(X_train_full)
-        X_normalizer.transform(X_test)
-        y_normalizer.fit_transform(y_train_full)
-        y_normalizer.transform(y_test)
+        X_train_full = X_normalizer.fit_transform(X_train_full_raw)
+        X_test = X_normalizer.transform(X_test_raw)
+        y_train_full = y_normalizer.fit_transform(y_train_full_raw)
+        y_test = y_normalizer.transform(y_test_raw)
 
-        # We perform normalization on the full training set so the CV folds
-        # are transformed consistently. The holdout test set is also transformed
-        # using the same normalizers.
+        # 2) k-fold CV on training portion
         kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-        cv_scores = {scorer_name: [] for scorer_name in validation_metrics}
+        cv_scores: dict[str, list[float]] = {
+            name: [] for name in validation_metrics.keys()
+        }
 
         if verbose:
             print(
-                f"Splitting data: {len(X_train_full)} training samples / {len(X_test)} test samples."
-            )
-            print(
-                f"Starting {n_splits}-fold cross-validation for {estimator.__class__.__name__}..."
+                f"Starting {n_splits}-fold CV on {estimator.__class__.__name__} (training size={len(X_train_full)})"
             )
 
-        # 3) Perform cross-validation on the TRAINING data ONLY
-        for i, (train_index, val_index) in enumerate(kf.split(X_train_full)):
-            X_train, X_val = X_train_full[train_index], X_train_full[val_index]
-            y_train, y_val = y_train_full[train_index], y_train_full[val_index]
-
-            # Clone the estimator fresh for each fold
-            estimator_clonned = estimator.clone()
-
+        for i, (train_idx, val_idx) in enumerate(kf.split(X_train_full)):
             if verbose:
                 print(f"--- Fold {i+1}/{n_splits} ---")
+            X_train = X_train_full[train_idx]
+            X_val = X_train_full[val_idx]
+            y_train = y_train_full[train_idx]
+            y_val = y_train_full[val_idx]
 
-            # Fit on the training fold
-            estimator_clonned.fit(X_train, y_train, **kwargs)
+            cloned_estimator = estimator.clone()
+            cloned_estimator.fit(X_train, y_train, batch_size=batch_size, epochs=epochs)
 
-            # Evaluate on the validation fold
-            fold_scores = self._eval_using_base_metrics(
-                estimator_clonned, X_val, y_val, validation_metrics
+            fold_scores = self._evaluate_point_metrics(
+                cloned_estimator, X_val, y_val, validation_metrics
+            )
+            for mname, score in fold_scores.items():
+                cv_scores[mname].append(score)
+                if verbose:
+                    print(f"  {mname}: {score:.4f}")
+
+        # 3) retrain final estimator on full training set
+        final_estimator = estimator.clone()
+        if isinstance(final_estimator, ProbabilisticEstimator):
+            final_estimator.fit(
+                X_train_full, y_train_full, batch_size=batch_size, epochs=epochs
             )
 
-            # Store and print scores
-            for metric_name, score in fold_scores.items():
-                cv_scores[metric_name].append(score)
-                if verbose:
-                    print(f"  {metric_name}: {score:.4f}")
+            # evaluate final model
+            test_scores = self._evaluate_point_metrics(
+                final_estimator, X_test, y_test, validation_metrics
+            )
+            train_scores = self._evaluate_point_metrics(
+                final_estimator, X_train_full, y_train_full, validation_metrics
+            )
 
-        if verbose:
-            print("\n" + "═" * 50)
-            print("Cross-Validation Results")
-            print("═" * 50)
-            for scorer_name, scores in cv_scores.items():
-                mean_score = np.mean(scores)
-                std_score = np.std(scores)
-                print(f"  {scorer_name}: {mean_score:.4f} ± {std_score:.4f} (CV)")
-            print("═" * 50)
+            # get per-epoch history for final model if available (probabilistic) else None (use train_size)
+            loss_history = final_estimator.get_loss_history()
 
-        # 4) Re-fit the final model on the entire training set
-        final_estimator_clonned = estimator.clone()
-        final_estimator_clonned.fit(X_train_full, y_train_full, **kwargs)
+        elif isinstance(final_estimator, DeterministicEstimator):
+            final_estimator.fit(X_train_full, y_train_full)
 
-        # 5) Evaluate the final model on the holdout test set
-        test_scores = self._eval_using_base_metrics(
-            final_estimator_clonned, X_test, y_test, validation_metrics
-        )
-        # Re-evaluate on the full training set as well for completeness
-        train_scores = self._eval_using_base_metrics(
-            final_estimator_clonned, X_train_full, y_train_full, validation_metrics
-        )
+            loss_history = self._build_training_chunks_for_deterministic(
+                estimator=final_estimator,
+                X_train=X_train_full,
+                y_train=y_train_full,
+                X_val=None,
+                y_val=None,
+                X_test=X_test,
+                y_test=y_test,
+                metrics=validation_metrics,
+                learning_curve_steps=learning_curve_steps,
+                random_state=random_state,
+            )
 
-        if verbose:
-            print("\n" + "═" * 50)
-            print("Final Evaluation on Holdout Test Set")
-            print("═" * 50)
-            for metric_name, score in test_scores.items():
-                print(f"  {metric_name}: {score:.4f}")
-            print("═" * 50)
-
-        # 6) Build and return the ModelArtifact
         artifact = ModelArtifact(
             parameters=parameters,
-            estimator=final_estimator_clonned,
+            estimator=final_estimator,
+            X_normalizer=X_normalizer,
+            y_normalizer=y_normalizer,
             train_scores=train_scores,
             test_scores=test_scores,
             cv_scores=cv_scores,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
+            metadata={"loss_history": loss_history},
         )
 
         return artifact

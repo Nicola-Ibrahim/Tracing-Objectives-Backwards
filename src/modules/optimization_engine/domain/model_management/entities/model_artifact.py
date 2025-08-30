@@ -19,16 +19,6 @@ class TrainingHistory:
     val_loss: list[float]
 
 
-@dataclass
-class LearningCurveRecord:
-    """One row in the learning curve (train fraction -> scores)."""
-
-    train_fraction: float
-    n_train: int
-    train_scores: dict[str, float]
-    val_scores: dict[str, float]
-
-
 class ModelArtifact(BaseModel):
     """
     Represents a trained model model and its associated metadata.
@@ -82,18 +72,9 @@ class ModelArtifact(BaseModel):
         description="Automatically assigned sequential version number for the training run",
     )
 
-    training_history: TrainingHistory | None = Field(
-        None,
-        description="Epoch-level training history for iterative models.",
-    )
-    learning_curve: list[LearningCurveRecord] = Field(
-        default_factory=list,
-        description="Records from a learning curve analysis showing performance vs. training size.",
-    )
-
-    metadata: dict[str, Any] = Field(
+    loss_history: dict[str, Any] = Field(
         default_factory=dict,
-        description="Additional metadata about the model training process.",
+        description="Training loss history for the model.",
     )
 
     @field_serializer("estimator", "X_normalizer", "y_normalizer")
@@ -126,27 +107,23 @@ class ModelArtifact(BaseModel):
     @classmethod
     def create(
         cls,
-        id: str,
-        parameters: dict[str, Any],
-        train_scores: dict[str, float],
-        cv_scores: dict[str, list[float]],
-        trained_at: datetime,
-        version: int | None,
         estimator: BaseEstimator,
         y_normalizer: BaseNormalizer,
         X_normalizer: BaseNormalizer,
+        parameters: dict[str, Any],
+        train_scores: dict[str, float],
+        cv_scores: dict[str, list[float]],
+        loss_history: dict[str, Any],
     ) -> Self:
         """
         Factory method to create a new ModelArtifact instance.
         """
         return cls(
-            id=id,
             parameters=parameters,
-            train_scores=train_scores,
-            cv_scores=cv_scores,
-            trained_at=trained_at,
-            version=version,
             estimator=estimator,
             y_normalizer=y_normalizer,
             X_normalizer=X_normalizer,
+            train_scores=train_scores,
+            cv_scores=cv_scores,
+            loss_history=loss_history,
         )

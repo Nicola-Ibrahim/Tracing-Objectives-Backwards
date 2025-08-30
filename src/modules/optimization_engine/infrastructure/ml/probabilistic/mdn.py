@@ -279,7 +279,6 @@ class MDNEstimator(ProbabilisticEstimator):
         self._model: MDN | None = None
         self._clusterer: GaussianMixture | None = None
         self._best_model_state_dict: dict | None = None
-        self._training_history: dict | None = None
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @property
@@ -312,7 +311,7 @@ class MDNEstimator(ProbabilisticEstimator):
         if self._gmm_boost:
             cluster_probs = self._clusterer.predict_proba(X)
             X_tensor = torch.cat(
-                [X_tensor, torch.tensor(cluster_probs, dtype=torch.float32)], dim=1
+                [X, torch.tensor(cluster_probs, dtype=torch.float32)], dim=1
             )
             input_dim = X_tensor.shape[1]
 

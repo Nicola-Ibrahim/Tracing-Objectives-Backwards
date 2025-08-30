@@ -96,7 +96,6 @@ class TrainModelCommandHandler:
                 n_splits=cv_splits,
                 random_state=random_state,
                 verbose=False,
-                kwargs={"epochs": getattr(estimator, "_epochs", 50)},
             )
             self._logger.log_info("Cross-validation workflow completed.")
 
@@ -112,9 +111,7 @@ class TrainModelCommandHandler:
                 parameters=parameters,
                 test_size=test_size,
                 random_state=random_state,
-                compute_learning_curve=True,
                 learning_curve_steps=10,
-                kwargs={"epochs": getattr(estimator, "_epochs", 50)},
             )
 
             self._logger.log_info("Model training (single split) completed.")
