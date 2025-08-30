@@ -1,8 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
-from sklearn.model_selection import ShuffleSplit, train_test_split
+from sklearn.model_selection import train_test_split
 
-from ...application.services.cross_validation import _clone
 from ...domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ...domain.model_evaluation.interfaces.base_validation_metric import (
     BaseValidationMetric,

@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
 
     command = TrainModelCommand(
-        estimator_params=MDNEstimatorParams(),
+        estimator_params=RBFEstimatorParams(),
         normalizer_config=NormalizerConfig(
             type="MinMaxScaler", params={"feature_range": (0, 1)}
         ),
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         ],
         test_size=0.2,
         random_state=42,
-        cv_splits=10,
+        # cv_splits=10,
     )
 
     # Execute the command handler

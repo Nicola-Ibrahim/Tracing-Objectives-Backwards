@@ -26,8 +26,8 @@ class EpochsCurveService:
         X_train: np.ndarray,
         y_train: np.ndarray,
         *,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
+        X_val: np.typing.NDArray,
+        y_val: np.typing.NDArray,
         epochs: int = 100,
         batch_size: int = 32,
         plot: bool = False,
@@ -98,8 +98,8 @@ class EpochsCurveService:
     @staticmethod
     def _show_plot(
         bins: List[Any],
-        train_loss: List[Optional[float]],
-        val_loss: List[Optional[float]],
+        train_loss: List[float],
+        val_loss: List[float],
         xlabel: str,
         ylabel: str,
         title: str,
@@ -134,12 +134,10 @@ class LearningCurveService:
         X_train: np.ndarray,
         y_train: np.ndarray,
         *,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
-        X_test: Optional[np.ndarray] = None,
-        y_test: Optional[np.ndarray] = None,
+        X_test: np.typing.NDArray,
+        y_test: np.typing.NDArray,
         metrics: Dict[str, BaseValidationMetric],
-        learning_curve_steps: int = 10,
+        learning_curve_steps: int = 50,
         random_state: int = 0,
         plot: bool = False,
     ) -> dict[str, Any]:
@@ -158,10 +156,10 @@ class LearningCurveService:
 
         bins: List[float] = []
         n_train_list: List[int] = []
-        train_loss_list: List[Optional[float]] = []
-        val_loss_list: List[Optional[float]] = []
-        test_loss_list: List[Optional[float]] = []
-
+        train_loss_list: List[float] = []
+        val_loss_list: List[float] = []
+        test_loss_list: List[float] = []
+        print(f"Building learning curve with {learning_curve_steps} steps...")
         for frac in fractions:
             n = max(1, int(math.floor(frac * n_total)))
             bins.append(float(frac))
@@ -179,11 +177,6 @@ class LearningCurveService:
             )
             train_loss_list.append(t_loss)
 
-            v_loss = self._evaluate_single_metric(
-                cloned, X_val, y_val, metrics, loss_metric_name
-            )
-            val_loss_list.append(v_loss)
-
             ts_loss = self._evaluate_single_metric(
                 cloned, X_test, y_test, metrics, loss_metric_name
             )
@@ -194,7 +187,7 @@ class LearningCurveService:
             "bins": bins,
             "n_train": n_train_list,
             "train_loss": train_loss_list,
-            "val_loss": val_loss_list,
+            "val_loss": [],
             "test_loss": test_loss_list,
         }
 
@@ -235,11 +228,11 @@ class LearningCurveService:
     def _evaluate_single_metric(
         self,
         estimator: BaseEstimator,
-        X: Optional[np.ndarray],
-        y: Optional[np.ndarray],
+        X: np.typing.NDArray,
+        y: np.typing.NDArray,
         metrics: Dict[str, BaseValidationMetric],
         metric_name: str,
-    ) -> Optional[float]:
+    ) -> float:
         if X is None or len(X) == 0:
             return None
         try:
@@ -251,9 +244,9 @@ class LearningCurveService:
     @staticmethod
     def _show_plot(
         n_train: List[int],
-        train_loss: List[Optional[float]],
-        val_loss: List[Optional[float]],
-        test_loss: List[Optional[float]],
+        train_loss: List[float],
+        val_loss: List[float],
+        test_loss: List[float],
         ylabel: str,
         title: str,
     ) -> None:

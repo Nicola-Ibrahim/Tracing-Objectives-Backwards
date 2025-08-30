@@ -14,7 +14,7 @@ from ....domain.model_management.interfaces.base_repository import (
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
 from ...factories.normalizer import NormalizerFactory
-from ...services.training import TrainerService
+from ...services.model_training import TrainerService
 from .train_model_command import TrainModelCommand
 
 
@@ -111,7 +111,7 @@ class TrainModelCommandHandler:
                 parameters=parameters,
                 test_size=test_size,
                 random_state=random_state,
-                learning_curve_steps=10,
+                learning_curve_steps=50,
             )
 
             self._logger.log_info("Model training (single split) completed.")

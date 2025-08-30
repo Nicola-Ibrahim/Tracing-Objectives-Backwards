@@ -62,7 +62,7 @@ class TrainerService:
         parameters: dict[str, Any],
         test_size: float = 0.2,
         random_state: int = 0,
-        learning_curve_steps: int = 20,
+        learning_curve_steps: int = 50,
         batch_size: int = 64,
         epochs: int = 100,
     ) -> ModelArtifact:
