@@ -31,7 +31,7 @@ class BaseEstimator(ABC):
         self._X_dim: int | None = None
         self._y_dim: int | None = None
 
-        self._training_history: dict | None = None
+        self._training_history: dict = {}
 
     @property
     def dimensionality(self) -> str:
