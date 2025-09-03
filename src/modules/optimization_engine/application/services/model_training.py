@@ -1,11 +1,8 @@
-from typing import Any
+from typing import Any, Iterable
 
 import numpy as np
 from sklearn.model_selection import KFold, train_test_split
 
-from ...domain.model_evaluation.interfaces.base_validation_metric import (
-    BaseValidationMetric,
-)
 from ...domain.model_management.entities.model_artifact import ModelArtifact
 from ...domain.model_management.interfaces.base_estimator import (
     BaseEstimator,
@@ -13,19 +10,22 @@ from ...domain.model_management.interfaces.base_estimator import (
     ProbabilisticEstimator,
 )
 from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
-from .model_selection import (
-    EpochsCurveService,
-    LearningCurveService,
-    ValidationCurveService,
+from ...domain.model_management.interfaces.base_validation_metric import (
+    BaseValidationMetric,
+)
+from ...infrastructure.visualizers.learning import (
+    EpochsCurve,
+    LearningCurve,
+    ValidationCurve,
 )
 
 
 class TrainerService:
     def __init__(self, loss_metric_name: str = "MSE") -> None:
         self.loss_metric_name = loss_metric_name
-        self._epochs_svc = EpochsCurveService()
-        self._learning_svc = LearningCurveService()
-        self._validation_svc = ValidationCurveService()
+        self._epochs_svc = EpochsCurve()
+        self._learning_svc = LearningCurve()
+        self._validation_svc = ValidationCurve()
 
     def _evaluate_point_metrics(
         self,
@@ -38,7 +38,7 @@ class TrainerService:
             return {name: float("nan") for name in metrics}
 
         if isinstance(estimator, ProbabilisticEstimator):
-            y_pred = estimator.predict(X, mode="mean")
+            y_pred = estimator.predict(X)
         elif isinstance(estimator, DeterministicEstimator):
             y_pred = estimator.predict(X)
 
@@ -50,11 +50,13 @@ class TrainerService:
                 results[name] = float("nan")
         return results
 
-    def train_and_evaluate(
+    def tune_hyperparameter(
         self,
         estimator: BaseEstimator,
         X: np.ndarray,
         y: np.ndarray,
+        param_name: str,
+        param_range: Iterable[Any],
         metrics: dict[str, BaseValidationMetric],
         *,
         X_normalizer: BaseNormalizer,
@@ -62,10 +64,28 @@ class TrainerService:
         parameters: dict[str, Any],
         test_size: float = 0.2,
         random_state: int = 0,
-        learning_curve_steps: int = 50,
-        batch_size: int = 64,
-        epochs: int = 100,
+        cv: int = 5,
     ) -> ModelArtifact:
+        """
+        Trains and evaluates a model for a range of parameter values to generate a validation curve.
+
+        Args:
+            estimator: The model to be trained. It must have a `clone()` method.
+            X (np.ndarray): The input features.
+            y (np.ndarray): The target values.
+            param_name (str): The name of the parameter to vary.
+            param_range (Iterable[Any]): The range of parameter values to test.
+            metrics (dict[str, BaseValidationMetric]): The metrics to evaluate the model's performance.
+            X_normalizer (BaseNormalizer): The normalizer for the input features.
+            y_normalizer (BaseNormalizer): The normalizer for the target values.
+            parameters (dict[str, Any]): A dictionary of other model parameters.
+            test_size (float): The proportion of the dataset to include in the test split.
+            random_state (int): The seed for the random number generator.
+            cv (int): The number of cross-validation splits.
+
+        Returns:
+            ModelArtifact: An artifact containing the trained model and validation curve data.
+        """
         if X.shape[0] != y.shape[0]:
             raise ValueError("X and y must have same number of rows")
 
@@ -78,168 +98,40 @@ class TrainerService:
         y_train = y_normalizer.fit_transform(y_train_raw)
         y_test = y_normalizer.transform(y_test_raw)
 
-        # 2) Create the loss history
-        loss_history = None
-
-        if isinstance(estimator, ProbabilisticEstimator):
-            loss_history = self._epochs_svc.run(
-                estimator,
-                X_train,
-                y_train,
-                X_val=X_test,
-                y_val=y_test,
-                epochs=epochs,
-                batch_size=batch_size,
-                plot=True,
-            )
-        elif isinstance(estimator, DeterministicEstimator):
-            loss_history = self._learning_svc.run(
-                estimator,
-                X_train,
-                y_train,
-                X_test=X_test,
-                y_test=y_test,
-                metrics=metrics,
-                learning_curve_steps=learning_curve_steps,
-                random_state=random_state,
-                plot=True,
-            )
-
-        # 3) Fit the main estimator on the full training data BEFORE any other operations.
-        if isinstance(estimator, ProbabilisticEstimator):
-            estimator.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
-        elif isinstance(estimator, DeterministicEstimator):
-            estimator.fit(X_train, y_train)
-
-        # 4) Evaluate the model
-        train_scores = self._evaluate_point_metrics(
-            estimator, X_train, y_train, metrics
-        )
-        test_scores = self._evaluate_point_metrics(estimator, X_test, y_test, metrics)
-
-        if loss_history:
-            final_test_loss = test_scores.get(self.loss_metric_name, np.nan)
-            if loss_history.get("test_loss") is not None:
-                loss_history["test_loss"] = [final_test_loss] * len(
-                    loss_history["bins"]
-                )
-        else:
-            loss_history = {
-                "bin_type": "single_point",
-                "bins": [0],
-                "n_train": [len(X_train)],
-                "train_loss": [train_scores.get(self.loss_metric_name, np.nan)],
-                "val_loss": [None],
-                "test_loss": [test_scores.get(self.loss_metric_name, np.nan)],
-            }
-
-            print(loss_history)
-
-        artifact = ModelArtifact.create(
-            parameters=parameters,
-            estimator=estimator,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
-            train_scores=train_scores,
-            test_scores=test_scores,
-            cv_scores={},
-            loss_history=loss_history,
+        # 2) Generate validation curve data
+        validation_curve_results = self._validation_svc.run(
+            estimator,
+            X_train,
+            y_train,
+            param_name=param_name,
+            param_range=param_range,
+            cv=cv,
+            metrics=metrics,
+            random_state=random_state,
         )
 
-        return artifact
-
-    def cross_validate(
-        self,
-        estimator: BaseEstimator,
-        X: np.ndarray,
-        y: np.ndarray,
-        validation_metrics: dict[str, BaseValidationMetric],
-        *,
-        X_normalizer: BaseNormalizer,
-        y_normalizer: BaseNormalizer,
-        parameters: dict[str, Any],
-        n_splits: int = 5,
-        test_size: float = 0.2,
-        random_state: int | None = 42,
-        verbose: bool = True,
-        batch_size: int = 32,
-        epochs: int = 100,
-    ) -> ModelArtifact:
-        """
-        Perform k-fold CV on training portion, retrain final estimator on full training set,
-        and return ModelArtifact with cv_scores and a single-point loss_history.
-        """
-        if X.shape[0] != y.shape[0]:
-            raise ValueError("X and y must have same number of rows")
-
-        X_train_full_raw, X_test_raw, y_train_full_raw, y_test_raw = train_test_split(
-            X, y, test_size=test_size, random_state=random_state
-        )
-        X_train_full = X_normalizer.fit_transform(X_train_full_raw)
-        X_test = X_normalizer.transform(X_test_raw)
-        y_train_full = y_normalizer.fit_transform(y_train_full_raw)
-        y_test = y_normalizer.transform(y_test_raw)
-
-        kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-        cv_scores: dict[str, list[float]] = {
-            name: [] for name in validation_metrics.keys()
-        }
-
-        if verbose:
-            print(
-                f"Starting {n_splits}-fold CV on {estimator.__class__.__name__} (training size={len(X_train_full)})"
-            )
-
-        for i, (train_idx, val_idx) in enumerate(kf.split(X_train_full)):
-            if verbose:
-                print(f"--- Fold {i+1}/{n_splits} ---")
-
-            X_train, X_val = X_train_full[train_idx], X_train_full[val_idx]
-            y_train, y_val = y_train_full[train_idx], y_train_full[val_idx]
-
-            cloned_estimator = estimator.clone()
-
-            if isinstance(cloned_estimator, ProbabilisticEstimator):
-                cloned_estimator.fit(
-                    X_train, y_train, batch_size=batch_size, epochs=epochs
-                )
-            else:
-                cloned_estimator.fit(X_train, y_train)
-
-            fold_scores = self._evaluate_point_metrics(
-                cloned_estimator, X_val, y_val, validation_metrics
-            )
-            for mname, score in fold_scores.items():
-                cv_scores[mname].append(score)
-                if verbose:
-                    print(f"  {mname}: {score:.4f}")
-
+        # 3) Fit a final model on the full training data with a representative parameter
+        # We choose the first parameter in the range for this example, but a better approach
+        # would be to select the best one based on validation scores.
         final_estimator = estimator.clone()
-        if isinstance(final_estimator, ProbabilisticEstimator):
-            final_estimator.fit(
-                X_train_full, y_train_full, batch_size=batch_size, epochs=epochs
-            )
-        else:
-            final_estimator.fit(X_train_full, y_train_full)
+        self._validation_svc._set_param(
+            final_estimator, param_name, validation_curve_results["param_range"][0]
+        )
 
+        if isinstance(final_estimator, ProbabilisticEstimator):
+            final_estimator.fit(X_train, y_train, epochs=100, batch_size=64)
+        else:
+            final_estimator.fit(X_train, y_train)
+
+        # 4) Evaluate the final model on train and test sets
         train_scores = self._evaluate_point_metrics(
-            final_estimator, X_train_full, y_train_full, validation_metrics
+            final_estimator, X_train, y_train, metrics
         )
         test_scores = self._evaluate_point_metrics(
-            final_estimator, X_test, y_test, validation_metrics
+            final_estimator, X_test, y_test, metrics
         )
 
-        avg_val_loss = np.mean(cv_scores.get(self.loss_metric_name, [np.nan]))
-
-        final_loss_history = {
-            "bin_type": "single_point",
-            "bins": [0],
-            "n_train": [len(X_train_full)],
-            "train_loss": [train_scores.get(self.loss_metric_name, np.nan)],
-            "val_loss": [float(avg_val_loss)],
-            "test_loss": [test_scores.get(self.loss_metric_name, np.nan)],
-        }
-
+        # 5) Create the ModelArtifact with the validation curve results
         artifact = ModelArtifact.create(
             parameters=parameters,
             estimator=final_estimator,
@@ -247,7 +139,8 @@ class TrainerService:
             y_normalizer=y_normalizer,
             train_scores=train_scores,
             test_scores=test_scores,
-            cv_scores=cv_scores,
-            loss_history=final_loss_history,
+            cv_scores={},
+            loss_history=validation_curve_results,
         )
-        return artifact
+
+        return artifact, X_train, y_train, X_test, y_test
