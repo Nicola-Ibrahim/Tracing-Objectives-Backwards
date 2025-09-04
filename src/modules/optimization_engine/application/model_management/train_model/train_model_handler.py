@@ -1,20 +1,23 @@
-from typing import Any
-
-import numpy as np
-
 from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
 from ....domain.generation.entities.data_model import DataModel
 from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
-from ....domain.model_management.interfaces.base_estimator import BaseEstimator
+from ....domain.model_management.entities.model_artifact import ModelArtifact
+from ....domain.model_management.interfaces.base_estimator import (
+    DeterministicEstimator,
+    ProbabilisticEstimator,
+)
 from ....domain.model_management.interfaces.base_logger import BaseLogger
-from ....domain.model_management.interfaces.base_normalizer import BaseNormalizer
 from ....domain.model_management.interfaces.base_repository import (
     BaseInterpolationModelRepository,
 )
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
 from ...factories.normalizer import NormalizerFactory
-from ...services.model_training import TrainerService
+from ...services.estimator_trainers import (
+    CrossValidationTrainer,
+    DeterministicModelTrainer,
+    ProbabilisticModelTrainer,
+)
 from .train_model_command import TrainModelCommand
 
 
@@ -39,7 +42,7 @@ class TrainModelCommandHandler:
         estimator_factory: EstimatorFactory,
         normalizer_factory: NormalizerFactory,
         metric_factory: MetricFactory,
-        visualizer: BaseDataVisualizer | None = None,
+        visualizer: BaseDataVisualizer,
     ) -> None:
         self._data_repository = data_repository
         self._estimator_factory = estimator_factory
@@ -48,7 +51,6 @@ class TrainModelCommandHandler:
         self._normalizer_factory = normalizer_factory
         self._metric_factory = metric_factory
         self._visualizer = visualizer
-        self._trainer_service = TrainerService()
 
     # --------------------- PUBLIC ENTRY ---------------------
 
@@ -62,12 +64,14 @@ class TrainModelCommandHandler:
         # Unpack command attributes once at the highest level
         estimator_params = command.estimator_params.model_dump()
         metric_configs = [
-            cfg.model_dump() for cfg in command.model_performance_metric_configs
+            cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
         normalizer_config = command.normalizer_config.model_dump()
         test_size = command.test_size
         random_state = command.random_state
         cv_splits = command.cv_splits
+        tune_param_name = command.tune_param_name
+        tune_param_range = command.tune_param_range
 
         estimator = self._estimator_factory.create(params=estimator_params)
         validation_metrics = self._metric_factory.create_multiple(
@@ -81,11 +85,30 @@ class TrainModelCommandHandler:
         )
         decisions_normalizer = self._normalizer_factory.create(config=normalizer_config)
 
-        # 2) Train and evaluate model
+        # 2) Train and evaluate model based on command
         parameters = {**estimator.to_dict(), "type": estimator.type}
-        if cv_splits:
+
+        if tune_param_name and tune_param_range:
+            self._logger.log_info("Starting hyperparameter tuning workflow.")
+            artifact = CrossValidationTrainer().search(
+                estimator=estimator,
+                X=raw_data.historical_objectives,
+                y=raw_data.historical_solutions,
+                param_name=tune_param_name,
+                param_range=tune_param_range,
+                metrics=validation_metrics,
+                X_normalizer=decisions_normalizer,
+                y_normalizer=objectives_normalizer,
+                parameters=parameters,
+                test_size=test_size,
+                random_state=random_state,
+                cv=cv_splits,
+            )
+            self._logger.log_info("Hyperparameter tuning workflow completed.")
+
+        elif cv_splits > 1:
             self._logger.log_info("Starting cross-validation workflow.")
-            artifact = self._trainer_service.cross_validate(
+            outcome = CrossValidationTrainer().validate(
                 estimator=estimator,
                 X=raw_data.historical_objectives,
                 y=raw_data.historical_solutions,
@@ -101,49 +124,59 @@ class TrainModelCommandHandler:
 
         else:
             self._logger.log_info("Starting single train/test split workflow.")
-            artifact = self._trainer_service.train_and_evaluate(
-                estimator=estimator,
-                X=raw_data.historical_objectives,
-                y=raw_data.historical_solutions,
-                metrics=validation_metrics,
-                X_normalizer=decisions_normalizer,
-                y_normalizer=objectives_normalizer,
-                parameters=parameters,
-                test_size=test_size,
-                random_state=random_state,
-                learning_curve_steps=50,
-            )
+            if isinstance(estimator, ProbabilisticEstimator):
+                outcome = ProbabilisticModelTrainer().train(
+                    estimator=estimator,
+                    X=raw_data.historical_objectives,
+                    y=raw_data.historical_solutions,
+                    X_normalizer=decisions_normalizer,
+                    y_normalizer=objectives_normalizer,
+                    test_size=test_size,
+                    random_state=random_state,
+                )
+
+            elif isinstance(estimator, DeterministicEstimator):
+                outcome = DeterministicModelTrainer().train(
+                    estimator=estimator,
+                    X=raw_data.historical_objectives,
+                    y=raw_data.historical_solutions,
+                    X_normalizer=decisions_normalizer,
+                    y_normalizer=objectives_normalizer,
+                    learning_curve_steps=50,
+                    metrics=validation_metrics,
+                    random_state=random_state,
+                    test_size=test_size,
+                )
 
             self._logger.log_info("Model training (single split) completed.")
+
+        artifact = ModelArtifact.create(
+            parameters=parameters,
+            estimator=outcome.estimator,
+            X_normalizer=outcome.X_normalizer,
+            y_normalizer=outcome.y_normalizer,
+            train_scores=outcome.train_scores,
+            test_scores=outcome.test_scores,
+            cv_scores={},
+            loss_history=outcome.loss_history.model_dump(),
+        )
 
         # 3) Persist artifact
         self._model_repository.save(artifact)
 
-    def _visualize(
-        self,
-        X_train: Any,
-        X_test: Any,
-        y_train: Any,
-        y_test: Any,
-        estimator: BaseEstimator,
-        decisions_normalizer: BaseNormalizer,
-    ) -> None:
-        """Runs visualization if visualizer is provided."""
-        if not self._visualizer:
-            return
-
-        y_pred_norm = estimator.predict(X_test)
-        if isinstance(y_pred_norm, np.ndarray) and y_pred_norm.ndim >= 3:
-            y_pred_norm = y_pred_norm.mean(axis=0)
-        elif isinstance(y_pred_norm, np.ndarray) and y_pred_norm.ndim == 1:
-            y_pred_norm = y_pred_norm.reshape(-1, 1)
-
-        y_pred = decisions_normalizer.inverse_transform(y_pred_norm)
+        # TODO: trying to pass only normalized training data
 
         self._visualizer.plot(
-            objectives_train=X_train,
-            objectives_val=X_test,
-            decisions_train=y_train,
-            decisions_val=y_test,
-            decisions_pred_val=y_pred,
+            data={
+                "estimator": outcome.estimator,
+                "X_train": outcome.X_train,
+                "y_train": outcome.y_train,
+                "X_test": outcome.X_test,
+                "y_test": outcome.y_test,
+                "X_normalizer": outcome.X_normalizer,
+                "y_normalizer": outcome.y_normalizer,
+                "non_linear": False,  # or True to try UMAP if installed
+                "n_samples": 300,
+                "title": f"Fitted {type(artifact.estimator).__name__}",
+            }
         )

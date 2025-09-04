@@ -1,8 +1,8 @@
 import math
-from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 import numpy as np
+from pydantic import BaseModel, Field
 from sklearn.model_selection import KFold
 
 from ...domain.model_management.interfaces.base_estimator import (
@@ -14,48 +14,54 @@ from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
 from ...domain.model_management.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from .utils import (
-    apply_param,
-    evaluate_metrics,
-    normalize_loss_history,
-    split_and_normalize,
-)
+from .utils import apply_param, evaluate_metrics, split_and_normalize
 
 
 # -------------------------
 # Domain-shaped data classes
 # -------------------------
-@dataclass
-class LossHistory:
+class LossHistory(BaseModel):
     """
     Canonical shape for loss history returned by trainers.
-    Keep lists (may be empty) so downstream code does not need to branch on types.
     """
 
     bin_type: str = ""
-    bins: list[float] = field(default_factory=list)
-    n_train: list[int] = field(default_factory=list)
-    train_loss: list[float] = field(default_factory=list)
-    val_loss: list[float] = field(default_factory=list)
-    test_loss: list[float] = field(default_factory=list)
+    bins: list[float] = Field(default_factory=list)
+    n_train: list[int] = Field(default_factory=list)
+    train_loss: list[float] = Field(default_factory=list)
+    val_loss: list[float] = Field(default_factory=list)
+    test_loss: list[float] = Field(default_factory=list)
+
+    class Config:
+        extra = "forbid"
 
 
-@dataclass
-class TrainingOutcome:
+class TrainingOutcome(BaseModel):
     """
-    Result returned by trainer.train(...).
-    Contains normalized arrays (X_train, ...), fitted estimator and loss history.
-    train_scores/test_scores may be None when the trainer doesn't compute them.
+    Result returned by a trainer.
+    - estimator: kept as the actual object in Python mode;
+                 serialized to a small summary in JSON mode.
+    - NumPy arrays: kept as arrays in Python mode; converted to lists in JSON mode.
     """
 
     estimator: BaseEstimator
     loss_history: LossHistory
-    X_train: np.ndarray
-    y_train: np.ndarray
-    X_test: np.ndarray
-    y_test: np.ndarray
-    train_scores: dict[str, float] | None = None
-    test_scores: dict[str, float] | None = None
+
+    X_train: np.typing.NDArray
+    y_train: np.typing.NDArray
+    X_test: np.typing.NDArray
+    y_test: np.typing.NDArray
+
+    X_normalizer: BaseNormalizer
+    y_normalizer: BaseNormalizer
+
+    train_scores: dict[str, float] = None
+    test_scores: dict[str, float] = None
+    cv_scores: dict[str, float] = None
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "forbid"
 
 
 class DeterministicModelTrainer:
@@ -168,13 +174,15 @@ class DeterministicModelTrainer:
         """
 
         # 1) split the data & normalise
-        X_train, X_test, y_train, y_test = split_and_normalize(
-            X=X,
-            y=y,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
-            test_size=test_size,
-            random_state=random_state,
+        X_train, X_test, y_train, y_test, X_normalizer, y_normalizer = (
+            split_and_normalize(
+                X=X,
+                y=y,
+                X_normalizer=X_normalizer,
+                y_normalizer=y_normalizer,
+                test_size=test_size,
+                random_state=random_state,
+            )
         )
 
         # 3) compute learning curve & ensure estimator is fitted
@@ -185,7 +193,7 @@ class DeterministicModelTrainer:
                 y_train=y_train,
                 X_test=X_test,
                 y_test=y_test,
-                metrics=metrics or {},
+                metrics=metrics,
                 learning_curve_steps=learning_curve_steps,
                 random_state=random_state,
             )
@@ -202,8 +210,8 @@ class DeterministicModelTrainer:
             )
 
         # 4) compute point-wise train/test metrics using normalized arrays
-        train_scores = self.compute_metrics(estimator, X_train, y_train, metrics or {})
-        test_scores = self.compute_metrics(estimator, X_test, y_test, metrics or {})
+        train_scores = evaluate_metrics(estimator, X_train, y_train, metrics)
+        test_scores = evaluate_metrics(estimator, X_test, y_test, metrics)
 
         # 5) return structured outcome
         return TrainingOutcome(
@@ -213,8 +221,11 @@ class DeterministicModelTrainer:
             y_train=y_train,
             X_test=X_test,
             y_test=y_test,
+            X_normalizer=X_normalizer,
+            y_normalizer=y_normalizer,
             train_scores=train_scores,
             test_scores=test_scores,
+            cv_scores={},
         )
 
 
@@ -295,13 +306,15 @@ class ProbabilisticModelTrainer:
         """
 
         # 1) split & normalise via utility
-        X_train, X_test, y_train, y_test = split_and_normalize(
-            X=X,
-            y=y,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
-            test_size=test_size,
-            random_state=random_state,
+        X_train, X_test, y_train, y_test, X_normalizer, y_normalizer = (
+            split_and_normalize(
+                X=X,
+                y=y,
+                X_normalizer=X_normalizer,
+                y_normalizer=y_normalizer,
+                test_size=test_size,
+                random_state=random_state,
+            )
         )
 
         # 3) fit and collect epoch history
@@ -324,8 +337,10 @@ class ProbabilisticModelTrainer:
             y_train=y_train,
             X_test=X_test,
             y_test=y_test,
-            train_scores=None,
-            test_scores=None,
+            X_normalizer=X_normalizer,
+            y_normalizer=y_normalizer,
+            train_scores={},
+            test_scores={},
         )
 
 
@@ -360,13 +375,15 @@ class CrossValidationTrainer:
             raise ValueError("X and y must have same number of rows")
 
         # 1) split & normalize - now delegated to utility
-        X_train, X_test, y_train, y_test = split_and_normalize(
-            X=X,
-            y=y,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
-            test_size=test_size,
-            random_state=random_state,
+        X_train, X_test, y_train, y_test, X_normalizer, y_normalizer = (
+            split_and_normalize(
+                X=X,
+                y=y,
+                X_normalizer=X_normalizer,
+                y_normalizer=y_normalizer,
+                test_size=test_size,
+                random_state=random_state,
+            )
         )
 
         # 2) CV
@@ -402,7 +419,7 @@ class CrossValidationTrainer:
                     test_size=0.0,
                 )
 
-            fold_histories.append(normalize_loss_history(fold_loss))
+            fold_histories.append(fold_loss)
             fold_scores = evaluate_metrics(trained_fold, X_val, y_val, metrics)
             for m, s in fold_scores.items():
                 cv_scores[m].append(s)
@@ -435,7 +452,7 @@ class CrossValidationTrainer:
             )
 
         final_trained = final_outcome.estimator
-        final_loss = normalize_loss_history(final_outcome.loss_history)
+        final_loss = final_outcome.loss_history
 
         # 4) compute train/test point metrics
         train_scores = evaluate_metrics(final_trained, X_train, y_train, metrics)
@@ -449,8 +466,11 @@ class CrossValidationTrainer:
             y_train=y_train,
             X_test=X_test,
             y_test=y_test,
+            X_normalizer=X_normalizer,
+            y_normalizer=y_normalizer,
             train_scores=train_scores,
             test_scores=test_scores,
+            cv_scores=cv_scores,
         )
 
     def search(

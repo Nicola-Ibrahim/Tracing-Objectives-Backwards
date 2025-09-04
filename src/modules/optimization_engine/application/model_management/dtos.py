@@ -34,7 +34,7 @@ class NeuralNetworkEstimatorParams(EstimatorParams):
         1000, gt=0, description="Number of epochs for training the neural network."
     )
     learning_rate: float = Field(
-        0.001, gt=0, description="Learning rate for the neural network optimizer."
+        1e-4, gt=0, description="Learning rate for the neural network optimizer."
     )
 
     class Config:
@@ -47,7 +47,6 @@ class GeodesicInterpolatorParams(EstimatorParams):
         50, gt=0, description="Max iterations for path finding."
     )
 
-    # Add other Geodesic specific parameters
     class Config:
         extra = "forbid"
 
@@ -261,7 +260,7 @@ class CVAEEstimatorParams(EstimatorParams):
     #     500, gt=0, description="Number of epochs for training the CVAE."
     # )
     learning_rate: float = Field(
-        1e-3, gt=0, description="Learning rate for the Adam optimizer."
+        1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
     # device: Literal["cpu", "cuda"] = Field(
     #     "cpu", description="The device to run the CVAE model on ('cpu' or 'cuda')."

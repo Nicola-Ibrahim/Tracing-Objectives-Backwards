@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from ..dtos import (
@@ -25,7 +27,7 @@ class TrainModelCommand(BaseModel):
         description="Configuration for the normalizer applied to objectives (output data).",
     )
 
-    model_performance_metric_configs: list[ValidationMetricConfig] = Field(
+    estimator_performance_metric_configs: list[ValidationMetricConfig] = Field(
         [
             ValidationMetricConfig(type="MSE"),
             ValidationMetricConfig(type="MAE"),
@@ -45,10 +47,19 @@ class TrainModelCommand(BaseModel):
         "Pass an int for reproducible output across multiple function calls.",
     )
 
-    cv_splits: int | None = Field(
-        None,
+    cv_splits: int = Field(
+        1,
         gt=1,
         description="Number of cross-validation splits. If specified, a full cross-validation workflow is executed. Otherwise, a single train-test split is used.",
+    )
+
+    tune_param_name: str | None = Field(
+        None,
+        description="Name of the hyperparameter to tune (e.g., 'C' for SVM, 'n_estimators' for RandomForest).",
+    )
+    tune_param_range: list[Any] | None = Field(
+        None,
+        description="A list of values to test for the hyperparameter. Required if tune_param_name is set.",
     )
 
     class Config:

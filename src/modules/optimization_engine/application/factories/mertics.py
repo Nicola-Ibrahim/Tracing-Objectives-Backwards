@@ -1,4 +1,4 @@
-from ...domain.model_evaluation.interfaces.base_validation_metric import (
+from ...domain.model_management.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
 from ...infrastructure.metrics import (

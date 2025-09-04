@@ -1,6 +1,7 @@
 import enum
 import inspect
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Self
 
 import numpy as np
@@ -30,8 +31,6 @@ class BaseEstimator(ABC):
 
         self._X_dim: int | None = None
         self._y_dim: int | None = None
-
-        self._training_history: dict = {}
 
     @property
     def dimensionality(self) -> str:
@@ -129,9 +128,6 @@ class BaseEstimator(ABC):
         # Create a new instance with the copied parameters
         return klass(**bound_args)
 
-    def get_loss_history(self) -> dict[str, list]:
-        return self._training_history
-
 
 class DeterministicEstimator(BaseEstimator):
     """
@@ -154,7 +150,57 @@ class DeterministicEstimator(BaseEstimator):
         raise NotImplementedError("Predict method not implemented")
 
 
+@dataclass
+class TrainingHistory:
+    """
+    Common training history container.
+
+    Core metrics:
+      - epochs, train_loss, val_loss
+
+    Extras:
+      - any additional metric lists (e.g., train_recon, train_kl, val_recon, val_kl)
+        stored in `extras` and merged by `as_dict()`.
+    """
+
+    epochs: list[int] = field(default_factory=list)
+    train_loss: list[float] = field(default_factory=list)
+    val_loss: list[float] = field(default_factory=list)
+    extras: dict[str, list[float]] = field(default_factory=dict)
+
+    def log(
+        self,
+        epoch: int,
+        train_loss: float | None = None,
+        val_loss: float | None = None,
+        **extra_metrics: float,
+    ) -> None:
+        self.epochs.append(int(epoch))
+        if train_loss is not None:
+            self.train_loss.append(float(train_loss))
+        if val_loss is not None:
+            self.val_loss.append(float(val_loss))
+        for k, v in extra_metrics.items():
+            self.extras.setdefault(k, []).append(float(v))
+
+    def as_dict(self) -> dict[str, list[float]]:
+        out: dict[str, list[float]] = {
+            "epochs": self.epochs,
+            "train_loss": self.train_loss,
+            "val_loss": self.val_loss,
+        }
+        out.update(self.extras)
+        return out
+
+
 class ProbabilisticEstimator(BaseEstimator):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._training_history: TrainingHistory = TrainingHistory()
+
+    def get_loss_history(self) -> dict[str, list]:
+        return self._training_history.as_dict()
+
     @abstractmethod
     def predict(
         self, X: npt.NDArray[np.float64], n_samples: int

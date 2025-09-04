@@ -11,7 +11,6 @@ from ...domain.model_management.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
 from .data_preparer import DataPreparer
-from .estimator_trainers import LossHistory
 
 
 def apply_param(estimator: BaseEstimator, name: str, value: Any) -> None:
@@ -60,7 +59,7 @@ def split_and_normalize(
     y_train = y_normalizer.fit_transform(y_train_raw)
     y_test = y_normalizer.transform(y_test_raw)
 
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test, X_normalizer, y_normalizer
 
 
 def safe_predict(estimator: BaseEstimator, X: np.ndarray) -> np.ndarray | None:
@@ -105,23 +104,3 @@ def evaluate_metrics(
         except Exception:
             results[name] = float("nan")
     return results
-
-
-def normalize_loss_history(raw: dict | None) -> LossHistory:
-    """
-    Convert a raw dict or None into a LossHistory instance with canonical fields.
-    This avoids branches downstream when a trainer returns {} or None.
-    """
-    if isinstance(raw, LossHistory):
-        return raw
-    if raw is None:
-        return LossHistory()
-    # raw is dict-like; extract fields defensively
-    return LossHistory(
-        bin_type=str(raw.get("bin_type", "")),
-        bins=list(raw.get("bins", [])),
-        n_train=list(raw.get("n_train", [])) if raw.get("n_train") is not None else [],
-        train_loss=list(raw.get("train_loss", [])),
-        val_loss=list(raw.get("val_loss", [])),
-        test_loss=list(raw.get("test_loss", [])),
-    )
