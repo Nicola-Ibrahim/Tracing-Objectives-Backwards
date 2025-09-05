@@ -55,43 +55,43 @@ clean:  # Remove all generated data, trained models, and cache files
 .PHONY: data-generate
 data-generate:  # Generate synthetic Pareto front data for a specified problem
 	@echo "$(BLUE)Generating synthetic data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.generate_data --problem-id 5
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_data --problem-id 5
 	@echo "$(GREEN)Data generation complete.$(RESET)"
 
 .PHONY: data-visualize
 data-visualize:  # Visualize the generated data
 	@echo "$(BLUE)Visualizing generated data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualize_data
+	$(PYTHON) -m src.modules.optimization_engine.cli.analyzing.visualize_data
 	@echo "$(GREEN)Data visualization complete.$(RESET)"
 
 .PHONY: data-process
 data-process: data-generate data-visualize # Run the full data generation pipeline
 	@echo "$(BLUE)Analyzing and visualizing generated data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.analyze_data
+	$(PYTHON) -m src.modules.optimization_engine.cli.analyzing.analyze_data
 	@echo "$(GREEN)Data processing complete.$(RESET)"
 
 .PHONY: model-train-single
 model-train-single:  # Train a single inverse decision mapper on the processed data
-	@echo "$(BLUE)Training a single interpolator model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.train_single_model
+	@echo "$(BLUE)Training a single model model...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
 .PHONY: model-train-all
 model-train-all:  # Train all inverse decision mappers defined in configuration
-	@echo "$(BLUE)Training all configured interpolator models...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.train_all_models
+	@echo "$(BLUE)Training all configured model models...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_all_models
 	@echo "$(GREEN)All models trained successfully.$(RESET)"
 
 .PHONY: model-generate-decision
 model-generate-decision:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.generate_decision
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
 .PHONY: model-visualize-performance
 model-visualize-performance:  # Visualize the performance of trained models
 	@echo "$(BLUE)Analyzing and visualizing model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualize_models_performance
+	$(PYTHON) -m src.modules.optimization_engine.cli.analyzing.visualize_models_performance
 	@echo "$(GREEN)Performance analysis complete.$(RESET)"
 
 # ====================================================================================
