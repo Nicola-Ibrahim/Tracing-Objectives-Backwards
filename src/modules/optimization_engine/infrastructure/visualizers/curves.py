@@ -18,7 +18,7 @@ except Exception:
 class ModelCurveVisualizer(BaseDataVisualizer):
     """
     Show-only visualizer of model fit(s) with training/validation/test curve
-    embedded in the same figure (as second row).
+    embedded in the same figure, plus residual diagnostics.
 
     Expected `data` keys:
       - estimator
@@ -30,6 +30,8 @@ class ModelCurveVisualizer(BaseDataVisualizer):
       - title (str, optional)
       - loss_history (dict, optional)  # e.g. outcome.loss_history.model_dump()
     """
+
+    # ------------------------------- public ------------------------------- #
 
     def plot(self, data: Any) -> None:
         if not isinstance(data, dict):
@@ -70,9 +72,21 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         n, x_dim = X.shape
         _, y_dim = Y.shape
 
+        # precompute: reduced axis & normalized inputs & mean predictions on observed X
+        X_red = (
+            self._reduce_to_1d(X, non_linear)
+            if not (x_dim == 2 and y_dim == 2)
+            else None
+        )
+        X_norm = Xn.transform(X)
+        Y_pred_mean = self._predict_pointwise_mean(
+            est, X_norm, yn, n_samples
+        )  # (n, y_dim)
+        Resid = Y - Y_pred_mean  # residuals on *observed* points
+
+        # --- 2D → 2D path: 2 surfaces + curves + residual panels ---
         if x_dim == 2 and y_dim == 2:
-            # 2D->2D surfaces + loss curves in same figure (second row)
-            self._plot_surfaces_2d_to_2d_with_loss(
+            self._plot_2d2d_with_curves_and_residuals(
                 estimator=est,
                 X_raw=X,
                 Y_raw=Y,
@@ -80,31 +94,32 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 y_normer=yn,
                 n_samples=n_samples,
                 title=title,
-                show_points=True,
                 split=split,
-                grid_res=50,
                 loss_history=loss_history,
+                y_pred_obs=Y_pred_mean,
+                resid_obs=Resid,
+                grid_res=50,
             )
             return
 
-        # 1D reduced fits per output + loss curves in the same figure
-        X_red = self._reduce_to_1d(X, non_linear)
-        X_norm = Xn.transform(X)
+        # --- general path: one figure per output (fit + curves + residual panels) ---
         has_mdn = self._estimator_has_mdn(est)
         is_prob = self._is_probabilistic(est)
 
         for out_idx in range(y_dim):
-            y1 = Y[:, out_idx : out_idx + 1]
-
-            # Build 2-row figure now; fill row 1 with the fit, row 2 with loss curves
+            y_true = Y[:, out_idx : out_idx + 1]
+            y_pred = Y_pred_mean[:, out_idx]
+            resid = Resid[:, out_idx]
             fig = make_subplots(
-                rows=2,
+                rows=4,
                 cols=1,
                 shared_xaxes=False,
-                vertical_spacing=0.18,
+                vertical_spacing=0.12,
                 subplot_titles=(
                     f"{title} — y{out_idx}",
                     "Training / Validation / Test",
+                    "Residuals vs Fitted",
+                    "Residual distribution",
                 ),
             )
 
@@ -118,7 +133,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                         X_raw=X,
                         X_red=X_red,
                         X_norm=X_norm,
-                        y_raw_1d=y1,
+                        y_raw_1d=y_true,
                         y_normer=yn,
                         out_idx=out_idx,
                     )
@@ -129,7 +144,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                         estimator=est,
                         X_red=X_red,
                         X_norm=X_norm,
-                        y_raw_1d=y1,
+                        y_raw_1d=y_true,
                         y_normer=yn,
                         n_samples=n_samples,
                         split=split,
@@ -141,7 +156,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                     estimator=est,
                     X_red=X_red,
                     X_norm=X_norm,
-                    y_raw_1d=y1,
+                    y_raw_1d=y_true,
                     y_normer=yn,
                     n_samples=n_samples,
                     split=split,
@@ -153,23 +168,32 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                     estimator=est,
                     X_red=X_red,
                     X_norm=X_norm,
-                    y_raw_1d=y1,
+                    y_raw_1d=y_true,
                     y_normer=yn,
                     split=split,
                 )
 
-            # Row 2: training/validation/test curves (if present)
+            # Row 2: training/validation/test curves
             self._add_loss_curves_row(fig, row=2, loss_history=loss_history)
+
+            # Row 3: residuals vs fitted
+            self._add_residuals_vs_fitted(
+                fig, row=3, fitted=y_pred, resid=resid, output_name=f"y{out_idx}"
+            )
+
+            # Row 4: residual histogram
+            self._add_residual_hist(fig, row=4, resid=resid, output_name=f"y{out_idx}")
 
             fig.update_xaxes(title_text="X (reduced)", row=1, col=1)
             fig.update_yaxes(title_text="y", row=1, col=1)
-            fig.update_layout(template="plotly_white", height=750)
+            fig.update_layout(template="plotly_white", height=1100)
             fig.show()
 
-    # ---------------- 2D→2D with embedded loss curves ---------------- #
+    # ---------------------- 2D→2D (surfaces + panels) --------------------- #
 
-    def _plot_surfaces_2d_to_2d_with_loss(
+    def _plot_2d2d_with_curves_and_residuals(
         self,
+        *,
         estimator,
         X_raw: np.ndarray,
         Y_raw: np.ndarray,
@@ -177,12 +201,13 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         y_normer,
         n_samples: int,
         title: str,
-        show_points: bool,
-        split: np.ndarray | None,
-        grid_res: int,
+        split: np.ndarray,
         loss_history: Optional[Dict[str, Any]],
+        y_pred_obs: np.ndarray,  # (n, 2) predictions on observed X
+        resid_obs: np.ndarray,  # (n, 2) residuals on observed X
+        grid_res: int = 50,
     ) -> None:
-        # Grid over X
+        # prediction surfaces on a grid (mean)
         x1_min, x1_max = np.min(X_raw[:, 0]), np.max(X_raw[:, 0])
         x2_min, x2_max = np.min(X_raw[:, 1]), np.max(X_raw[:, 1])
         gx = np.linspace(x1_min, x1_max, grid_res)
@@ -191,122 +216,135 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         X_grid = np.stack([GX.ravel(), GY.ravel()], axis=1)
         Xg_norm = X_normer.transform(X_grid)
 
-        # Mean prediction on grid
-        Yg = None
-        try:
-            Yg_norm = np.atleast_2d(estimator.predict(Xg_norm))
-            Yg = self._inverse_rows(y_normer, Yg_norm)
-        except Exception:
-            pass
-
-        if Yg is None and self._estimator_has_mdn(estimator):
-            try:
-                mp = self._get_mdn_params(estimator, Xg_norm)
-                pi, mu = mp["pi"], mp["mu"]
-                if mu.ndim == 2:
-                    mu = mu[..., None]
-                mean_norm = np.sum(pi[..., None] * mu, axis=1)
-                Yg = self._inverse_rows(y_normer, mean_norm)
-            except Exception:
-                Yg = None
-
-        if Yg is None:
-            samples = estimator.predict(Xg_norm, n_samples=max(64, n_samples))
-            samples = np.asarray(samples)
-            if samples.ndim == 2:
-                Yg = self._inverse_rows(y_normer, samples)
-            else:
-                n_pts, ns, y_dim = samples.shape
-                flat = samples.reshape(-1, y_dim)
-                flat_inv = self._inverse_rows(y_normer, flat)
-                Yg = flat_inv.reshape(n_pts, ns, y_dim).mean(axis=1)
-
+        Yg = self._predict_pointwise_mean(estimator, Xg_norm, y_normer, n_samples)
         z1 = Yg[:, 0].reshape(grid_res, grid_res)
         z2 = Yg[:, 1].reshape(grid_res, grid_res)
 
-        # Build figure: row 1 has 2 surfaces; row 2 (colspan=2) has loss curves
+        # Figure with an extra last row for joint residual distribution
         fig = make_subplots(
-            rows=2,
+            rows=5,
             cols=2,
             specs=[
-                [{"type": "surface"}, {"type": "surface"}],
-                [{"type": "xy", "colspan": 2}, None],
+                [{"type": "surface"}, {"type": "surface"}],  # row1: surfaces
+                [{"type": "xy", "colspan": 2}, None],  # row2: curves
+                [{"type": "xy"}, {"type": "xy"}],  # row3: resid vs fitted (y1,y2)
+                [{"type": "xy"}, {"type": "xy"}],  # row4: resid hist (y1,y2)
+                [
+                    {"type": "xy", "colspan": 2},
+                    None,
+                ],  # row5: joint residual dist (y1 vs y2)
             ],
             subplot_titles=[
                 "(x1,x2) → y1",
                 "(x1,x2) → y2",
                 "Training / Validation / Test",
+                "Residuals vs Fitted (y1)",
+                "Residuals vs Fitted (y2)",
+                "Residual distribution (y1)",
+                "Residual distribution (y2)",
+                "Residual joint distribution (y1 vs y2)",
             ],
-            vertical_spacing=0.12,
+            vertical_spacing=0.10,
         )
 
+        # row1: surfaces + point clouds
         fig.add_trace(go.Surface(x=GX, y=GY, z=z1, showscale=False), row=1, col=1)
         fig.add_trace(go.Surface(x=GX, y=GY, z=z2, showscale=False), row=1, col=2)
 
-        if show_points:
-            s0 = (split == 0) if split is not None else slice(None)
-            s1 = (split == 1) if split is not None else np.array([], dtype=bool)
-
+        s0 = split == 0
+        s1 = split == 1
+        # y1
+        fig.add_trace(
+            go.Scatter3d(
+                x=X_raw[s0, 0],
+                y=X_raw[s0, 1],
+                z=Y_raw[s0, 0],
+                mode="markers",
+                name="Train (y1)",
+                marker=dict(size=3, opacity=0.5),
+            ),
+            row=1,
+            col=1,
+        )
+        if split.any():
             fig.add_trace(
                 go.Scatter3d(
-                    x=X_raw[s0, 0],
-                    y=X_raw[s0, 1],
-                    z=Y_raw[s0, 0],
+                    x=X_raw[s1, 0],
+                    y=X_raw[s1, 1],
+                    z=Y_raw[s1, 0],
                     mode="markers",
-                    name="Train (y1)",
+                    name="Test (y1)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
                 col=1,
             )
-            if split is not None and split.any():
-                fig.add_trace(
-                    go.Scatter3d(
-                        x=X_raw[s1, 0],
-                        y=X_raw[s1, 1],
-                        z=Y_raw[s1, 0],
-                        mode="markers",
-                        name="Test (y1)",
-                        marker=dict(size=3, opacity=0.5),
-                    ),
-                    row=1,
-                    col=1,
-                )
+        # y2
+        fig.add_trace(
+            go.Scatter3d(
+                x=X_raw[s0, 0],
+                y=X_raw[s0, 1],
+                z=Y_raw[s0, 1],
+                mode="markers",
+                name="Train (y2)",
+                marker=dict(size=3, opacity=0.5),
+            ),
+            row=1,
+            col=2,
+        )
+        if split.any():
             fig.add_trace(
                 go.Scatter3d(
-                    x=X_raw[s0, 0],
-                    y=X_raw[s0, 1],
-                    z=Y_raw[s0, 1],
+                    x=X_raw[s1, 0],
+                    y=X_raw[s1, 1],
+                    z=Y_raw[s1, 1],
                     mode="markers",
-                    name="Train (y2)",
+                    name="Test (y2)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
                 col=2,
             )
-            if split is not None and split.any():
-                fig.add_trace(
-                    go.Scatter3d(
-                        x=X_raw[s1, 0],
-                        y=X_raw[s1, 1],
-                        z=Y_raw[s1, 1],
-                        mode="markers",
-                        name="Test (y2)",
-                        marker=dict(size=3, opacity=0.5),
-                    ),
-                    row=1,
-                    col=2,
-                )
 
-        # Row 2: loss curves
+        # row2: loss curves
         self._add_loss_curves_row(fig, row=2, loss_history=loss_history, col=1)
 
-        fig.update_layout(
-            title=title + " — fit & training curves",
-            template="plotly_white",
-            height=850,
+        # row3: residuals vs fitted
+        self._add_residuals_vs_fitted(
+            fig,
+            row=3,
+            col=1,
+            fitted=y_pred_obs[:, 0],
+            resid=resid_obs[:, 0],
+            output_name="y1",
         )
-        # Axes titles for surfaces
+        self._add_residuals_vs_fitted(
+            fig,
+            row=3,
+            col=2,
+            fitted=y_pred_obs[:, 1],
+            resid=resid_obs[:, 1],
+            output_name="y2",
+        )
+
+        # row4: residual histograms
+        self._add_residual_hist(
+            fig, row=4, col=1, resid=resid_obs[:, 0], output_name="y1"
+        )
+        self._add_residual_hist(
+            fig, row=4, col=2, resid=resid_obs[:, 1], output_name="y2"
+        )
+
+        # row5: joint residual distribution (y1 vs y2)
+        self._add_joint_residual_distribution(
+            fig, row=5, col=1, resid_y1=resid_obs[:, 0], resid_y2=resid_obs[:, 1]
+        )
+
+        fig.update_layout(
+            title=title + " — fit, curves & residuals",
+            template="plotly_white",
+            height=1600,
+        )
         fig.update_scenes(
             xaxis_title="x1", yaxis_title="x2", zaxis_title="y1", row=1, col=1
         )
@@ -315,7 +353,162 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         )
         fig.show()
 
-    # ---------------- Loss curves in a subplot row ---------------- #
+    # -------------------------- residual panels --------------------------- #
+
+    def _add_residuals_vs_fitted(
+        self,
+        fig: go.Figure,
+        *,
+        row: int,
+        fitted: np.ndarray,
+        resid: np.ndarray,
+        output_name: str,
+        col: int = 1,
+    ) -> None:
+        # points
+        fig.add_trace(
+            go.Scatter(
+                x=fitted,
+                y=resid,
+                mode="markers",
+                name=f"Residuals ({output_name})",
+                marker=dict(opacity=0.35, size=6),
+            ),
+            row=row,
+            col=col,
+        )
+        # zero line as a 2D trace (avoid add_hline/shapes)
+        if np.size(fitted) > 0:
+            x_min = float(np.nanmin(fitted))
+            x_max = float(np.nanmax(fitted))
+            if np.isfinite(x_min) and np.isfinite(x_max) and x_min != x_max:
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_min, x_max],
+                        y=[0.0, 0.0],
+                        mode="lines",
+                        name="Zero residual",
+                        line=dict(color="black", width=1),
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+        fig.update_xaxes(title_text="Fitted", row=row, col=col)
+        fig.update_yaxes(title_text="Residual", row=row, col=col)
+
+    def _add_residual_hist(
+        self,
+        fig: go.Figure,
+        *,
+        row: int,
+        resid: np.ndarray,
+        output_name: str,
+        col: int = 1,
+    ) -> None:
+        # histogram
+        fig.add_trace(
+            go.Histogram(
+                x=resid,
+                nbinsx=40,
+                name=f"Resid ({output_name})",
+                histnorm="probability density",
+                opacity=0.7,
+            ),
+            row=row,
+            col=col,
+        )
+        # vertical zero line drawn as a trace (avoid add_vline/shapes)
+        vals = resid[np.isfinite(resid)]
+        if vals.size:
+            counts, edges = np.histogram(vals, bins=40, density=True)
+            ymax = float(np.nanmax(counts)) if counts.size else 1.0
+            fig.add_trace(
+                go.Scatter(
+                    x=[0.0, 0.0],
+                    y=[0.0, ymax * 1.05],
+                    mode="lines",
+                    name="Zero",
+                    line=dict(color="black", width=1),
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+        fig.update_xaxes(title_text="Residual", row=row, col=col)
+        fig.update_yaxes(title_text="Density", row=row, col=col)
+
+    def _add_joint_residual_distribution(
+        self,
+        fig: go.Figure,
+        *,
+        row: int,
+        col: int,
+        resid_y1: np.ndarray,
+        resid_y2: np.ndarray,
+    ) -> None:
+        # 2D residual density (contours/heatmap) + light scatter + zero lines
+        vals_x = resid_y1[np.isfinite(resid_y1)]
+        vals_y = resid_y2[np.isfinite(resid_y2)]
+        fig.add_trace(
+            go.Histogram2dContour(
+                x=vals_x,
+                y=vals_y,
+                ncontours=20,
+                contours_coloring="heatmap",
+                showscale=True,
+                name="Residual density",
+                opacity=0.85,
+            ),
+            row=row,
+            col=col,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=vals_x,
+                y=vals_y,
+                mode="markers",
+                name="Residuals",
+                marker=dict(size=4, opacity=0.25),
+                showlegend=False,
+            ),
+            row=row,
+            col=col,
+        )
+        # zero axes as traces
+        if vals_x.size and vals_y.size:
+            x_min, x_max = float(np.nanmin(vals_x)), float(np.nanmax(vals_x))
+            y_min, y_max = float(np.nanmin(vals_y)), float(np.nanmax(vals_y))
+            if np.isfinite(x_min) and np.isfinite(x_max) and x_min != x_max:
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_min, x_max],
+                        y=[0.0, 0.0],
+                        mode="lines",
+                        line=dict(color="black", width=1),
+                        name="y2=0",
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+            if np.isfinite(y_min) and np.isfinite(y_max) and y_min != y_max:
+                fig.add_trace(
+                    go.Scatter(
+                        x=[0.0, 0.0],
+                        y=[y_min, y_max],
+                        mode="lines",
+                        line=dict(color="black", width=1),
+                        name="y1=0",
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+        fig.update_xaxes(title_text="Residual y1", row=row, col=col)
+        fig.update_yaxes(title_text="Residual y2", row=row, col=col)
+
+    # ----------------------- loss curves helper row ----------------------- #
 
     def _add_loss_curves_row(
         self,
@@ -371,7 +564,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         fig.update_xaxes(title_text=x_label, row=row, col=col)
         fig.update_yaxes(title_text="Loss / Score", row=row, col=col)
 
-    # ---------------- 1D helpers (fit row) ---------------- #
+    # ------------------------- 1D fit-row helpers ------------------------ #
 
     def _add_det_fit_row(
         self,
@@ -578,7 +771,44 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                     col=1,
                 )
 
-    # ---------------- Utilities ---------------- #
+    # ----------------------------- utilities ----------------------------- #
+
+    def _predict_pointwise_mean(
+        self,
+        estimator: Any,
+        X_norm: np.ndarray,
+        y_normer,
+        n_samples: int,
+    ) -> np.ndarray:
+        """Mean prediction on the *observed* X (shape: (n, y_dim))."""
+        # try direct predict
+        try:
+            y_pred_norm = np.atleast_2d(estimator.predict(X_norm))
+            return self._inverse_rows(y_normer, y_pred_norm)
+        except Exception:
+            pass
+
+        # try analytic MDN mean
+        if self._estimator_has_mdn(estimator):
+            try:
+                mp = self._get_mdn_params(estimator, X_norm)
+                pi, mu = mp["pi"], mp["mu"]
+                if mu.ndim == 2:
+                    mu = mu[..., None]
+                mean_norm = np.sum(pi[..., None] * mu, axis=1)
+                return self._inverse_rows(y_normer, mean_norm)
+            except Exception:
+                pass
+
+        # sampling fallback
+        s = estimator.predict(X_norm, n_samples=max(64, n_samples))
+        s = np.asarray(s)
+        if s.ndim == 2:
+            return self._inverse_rows(y_normer, s)
+        n, ns, y_dim = s.shape
+        flat = s.reshape(-1, y_dim)
+        flat_inv = self._inverse_rows(y_normer, flat)
+        return flat_inv.reshape(n, ns, y_dim).mean(axis=1)
 
     def _reduce_to_1d(self, X: np.ndarray, non_linear: bool) -> np.ndarray:
         if X.shape[1] == 1:
