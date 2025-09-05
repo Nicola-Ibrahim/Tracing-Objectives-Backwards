@@ -20,8 +20,6 @@ class GaussianProcessEstimator(DeterministicEstimator):
     uncertainty estimates.
     """
 
-    _gpr_model: GaussianProcessRegressor | None = None
-
     def __init__(
         self,
         kernel: Kernel | str = "Matern",
@@ -41,7 +39,7 @@ class GaussianProcessEstimator(DeterministicEstimator):
             random_state (int): Seed for reproducibility.
         """
         super().__init__()
-        self._gpr_model = None
+        self._model = None
         self._alpha = alpha
         self._n_restarts_optimizer = n_restarts_optimizer
         self._random_state = random_state
@@ -87,14 +85,14 @@ class GaussianProcessEstimator(DeterministicEstimator):
         # 2. Instantiate and fit the GPR model
         # The GPR handles multi-output regression by fitting a separate model for each output dimension
         # when `y` has more than one column.
-        self._gpr_model = GaussianProcessRegressor(
+        self._model = GaussianProcessRegressor(
             kernel=self.kernel,
             alpha=self._alpha,
             n_restarts_optimizer=self._n_restarts_optimizer,
             random_state=self._random_state,
         )
 
-        self._gpr_model.fit(X, y)
+        self._model.fit(X, y)
 
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """
@@ -107,7 +105,7 @@ class GaussianProcessEstimator(DeterministicEstimator):
             NDArray[np.float64]: Predicted values.
         """
         # 1. Perform validation specific to this method
-        if self._gpr_model is None:
+        if self._model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
         if X.ndim == 1:
@@ -119,4 +117,4 @@ class GaussianProcessEstimator(DeterministicEstimator):
             )
 
         # 2. Call the fitted GPR's predict method
-        return self._gpr_model.predict(X)
+        return self._model.predict(X)

@@ -178,5 +178,6 @@ class TrainModelCommandHandler:
                 "non_linear": False,  # or True to try UMAP if installed
                 "n_samples": 300,
                 "title": f"Fitted {type(artifact.estimator).__name__}",
+                "loss_history": outcome.loss_history.model_dump(),
             }
         )
