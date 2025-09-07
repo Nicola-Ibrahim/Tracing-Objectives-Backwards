@@ -1,46 +1,67 @@
-from ....domain.analysis.interfaces.base_visualizer import (
-    BaseDataVisualizer,
-)
-from ....domain.generation.interfaces.base_repository import (
-    BaseParetoDataRepository,
-)
+import numpy as np
+
+from ....domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
+from ....domain.generation.interfaces.base_repository import BaseParetoDataRepository
+from ...factories.normalizer import NormalizerFactory
 from .visualize_biobj_data_command import VisualizeBiobjDataCommand
 
 
 class VisulizeBiobjDataCommandHandler:
     """
-    Handles the VisualizeBiobjDataCommand by using the ParetoDataService
-    to retrieve data and then visualizing it.
+    Loads a bi-objective dataset, builds normalizers via an injected factory,
+    normalizes decisions (X) and objectives (F), and passes everything to the
+    visualizer as a compact dict.
+
     """
 
     def __init__(
         self,
-        pareto_data_repo: BaseParetoDataRepository,
+        data_repo: BaseParetoDataRepository,
         visualizer: BaseDataVisualizer,
+        normalizer_factory: NormalizerFactory,
     ):
-        """
-        Initializes the command handler with a dedicated analysis data service and a visualizer.
-
-        Args:
-            pareto_data_service: The service responsible for fetching analysis-ready data.
-            visualizer: The component responsible for plotting the data.
-        """
-        self._pareto_data_repo = pareto_data_repo
+        self._data_repo = data_repo
         self._visualizer = visualizer
+        self._normalizer_factory = normalizer_factory
 
     def execute(self, command: VisualizeBiobjDataCommand) -> None:
-        """
-        Executes the command to analyze and visualize biobjective data.
+        # 1) Load raw data from repository
+        raw = self._data_repo.load(filename=command.data_file_name)
 
-        It delegates data retrieval to the ParetoDataService and then
-        passes the received data to the visualizer.
+        pareto_set = np.asarray(getattr(raw, "pareto_set", None))  # (n, 2)
+        pareto_front = np.asarray(getattr(raw, "pareto_front", None))  # (n, 2)
+        hist_solutions = getattr(raw, "historical_solutions", None)  # optional (m, 2)
+        hist_objectives = getattr(raw, "historical_objectives", None)  # optional (k, 2)
 
-        Args:
-            command: The command containing the identifier for the data to analyze.
-        """
+        # 3) Build distinct normalizers for each space via the injected factory
+        paret_set_normalizer = self._normalizer_factory.create(
+            command.normalizer_config.model_dump()
+        )
+        pareto_front_normalizer = self._normalizer_factory.create(
+            command.normalizer_config.model_dump()
+        )
 
-        # Retrieve the dataset using the repository
-        pareto_data = self._pareto_data_repo.load(filename=command.data_file_name)
+        # 4) Fit + transform (one per space). Keep them 2D as (n, 2).
+        pareto_set_norm = paret_set_normalizer.fit_transform(pareto_set)  # (n, 2)
+        pareto_front_norm = pareto_front_normalizer.fit_transform(
+            pareto_front
+        )  # (n, 2)
 
-        # Visualize the data using the provided visualizer
-        self._visualizer.plot(data=pareto_data)
+        historical_solutions_norm = paret_set_normalizer.transform(hist_solutions)
+
+        historical_objectives_norm = pareto_front_normalizer.transform(hist_objectives)
+
+        # 6) Package payload (arrays only)
+        payload = {
+            "pareto_set": pareto_set,
+            "pareto_front": pareto_front,
+            "pareto_set_norm": pareto_set_norm,
+            "pareto_front_norm": pareto_front_norm,
+            "historical_solutions": hist_solutions,
+            "historical_objectives": hist_objectives,
+            "historical_solutions_norm": historical_solutions_norm,
+            "historical_objectives_norm": historical_objectives_norm,
+        }
+
+        # 7) Plot
+        self._visualizer.plot(data=payload)
