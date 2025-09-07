@@ -14,7 +14,7 @@ from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
 from ...domain.modeling.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from .utils import apply_param, evaluate_metrics, split_and_normalize
+from .utils import apply_param, evaluate_metrics
 
 
 # -------------------------
@@ -73,11 +73,11 @@ class DeterministicModelTrainer:
     def compute_learning_curve(
         self,
         estimator: BaseEstimator,
-        X_train: np.ndarray,
-        y_train: np.ndarray,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
         *,
-        X_test: np.ndarray,
-        y_test: np.ndarray,
+        X_test: np.typing.NDArray,
+        y_test: np.typing.NDArray,
         metrics: dict[str, BaseValidationMetric],
         learning_curve_steps: int = 50,
         random_state: int = 0,
@@ -153,15 +153,16 @@ class DeterministicModelTrainer:
     def train(
         self,
         estimator: BaseEstimator,
-        X: np.ndarray,
-        y: np.ndarray,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
+        X_test: np.typing.NDArray,
+        y_test: np.typing.NDArray,
         *,
         X_normalizer: BaseNormalizer,
         y_normalizer: BaseNormalizer,
         learning_curve_steps: int = 50,
         random_state: int = 0,
         metrics: dict[str, BaseValidationMetric],
-        test_size: float = 0.2,
     ) -> TrainingOutcome:
         """
         Public entry to train a deterministic estimator on raw (X, y).
@@ -173,19 +174,7 @@ class DeterministicModelTrainer:
           5) Return TrainingOutcome containing estimator, LossHistory and normalized arrays
         """
 
-        # 1) split the data & normalise
-        X_train, X_test, y_train, y_test, X_normalizer, y_normalizer = (
-            split_and_normalize(
-                X=X,
-                y=y,
-                X_normalizer=X_normalizer,
-                y_normalizer=y_normalizer,
-                test_size=test_size,
-                random_state=random_state,
-            )
-        )
-
-        # 3) compute learning curve & ensure estimator is fitted
+        # 1) compute learning curve & ensure estimator is fitted
         if isinstance(estimator, DeterministicEstimator):
             estimator, loss_history = self.compute_learning_curve(
                 estimator=estimator,
@@ -209,11 +198,11 @@ class DeterministicModelTrainer:
                 test_loss=[],
             )
 
-        # 4) compute point-wise train/test metrics using normalized arrays
+        # 2) compute point-wise train/test metrics using normalized arrays
         train_scores = evaluate_metrics(estimator, X_train, y_train, metrics)
         test_scores = evaluate_metrics(estimator, X_test, y_test, metrics)
 
-        # 5) return structured outcome
+        # 3) return structured outcome
         return TrainingOutcome(
             estimator=estimator,
             loss_history=loss_history,
@@ -237,8 +226,8 @@ class ProbabilisticModelTrainer:
     def compute_epoch_history(
         self,
         estimator: ProbabilisticEstimator,
-        X_train: np.ndarray,
-        y_train: np.ndarray,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
         *,
         epochs: int = 100,
         batch_size: int = 32,
@@ -286,15 +275,15 @@ class ProbabilisticModelTrainer:
     def train(
         self,
         estimator: BaseEstimator,
-        X: np.ndarray,
-        y: np.ndarray,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
+        X_test: np.typing.NDArray,
+        y_test: np.typing.NDArray,
         *,
         X_normalizer: BaseNormalizer,
         y_normalizer: BaseNormalizer,
         epochs: int = 50,
         batch_size: int = 64,
-        test_size: float = 0.2,
-        random_state: int = 42,
     ) -> TrainingOutcome:
         """
         Public entry to train a probabilistic estimator on raw (X, y).
@@ -305,19 +294,7 @@ class ProbabilisticModelTrainer:
           4) Return TrainingOutcome with fitted estimator, loss_history and normalized arrays
         """
 
-        # 1) split & normalise via utility
-        X_train, X_test, y_train, y_test, X_normalizer, y_normalizer = (
-            split_and_normalize(
-                X=X,
-                y=y,
-                X_normalizer=X_normalizer,
-                y_normalizer=y_normalizer,
-                test_size=test_size,
-                random_state=random_state,
-            )
-        )
-
-        # 3) fit and collect epoch history
+        # 1) fit and collect epoch history
         if not isinstance(estimator, ProbabilisticEstimator):
             raise TypeError("ProbabilisticModelTrainer requires ProbabilisticEstimator")
 
@@ -329,7 +306,7 @@ class ProbabilisticModelTrainer:
             batch_size=batch_size,
         )
 
-        # 4) produce TrainingOutcome; leave train/test point-scores None (caller can compute if desired)
+        # 2) produce TrainingOutcome; leave train/test point-scores None (caller can compute if desired)
         return TrainingOutcome(
             estimator=estimator,
             loss_history=loss_history,
@@ -352,14 +329,15 @@ class CrossValidationTrainer:
     def validate(
         self,
         estimator: BaseEstimator,
-        X: np.ndarray,
-        y: np.ndarray,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
+        X_test: np.typing.NDArray,
+        y_test: np.typing.NDArray,
         metrics: dict[str, BaseValidationMetric],
         parameters: dict[str, Any],
         *,
         X_normalizer: BaseNormalizer,
         y_normalizer: BaseNormalizer,
-        test_size: float = 0.2,
         random_state: int = 0,
         n_splits: int = 5,
         epochs: int = 100,
@@ -371,22 +349,7 @@ class CrossValidationTrainer:
         compute train/test metrics and return TrainingOutcome (includes normalized arrays).
         """
 
-        if X.shape[0] != y.shape[0]:
-            raise ValueError("X and y must have same number of rows")
-
-        # 1) split & normalize - now delegated to utility
-        X_train, X_test, y_train, y_test, X_normalizer, y_normalizer = (
-            split_and_normalize(
-                X=X,
-                y=y,
-                X_normalizer=X_normalizer,
-                y_normalizer=y_normalizer,
-                test_size=test_size,
-                random_state=random_state,
-            )
-        )
-
-        # 2) CV
+        # 1) CV
         kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
         cv_scores: dict[str, list[float]] = {n: [] for n in metrics.keys()}
         fold_histories: list[dict] = []
@@ -424,7 +387,7 @@ class CrossValidationTrainer:
             for m, s in fold_scores.items():
                 cv_scores[m].append(s)
 
-        # 3) final fit on full training portion via trainers (preserve internals)
+        # 2) final fit on full training portion via trainers (preserve internals)
         final = estimator.clone()
         if isinstance(final, ProbabilisticEstimator):
             final_outcome = self._prob_trainer.train(
@@ -458,7 +421,6 @@ class CrossValidationTrainer:
         train_scores = evaluate_metrics(final_trained, X_train, y_train, metrics)
         test_scores = evaluate_metrics(final_trained, X_test, y_test, metrics)
 
-        # return TrainingOutcome
         return TrainingOutcome(
             estimator=final_trained,
             loss_history=final_loss,
@@ -476,8 +438,10 @@ class CrossValidationTrainer:
     def search(
         self,
         estimator: BaseEstimator,
-        X: np.ndarray,
-        y: np.ndarray,
+        X_train: np.typing.NDArray,
+        y_train: np.typing.NDArray,
+        X_test: np.typing.NDArray,
+        y_test: np.typing.NDArray,
         param_name: str,
         param_range: Iterable[Any],
         metrics: dict[str, BaseValidationMetric],
@@ -508,8 +472,10 @@ class CrossValidationTrainer:
 
             res = self.validate(
                 c,
-                X,
-                y,
+                X_train,
+                y_train,
+                X_test,
+                y_test,
                 metrics,
                 parameters={**parameters, param_name: val},
                 X_normalizer=X_normalizer,
@@ -538,8 +504,10 @@ class CrossValidationTrainer:
 
         best_result = self.validate(
             best_clone,
-            X,
-            y,
+            X_train,
+            y_train,
+            X_test,
+            y_test,
             metrics,
             parameters={**parameters, param_name: best_val},
             X_normalizer=X_normalizer,

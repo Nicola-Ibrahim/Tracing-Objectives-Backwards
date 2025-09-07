@@ -1,8 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
-
 
 class DataPreparer:
     """
@@ -15,7 +13,7 @@ class DataPreparer:
         X: np.ndarray,
         y: np.ndarray,
         test_size: float = 0.2,
-        random_state: int | None = None,
+        random_state: int = 44,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         if X.shape[0] != y.shape[0]:
             raise ValueError("X and y must have same number of rows")

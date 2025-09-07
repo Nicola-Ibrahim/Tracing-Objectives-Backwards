@@ -1,4 +1,5 @@
 from ....domain.common.interfaces.base_logger import BaseLogger
+from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_estimator import (
@@ -39,7 +40,6 @@ class TrainModelCommandHandler:
         model_repository: BaseInterpolationModelRepository,
         logger: BaseLogger,
         estimator_factory: EstimatorFactory,
-        normalizer_factory: NormalizerFactory,
         metric_factory: MetricFactory,
         visualizer: BaseVisualizer,
     ) -> None:
@@ -47,7 +47,6 @@ class TrainModelCommandHandler:
         self._estimator_factory = estimator_factory
         self._logger = logger
         self._model_repository = model_repository
-        self._normalizer_factory = normalizer_factory
         self._metric_factory = metric_factory
         self._visualizer = visualizer
 
@@ -58,15 +57,22 @@ class TrainModelCommandHandler:
         Executes the training workflow for a given command.
         Unpacks command attributes to pass only necessary data to sub-methods.
         """
-        raw_data = self._data_repository.load(filename="dataset")
+        processed_dataset: ProcessedDataset = self._data_repository.load(
+            filename="dataset"
+        )
+
+        X_train = processed_dataset.X_train
+        y_train = processed_dataset.y_train
+        X_test = processed_dataset.X_test
+        y_test = processed_dataset.y_test
+        X_normalizer = processed_dataset.X_normalizer
+        y_normalizer = processed_dataset.y_normalizer
 
         # Unpack command attributes once at the highest level
         estimator_params = command.estimator_params.model_dump()
         metric_configs = [
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
-        normalizer_config = command.normalizer_config.model_dump()
-        test_size = command.test_size
         random_state = command.random_state
         cv_splits = command.cv_splits
         tune_param_name = command.tune_param_name
@@ -78,28 +84,23 @@ class TrainModelCommandHandler:
         )
         validation_metrics = {metric.name: metric for metric in validation_metrics}
 
-        # 1) Build normalizers
-        objectives_normalizer = self._normalizer_factory.create(
-            config=normalizer_config
-        )
-        decisions_normalizer = self._normalizer_factory.create(config=normalizer_config)
-
-        # 2) Train and evaluate model based on command
+        # 1) Train and evaluate model based on command
         parameters = {**estimator.to_dict(), "type": estimator.type}
 
         if tune_param_name and tune_param_range:
             self._logger.log_info("Starting hyperparameter tuning workflow.")
             artifact = CrossValidationTrainer().search(
                 estimator=estimator,
-                X=raw_data.historical_objectives,
-                y=raw_data.historical_solutions,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
                 param_name=tune_param_name,
                 param_range=tune_param_range,
                 metrics=validation_metrics,
-                X_normalizer=objectives_normalizer,
-                y_normalizer=decisions_normalizer,
+                X_normalizer=X_normalizer,
+                y_normalizer=y_normalizer,
                 parameters=parameters,
-                test_size=test_size,
                 random_state=random_state,
                 cv=cv_splits,
             )
@@ -109,10 +110,12 @@ class TrainModelCommandHandler:
             self._logger.log_info("Starting cross-validation workflow.")
             outcome = CrossValidationTrainer().validate(
                 estimator=estimator,
-                X=raw_data.historical_objectives,
-                y=raw_data.historical_solutions,
-                X_normalizer=objectives_normalizer,
-                y_normalizer=decisions_normalizer,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
+                X_normalizer=X_normalizer,
+                y_normalizer=y_normalizer,
                 validation_metrics=validation_metrics,
                 parameters=parameters,
                 n_splits=cv_splits,
@@ -126,25 +129,27 @@ class TrainModelCommandHandler:
             if isinstance(estimator, ProbabilisticEstimator):
                 outcome = ProbabilisticModelTrainer().train(
                     estimator=estimator,
-                    X=raw_data.historical_objectives,
-                    y=raw_data.historical_solutions,
-                    X_normalizer=objectives_normalizer,
-                    y_normalizer=decisions_normalizer,
-                    test_size=test_size,
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_test=X_test,
+                    y_test=y_test,
+                    X_normalizer=X_normalizer,
+                    y_normalizer=y_normalizer,
                     random_state=random_state,
                 )
 
             elif isinstance(estimator, DeterministicEstimator):
                 outcome = DeterministicModelTrainer().train(
                     estimator=estimator,
-                    X=raw_data.historical_objectives,
-                    y=raw_data.historical_solutions,
-                    X_normalizer=objectives_normalizer,
-                    y_normalizer=decisions_normalizer,
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_test=X_test,
+                    y_test=y_test,
+                    X_normalizer=X_normalizer,
+                    y_normalizer=y_normalizer,
                     learning_curve_steps=50,
                     metrics=validation_metrics,
                     random_state=random_state,
-                    test_size=test_size,
                 )
 
             self._logger.log_info("Model training (single split) completed.")

@@ -22,11 +22,6 @@ class TrainModelCommand(BaseModel):
         "this specific interpolator instance for training.",
     )
 
-    normalizer_config: NormalizerConfig = Field(
-        None,
-        description="Configuration for the normalizer applied to objectives (output data).",
-    )
-
     estimator_performance_metric_configs: list[ValidationMetricConfig] = Field(
         [
             ValidationMetricConfig(type="MSE"),
@@ -35,12 +30,6 @@ class TrainModelCommand(BaseModel):
         description="Configurations for the validation metrics.",
     )
 
-    test_size: float = Field(
-        0.2,
-        description="The proportion of the dataset to include in the test split for validation.",
-        ge=0.0,
-        le=1.0,
-    )
     random_state: int = Field(
         42,
         description="Controls the shuffling applied to the data before applying the split. "
