@@ -1,4 +1,4 @@
-from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
+from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
 from ...infrastructure.normalizers import (
     HypercubeNormalizer,
     LogNormalizer,

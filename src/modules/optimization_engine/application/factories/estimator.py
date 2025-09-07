@@ -1,9 +1,9 @@
 from typing import Any
 
-from ...domain.model_management.enums.estimator_type_enum import (
+from ...domain.modeling.enums.estimator_type_enum import (
     EstimatorTypeEnum,
 )
-from ...domain.model_management.interfaces.base_estimator import (
+from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
 from ...infrastructure.ml.deterministic import (

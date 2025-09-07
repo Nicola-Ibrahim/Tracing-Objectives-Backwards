@@ -2,12 +2,12 @@ from typing import Any
 
 import numpy as np
 
-from ...domain.model_management.interfaces.base_estimator import (
+from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
     ProbabilisticEstimator,
 )
-from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
-from ...domain.model_management.interfaces.base_validation_metric import (
+from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
+from ...domain.modeling.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
 from .data_preparer import DataPreparer
@@ -44,7 +44,9 @@ def split_and_normalize(
     y_normalizer: BaseNormalizer,
     test_size: float,
     random_state: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, BaseNormalizer, BaseNormalizer
+]:
     """
     1) Delegates to DataPreparer for a single split (keeps your splitting behavior).
     2) Applies the normalizers (fit_transform on train, transform on test).

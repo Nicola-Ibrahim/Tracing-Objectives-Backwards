@@ -1,4 +1,4 @@
-from ...domain.generation.interfaces.base_problem import BaseProblem
+from ...domain.datasets.interfaces.base_problem import BaseProblem
 from ...infrastructure.generation.problems.biobj import (
     BiObjProblemConfig,
     COCOBiObjectiveProblem,

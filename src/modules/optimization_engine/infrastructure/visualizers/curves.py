@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
 
-from ...domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
+from ...domain.visualization.interfaces.base_visualizer import BaseVisualizer
 
 try:
     from umap import UMAP
@@ -15,20 +15,19 @@ except Exception:
     _HAS_UMAP = False
 
 
-class ModelCurveVisualizer(BaseDataVisualizer):
+class ModelCurveVisualizer(BaseVisualizer):
     """
-    Show-only visualizer of model fit(s) with training/validation/test curve
-    embedded in the same figure, plus residual diagnostics.
+    Visualize model fits on *normalized* data + residual diagnostics.
 
-    Expected `data` keys:
+    Expected `data` keys (all ALREADY NORMALIZED):
       - estimator
       - X_train, y_train
       - X_test (optional), y_test (optional)
-      - X_normalizer, y_normalizer
       - n_samples (int, default 200)
-      - non_linear (bool, default False)
+      - non_linear (bool, default False)  # for dimensionality reduction of X to 1D
       - title (str, optional)
-      - loss_history (dict, optional)  # e.g. outcome.loss_history.model_dump()
+      - loss_history (dict, optional)     # e.g. outcome.loss_history.model_dump()
+      - show_train_residuals (bool, default False)
     """
 
     # ------------------------------- public ------------------------------- #
@@ -42,99 +41,107 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         ytr = np.asarray(data["y_train"])
         Xte = np.asarray(data["X_test"]) if data.get("X_test") is not None else None
         yte = np.asarray(data["y_test"]) if data.get("y_test") is not None else None
-        Xn = data["X_normalizer"]
-        yn = data["y_normalizer"]
 
         n_samples = int(data.get("n_samples", 200))
         non_linear = bool(data.get("non_linear", False))
         title = data.get("title", f"Model fit ({type(est).__name__})")
         loss_history: Optional[Dict[str, Any]] = data.get("loss_history")
+        show_train_residuals: bool = bool(data.get("show_train_residuals", False))
 
-        # normalize shapes
-        if Xtr.ndim == 1:
-            Xtr = Xtr.reshape(-1, 1)
-        if ytr.ndim == 1:
-            ytr = ytr.reshape(-1, 1)
-        if Xte is not None and Xte.ndim == 1:
-            Xte = Xte.reshape(-1, 1)
-        if yte is not None and yte.ndim == 1:
-            yte = yte.reshape(-1, 1)
+        ntr, x_dim = Xtr.shape
+        _, y_dim = ytr.shape
 
-        # concat train+test for overlays
-        if Xte is not None and yte is not None:
-            X = np.vstack([Xtr, Xte])
-            Y = np.vstack([ytr, yte])
-            split = np.array([0] * len(Xtr) + [1] * len(Xte))  # 0=train,1=test
-        else:
-            X, Y = Xtr, ytr
-            split = np.zeros(len(Xtr), dtype=int)
-
-        n, x_dim = X.shape
-        _, y_dim = Y.shape
-
-        # precompute: reduced axis & normalized inputs & mean predictions on observed X
-        X_red = (
-            self._reduce_to_1d(X, non_linear)
+        # Fit reducer on TRAIN ONLY; transform TRAIN (and TEST if provided)
+        reducer, Xtr_red = (
+            self._fit_reducer_to_1d(Xtr, non_linear)
             if not (x_dim == 2 and y_dim == 2)
-            else None
+            else (None, None)
         )
-        X_norm = Xn.transform(X)
-        Y_pred_mean = self._predict_pointwise_mean(
-            est, X_norm, yn, n_samples
-        )  # (n, y_dim)
-        Resid = Y - Y_pred_mean  # residuals on *observed* points
+        Xte_red = (
+            self._transform_reducer(reducer, Xte)
+            if (reducer is not None and Xte is not None)
+            else (
+                Xte[:, 0]
+                if (Xte is not None and Xte.shape[1] == 1 and reducer is None)
+                else None
+            )
+        )
 
-        # --- 2D → 2D path: 2 surfaces + curves + residual panels ---
+        # Mean predictions and residuals (normalized) on TRAIN and TEST separately
+        Y_pred_train = self._predict_pointwise_mean(est, Xtr, n_samples)  # (ntr, y_dim)
+        Resid_train = ytr - Y_pred_train
+
+        if Xte is not None and yte is not None:
+            Y_pred_test = self._predict_pointwise_mean(
+                est, Xte, n_samples
+            )  # (nte, y_dim)
+            Resid_test = yte - Y_pred_test
+        else:
+            Y_pred_test = None
+            Resid_test = None
+
+        # --- 2D → 2D path: 2 surfaces (grid from TRAIN) + residual panels ---
         if x_dim == 2 and y_dim == 2:
             self._plot_2d2d_with_curves_and_residuals(
                 estimator=est,
-                X_raw=X,
-                Y_raw=Y,
-                X_normer=Xn,
-                y_normer=yn,
+                Xtr=Xtr,
+                Ytr=ytr,
+                Xte=Xte,
+                Yte=yte,
                 n_samples=n_samples,
                 title=title,
-                split=split,
                 loss_history=loss_history,
-                y_pred_obs=Y_pred_mean,
-                resid_obs=Resid,
+                y_pred_test=Y_pred_test,
+                resid_test=Resid_test,
+                y_pred_train=Y_pred_train if show_train_residuals else None,
+                resid_train=Resid_train if show_train_residuals else None,
                 grid_res=50,
             )
             return
 
-        # --- general path: one figure per output (fit + curves + residual panels) ---
+        # --- general path: one figure per output (fit + residual panels) ---
         has_mdn = self._estimator_has_mdn(est)
         is_prob = self._is_probabilistic(est)
 
         for out_idx in range(y_dim):
-            y_true = Y[:, out_idx : out_idx + 1]
-            y_pred = Y_pred_mean[:, out_idx]
-            resid = Resid[:, out_idx]
+            ytr_1d = ytr[:, out_idx : out_idx + 1]
+            yte_1d = yte[:, out_idx : out_idx + 1] if yte is not None else None
+
+            y_pred_tr = Y_pred_train[:, out_idx]
+            resid_tr = Resid_train[:, out_idx]
+
+            if Y_pred_test is not None:
+                y_pred_te = Y_pred_test[:, out_idx]
+                resid_te = Resid_test[:, out_idx]
+            else:
+                y_pred_te = None
+                resid_te = None
+
             fig = make_subplots(
                 rows=4,
                 cols=1,
                 shared_xaxes=False,
                 vertical_spacing=0.12,
                 subplot_titles=(
-                    f"{title} — y{out_idx}",
+                    f"{title} — y{out_idx} (normalized)",
                     "Training / Validation / Test",
-                    "Residuals vs Fitted",
-                    "Residual distribution",
+                    "Residuals vs Fitted (test)"
+                    + (" + train" if show_train_residuals else ""),
+                    "Residual distribution (test)"
+                    + (" + train" if show_train_residuals else ""),
                 ),
             )
 
-            # Row 1: fit curves
+            # Row 1: fit curves using TRAIN ONLY; overlay TEST points if present
             if has_mdn:
                 try:
                     self._add_mdn_fit_row(
                         fig,
                         row=1,
                         estimator=est,
-                        X_raw=X,
-                        X_red=X_red,
-                        X_norm=X_norm,
-                        y_raw_1d=y_true,
-                        y_normer=yn,
+                        X=Xtr,
+                        X_red=Xtr_red,
+                        y_raw_1d=ytr_1d,
                         out_idx=out_idx,
                     )
                 except Exception:
@@ -142,50 +149,101 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                         fig,
                         row=1,
                         estimator=est,
-                        X_red=X_red,
-                        X_norm=X_norm,
-                        y_raw_1d=y_true,
-                        y_normer=yn,
-                        n_samples=n_samples,
-                        split=split,
+                        X_red=Xtr_red,
+                        X=Xtr,
+                        y_raw_1d=ytr_1d,
                     )
             elif is_prob:
                 self._add_prob_fit_row(
                     fig,
                     row=1,
                     estimator=est,
-                    X_red=X_red,
-                    X_norm=X_norm,
-                    y_raw_1d=y_true,
-                    y_normer=yn,
-                    n_samples=n_samples,
-                    split=split,
+                    X_red=Xtr_red,
+                    X=Xtr,
+                    y_raw_1d=ytr_1d,
                 )
             else:
                 self._add_det_fit_row(
                     fig,
                     row=1,
                     estimator=est,
-                    X_red=X_red,
-                    X_norm=X_norm,
-                    y_raw_1d=y_true,
-                    y_normer=yn,
-                    split=split,
+                    X_red=Xtr_red,
+                    X=Xtr,
+                    y_raw_1d=ytr_1d,
                 )
+
+            # Overlay TRAIN/TEST scatter on the fit row
+            if Xtr_red is not None:
+                fig.add_trace(
+                    go.Scatter(
+                        x=Xtr_red,
+                        y=ytr_1d[:, 0],
+                        mode="markers",
+                        name="Train",
+                        marker=dict(opacity=0.35),
+                    ),
+                    row=1,
+                    col=1,
+                )
+                if Xte_red is not None and yte_1d is not None:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=Xte_red,
+                            y=yte_1d[:, 0],
+                            mode="markers",
+                            name="Test",
+                            marker=dict(opacity=0.35),
+                        ),
+                        row=1,
+                        col=1,
+                    )
 
             # Row 2: training/validation/test curves
             self._add_loss_curves_row(fig, row=2, loss_history=loss_history)
 
-            # Row 3: residuals vs fitted
-            self._add_residuals_vs_fitted(
-                fig, row=3, fitted=y_pred, resid=resid, output_name=f"y{out_idx}"
-            )
+            # Row 3: residuals vs fitted (TEST, optionally TRAIN overlay)
+            if y_pred_te is not None:
+                self._add_residuals_vs_fitted(
+                    fig,
+                    row=3,
+                    fitted=y_pred_te,
+                    resid=resid_te,
+                    output_name=f"y{out_idx} (test)",
+                )
+            else:
+                # no test -> use train so panel isn't empty
+                self._add_residuals_vs_fitted(
+                    fig,
+                    row=3,
+                    fitted=y_pred_tr,
+                    resid=resid_tr,
+                    output_name=f"y{out_idx} (train)",
+                )
+            if show_train_residuals and y_pred_tr is not None:
+                self._add_residuals_vs_fitted(
+                    fig,
+                    row=3,
+                    fitted=y_pred_tr,
+                    resid=resid_tr,
+                    output_name=f"y{out_idx} (train)",
+                )
 
-            # Row 4: residual histogram
-            self._add_residual_hist(fig, row=4, resid=resid, output_name=f"y{out_idx}")
+            # Row 4: residual histogram (TEST, optionally TRAIN overlay)
+            if resid_te is not None:
+                self._add_residual_hist(
+                    fig, row=4, resid=resid_te, output_name=f"y{out_idx} (test)"
+                )
+            else:
+                self._add_residual_hist(
+                    fig, row=4, resid=resid_tr, output_name=f"y{out_idx} (train)"
+                )
+            if show_train_residuals and resid_tr is not None:
+                self._add_residual_hist(
+                    fig, row=4, resid=resid_tr, output_name=f"y{out_idx} (train)"
+                )
 
-            fig.update_xaxes(title_text="X (reduced)", row=1, col=1)
-            fig.update_yaxes(title_text="y", row=1, col=1)
+            fig.update_xaxes(title_text="X (reduced, normalized)", row=1, col=1)
+            fig.update_yaxes(title_text="y (normalized)", row=1, col=1)
             fig.update_layout(template="plotly_white", height=1100)
             fig.show()
 
@@ -195,48 +253,57 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         self,
         *,
         estimator,
-        X_raw: np.ndarray,
-        Y_raw: np.ndarray,
-        X_normer,
-        y_normer,
+        Xtr: np.ndarray,  # normalized (train)
+        Ytr: np.ndarray,  # normalized (train)
+        Xte: Optional[np.ndarray],  # normalized (test)
+        Yte: Optional[np.ndarray],  # normalized (test)
         n_samples: int,
         title: str,
-        split: np.ndarray,
         loss_history: Optional[Dict[str, Any]],
-        y_pred_obs: np.ndarray,  # (n, 2) predictions on observed X
-        resid_obs: np.ndarray,  # (n, 2) residuals on observed X
+        y_pred_test: Optional[np.ndarray],  # (m, 2) normalized mean predictions (test)
+        resid_test: Optional[np.ndarray],  # (m, 2) normalized residuals (test)
+        y_pred_train: Optional[
+            np.ndarray
+        ] = None,  # (n, 2) mean predictions (train) if overlay requested
+        resid_train: Optional[
+            np.ndarray
+        ] = None,  # (n, 2) residuals (train) if overlay requested
         grid_res: int = 50,
     ) -> None:
-        # prediction surfaces on a grid (mean)
-        x1_min, x1_max = np.min(X_raw[:, 0]), np.max(X_raw[:, 0])
-        x2_min, x2_max = np.min(X_raw[:, 1]), np.max(X_raw[:, 1])
+        # surfaces on grid defined by TRAIN domain
+        x1_min, x1_max = np.min(Xtr[:, 0]), np.max(Xtr[:, 0])
+        x2_min, x2_max = np.min(Xtr[:, 1]), np.max(Xtr[:, 1])
         gx = np.linspace(x1_min, x1_max, grid_res)
         gy = np.linspace(x2_min, x2_max, grid_res)
         GX, GY = np.meshgrid(gx, gy, indexing="xy")
         X_grid = np.stack([GX.ravel(), GY.ravel()], axis=1)
-        Xg_norm = X_normer.transform(X_grid)
 
-        Yg = self._predict_pointwise_mean(estimator, Xg_norm, y_normer, n_samples)
+        Yg = self._predict_pointwise_mean(estimator, X_grid, n_samples)  # normalized
         z1 = Yg[:, 0].reshape(grid_res, grid_res)
         z2 = Yg[:, 1].reshape(grid_res, grid_res)
 
-        # Figure with an extra last row for joint residual distribution
         fig = make_subplots(
             rows=5,
             cols=2,
             specs=[
                 [{"type": "surface"}, {"type": "surface"}],  # row1: surfaces
                 [{"type": "xy", "colspan": 2}, None],  # row2: curves
-                [{"type": "xy"}, {"type": "xy"}],  # row3: resid vs fitted (y1,y2)
-                [{"type": "xy"}, {"type": "xy"}],  # row4: resid hist (y1,y2)
+                [
+                    {"type": "xy"},
+                    {"type": "xy"},
+                ],  # row3: resid vs fitted (y1,y2) test (+train overlay)
+                [
+                    {"type": "xy"},
+                    {"type": "xy"},
+                ],  # row4: resid hist       (y1,y2) test (+train overlay)
                 [
                     {"type": "xy", "colspan": 2},
                     None,
-                ],  # row5: joint residual dist (y1 vs y2)
+                ],  # row5: joint residual dist (test)
             ],
             subplot_titles=[
-                "(x1,x2) → y1",
-                "(x1,x2) → y2",
+                "(x1,x2) → y1 (normalized)",
+                "(x1,x2) → y2 (normalized)",
                 "Training / Validation / Test",
                 "Residuals vs Fitted (y1)",
                 "Residuals vs Fitted (y2)",
@@ -244,21 +311,25 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 "Residual distribution (y2)",
                 "Residual joint distribution (y1 vs y2)",
             ],
-            vertical_spacing=0.10,
+            vertical_spacing=0.06,
+            horizontal_spacing=0.07,
+            row_heights=[0.42, 0.14, 0.18, 0.18, 0.08],
         )
 
-        # row1: surfaces + point clouds
-        fig.add_trace(go.Surface(x=GX, y=GY, z=z1, showscale=False), row=1, col=1)
-        fig.add_trace(go.Surface(x=GX, y=GY, z=z2, showscale=False), row=1, col=2)
+        # row1: surfaces + TRAIN/TEST point clouds
+        fig.add_trace(
+            go.Surface(x=GX, y=GY, z=z1, opacity=0.45, showscale=False), row=1, col=1
+        )
+        fig.add_trace(
+            go.Surface(x=GX, y=GY, z=z2, opacity=0.45, showscale=False), row=1, col=2
+        )
 
-        s0 = split == 0
-        s1 = split == 1
-        # y1
+        # TRAIN points
         fig.add_trace(
             go.Scatter3d(
-                x=X_raw[s0, 0],
-                y=X_raw[s0, 1],
-                z=Y_raw[s0, 0],
+                x=Xtr[:, 0],
+                y=Xtr[:, 1],
+                z=Ytr[:, 0],
                 mode="markers",
                 name="Train (y1)",
                 marker=dict(size=3, opacity=0.5),
@@ -266,25 +337,11 @@ class ModelCurveVisualizer(BaseDataVisualizer):
             row=1,
             col=1,
         )
-        if split.any():
-            fig.add_trace(
-                go.Scatter3d(
-                    x=X_raw[s1, 0],
-                    y=X_raw[s1, 1],
-                    z=Y_raw[s1, 0],
-                    mode="markers",
-                    name="Test (y1)",
-                    marker=dict(size=3, opacity=0.5),
-                ),
-                row=1,
-                col=1,
-            )
-        # y2
         fig.add_trace(
             go.Scatter3d(
-                x=X_raw[s0, 0],
-                y=X_raw[s0, 1],
-                z=Y_raw[s0, 1],
+                x=Xtr[:, 0],
+                y=Xtr[:, 1],
+                z=Ytr[:, 1],
                 mode="markers",
                 name="Train (y2)",
                 marker=dict(size=3, opacity=0.5),
@@ -292,12 +349,26 @@ class ModelCurveVisualizer(BaseDataVisualizer):
             row=1,
             col=2,
         )
-        if split.any():
+
+        # TEST points (if available)
+        if Xte is not None and Yte is not None:
             fig.add_trace(
                 go.Scatter3d(
-                    x=X_raw[s1, 0],
-                    y=X_raw[s1, 1],
-                    z=Y_raw[s1, 1],
+                    x=Xte[:, 0],
+                    y=Xte[:, 1],
+                    z=Yte[:, 0],
+                    mode="markers",
+                    name="Test (y1)",
+                    marker=dict(size=3, opacity=0.5),
+                ),
+                row=1,
+                col=1,
+            )
+            fig.add_trace(
+                go.Scatter3d(
+                    x=Xte[:, 0],
+                    y=Xte[:, 1],
+                    z=Yte[:, 1],
                     mode="markers",
                     name="Test (y2)",
                     marker=dict(size=3, opacity=0.5),
@@ -309,47 +380,84 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         # row2: loss curves
         self._add_loss_curves_row(fig, row=2, loss_history=loss_history, col=1)
 
-        # row3: residuals vs fitted
-        self._add_residuals_vs_fitted(
-            fig,
-            row=3,
-            col=1,
-            fitted=y_pred_obs[:, 0],
-            resid=resid_obs[:, 0],
-            output_name="y1",
-        )
-        self._add_residuals_vs_fitted(
-            fig,
-            row=3,
-            col=2,
-            fitted=y_pred_obs[:, 1],
-            resid=resid_obs[:, 1],
-            output_name="y2",
-        )
+        # row3: residuals vs fitted (TEST, with optional TRAIN overlay)
+        if y_pred_test is not None and resid_test is not None:
+            self._add_residuals_vs_fitted(
+                fig,
+                row=3,
+                col=1,
+                fitted=y_pred_test[:, 0],
+                resid=resid_test[:, 0],
+                output_name="y1 (test)",
+            )
+            self._add_residuals_vs_fitted(
+                fig,
+                row=3,
+                col=2,
+                fitted=y_pred_test[:, 1],
+                resid=resid_test[:, 1],
+                output_name="y2 (test)",
+            )
+        if y_pred_train is not None and resid_train is not None:
+            self._add_residuals_vs_fitted(
+                fig,
+                row=3,
+                col=1,
+                fitted=y_pred_train[:, 0],
+                resid=resid_train[:, 0],
+                output_name="y1 (train)",
+            )
+            self._add_residuals_vs_fitted(
+                fig,
+                row=3,
+                col=2,
+                fitted=y_pred_train[:, 1],
+                resid=resid_train[:, 1],
+                output_name="y2 (train)",
+            )
 
-        # row4: residual histograms
-        self._add_residual_hist(
-            fig, row=4, col=1, resid=resid_obs[:, 0], output_name="y1"
-        )
-        self._add_residual_hist(
-            fig, row=4, col=2, resid=resid_obs[:, 1], output_name="y2"
-        )
+        # row4: residual histograms (TEST, with optional TRAIN overlay)
+        if resid_test is not None:
+            self._add_residual_hist(
+                fig, row=4, col=1, resid=resid_test[:, 0], output_name="y1 (test)"
+            )
+            self._add_residual_hist(
+                fig, row=4, col=2, resid=resid_test[:, 1], output_name="y2 (test)"
+            )
+        if resid_train is not None:
+            self._add_residual_hist(
+                fig, row=4, col=1, resid=resid_train[:, 0], output_name="y1 (train)"
+            )
+            self._add_residual_hist(
+                fig, row=4, col=2, resid=resid_train[:, 1], output_name="y2 (train)"
+            )
 
-        # row5: joint residual distribution (y1 vs y2)
-        self._add_joint_residual_distribution(
-            fig, row=5, col=1, resid_y1=resid_obs[:, 0], resid_y2=resid_obs[:, 1]
-        )
+        # row5: joint residual distribution (TEST; TRAIN not shown here to keep it readable)
+        if resid_test is not None:
+            self._add_joint_residual_distribution(
+                fig, row=5, col=1, resid_y1=resid_test[:, 0], resid_y2=resid_test[:, 1]
+            )
 
         fig.update_layout(
-            title=title + " — fit, curves & residuals",
+            title=title + " — fit, curves & residuals (normalized)",
             template="plotly_white",
-            height=1600,
+            height=2000,
+            width=1600,
+            margin=dict(l=40, r=40, t=80, b=40),
         )
         fig.update_scenes(
-            xaxis_title="x1", yaxis_title="x2", zaxis_title="y1", row=1, col=1
+            xaxis_title="x1 (norm)",
+            yaxis_title="x2 (norm)",
+            zaxis_title="y1 (norm)",
+            row=1,
+            col=1,
         )
         fig.update_scenes(
-            xaxis_title="x1", yaxis_title="x2", zaxis_title="y2", row=1, col=2
+            xaxis_title="x1 (norm)",
+            yaxis_title="x2 (norm)",
+            zaxis_title="y2 (norm)",
+            row=1,
+            col=2,
         )
         fig.show()
 
@@ -365,7 +473,6 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         output_name: str,
         col: int = 1,
     ) -> None:
-        # points
         fig.add_trace(
             go.Scatter(
                 x=fitted,
@@ -394,8 +501,8 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                     row=row,
                     col=col,
                 )
-        fig.update_xaxes(title_text="Fitted", row=row, col=col)
-        fig.update_yaxes(title_text="Residual", row=row, col=col)
+        fig.update_xaxes(title_text="Fitted (norm)", row=row, col=col)
+        fig.update_yaxes(title_text="Residual (norm)", row=row, col=col)
 
     def _add_residual_hist(
         self,
@@ -406,22 +513,20 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         output_name: str,
         col: int = 1,
     ) -> None:
-        # histogram
         fig.add_trace(
             go.Histogram(
                 x=resid,
                 nbinsx=40,
-                name=f"Resid ({output_name})",
                 histnorm="probability density",
+                name=f"Resid ({output_name})",
                 opacity=0.7,
             ),
             row=row,
             col=col,
         )
-        # vertical zero line drawn as a trace (avoid add_vline/shapes)
         vals = resid[np.isfinite(resid)]
         if vals.size:
-            counts, edges = np.histogram(vals, bins=40, density=True)
+            counts, _ = np.histogram(vals, bins=40, density=True)
             ymax = float(np.nanmax(counts)) if counts.size else 1.0
             fig.add_trace(
                 go.Scatter(
@@ -435,7 +540,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 row=row,
                 col=col,
             )
-        fig.update_xaxes(title_text="Residual", row=row, col=col)
+        fig.update_xaxes(title_text="Residual (norm)", row=row, col=col)
         fig.update_yaxes(title_text="Density", row=row, col=col)
 
     def _add_joint_residual_distribution(
@@ -447,7 +552,6 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         resid_y1: np.ndarray,
         resid_y2: np.ndarray,
     ) -> None:
-        # 2D residual density (contours/heatmap) + light scatter + zero lines
         vals_x = resid_y1[np.isfinite(resid_y1)]
         vals_y = resid_y2[np.isfinite(resid_y2)]
         fig.add_trace(
@@ -456,7 +560,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 y=vals_y,
                 ncontours=20,
                 contours_coloring="heatmap",
-                showscale=True,
+                showscale=False,
                 name="Residual density",
                 opacity=0.85,
             ),
@@ -475,7 +579,6 @@ class ModelCurveVisualizer(BaseDataVisualizer):
             row=row,
             col=col,
         )
-        # zero axes as traces
         if vals_x.size and vals_y.size:
             x_min, x_max = float(np.nanmin(vals_x)), float(np.nanmax(vals_x))
             y_min, y_max = float(np.nanmin(vals_y)), float(np.nanmax(vals_y))
@@ -505,8 +608,8 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                     row=row,
                     col=col,
                 )
-        fig.update_xaxes(title_text="Residual y1", row=row, col=col)
-        fig.update_yaxes(title_text="Residual y2", row=row, col=col)
+        fig.update_xaxes(title_text="Residual y1 (norm)", row=row, col=col)
+        fig.update_yaxes(title_text="Residual y2 (norm)", row=row, col=col)
 
     # ----------------------- loss curves helper row ----------------------- #
 
@@ -519,14 +622,12 @@ class ModelCurveVisualizer(BaseDataVisualizer):
     ) -> None:
         if not isinstance(loss_history, dict):
             return
-
         bins: List[float] = list(loss_history.get("bins", []))
         train_loss: List[Optional[float]] = list(loss_history.get("train_loss", []))
         val_loss: List[Optional[float]] = list(loss_history.get("val_loss", []))
         test_loss: List[Optional[float]] = list(loss_history.get("test_loss", []))
         n_train: List[int] = list(loss_history.get("n_train", []))
         bin_type: str = str(loss_history.get("bin_type", "bin"))
-
         # Choose x-axis and labels
         if bin_type == "train_fraction" and n_train:
             x_vals = n_train
@@ -539,7 +640,6 @@ class ModelCurveVisualizer(BaseDataVisualizer):
             x_label = {"param": "Parameter", "bin": "Bin"}.get(
                 bin_type, bin_type.title()
             )
-
         if train_loss:
             fig.add_trace(
                 go.Scatter(x=x_vals, y=train_loss, mode="lines+markers", name="Train"),
@@ -560,7 +660,6 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 row=row,
                 col=col,
             )
-
         fig.update_xaxes(title_text=x_label, row=row, col=col)
         fig.update_yaxes(title_text="Loss / Score", row=row, col=col)
 
@@ -573,36 +672,11 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         *,
         estimator,
         X_red,
-        X_norm,
+        X,
         y_raw_1d,
-        y_normer,
-        split,
     ):
-        y_pred = self._inverse_rows(y_normer, np.atleast_2d(estimator.predict(X_norm)))
+        y_pred = np.atleast_2d(estimator.predict(X))  # normalized
         order = np.argsort(X_red)
-        fig.add_trace(
-            go.Scatter(
-                x=X_red[split == 0],
-                y=y_raw_1d[split == 0, 0],
-                mode="markers",
-                name="Train",
-                marker=dict(opacity=0.35),
-            ),
-            row=row,
-            col=1,
-        )
-        if split.any():
-            fig.add_trace(
-                go.Scatter(
-                    x=X_red[split == 1],
-                    y=y_raw_1d[split == 1, 0],
-                    mode="markers",
-                    name="Test",
-                    marker=dict(opacity=0.35),
-                ),
-                row=row,
-                col=1,
-            )
         fig.add_trace(
             go.Scatter(
                 x=X_red[order], y=y_pred[order, 0], mode="lines", name="Prediction"
@@ -618,47 +692,25 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         *,
         estimator,
         X_red,
-        X_norm,
+        X,
         y_raw_1d,
-        y_normer,
-        n_samples,
-        split,
     ):
-        samples = estimator.predict(X_norm, n_samples=n_samples)
-        samples = np.asarray(samples)
-        if samples.ndim == 2:
-            samples = samples[:, None, :]
-        n, ns, ydim = samples.shape
-        flat_inv = self._inverse_rows(y_normer, samples.reshape(-1, ydim)).reshape(
-            n, ns, ydim
-        )
-        mean = flat_inv.mean(axis=1)[:, 0]
-        p05 = np.percentile(flat_inv, 5, axis=1)[:, 0]
-        p95 = np.percentile(flat_inv, 95, axis=1)[:, 0]
+        pred = estimator.predict(X, n_samples=max(64, 200))
+        arr = np.asarray(pred)
+        if arr.ndim == 2:
+            arr = arr[:, None, :]  # (n, 1, ydim)
+        elif arr.ndim == 3:
+            n = X.shape[0]
+            if arr.shape[0] == n:
+                pass
+            elif arr.shape[1] == n:
+                arr = np.transpose(arr, (1, 0, 2))
+            else:
+                arr = np.transpose(arr, (1, 0, 2))
+        mean = arr.mean(axis=1)[:, 0]
+        p05 = np.percentile(arr, 5, axis=1)[:, 0]
+        p95 = np.percentile(arr, 95, axis=1)[:, 0]
         order = np.argsort(X_red)
-        fig.add_trace(
-            go.Scatter(
-                x=X_red[split == 0],
-                y=y_raw_1d[split == 0, 0],
-                mode="markers",
-                name="Train",
-                marker=dict(opacity=0.35),
-            ),
-            row=row,
-            col=1,
-        )
-        if split.any():
-            fig.add_trace(
-                go.Scatter(
-                    x=X_red[split == 1],
-                    y=y_raw_1d[split == 1, 0],
-                    mode="markers",
-                    name="Test",
-                    marker=dict(opacity=0.35),
-                ),
-                row=row,
-                col=1,
-            )
         fig.add_trace(
             go.Scatter(x=X_red[order], y=mean[order], mode="lines", name="Mean"),
             row=row,
@@ -685,47 +737,18 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         row: int,
         *,
         estimator,
-        X_raw,
+        X,
         X_red,
-        X_norm,
         y_raw_1d,
-        y_normer,
         out_idx,
     ):
-        mp = self._get_mdn_params(estimator, X_norm)
+        mp = self._get_mdn_params(estimator, X)
         pi, mu, sigma = mp["pi"], mp["mu"], mp["sigma"]
         if mu.ndim == 2:
             mu = mu[..., None]
         n_pts, K, _ = mu.shape
-        mu_k = mu[:, :, out_idx]
-        mu_inv = self._inverse_rows(y_normer, mu_k.reshape(-1, 1)).reshape(n_pts, K)
-
-        sigma_inv = None
-        if sigma is not None:
-            if sigma.ndim == 2:
-                sigma = sigma[..., None]
-            sig_k = sigma[:, :, out_idx]
-            plus = self._inverse_rows(y_normer, (mu_k + sig_k).reshape(-1, 1)).reshape(
-                n_pts, K
-            )
-            minus = self._inverse_rows(y_normer, (mu_k - sig_k).reshape(-1, 1)).reshape(
-                n_pts, K
-            )
-            sigma_inv = (plus - minus) / 2.0
-
+        mu_k = mu[:, :, out_idx]  # normalized
         order = np.argsort(X_red)
-        fig.add_trace(
-            go.Scatter(
-                x=X_red,
-                y=y_raw_1d[:, 0],
-                mode="markers",
-                name="Ground Truth",
-                marker=dict(opacity=0.25),
-            ),
-            row=row,
-            col=1,
-        )
-
         base_colors = [
             "rgba(31,119,180,1.0)",
             "rgba(214,39,40,1.0)",
@@ -736,7 +759,7 @@ class ModelCurveVisualizer(BaseDataVisualizer):
         ]
         z = 1.96
         for k in range(K):
-            comp_mu = mu_inv[:, k][order]
+            comp_mu = mu_k[:, k][order]
             fig.add_trace(
                 go.Scatter(
                     x=X_red[order],
@@ -748,8 +771,11 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 row=row,
                 col=1,
             )
-            if sigma_inv is not None:
-                comp_sig = np.clip(sigma_inv[:, k], 1e-12, None)[order]
+            if sigma is not None:
+                if sigma.ndim == 2:
+                    sigma = sigma[..., None]
+                sig_k = sigma[:, :, out_idx]
+                comp_sig = np.clip(sig_k[:, k], 1e-12, None)[order]
                 upper = comp_mu + z * comp_sig
                 lower = comp_mu - z * comp_sig
                 ribbon_x = np.concatenate([X_red[order], X_red[order][::-1]])
@@ -773,49 +799,68 @@ class ModelCurveVisualizer(BaseDataVisualizer):
 
     # ----------------------------- utilities ----------------------------- #
 
+    def _fit_reducer_to_1d(self, X: np.ndarray, non_linear: bool):
+        """Fit a 1D reducer on TRAIN and return (reducer, X_train_reduced)."""
+        if X.shape[1] == 1:
+            return None, X[:, 0]
+        if non_linear and _HAS_UMAP:
+            reducer = UMAP(n_components=1)
+            Xr = reducer.fit_transform(X).squeeze()
+            return reducer, Xr
+        reducer = PCA(n_components=1)
+        Xr = reducer.fit_transform(X).squeeze()
+        return reducer, Xr
+
+    def _transform_reducer(
+        self, reducer, X: Optional[np.ndarray]
+    ) -> Optional[np.ndarray]:
+        if X is None:
+            return None
+        if reducer is None:
+            # 1D case handled by caller
+            return X[:, 0] if X.shape[1] == 1 else None
+        xr = reducer.transform(X).squeeze()
+        return xr
+
     def _predict_pointwise_mean(
         self,
         estimator: Any,
-        X_norm: np.ndarray,
-        y_normer,
+        X: np.ndarray,  # normalized inputs
         n_samples: int,
     ) -> np.ndarray:
-        """Mean prediction on the *observed* X (shape: (n, y_dim))."""
-        # try direct predict
+        """Return mean prediction in normalized space, shape (n, y_dim)."""
         try:
-            y_pred_norm = np.atleast_2d(estimator.predict(X_norm))
-            return self._inverse_rows(y_normer, y_pred_norm)
+            y = np.atleast_2d(estimator.predict(X))
+            if y.ndim == 2:
+                return y
+            if y.ndim == 3:
+                n = X.shape[0]
+                if y.shape[0] == n:
+                    return y.mean(axis=1)
+                elif y.shape[1] == n:
+                    return y.mean(axis=0)
         except Exception:
             pass
-
-        # try analytic MDN mean
         if self._estimator_has_mdn(estimator):
             try:
-                mp = self._get_mdn_params(estimator, X_norm)
+                mp = self._get_mdn_params(estimator, X)
                 pi, mu = mp["pi"], mp["mu"]
                 if mu.ndim == 2:
                     mu = mu[..., None]
-                mean_norm = np.sum(pi[..., None] * mu, axis=1)
-                return self._inverse_rows(y_normer, mean_norm)
+                return np.sum(pi[..., None] * mu, axis=1)
             except Exception:
                 pass
-
-        # sampling fallback
-        s = estimator.predict(X_norm, n_samples=max(64, n_samples))
+        s = estimator.predict(X, n_samples=max(64, n_samples))
         s = np.asarray(s)
         if s.ndim == 2:
-            return self._inverse_rows(y_normer, s)
-        n, ns, y_dim = s.shape
-        flat = s.reshape(-1, y_dim)
-        flat_inv = self._inverse_rows(y_normer, flat)
-        return flat_inv.reshape(n, ns, y_dim).mean(axis=1)
-
-    def _reduce_to_1d(self, X: np.ndarray, non_linear: bool) -> np.ndarray:
-        if X.shape[1] == 1:
-            return X[:, 0]
-        if non_linear and _HAS_UMAP:
-            return UMAP(n_components=1).fit_transform(X).squeeze()
-        return PCA(n_components=1).fit_transform(X).squeeze()
+            return s
+        n = X.shape[0]
+        if s.ndim == 3:
+            if s.shape[0] == n:
+                return s.mean(axis=1)
+            elif s.shape[1] == n:
+                return s.mean(axis=0)
+        return np.squeeze(s)
 
     def _is_probabilistic(self, estimator: Any) -> bool:
         try:
@@ -834,13 +879,11 @@ class ModelCurveVisualizer(BaseDataVisualizer):
             for n in ("get_mixture_parameters", "get_mixture_params")
         )
 
-    def _get_mdn_params(
-        self, estimator: Any, X_norm: np.ndarray
-    ) -> Dict[str, np.ndarray]:
+    def _get_mdn_params(self, estimator: Any, X: np.ndarray) -> Dict[str, np.ndarray]:
         params = (
-            estimator.get_mixture_parameters(X_norm)
+            estimator.get_mixture_parameters(X)
             if hasattr(estimator, "get_mixture_parameters")
-            else estimator.get_mixture_params(X_norm)
+            else estimator.get_mixture_params(X)
         )
         if isinstance(params, tuple) and len(params) >= 2:
             pi, mu = params[0], params[1]
@@ -859,14 +902,3 @@ class ModelCurveVisualizer(BaseDataVisualizer):
                 else np.asarray(params["sigma"]),
             }
         raise TypeError("Unsupported MDN parameter format.")
-
-    def _inverse_rows(self, y_normer, arr2d: np.ndarray) -> np.ndarray:
-        try:
-            return y_normer.inverse_transform(arr2d)
-        except Exception:
-            return np.vstack(
-                [
-                    y_normer.inverse_transform(r.reshape(1, -1)).reshape(-1)
-                    for r in arr2d
-                ]
-            )

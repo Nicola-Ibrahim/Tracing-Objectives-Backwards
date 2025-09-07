@@ -1,17 +1,17 @@
-from ...application.model_management.generate_decision.generate_decision_command import (
+from ...application.modeling.generate_decision.generate_decision_command import (
     GenerateDecisionCommand,
 )
-from ...application.model_management.generate_decision.generate_decision_handler import (
+from ...application.modeling.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
 )
-from ...domain.model_management.enums.estimator_type_enum import (
+from ...domain.modeling.enums.estimator_type_enum import (
     EstimatorTypeEnum,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.generation.data_model_repo import (
-    FileSystemDataModelRepository,
+from ...infrastructure.repositories.datasets.generated_dataset_repo import (
+    FileSystemGeneratedDatasetRepository,
 )
-from ...infrastructure.repositories.model_management.model_artifact_repo import (
+from ...infrastructure.repositories.modeling.model_artifact_repo import (
     FileSystemModelArtifcatRepository,
 )
 
@@ -28,7 +28,7 @@ def main():
     # Initialize the handler with the repository
     handler = GenerateDecisionCommandHandler(
         interpolation_model_repo=FileSystemModelArtifcatRepository(),
-        data_repository=FileSystemDataModelRepository(),
+        data_repository=FileSystemGeneratedDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )
 

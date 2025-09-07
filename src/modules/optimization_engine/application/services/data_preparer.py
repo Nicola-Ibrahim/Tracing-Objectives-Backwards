@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
+from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
 
 
 class DataPreparer:

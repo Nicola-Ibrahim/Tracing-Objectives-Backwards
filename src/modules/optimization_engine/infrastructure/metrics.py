@@ -5,7 +5,7 @@ from sklearn.metrics import mean_absolute_error as sk_mean_absolute_error
 from sklearn.metrics import mean_squared_error as sk_mean_squared_error
 from sklearn.metrics import r2_score as sk_r2_score
 
-from ..domain.model_management.interfaces.base_validation_metric import (
+from ..domain.modeling.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
 

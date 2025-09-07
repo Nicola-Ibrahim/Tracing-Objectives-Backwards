@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from numpy.typing import NDArray
 
-from ....domain.model_management.interfaces.base_estimator import (
+from ....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 

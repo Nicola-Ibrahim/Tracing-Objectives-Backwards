@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import SVR
 
-from ....domain.model_management.interfaces.base_estimator import (
+from ....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 

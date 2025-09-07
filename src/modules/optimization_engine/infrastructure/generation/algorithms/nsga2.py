@@ -3,7 +3,7 @@ from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PolynomialMutation
 
-from ....domain.generation.interfaces.base_algorithm import BaseAlgorithm
+from ....domain.datasets.interfaces.base_algorithm import BaseAlgorithm
 
 
 class NSGA2Config(BaseModel):

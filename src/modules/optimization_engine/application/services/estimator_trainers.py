@@ -5,13 +5,13 @@ import numpy as np
 from pydantic import BaseModel, Field
 from sklearn.model_selection import KFold
 
-from ...domain.model_management.interfaces.base_estimator import (
+from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
     DeterministicEstimator,
     ProbabilisticEstimator,
 )
-from ...domain.model_management.interfaces.base_normalizer import BaseNormalizer
-from ...domain.model_management.interfaces.base_validation_metric import (
+from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
+from ...domain.modeling.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
 from .utils import apply_param, evaluate_metrics, split_and_normalize

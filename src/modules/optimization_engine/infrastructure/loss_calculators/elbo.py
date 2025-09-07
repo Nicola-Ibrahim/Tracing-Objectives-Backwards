@@ -5,7 +5,7 @@ import torch.nn.functional as F  # Import F for mse_loss
 from torch import Tensor
 
 # Adjust import path
-from ...domain.model_management.interfaces.base_loss_calculator import (
+from ...domain.modeling.interfaces.base_loss_calculator import (
     ArrayLike,  # Still used for targets
     BaseLossCalculator,
     to_tensor,  # Used for targets if they are numpy

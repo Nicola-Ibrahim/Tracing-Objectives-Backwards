@@ -9,10 +9,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.stats import gaussian_kde
 
-from ...domain.analysis.interfaces.base_visualizer import BaseDataVisualizer
+from ...domain.visualization.interfaces.base_visualizer import BaseVisualizer
 
 
-class PlotlyParetoDataVisualizer(BaseDataVisualizer):
+class PlotlyParetoDataVisualizer(BaseVisualizer):
     """
     Pareto dashboard that accepts a dict prepared by the handler.
 

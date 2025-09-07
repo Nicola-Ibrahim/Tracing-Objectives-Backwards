@@ -1,7 +1,7 @@
-from ...domain.model_management.interfaces.base_forward_decision_mapper import (
+from ...domain.modeling.interfaces.base_forward_decision_mapper import (
     BaseForwardDecisionMapper,
 )
-from ...domain.model_management.interfaces.base_loss_calculator import (
+from ...domain.modeling.interfaces.base_loss_calculator import (
     BaseLossCalculator,
     to_numpy,
 )

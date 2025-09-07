@@ -1,7 +1,7 @@
 import cocoex
 import numpy as np
 
-from ....domain.model_management.interfaces.base_estimator import (
+from ....domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
 

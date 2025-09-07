@@ -3,7 +3,7 @@ import numpy.typing as npt
 import torch
 from torch.distributions import MixtureSameFamily
 
-from ...domain.model_management.interfaces.base_loss_calculator import BaseLossCalculator
+from ...domain.modeling.interfaces.base_loss_calculator import BaseLossCalculator
 
 
 class NegativeLogLikelihoodLossCalculator(BaseLossCalculator):
