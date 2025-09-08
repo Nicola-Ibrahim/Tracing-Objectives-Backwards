@@ -47,14 +47,6 @@ class TrainingOutcome(BaseModel):
     estimator: BaseEstimator
     loss_history: LossHistory
 
-    X_train: np.typing.NDArray
-    y_train: np.typing.NDArray
-    X_test: np.typing.NDArray
-    y_test: np.typing.NDArray
-
-    X_normalizer: BaseNormalizer
-    y_normalizer: BaseNormalizer
-
     train_scores: dict[str, float] = None
     test_scores: dict[str, float] = None
     cv_scores: dict[str, float] = None
@@ -136,7 +128,7 @@ class DeterministicModelTrainer:
             val_loss_list.append(float("nan"))
 
         # 3) Final fit on the entire training portion (so estimator returned is fitted)
-        estimator.fit(X_train, y_train)
+        estimator.fit(X=y_train, y=X_train)
 
         # 4) Build LossHistory object to return
         loss_history = LossHistory(
@@ -158,8 +150,6 @@ class DeterministicModelTrainer:
         X_test: np.typing.NDArray,
         y_test: np.typing.NDArray,
         *,
-        X_normalizer: BaseNormalizer,
-        y_normalizer: BaseNormalizer,
         learning_curve_steps: int = 50,
         random_state: int = 0,
         metrics: dict[str, BaseValidationMetric],
@@ -188,7 +178,7 @@ class DeterministicModelTrainer:
             )
         else:
             # fallback: fit estimator and return single-point loss history
-            estimator.fit(X_train, y_train)
+            estimator.fit(X=y_train, y=X_train)
             loss_history = LossHistory(
                 bin_type="single_point",
                 bins=[],
@@ -206,12 +196,6 @@ class DeterministicModelTrainer:
         return TrainingOutcome(
             estimator=estimator,
             loss_history=loss_history,
-            X_train=X_train,
-            y_train=y_train,
-            X_test=X_test,
-            y_test=y_test,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
             train_scores=train_scores,
             test_scores=test_scores,
             cv_scores={},
@@ -240,7 +224,7 @@ class ProbabilisticModelTrainer:
             raise TypeError("EpochsCurve is for ProbabilisticEstimator only")
 
         # 1) Fit estimator for given number of epochs (estimator should internally record history)
-        estimator.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
+        estimator.fit(X=y_train, y=X_train, epochs=epochs, batch_size=batch_size)
 
         # 2) Try to read history from common accessor names
         history = estimator.get_loss_history()
@@ -277,11 +261,6 @@ class ProbabilisticModelTrainer:
         estimator: BaseEstimator,
         X_train: np.typing.NDArray,
         y_train: np.typing.NDArray,
-        X_test: np.typing.NDArray,
-        y_test: np.typing.NDArray,
-        *,
-        X_normalizer: BaseNormalizer,
-        y_normalizer: BaseNormalizer,
         epochs: int = 50,
         batch_size: int = 64,
     ) -> TrainingOutcome:
@@ -310,14 +289,9 @@ class ProbabilisticModelTrainer:
         return TrainingOutcome(
             estimator=estimator,
             loss_history=loss_history,
-            X_train=X_train,
-            y_train=y_train,
-            X_test=X_test,
-            y_test=y_test,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
             train_scores={},
             test_scores={},
+            cv_scores={},
         )
 
 
@@ -334,7 +308,6 @@ class CrossValidationTrainer:
         X_test: np.typing.NDArray,
         y_test: np.typing.NDArray,
         metrics: dict[str, BaseValidationMetric],
-        parameters: dict[str, Any],
         *,
         X_normalizer: BaseNormalizer,
         y_normalizer: BaseNormalizer,
@@ -424,12 +397,6 @@ class CrossValidationTrainer:
         return TrainingOutcome(
             estimator=final_trained,
             loss_history=final_loss,
-            X_train=X_train,
-            y_train=y_train,
-            X_test=X_test,
-            y_test=y_test,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
             train_scores=train_scores,
             test_scores=test_scores,
             cv_scores=cv_scores,

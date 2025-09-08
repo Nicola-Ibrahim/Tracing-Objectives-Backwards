@@ -36,14 +36,14 @@ class TrainModelCommandHandler:
 
     def __init__(
         self,
-        data_repository: BaseDatasetRepository,
+        processed_data_repository: BaseDatasetRepository,
         model_repository: BaseInterpolationModelRepository,
         logger: BaseLogger,
         estimator_factory: EstimatorFactory,
         metric_factory: MetricFactory,
         visualizer: BaseVisualizer,
     ) -> None:
-        self._data_repository = data_repository
+        self._processed_data_repository = processed_data_repository
         self._estimator_factory = estimator_factory
         self._logger = logger
         self._model_repository = model_repository
@@ -57,7 +57,7 @@ class TrainModelCommandHandler:
         Executes the training workflow for a given command.
         Unpacks command attributes to pass only necessary data to sub-methods.
         """
-        processed_dataset: ProcessedDataset = self._data_repository.load(
+        processed_dataset: ProcessedDataset = self._processed_data_repository.load(
             filename="dataset"
         )
 
@@ -131,11 +131,6 @@ class TrainModelCommandHandler:
                     estimator=estimator,
                     X_train=X_train,
                     y_train=y_train,
-                    X_test=X_test,
-                    y_test=y_test,
-                    X_normalizer=X_normalizer,
-                    y_normalizer=y_normalizer,
-                    random_state=random_state,
                 )
 
             elif isinstance(estimator, DeterministicEstimator):
@@ -157,11 +152,11 @@ class TrainModelCommandHandler:
         artifact = ModelArtifact.create(
             parameters=parameters,
             estimator=outcome.estimator,
-            X_normalizer=outcome.X_normalizer,
-            y_normalizer=outcome.y_normalizer,
+            X_normalizer=X_normalizer,
+            y_normalizer=y_normalizer,
             train_scores=outcome.train_scores,
             test_scores=outcome.test_scores,
-            cv_scores={},
+            cv_scores=outcome.cv_scores,
             loss_history=outcome.loss_history.model_dump(),
         )
 
@@ -171,12 +166,12 @@ class TrainModelCommandHandler:
         self._visualizer.plot(
             data={
                 "estimator": outcome.estimator,
-                "X_train": outcome.X_train,
-                "y_train": outcome.y_train,
-                "X_test": outcome.X_test,
-                "y_test": outcome.y_test,
-                "X_normalizer": outcome.X_normalizer,
-                "y_normalizer": outcome.y_normalizer,
+                "X_train": X_train,
+                "y_train": y_train,
+                "X_test": X_test,
+                "y_test": y_test,
+                "X_normalizer": X_normalizer,
+                "y_normalizer": y_normalizer,
                 "non_linear": False,  # or True to try UMAP if installed
                 "n_samples": 300,
                 "title": f"Fitted {artifact.estimator.type}",
