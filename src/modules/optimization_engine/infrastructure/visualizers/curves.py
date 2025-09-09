@@ -253,34 +253,37 @@ class ModelCurveVisualizer(BaseVisualizer):
         self,
         *,
         estimator,
-        Xtr: np.ndarray,  # normalized (train)
-        Ytr: np.ndarray,  # normalized (train)
-        Xte: Optional[np.ndarray],  # normalized (test)
-        Yte: Optional[np.ndarray],  # normalized (test)
+        Xtr: np.ndarray,  # normalized (train)  -> targets (z) for row-1 overlays
+        Ytr: np.ndarray,  # normalized (train)  -> grid domain (x,y) for row-1
+        Xte: Optional[np.ndarray],
+        Yte: Optional[np.ndarray],
         n_samples: int,
         title: str,
         loss_history: Optional[Dict[str, Any]],
-        y_pred_test: Optional[np.ndarray],  # (m, 2) normalized mean predictions (test)
-        resid_test: Optional[np.ndarray],  # (m, 2) normalized residuals (test)
-        y_pred_train: Optional[
-            np.ndarray
-        ] = None,  # (n, 2) mean predictions (train) if overlay requested
-        resid_train: Optional[
-            np.ndarray
-        ] = None,  # (n, 2) residuals (train) if overlay requested
+        y_pred_test: Optional[np.ndarray],
+        resid_test: Optional[np.ndarray],
+        y_pred_train: Optional[np.ndarray] = None,
+        resid_train: Optional[np.ndarray] = None,
         grid_res: int = 50,
     ) -> None:
-        # surfaces on grid defined by TRAIN domain
-        x1_min, x1_max = np.min(Xtr[:, 0]), np.max(Xtr[:, 0])
-        x2_min, x2_max = np.min(Xtr[:, 1]), np.max(Xtr[:, 1])
-        gx = np.linspace(x1_min, x1_max, grid_res)
-        gy = np.linspace(x2_min, x2_max, grid_res)
-        GX, GY = np.meshgrid(gx, gy, indexing="xy")
-        X_grid = np.stack([GX.ravel(), GY.ravel()], axis=1)
+        """
+        2D→2D case: render two 3D surfaces x1(y1,y2) and x2(y1,y2) plus
+        training/validation curves and residual diagnostics. Axes across both
+        3D scenes are forced to share the same x/y/z ranges and aspect.
+        """
 
-        Yg = self._predict_pointwise_mean(estimator, X_grid, n_samples)  # normalized
-        z1 = Yg[:, 0].reshape(grid_res, grid_res)
-        z2 = Yg[:, 1].reshape(grid_res, grid_res)
+        # --- build grid over TRAIN *Y* domain (y1,y2) ---
+        y1_min, y1_max = float(np.min(Ytr[:, 0])), float(np.max(Ytr[:, 0]))
+        y2_min, y2_max = float(np.min(Ytr[:, 1])), float(np.max(Ytr[:, 1]))
+        gy1 = np.linspace(y1_min, y1_max, grid_res)
+        gy2 = np.linspace(y2_min, y2_max, grid_res)
+        GY1, GY2 = np.meshgrid(gy1, gy2, indexing="xy")
+        Y_grid = np.stack([GY1.ravel(), GY2.ravel()], axis=1)
+
+        # predict X on the Y-grid (model maps y -> X). Returns (n, 2) for x1,x2
+        Xg = self._predict_pointwise_mean(estimator, Y_grid, n_samples)
+        z_x1 = Xg[:, 0].reshape(grid_res, grid_res)
+        z_x2 = Xg[:, 1].reshape(grid_res, grid_res)
 
         fig = make_subplots(
             rows=5,
@@ -288,22 +291,13 @@ class ModelCurveVisualizer(BaseVisualizer):
             specs=[
                 [{"type": "surface"}, {"type": "surface"}],  # row1: surfaces
                 [{"type": "xy", "colspan": 2}, None],  # row2: curves
-                [
-                    {"type": "xy"},
-                    {"type": "xy"},
-                ],  # row3: resid vs fitted (y1,y2) test (+train overlay)
-                [
-                    {"type": "xy"},
-                    {"type": "xy"},
-                ],  # row4: resid hist       (y1,y2) test (+train overlay)
-                [
-                    {"type": "xy", "colspan": 2},
-                    None,
-                ],  # row5: joint residual dist (test)
+                [{"type": "xy"}, {"type": "xy"}],  # row3: residuals vs fitted
+                [{"type": "xy"}, {"type": "xy"}],  # row4: residual hists
+                [{"type": "xy", "colspan": 2}, None],  # row5: joint resid dist
             ],
             subplot_titles=[
-                "(x1,x2) → y1 (normalized)",
-                "(x1,x2) → y2 (normalized)",
+                "(y1,y2) → x1 (normalized)",
+                "(y1,y2) → x2 (normalized)",
                 "Training / Validation / Test",
                 "Residuals vs Fitted (y1)",
                 "Residuals vs Fitted (y2)",
@@ -316,22 +310,30 @@ class ModelCurveVisualizer(BaseVisualizer):
             row_heights=[0.42, 0.14, 0.18, 0.18, 0.08],
         )
 
-        # row1: surfaces + TRAIN/TEST point clouds
+        # -------- row1: surfaces + TRAIN/TEST point clouds (y on axes; x as height) -----
         fig.add_trace(
-            go.Surface(x=GX, y=GY, z=z1, opacity=0.45, showscale=False), row=1, col=1
+            go.Surface(
+                x=GY1, y=GY2, z=z_x1, opacity=0.45, showscale=False, name="x1(y)"
+            ),
+            row=1,
+            col=1,
         )
         fig.add_trace(
-            go.Surface(x=GX, y=GY, z=z2, opacity=0.45, showscale=False), row=1, col=2
+            go.Surface(
+                x=GY1, y=GY2, z=z_x2, opacity=0.45, showscale=False, name="x2(y)"
+            ),
+            row=1,
+            col=2,
         )
 
-        # TRAIN points
+        # TRAIN points: (y1,y2) on plane; z = x1 / x2
         fig.add_trace(
             go.Scatter3d(
-                x=Xtr[:, 0],
-                y=Xtr[:, 1],
-                z=Ytr[:, 0],
+                x=Ytr[:, 0],
+                y=Ytr[:, 1],
+                z=Xtr[:, 0],
                 mode="markers",
-                name="Train (y1)",
+                name="Train (x1)",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=1,
@@ -339,26 +341,26 @@ class ModelCurveVisualizer(BaseVisualizer):
         )
         fig.add_trace(
             go.Scatter3d(
-                x=Xtr[:, 0],
-                y=Xtr[:, 1],
-                z=Ytr[:, 1],
+                x=Ytr[:, 0],
+                y=Ytr[:, 1],
+                z=Xtr[:, 1],
                 mode="markers",
-                name="Train (y2)",
+                name="Train (x2)",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=1,
             col=2,
         )
 
-        # TEST points (if available)
+        # TEST points (if provided)
         if Xte is not None and Yte is not None:
             fig.add_trace(
                 go.Scatter3d(
-                    x=Xte[:, 0],
-                    y=Xte[:, 1],
-                    z=Yte[:, 0],
+                    x=Yte[:, 0],
+                    y=Yte[:, 1],
+                    z=Xte[:, 0],
                     mode="markers",
-                    name="Test (y1)",
+                    name="Test (x1)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
@@ -366,21 +368,20 @@ class ModelCurveVisualizer(BaseVisualizer):
             )
             fig.add_trace(
                 go.Scatter3d(
-                    x=Xte[:, 0],
-                    y=Xte[:, 1],
-                    z=Yte[:, 1],
+                    x=Yte[:, 0],
+                    y=Yte[:, 1],
+                    z=Xte[:, 1],
                     mode="markers",
-                    name="Test (y2)",
+                    name="Test (x2)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
                 col=2,
             )
 
-        # row2: loss curves
+        # ------------------ row2..row5: diagnostics -------------------
         self._add_loss_curves_row(fig, row=2, loss_history=loss_history, col=1)
 
-        # row3: residuals vs fitted (TEST, with optional TRAIN overlay)
         if y_pred_test is not None and resid_test is not None:
             self._add_residuals_vs_fitted(
                 fig,
@@ -416,7 +417,6 @@ class ModelCurveVisualizer(BaseVisualizer):
                 output_name="y2 (train)",
             )
 
-        # row4: residual histograms (TEST, with optional TRAIN overlay)
         if resid_test is not None:
             self._add_residual_hist(
                 fig, row=4, col=1, resid=resid_test[:, 0], output_name="y1 (test)"
@@ -432,33 +432,103 @@ class ModelCurveVisualizer(BaseVisualizer):
                 fig, row=4, col=2, resid=resid_train[:, 1], output_name="y2 (train)"
             )
 
-        # row5: joint residual distribution (TEST; TRAIN not shown here to keep it readable)
         if resid_test is not None:
             self._add_joint_residual_distribution(
                 fig, row=5, col=1, resid_y1=resid_test[:, 0], resid_y2=resid_test[:, 1]
             )
 
+        # --- unified axis ranges & consistent aspect/ticks for both 3D scenes ---
+        def _minmax(*arrs):
+            vals = [np.asarray(a).ravel() for a in arrs if a is not None]
+            if not vals:
+                return (0.0, 1.0)
+            v = np.concatenate(vals)
+            v = v[np.isfinite(v)]
+            return (float(v.min()), float(v.max())) if v.size else (0.0, 1.0)
+
+        # common XY ranges taken from Y (domain); include the grid and any test Ys
+        x_rng = _minmax(Ytr[:, 0], (Yte[:, 0] if Yte is not None else None), GY1)
+        y_rng = _minmax(Ytr[:, 1], (Yte[:, 1] if Yte is not None else None), GY2)
+
+        # Z ranges from X (targets) + predicted surfaces
+        z1_min, z1_max = _minmax(
+            Xtr[:, 0], (Xte[:, 0] if Xte is not None else None), z_x1
+        )
+        z2_min, z2_max = _minmax(
+            Xtr[:, 1], (Xte[:, 1] if Xte is not None else None), z_x2
+        )
+        z_rng = (min(z1_min, z2_min), max(z1_max, z2_max))
+
+        # small padding so points aren’t glued to box
+        def _pad(a, b, frac=0.02):
+            d = (b - a) if b > a else 1.0
+            return (a - frac * d, b + frac * d)
+
+        x_rng = _pad(*x_rng)
+        y_rng = _pad(*y_rng)
+        z_rng = _pad(*z_rng)
+
+        # If your data are strictly normalized and you want hard clamp to [0,1], use:
+        # x_rng = (0.0, 1.0); y_rng = (0.0, 1.0); z_rng = (0.0, 1.0)
+
+        # build identical tick locations so both scenes show the same ticks
+        def _ticks(rng, n=5):
+            return list(np.round(np.linspace(rng[0], rng[1], n), 5))
+
+        scene1_axes = dict(
+            xaxis=dict(
+                title="y1 (norm)",
+                range=list(x_rng),
+                tickmode="array",
+                tickvals=_ticks(x_rng),
+            ),
+            yaxis=dict(
+                title="y2 (norm)",
+                range=list(y_rng),
+                tickmode="array",
+                tickvals=_ticks(y_rng),
+            ),
+            zaxis=dict(
+                title="x1 (norm)",
+                range=list(z_rng),
+                tickmode="array",
+                tickvals=_ticks(z_rng),
+            ),
+            aspectmode="cube",  # equal scale, no distortion
+        )
+        scene2_axes = dict(
+            xaxis=dict(
+                title="y1 (norm)",
+                range=list(x_rng),
+                tickmode="array",
+                tickvals=_ticks(x_rng),
+            ),
+            yaxis=dict(
+                title="y2 (norm)",
+                range=list(y_rng),
+                tickmode="array",
+                tickvals=_ticks(y_rng),
+            ),
+            zaxis=dict(
+                title="x2 (norm)",
+                range=list(z_rng),
+                tickmode="array",
+                tickvals=_ticks(z_rng),
+            ),
+            aspectmode="cube",
+        )
+
+        # final layout + apply scene settings
         fig.update_layout(
             title=title + " — fit, curves & residuals (normalized)",
             template="plotly_white",
-            height=2000,
+            height=1600,  # less tall; adjust if you want more vertical space
             width=1600,
             margin=dict(l=40, r=40, t=80, b=40),
         )
-        fig.update_scenes(
-            xaxis_title="x1 (norm)",
-            yaxis_title="x2 (norm)",
-            zaxis_title="y1 (norm)",
-            row=1,
-            col=1,
-        )
-        fig.update_scenes(
-            xaxis_title="x1 (norm)",
-            yaxis_title="x2 (norm)",
-            zaxis_title="y2 (norm)",
-            row=1,
-            col=2,
-        )
+        fig.update_scenes(row=1, col=1, **scene1_axes)
+        fig.update_scenes(row=1, col=2, **scene2_axes)
+
         fig.show()
 
     # -------------------------- residual panels --------------------------- #
