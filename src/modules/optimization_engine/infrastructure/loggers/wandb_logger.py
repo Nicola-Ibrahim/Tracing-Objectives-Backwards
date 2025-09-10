@@ -63,7 +63,7 @@ class WandbLogger(BaseLogger):
         self,
         model: Any,
         name: str,
-        model_type: Optional[str] = None,
+        estimator_type: Optional[str] = None,
         description: Optional[str] = None,
         parameters: Optional[Dict[str, Any]] = None,
         metrics: Optional[Dict[str, float]] = None,
@@ -78,7 +78,7 @@ class WandbLogger(BaseLogger):
 
         # Prepare metadata for the artifact
         metadata = {
-            "model_type": model_type,
+            "estimator_type": estimator_type,
             "parameters": parameters or {},
             "metrics": metrics or {},
             "notes": notes,
@@ -89,7 +89,7 @@ class WandbLogger(BaseLogger):
         artifact = wandb.Artifact(
             name=name,
             type="model",
-            description=description or f"Model: {model_type or 'Unknown'}",
+            description=description or f"Model: {estimator_type or 'Unknown'}",
             metadata=metadata,
         )
         artifact.add_file(model_path)

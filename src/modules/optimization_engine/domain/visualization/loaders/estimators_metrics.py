@@ -22,7 +22,7 @@ class InterpolatorMetricsLoader:
         Traverses the models directory and extracts model type and MSE from each metadata.json file.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, e.g., [{'model_type': 'gaussian_process_nd', 'mse': 0.0176}].
+            list[dict[str, Any]]: A list of dictionaries, e.g., [{'estimator_type': 'gaussian_process_nd', 'mse': 0.0176}].
         """
 
         interpolators_dir = ROOT_PATH / dir_name
@@ -43,15 +43,15 @@ class InterpolatorMetricsLoader:
                 raw_data = json.loads(metadata_content)
 
                 # Extract the required fields directly from the raw dictionary
-                model_type = raw_data.get("parameters", {}).get("type")
+                estimator_type = raw_data.get("parameters", {}).get("type")
                 mse_metric = raw_data.get("metrics", {}).get(
                     "MeanSquaredErrorValidationMetric"
                 )
 
-                if model_type and mse_metric is not None:
-                    if model_type not in grouped_metrics:
-                        grouped_metrics[model_type] = []
-                    grouped_metrics[model_type].append(mse_metric)
+                if estimator_type and mse_metric is not None:
+                    if estimator_type not in grouped_metrics:
+                        grouped_metrics[estimator_type] = []
+                    grouped_metrics[estimator_type].append(mse_metric)
                 else:
                     print(
                         f"MetricsLoader: Missing required fields in {metadata_file}. Skipping."

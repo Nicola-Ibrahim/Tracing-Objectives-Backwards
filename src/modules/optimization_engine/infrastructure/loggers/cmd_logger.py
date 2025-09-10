@@ -109,7 +109,7 @@ class CMDLogger(BaseLogger):
         self,
         model: Any,
         name: str,
-        model_type: Optional[str] = None,
+        estimator_type: Optional[str] = None,
         description: Optional[str] = None,
         parameters: Optional[Dict[str, Any]] = None,
         metrics: Optional[Dict[str, float]] = None,
@@ -119,8 +119,8 @@ class CMDLogger(BaseLogger):
     ):
         """Log model details for CMD output. Ignores some W&B specific metadata."""
         log_message = f"Logging Model: '{name}'"
-        if model_type:
-            log_message += f", Type: {model_type}"
+        if estimator_type:
+            log_message += f", Type: {estimator_type}"
         if step is not None:
             log_message += f", Step: {step}"
         if description:

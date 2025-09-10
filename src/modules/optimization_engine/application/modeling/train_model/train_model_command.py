@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 
 from ...dtos import (
     EstimatorParams,
-    NormalizerConfig,
     ValidationMetricConfig,
 )
 
@@ -51,5 +50,10 @@ class TrainModelCommand(BaseModel):
         description="A list of values to test for the hyperparameter. Required if tune_param_name is set.",
     )
 
+    learning_curve_steps: int = Field(
+        50, description="The number of step to train the deterministic model"
+    )
+
     class Config:
         arbitrary_types_allowed = True
+        use_enum_values = True

@@ -1,14 +1,11 @@
-import numpy as np
-
 from ....domain.datasets.entities.generated_dataset import GeneratedDataset
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
-from ...factories.normalizer import NormalizerFactory
 from .visualize_data_command import VisualizeDatasetCommand
 
 
-class VisulizeDatasetCommandHandler:
+class VisualizeDatasetCommandHandler:
     """
     Loads a bi-objective dataset, builds normalizers via an injected factory,
     normalizes decisions (X) and objectives (F), and passes everything to the

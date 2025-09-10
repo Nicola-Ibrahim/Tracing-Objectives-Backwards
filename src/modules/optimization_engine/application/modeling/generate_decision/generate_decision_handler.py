@@ -1,9 +1,9 @@
 import numpy as np
 
-from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.common.interfaces.base_logger import BaseLogger
+from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_repository import (
-    BaseInterpolationModelRepository,
+    BaseModelArtifactRepository,
 )
 from ....domain.objective.feasibility.checker import ObjectiveFeasibilityChecker
 from ....domain.objective.feasibility.exceptions import ObjectiveOutOfBoundsError
@@ -24,31 +24,31 @@ from .generate_decision_command import GenerateDecisionCommand
 class GenerateDecisionCommandHandler:
     def __init__(
         self,
-        interpolation_model_repo: BaseInterpolationModelRepository,
+        interpolation_model_repo: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,
     ):
-        self._interpolation_model_repo = interpolation_model_repo
+        self._model_artificat_repo = interpolation_model_repo
         self._data_repository = data_repository
         self._logger = logger
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         self._logger.log_info(
-            f"Starting FreeMode decision generation for interpolator type: {command.model_type}"
+            f"Starting FreeMode decision generation for interpolator type: {command.estimator_type}"
         )
 
         # Load interpolation model and normalizers
-        model = self._interpolation_model_repo.get_latest_version(
-            model_type=command.model_type
+        model_artifact = self._model_artificat_repo.get_latest_version(
+            estimator_type=command.estimator_type
         )
         self._logger.log_info(
-            f"Loaded interpolation model version {model.version} "
-            f"of type {command.model_type}."
+            f"Loaded interpolation model version {model_artifact.version} "
+            f"of type {command.estimator_type}."
         )
 
-        estimator = model.estimator
-        decisions_normalizer = model.decisions_normalizer
-        objectives_normalizer = model.objectives_normalizer
+        estimator = model_artifact.estimator
+        decisions_normalizer = model_artifact.decisions_normalizer
+        objectives_normalizer = model_artifact.objectives_normalizer
 
         # Load Pareto data
         raw_data = self._data_repository.load("dataset")

@@ -14,7 +14,6 @@ class MinMaxScalerNormalizer(BaseNormalizer):
 
     def __init__(self, feature_range: tuple[float, float] = (0, 1)):
         self.scaler = MinMaxScaler(feature_range=feature_range)
-        self.feature_range = feature_range
 
     def fit(self, X: NDArray[np.floating], y: NDArray | None = None) -> Self:
         """

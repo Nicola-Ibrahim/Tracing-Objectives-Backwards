@@ -7,12 +7,10 @@ from ....domain.modeling.interfaces.base_estimator import (
     ProbabilisticEstimator,
 )
 from ....domain.modeling.interfaces.base_repository import (
-    BaseInterpolationModelRepository,
+    BaseModelArtifactRepository,
 )
-from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from ...factories.normalizer import NormalizerFactory
 from ...services.estimator_trainers import (
     CrossValidationTrainer,
     DeterministicModelTrainer,
@@ -37,18 +35,16 @@ class TrainModelCommandHandler:
     def __init__(
         self,
         processed_data_repository: BaseDatasetRepository,
-        model_repository: BaseInterpolationModelRepository,
+        model_repository: BaseModelArtifactRepository,
         logger: BaseLogger,
         estimator_factory: EstimatorFactory,
         metric_factory: MetricFactory,
-        visualizer: BaseVisualizer,
     ) -> None:
         self._processed_data_repository = processed_data_repository
         self._estimator_factory = estimator_factory
         self._logger = logger
         self._model_repository = model_repository
         self._metric_factory = metric_factory
-        self._visualizer = visualizer
 
     # --------------------- PUBLIC ENTRY ---------------------
 
@@ -77,6 +73,7 @@ class TrainModelCommandHandler:
         cv_splits = command.cv_splits
         tune_param_name = command.tune_param_name
         tune_param_range = command.tune_param_range
+        learning_curve_steps = command.learning_curve_steps
 
         estimator = self._estimator_factory.create(params=estimator_params)
         validation_metrics = self._metric_factory.create_multiple(
@@ -140,9 +137,7 @@ class TrainModelCommandHandler:
                     y_train=y_train,
                     X_test=X_test,
                     y_test=y_test,
-                    X_normalizer=X_normalizer,
-                    y_normalizer=y_normalizer,
-                    learning_curve_steps=50,
+                    learning_curve_steps=learning_curve_steps,
                     metrics=validation_metrics,
                     random_state=random_state,
                 )
@@ -152,8 +147,6 @@ class TrainModelCommandHandler:
         artifact = ModelArtifact.create(
             parameters=parameters,
             estimator=outcome.estimator,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
             train_scores=outcome.train_scores,
             test_scores=outcome.test_scores,
             cv_scores=outcome.cv_scores,
@@ -162,19 +155,3 @@ class TrainModelCommandHandler:
 
         # 3) Persist artifact
         self._model_repository.save(artifact)
-
-        self._visualizer.plot(
-            data={
-                "estimator": outcome.estimator,
-                "X_train": X_train,
-                "y_train": y_train,
-                "X_test": X_test,
-                "y_test": y_test,
-                "X_normalizer": X_normalizer,
-                "y_normalizer": y_normalizer,
-                "non_linear": False,  # or True to try UMAP if installed
-                "n_samples": 300,
-                "title": f"Fitted {artifact.estimator.type}",
-                "loss_history": outcome.loss_history.model_dump(),
-            }
-        )

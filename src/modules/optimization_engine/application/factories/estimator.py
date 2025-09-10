@@ -1,6 +1,6 @@
 from typing import Any
 
-from ...domain.modeling.enums.estimator_type_enum import (
+from ...domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
 )
 from ...domain.modeling.interfaces.base_estimator import (
@@ -31,7 +31,7 @@ class EstimatorFactory:
 
     # A class-level registry to map the enum type to the corresponding class
     _registry: dict[EstimatorTypeEnum, BaseEstimator] = {
-        EstimatorTypeEnum.RBF_ND.value: RBFEstimator,
+        EstimatorTypeEnum.RBF.value: RBFEstimator,
         EstimatorTypeEnum.LINEAR_ND.value: LinearNDEstimator,
         EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value: NearestNDEstimator,
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value: NNEstimator,
@@ -40,8 +40,8 @@ class EstimatorFactory:
         EstimatorTypeEnum.SPLINE_ND.value: SplineEstimator,
         EstimatorTypeEnum.KRIGING_ND.value: KrigingEstimator,
         EstimatorTypeEnum.SVR_ND.value: SVREstimator,
-        EstimatorTypeEnum.CVAE_ND.value: CVAEEstimator,
-        EstimatorTypeEnum.MDN_ND.value: MDNEstimator,
+        EstimatorTypeEnum.CVAE.value: CVAEEstimator,
+        EstimatorTypeEnum.MDN.value: MDNEstimator,
     }
 
     def create(self, params: dict[str, Any]) -> BaseEstimator:

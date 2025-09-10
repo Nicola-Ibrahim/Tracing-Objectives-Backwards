@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ..entities.model_artifact import ModelArtifact
 
 
-class BaseInterpolationModelRepository(ABC):
+class BaseModelArtifactRepository(ABC):
     """
     Abstract base class for a repository that handles persistence
     of ModelArtifact entities, supporting version tracking.
@@ -39,12 +39,12 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_versions(self, model_type: str) -> list[ModelArtifact]:
+    def get_all_versions(self, estimator_type: str) -> list[ModelArtifact]:
         """
         Retrieves all trained versions of a model based on its type.
 
         Args:
-             model_type: The type of interpolation model (e.g., 'gaussian_process_nd')
+             estimator_type: The type of interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
             A list of ModelArtifact entities, sorted by version (highest first)
@@ -52,12 +52,12 @@ class BaseInterpolationModelRepository(ABC):
         pass
 
     @abstractmethod
-    def get_latest_version(self, model_type: str) -> ModelArtifact:
+    def get_latest_version(self, estimator_type: str) -> ModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
 
         Args:
-             model_type: The type of interpolation model
+             estimator_type: The type of interpolation model
 
         Returns:
             The ModelArtifact entity with the highest version

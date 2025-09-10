@@ -36,7 +36,7 @@ class BaseLogger(ABC):
         self,
         model: Any,
         name: str,  # Model name/artifact name is crucial for tracking
-        model_type: Optional[str] = None,
+        estimator_type: Optional[str] = None,
         description: Optional[str] = None,
         parameters: Optional[Dict[str, Any]] = None,
         metrics: Optional[Dict[str, float]] = None,

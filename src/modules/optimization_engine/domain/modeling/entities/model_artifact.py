@@ -7,7 +7,6 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from ..interfaces.base_estimator import BaseEstimator
-from ..interfaces.base_normalizer import BaseNormalizer
 
 
 @dataclass
@@ -40,15 +39,6 @@ class ModelArtifact(BaseModel):
         description="The actual fitted inverse decision mapper instance from this run.",
     )
 
-    X_normalizer: BaseNormalizer = Field(
-        ...,
-        description="The fitted normalizer for the input/decision space (x_train).",
-    )
-    y_normalizer: BaseNormalizer = Field(
-        ...,
-        description="The fitted normalizer for the output/objective space (y_train).",
-    )
-
     train_scores: dict[str, float] = Field(
         default_factory=dict,
         description="Performance metrics for a single training run (e.g., from a train-test split).",
@@ -77,15 +67,15 @@ class ModelArtifact(BaseModel):
         description="Training loss history for the model.",
     )
 
-    @field_serializer("estimator", "X_normalizer", "y_normalizer")
-    def serialize_model_and_normalizers(self, obj: Any) -> bytes:
+    # ---- (De)serialization for the estimator field only ----
+
+    @field_serializer("estimator")
+    def serialize_model(self, obj: Any) -> bytes:
         """Serializes the object to a byte stream using pickle."""
         return pickle.dumps(obj)
 
     @field_validator(
         "estimator",
-        "y_normalizer",
-        "X_normalizer",
         mode="before",
     )
     @classmethod
@@ -107,25 +97,22 @@ class ModelArtifact(BaseModel):
     @classmethod
     def create(
         cls,
+        *,
         estimator: BaseEstimator,
-        y_normalizer: BaseNormalizer,
-        X_normalizer: BaseNormalizer,
         parameters: dict[str, Any],
-        train_scores: dict[str, float],
-        test_scores: dict[str, float],
-        cv_scores: dict[str, list[float]],
-        loss_history: dict[str, Any],
+        train_scores: dict[str, float] | None = None,
+        test_scores: dict[str, float] | None = None,
+        cv_scores: dict[str, list[float]] | None = None,
+        loss_history: dict[str, Any] | None = None,
     ) -> Self:
         """
-        Factory method to create a new ModelArtifact instance.
+        Convenience factory that fills sensible defaults; pass only what you have.
         """
         return cls(
-            parameters=parameters,
             estimator=estimator,
-            y_normalizer=y_normalizer,
-            X_normalizer=X_normalizer,
-            train_scores=train_scores,
-            test_scores=test_scores,
-            cv_scores=cv_scores,
-            loss_history=loss_history,
+            parameters=parameters,
+            train_scores=train_scores or {},
+            test_scores=test_scores or {},
+            cv_scores=cv_scores or {},
+            loss_history=loss_history or {},
         )

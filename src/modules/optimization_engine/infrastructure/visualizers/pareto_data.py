@@ -12,7 +12,7 @@ from scipy.stats import gaussian_kde
 from ...domain.visualization.interfaces.base_visualizer import BaseVisualizer
 
 
-class PlotlyParetoDataVisualizer(BaseVisualizer):
+class PlotlyDatasetVisualizer(BaseVisualizer):
     """
     Visualizes bi-objective data using a dict payload.
 
