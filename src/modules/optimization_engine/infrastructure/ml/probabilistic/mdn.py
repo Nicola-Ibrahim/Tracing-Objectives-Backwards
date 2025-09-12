@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 from enum import Enum
+from typing import Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -13,7 +13,6 @@ from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
 from torch.distributions import (
     Categorical,
-    Gamma,
     Independent,
     Laplace,
     LogNormal,
@@ -21,25 +20,19 @@ from torch.distributions import (
     Normal,
 )
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 from umap import UMAP
 
-from ....domain.model_management.interfaces.base_estimator import (
+from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from ....domain.modeling.interfaces.base_estimator import (
     ProbabilisticEstimator,
 )
 
-
-@dataclass
-class TrainingHistory:
-    # small container, easy to serialize as dict(training_history.__dict__)
-    epochs: list
-    train_loss: list
-    val_loss: list
+# ======================================================================
+# Data containers & Enums
+# ======================================================================
 
 
 class ActivationFunctionEnum(Enum):
-    """An Enum for available activation function names."""
-
     RELU = "relu"
     TANH = "tanh"
     SIGMOID = "sigmoid"
@@ -48,27 +41,33 @@ class ActivationFunctionEnum(Enum):
 
 
 class DistributionFamilyEnum(Enum):
-    """An Enum for available distribution families."""
-
     NORMAL = "normal"
     LAPLACE = "laplace"
-    LOGNORMAL = "lognormal"
+    LOGNORMAL = "lognormal"  # interpret mu, sigma as log-space params
 
 
 class OptimizerFunctionEnum(Enum):
-    """An Enum for available optimizers."""
-
     SGD = "sgd"
     ADAM = "adam"
     RMSPROP = "rmsprop"
-    GRADIENT_DESCENT = "gradient_descent"
+    GRADIENT_DESCENT = "gradient_descent"  # alias to SGD
+
+
+# ======================================================================
+# MDN module
+# ======================================================================
 
 
 class MDN(nn.Module):
     """
-    A Mixture Density Network (MDN) module with configurable architecture.
+    A Mixture Density Network (MDN) with configurable hidden stack and heads.
 
-        Architecture Overview:
+    Heads:
+      - π-head:   Linear -> Softmax over K
+      - μ-head:   Linear -> reshape (K, out_dim)
+      - σ-head:   Linear -> Softplus + eps -> reshape (K, out_dim)  (σ is SCALE)
+
+      Architecture Overview:
         Input (input_dim)
            │
            ▼
@@ -90,6 +89,8 @@ class MDN(nn.Module):
                           → Softplus (or exp) for positivity
                           → reshape to (num_mixtures, output_dim)
 
+
+    NOTE: For LOGNORMAL, μ and σ are log-space parameters (location & scale).
     """
 
     def __init__(
@@ -99,65 +100,62 @@ class MDN(nn.Module):
         num_mixtures: int = 5,
         hidden_layers: list[int] = [64, 32],
         hidden_activation_fn_name: ActivationFunctionEnum = ActivationFunctionEnum.RELU,
-        pi_bias_init: list | None = None,
-        mu_bias_init: list | None = None,
+        pi_bias_init: Sequence[float] = None,
+        mu_bias_init: Sequence[float] = None,
     ):
-        """
-        Initialize the Mixture Density Network (MDN).
-        """
         super().__init__()
 
-        self.num_mixtures = num_mixtures
-        self.output_dim = output_dim
+        self.num_mixtures = int(num_mixtures)
+        self.output_dim = int(output_dim)
 
-        # Get activation function
-        self.hidden_activation_fn_name = self._get_activation(hidden_activation_fn_name)
+        # Activation (module instance)
+        self.hidden_activation = self._get_activation(hidden_activation_fn_name)
+        self.hidden_activation_name = hidden_activation_fn_name
 
-        # ----- Build hidden stack -----
-        layers = []
+        # ----- Build hidden stack explicitly (no trailing activation) -----
+        layers: list[nn.Module] = []
         in_size = input_dim
-        for hidden_size in hidden_layers:
+        for i, hidden_size in enumerate(hidden_layers):
             layers.append(nn.Linear(in_size, hidden_size))
-            layers.append(self.hidden_activation_fn_name)
+            if i < len(hidden_layers) - 1:
+                layers.append(self.hidden_activation)
             in_size = hidden_size
-
-        if layers:  # remove last activation to let heads apply their own logic
-            layers.pop()
-
         self.hidden_stack = nn.Sequential(*layers)
-
         final_hidden_size = hidden_layers[-1] if hidden_layers else input_dim
 
-        # ----- Output heads -----
-        # Mixture weights (π) → Softmax later
+        # ----- Heads -----
         self.fc_pi = nn.Linear(final_hidden_size, num_mixtures)
         nn.init.normal_(self.fc_pi.weight)
-        if pi_bias_init is not None:
-            nn.init.constant_(self.fc_pi.bias, pi_bias_init)
 
-        # Means (μ) → shape (num_mixtures, output_dim)
-        self.fc_mu = nn.Linear(final_hidden_size, num_mixtures * output_dim)
-        if mu_bias_init is not None:
-            nn.init.constant_(self.fc_mu.bias, mu_bias_init)
-
-        # Standard deviations (σ) → positive via softplus/exp
-        self.fc_sigma = nn.Linear(final_hidden_size, num_mixtures * output_dim)
+        self.fc_mu = nn.Linear(final_hidden_size, num_mixtures * self.output_dim)
+        self.fc_sigma = nn.Linear(final_hidden_size, num_mixtures * self.output_dim)
         nn.init.normal_(self.fc_sigma.weight)
 
+        # Optional bias initialisation with size checks
+        if pi_bias_init is not None:
+            b = torch.tensor(pi_bias_init, dtype=self.fc_pi.bias.dtype)
+            if b.numel() != self.fc_pi.bias.numel():
+                raise ValueError("pi_bias_init size mismatch.")
+            with torch.no_grad():
+                self.fc_pi.bias.copy_(b)
+
+        if mu_bias_init is not None:
+            b = torch.tensor(mu_bias_init, dtype=self.fc_mu.bias.dtype)
+            if b.numel() != self.fc_mu.bias.numel():
+                raise ValueError("mu_bias_init size mismatch.")
+            with torch.no_grad():
+                self.fc_mu.bias.copy_(b)
+
     # ------- Utility Functions -------
-    def _get_activation(self, activation_fn: ActivationFunctionEnum):
-        """
-        Get the activation function based on the specified activation function name.
-        """
-        activation_fns = {
+    def _get_activation(self, activation_fn: ActivationFunctionEnum) -> nn.Module:
+        mapping = {
             ActivationFunctionEnum.RELU: nn.ReLU(),
             ActivationFunctionEnum.TANH: nn.Tanh(),
             ActivationFunctionEnum.SIGMOID: nn.Sigmoid(),
             ActivationFunctionEnum.SOFTPLUS: nn.Softplus(),
             ActivationFunctionEnum.IDENTITY: nn.Identity(),
         }
-
-        return activation_fns.get(activation_fn, nn.Identity())
+        return mapping.get(activation_fn, nn.Identity())
 
     def _get_distribution(
         self,
@@ -167,37 +165,30 @@ class MDN(nn.Module):
         distribution_family: DistributionFamilyEnum,
     ) -> MixtureSameFamily:
         """
-        Gets a `MixtureSameFamily` distribution object.
+        Builds a MixtureSameFamily with component distribution:
+          - Normal(mu, sigma)     if NORMAL
+          - Laplace(mu, sigma)    if LAPLACE
+          - LogNormal(mu, sigma)  if LOGNORMAL  (mu, sigma are log-space)
         """
         if distribution_family == DistributionFamilyEnum.NORMAL:
-            dist = Normal(mu, sigma)
+            comp = Normal(mu, sigma)
         elif distribution_family == DistributionFamilyEnum.LAPLACE:
-            dist = Laplace(mu, sigma)
+            comp = Laplace(mu, sigma)
         elif distribution_family == DistributionFamilyEnum.LOGNORMAL:
-            dist = LogNormal(mu, sigma)
+            comp = LogNormal(mu, sigma)
         else:
             raise ValueError(
                 f"Unsupported distribution family: {distribution_family.value}"
             )
 
-        return MixtureSameFamily(Categorical(probs=pi), Independent(dist, 1))
+        return MixtureSameFamily(Categorical(probs=pi), Independent(comp, 1))
 
     def summary(self, input_size=(1,)):
-        """
-        Prints a summary of the architecture.
-        """
-        # This part of the code is unchanged as it is not a critical part of the MDN logic.
-        # It's a nice utility that should be kept as-is.
         x = torch.zeros(1, *input_size)
         print("\nMixture Density Network (MDN) Summary\n" + "=" * 50)
-
-        layers = []
-        layers.append(("Input", x.shape))
-
+        layers = [("Input", x.shape)]
         tmp_x = x
-        for i, layer in enumerate(
-            tqdm(self.hidden_stack, desc="Building Summary", unit="layer")
-        ):
+        for i, layer in enumerate(self.hidden_stack):
             tmp_x = layer(tmp_x)
             layers.append((layer.__class__.__name__, tmp_x.shape))
 
@@ -216,7 +207,6 @@ class MDN(nn.Module):
         print("=" * 50)
 
     # ----- Forward Pass -----
-
     def forward(self, x: torch.Tensor):
         # Apply activation to the output of the first fully connected layer
         # Shared hidden representation
@@ -241,20 +231,30 @@ class MDN(nn.Module):
             F.softplus(sigma) + 1e-6
         )  # Enforce positive stddev so the Gaussian is well-defined and gradients behave predictably
         sigma = sigma.view(-1, self.num_mixtures, self.output_dim)
-
         return pi, mu, sigma
+
+
+# ======================================================================
+# Estimator
+# ======================================================================
 
 
 class MDNEstimator(ProbabilisticEstimator):
     """
-    An inverse mapper that uses a Mixture Density Network (MDN) to model the
-    inverse relationship from objectives to decisions.
+    Probabilistic inverse mapper using an MDN.
+
+    Public API:
+      - predict(X, ...) -> one stochastic draw per x: (n, out_dim)
+      - sample(X, n_samples, ...) -> many draws: (n, n_samples, out_dim)
+      - predict_mean / predict_map / predict_std (analytic where possible)
+      - predict_median / predict_quantiles (sampling-based)
+      - get_mixture_parameters(X) -> (pi, mu, sigma) as numpy arrays
     """
 
     def __init__(
         self,
         num_mixtures: int = -1,
-        learning_rate: float = 1e-3,
+        learning_rate: float = 1e-4,
         early_stopping_patience: int = 10,
         distribution_family: DistributionFamilyEnum = DistributionFamilyEnum.NORMAL,
         gmm_boost: bool = False,
@@ -263,9 +263,6 @@ class MDNEstimator(ProbabilisticEstimator):
         optimizer_fn_name: OptimizerFunctionEnum = OptimizerFunctionEnum.ADAM,
         verbose: bool = False,
     ):
-        """
-        Initialize the MDNEstimator.
-        """
         super().__init__()
         self._num_mixtures = num_mixtures
         self._learning_rate = learning_rate
@@ -276,20 +273,23 @@ class MDNEstimator(ProbabilisticEstimator):
         self._hidden_activation_fn_name = hidden_activation_fn_name
         self._optimizer_fn_name = optimizer_fn_name
         self._verbose = verbose
+
         self._model: MDN | None = None
-        self._clusterer: GaussianMixture | None = None
-        self._best_model_state_dict: dict | None = None
+        self._clusterer: GaussianMixture = None
+        self._best_model_state_dict: dict = None
+
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @property
     def type(self) -> str:
-        return "MDN"
+        return getattr(EstimatorTypeEnum, "MDN", EstimatorTypeEnum.MDN).value
+
+    # ----------------------- Fitting -----------------------
 
     def _determine_num_mixtures(self, X_y: npt.NDArray[np.float64]) -> int:
         lowest_bic = np.inf
-        best_gmm = None
-        n_components_range = range(1, 7)
-        for n_components in n_components_range:
+        best_gmm: GaussianMixture = None
+        for n_components in range(1, 7):
             gmm = GaussianMixture(
                 n_components=n_components, covariance_type="full", max_iter=10000
             )
@@ -298,6 +298,8 @@ class MDNEstimator(ProbabilisticEstimator):
             if bic < lowest_bic:
                 lowest_bic = bic
                 best_gmm = gmm
+        if best_gmm is None:
+            raise RuntimeError("Failed to determine number of mixtures via BIC.")
         self._clusterer = best_gmm
         return best_gmm.n_components
 
@@ -309,11 +311,10 @@ class MDNEstimator(ProbabilisticEstimator):
             self._num_mixtures = self._determine_num_mixtures(np.hstack((X, y)))
 
         if self._gmm_boost:
+            if self._clusterer is None:
+                raise RuntimeError("GMM boost enabled but _clusterer is None.")
             cluster_probs = self._clusterer.predict_proba(X)
-            X_tensor = torch.cat(
-                [X, torch.tensor(cluster_probs, dtype=torch.float32)], dim=1
-            )
-            input_dim = X_tensor.shape[1]
+            input_dim = input_dim + cluster_probs.shape[1]
 
         self._model = MDN(
             input_dim=input_dim,
@@ -321,21 +322,16 @@ class MDNEstimator(ProbabilisticEstimator):
             num_mixtures=self._num_mixtures,
             hidden_layers=self._hidden_layers,
             hidden_activation_fn_name=self._hidden_activation_fn_name,
-        )
-        self._model.to(self._device)
+        ).to(self._device)
 
-    def _get_optimizer_fn(self, name: str):
-        optimizers = {
+    def _get_optimizer_fn(self, name: OptimizerFunctionEnum):
+        mapping = {
             OptimizerFunctionEnum.SGD: torch.optim.SGD,
             OptimizerFunctionEnum.ADAM: torch.optim.Adam,
             OptimizerFunctionEnum.RMSPROP: torch.optim.RMSprop,
             OptimizerFunctionEnum.GRADIENT_DESCENT: torch.optim.SGD,
         }
-
-        optimizer_class = optimizers.get(name)
-        if optimizer_class is None:
-            raise ValueError(f"Unknown optimizer: {name}")
-        return optimizer_class
+        return mapping[name]
 
     def _prepare_dataloaders(
         self,
@@ -344,11 +340,9 @@ class MDNEstimator(ProbabilisticEstimator):
         batch_size: int = 32,
         test_size: float = 0.2,
     ) -> tuple[DataLoader, DataLoader]:
-        """Splits data and creates PyTorch DataLoaders for batch training."""
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size=test_size, random_state=42
         )
-
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
         y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
         X_val_tensor = torch.tensor(X_val, dtype=torch.float32)
@@ -359,42 +353,65 @@ class MDNEstimator(ProbabilisticEstimator):
 
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
         return train_loader, val_loader
 
+    def _maybe_fail_on_lognormal(self, y: npt.NDArray[np.float64]) -> None:
+        if self._distribution_family == DistributionFamilyEnum.LOGNORMAL and np.any(
+            y <= 0.0
+        ):
+            raise ValueError(
+                "LogNormal selected but targets contain non-positive values. "
+                "Either transform targets to be positive or use a different distribution."
+            )
+
     def fit(
-        self, X: npt.NDArray[np.float64], y: npt.NDArray[np.float64], **kwargs
+        self,
+        X: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        **kwargs,
     ) -> None:
-        """Fits the MDN model using batched data and early stopping."""
+        """
+        Fit the MDN with early stopping.
+        kwargs:
+            epochs: int = 100
+            batch_size: int = 32
+            weight_decay: float = 0.0
+            clip_grad_norm: Optional[float] = None
+            seed: int = None  (for reproducibility)
+        """
         super().fit(X, y)
 
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        Y_tensor = torch.tensor(y, dtype=torch.float32)
+        # Optional reproducibility
+        seed = kwargs.get("seed", None)
+        if seed is not None:
+            torch.manual_seed(int(seed))
+            np.random.seed(int(seed))
 
-        # Unpack additional keyword arguments
-        epochs = kwargs.get("epochs", 100)
-        batch_size = kwargs.get("batch_size", 32)
+        epochs = int(kwargs.get("epochs", 100))
+        batch_size = int(kwargs.get("batch_size", 32))
+        weight_decay = float(kwargs.get("weight_decay", 0.0))
+        clip_grad_norm = kwargs.get("clip_grad_norm", None)
 
-        self._prepare_model(X_tensor, Y_tensor)  # This helper function is not changed
+        self._maybe_fail_on_lognormal(y)
+        self._prepare_model(X, y)
         train_loader, val_loader = self._prepare_dataloaders(X, y, batch_size)
 
         optimizer_fn = self._get_optimizer_fn(self._optimizer_fn_name)
-        optimizer = optimizer_fn(self._model.parameters(), lr=self._learning_rate)
+        optimizer = optimizer_fn(
+            self._model.parameters(), lr=self._learning_rate, weight_decay=weight_decay
+        )
 
         best_loss = float("inf")
         patience_counter = 0
 
-        self._training_history = {"epochs": [], "train_loss": [], "val_loss": []}
-
-        epochs_range = (
-            tqdm(range(epochs), unit="epoch") if self._verbose else range(epochs)
-        )
-
-        for epoch in epochs_range:
-            # Training loop
+        # Training loop
+        for epoch in range(epochs):
             self._model.train()
-            train_loss = 0
+            train_loss = 0.0
             for batch_X, batch_y in train_loader:
+                batch_X = batch_X.to(self._device)
+                batch_y = batch_y.to(self._device)
+
                 optimizer.zero_grad()
                 pi, mu, sigma = self._model(batch_X)
                 dist = self._model._get_distribution(
@@ -402,33 +419,33 @@ class MDNEstimator(ProbabilisticEstimator):
                 )
                 loss = -dist.log_prob(batch_y).mean()
                 loss.backward()
+                if clip_grad_norm is not None:
+                    torch.nn.utils.clip_grad_norm_(
+                        self._model.parameters(), float(clip_grad_norm)
+                    )
                 optimizer.step()
                 train_loss += loss.item()
 
-            avg_train_loss = train_loss / len(train_loader)
+            avg_train = train_loss / max(1, len(train_loader))
 
-            # Validation loop
+            # Validation
             self._model.eval()
-            val_loss = 0
+            val_loss = 0.0
             with torch.no_grad():
                 for batch_X, batch_y in val_loader:
+                    batch_X = batch_X.to(self._device)
+                    batch_y = batch_y.to(self._device)
                     pi, mu, sigma = self._model(batch_X)
                     dist = self._model._get_distribution(
                         pi, mu, sigma, self._distribution_family
                     )
-                    loss = -dist.log_prob(batch_y).mean()
-                    val_loss += loss.item()
+                    val_loss += (-dist.log_prob(batch_y).mean()).item()
 
-            avg_val_loss = val_loss / len(val_loader)
+            avg_val = val_loss / max(1, len(val_loader))
 
-            if self._verbose:
-                epochs_range.set_postfix(
-                    train_loss=f"{avg_train_loss:.4f}", val_loss=f"{avg_val_loss:.4f}"
-                )
-
-            # Early stopping check
-            if avg_val_loss < best_loss:
-                best_loss = avg_val_loss
+            # Early stopping
+            if avg_val < best_loss:
+                best_loss = avg_val
                 patience_counter = 0
                 self._best_model_state_dict = self._model.state_dict()
             else:
@@ -436,88 +453,318 @@ class MDNEstimator(ProbabilisticEstimator):
                 if patience_counter >= self._early_stopping_patience:
                     if self._verbose:
                         print(
-                            f"Early stopping at epoch {epoch}. Best validation loss: {best_loss:.4f}"
+                            f"Early stopping at epoch {epoch}. Best val loss: {best_loss:.4f}"
                         )
                     if self._best_model_state_dict:
                         self._model.load_state_dict(self._best_model_state_dict)
                     break
 
-            self._training_history["epochs"].append(epoch)
-            self._training_history["train_loss"].append(float(avg_train_loss))
-            self._training_history["val_loss"].append(float(avg_val_loss))
+            self._training_history.epochs.append(epoch)
+            self._training_history.train_loss.append(float(avg_train))
+            self._training_history.val_loss.append(float(avg_val))
 
         self._model.eval()
 
+    # ----------------------- Inference API -----------------------
+
     def predict(
-        self, X: npt.NDArray[np.float64], n_samples: int = 10, mode: str = "samples"
+        self,
+        X: npt.NDArray[np.float64],
+        seed: int | None = None,
+        *,
+        temperature: float = 1.0,
+        max_outputs_per_chunk: int = 20_000,
     ) -> npt.NDArray[np.float64]:
-        if self._model is None:
-            raise RuntimeError("The model has not been fit yet. Call 'fit' first.")
+        """
+        One **stochastic** draw per input from p(x|y).
 
-        X_tensor = torch.tensor(X, dtype=torch.float32)
+        Determinism:
+        - Stochastic. Use `seed` for reproducibility.
+        - `temperature` rescales component scales (σ), not means.
 
-        if self._gmm_boost and self._clusterer is not None:
-            cluster_probs = self._clusterer.predict_proba(X)
-            X_tensor = torch.cat(
-                [X_tensor, torch.tensor(cluster_probs, dtype=torch.float32)], dim=1
-            )
+        Shapes:
+        - X: (n, in_dim)
+        - return: (n, out_dim)
+        """
+        s = self.sample(
+            X,
+            n_samples=1,
+            seed=seed,
+            temperature=temperature,
+            max_outputs_per_chunk=max_outputs_per_chunk,
+        )
+        return s.astype(np.float64, copy=False)
 
+    def sample(
+        self,
+        X: npt.NDArray[np.float64],
+        n_samples: int = 1,
+        seed: int | None = None,
+        *,
+        temperature: float = 1.0,
+        max_outputs_per_chunk: int = 20_000,
+    ) -> npt.NDArray[np.float64]:
+        """
+        Draw `n_samples` IID samples per input from p(x|y).
+
+        Shapes:
+        - X: (n, in_dim)
+        - return:
+            (n, out_dim)              if n_samples == 1
+            (n, n_samples, out_dim)   if n_samples  > 1
+        """
+        self._ensure_fitted()
+        if n_samples < 1:
+            raise ValueError("n_samples must be >= 1")
+
+        X_tensor = self._prepare_inputs(X)
+        device = self._model_device()
+        n = X_tensor.shape[0]
+        n_samples = int(n_samples)
+
+        # RNG
+        gen = None
+        if seed is not None:
+            gen = torch.Generator(device=device)
+            gen.manual_seed(int(seed))
+
+        total_outputs = n * max(1, n_samples)
+
+        # Fast path
+        if total_outputs <= max_outputs_per_chunk:
+            with torch.no_grad():
+                pi, mu, sigma = self._model(X_tensor)
+                if temperature != 1.0:
+                    sigma = self._apply_temperature(sigma, temperature)
+                dist = self._model._get_distribution(
+                    pi, mu, sigma, self._distribution_family
+                )
+                if n_samples == 1:
+                    y = dist.sample(generator=gen)  # (n, out)
+                    return y.cpu().numpy().astype(np.float64, copy=False)
+                else:
+                    y = dist.sample((n_samples,), generator=gen)  # (n_s, n, out)
+                    return (
+                        y.permute(1, 0, 2).cpu().numpy().astype(np.float64, copy=False)
+                    )
+
+        # Chunked path
+        results = []
+        chunk_batch = max(1, max_outputs_per_chunk // max(1, n_samples))
+        for start in range(0, n, chunk_batch):
+            end = min(n, start + chunk_batch)
+            X_chunk = X_tensor[start:end]
+            with torch.no_grad():
+                pi_c, mu_c, sigma_c = self._model(X_chunk)
+                if temperature != 1.0:
+                    sigma_c = self._apply_temperature(sigma_c, temperature)
+                dist_c = self._model._get_distribution(
+                    pi_c, mu_c, sigma_c, self._distribution_family
+                )
+                if n_samples == 1:
+                    s_chunk = dist_c.sample(generator=gen)  # (chunk, out)
+                    results.append(s_chunk.cpu())
+                else:
+                    s_chunk = dist_c.sample(
+                        (n_samples,), generator=gen
+                    )  # (n_s, chunk, out)
+                    s_chunk = s_chunk.permute(1, 0, 2).cpu()  # (chunk, n_s, out)
+                    results.append(s_chunk)
+
+        out = torch.cat(results, dim=0).numpy().astype(np.float64, copy=False)
+        return out
+
+    def predict_mean(
+        self,
+        X: npt.NDArray[np.float64],
+        n_samples: int = 256,
+        seed: int | None = None,
+        *,
+        temperature: float = 1.0,
+        max_outputs_per_chunk: int = 20_000,
+    ) -> npt.NDArray[np.float64]:
+        """
+        **Monte-Carlo mean** per input: average of `n_samples` draws from p(x|y).
+
+        Rationale:
+        - Matches CVAE-style APIs and your `generate_point_predictions` idea.
+        - Avoids relying on analytic mixture moments when models differ.
+
+        Determinism:
+        - Stochastic unless you fix `seed`. Larger `n_samples` → lower MC noise.
+
+        Shapes:
+        - X: (n, in_dim)
+        - return: (n, out_dim)
+        """
+        s = self.sample(
+            X,
+            n_samples=n_samples,
+            seed=seed,
+            temperature=temperature,
+            max_outputs_per_chunk=max_outputs_per_chunk,
+        )
+        if s.ndim == 2:
+            return s.astype(np.float64, copy=False)  # n_samples==1, trivial mean
+        return s.mean(axis=1).astype(np.float64, copy=False)
+
+    def predict_median(
+        self,
+        X: npt.NDArray[np.float64],
+        n_samples: int = 501,
+        seed: int | None = None,
+        *,
+        temperature: float = 1.0,
+        max_outputs_per_chunk: int = 20_000,
+    ) -> npt.NDArray[np.float64]:
+        """
+        **Monte-Carlo median** per input (marginal, per output dimension).
+
+        Shapes:
+        - X: (n, in_dim)
+        - return: (n, out_dim)
+        """
+        s = self.sample(
+            X,
+            n_samples=n_samples,
+            seed=seed,
+            temperature=temperature,
+            max_outputs_per_chunk=max_outputs_per_chunk,
+        )
+        if s.ndim == 2:
+            return s.astype(np.float64, copy=False)
+        return np.median(s, axis=1).astype(np.float64, copy=False)
+
+    def predict_quantiles(
+        self,
+        X: npt.NDArray[np.float64],
+        qs: Sequence[float] = (0.05, 0.95),
+        n_samples: int = 500,
+        seed: int | None = None,
+        *,
+        temperature: float = 1.0,
+        max_outputs_per_chunk: int = 20_000,
+    ) -> npt.NDArray[np.float64]:
+        """
+        **Monte-Carlo quantiles** per input (marginal, per output dimension).
+
+        Shapes:
+        - X: (n, in_dim)
+        - return: (n, len(qs), out_dim)
+        """
+        s = self.sample(
+            X,
+            n_samples=n_samples,
+            seed=seed,
+            temperature=temperature,
+            max_outputs_per_chunk=max_outputs_per_chunk,
+        )
+        if s.ndim == 2:
+            s = s[:, None, :]
+        percents = [float(q) * 100.0 for q in qs]
+        q_arr = np.percentile(s, percents, axis=1)  # (len(qs), n, out)
+        return np.transpose(q_arr, (1, 0, 2)).astype(np.float64, copy=False)
+
+    def predict_std(
+        self,
+        X: npt.NDArray[np.float64],
+        n_samples: int = 500,
+        seed: int | None = None,
+        *,
+        temperature: float = 1.0,
+        max_outputs_per_chunk: int = 20_000,
+    ) -> npt.NDArray[np.float64]:
+        """
+        **Monte-Carlo standard deviation** per input (marginal, per output dimension).
+
+        Notes:
+        - Uses sample variance across draws from p(x|y).
+        - Prefer MC here to keep semantics aligned with CVAE and other models.
+
+        Shapes:
+        - X: (n, in_dim)
+        - return: (n, out_dim)
+        """
+        s = self.sample(
+            X,
+            n_samples=n_samples,
+            seed=seed,
+            temperature=temperature,
+            max_outputs_per_chunk=max_outputs_per_chunk,
+        )
+        if s.ndim == 2:
+            # with one sample, std is undefined; return zeros
+            return np.zeros_like(s, dtype=np.float64)
+        return s.std(axis=1, ddof=0).astype(np.float64, copy=False)
+
+    def predict_map(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        """
+        **Deterministic** mean of the **MAP component** per input:
+        k* = argmax_k π_k(y); returns μ_{k*}(y).
+
+        Shapes:
+        - X: (n, in_dim)
+        - return: (n, out_dim)
+        """
+        self._ensure_fitted()
+        X_t = self._prepare_inputs(X)
+        with torch.no_grad():
+            pi, mu, sigma = self._model(X_t)
+            k_star = torch.argmax(pi, dim=1)  # (n,)
+            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]  # (n, out)
+        return out.cpu().numpy().astype(np.float64, copy=False)
+
+    def get_mixture_parameters(
+        self, X: npt.NDArray[np.float64]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return (pi, mu, sigma) as numpy arrays."""
+        self._ensure_fitted()
+        X_tensor = self._prepare_inputs(X)
         with torch.no_grad():
             pi, mu, sigma = self._model(X_tensor)
-            dist = self._model._get_distribution(
-                pi, mu, sigma, self._distribution_family
-            )
+        return pi.cpu().numpy(), mu.cpu().numpy(), sigma.cpu().numpy()
 
-            if n_samples < 1:
-                raise ValueError("n_samples must be at least 1.")
+    # -------------------- internal helpers --------------------
 
-            if n_samples == 1:
-                return dist.mean().numpy()
+    def _ensure_fitted(self) -> None:
+        if getattr(self, "_model", None) is None:
+            raise RuntimeError("Model not fitted. Call 'fit' first.")
 
-            if n_samples > 1 and mode == "samples":
-                samples = dist.sample((n_samples,))
-                return samples.numpy()
+    def _model_device(self) -> torch.device:
+        return next(self._model.parameters()).device
 
-            elif (
-                mode == "map"
-            ):  # returns the mean (μ) of the most probable mixture component
-                k_star = torch.argmax(pi, dim=1)
-                y_hat = mu[torch.arange(mu.size(0)), k_star, :]
-                return y_hat.numpy()
-
-            elif mode == "mean":
-                weighted_mean = torch.sum(pi.unsqueeze(-1) * mu, dim=1)
-                return weighted_mean.numpy()
-
-            elif mode == "median":
-                weighted_median = torch.median(pi.unsqueeze(-1) * mu, dim=1)
-                return weighted_median.numpy()
-            else:
-                raise ValueError(f"Unknown mode '{mode}'")
-
-    def get_mixture_parameters(self, X: npt.NDArray[np.float64]):
+    def _prepare_inputs(self, X: npt.NDArray[np.float64]) -> torch.Tensor:
         """
-        Get the mixture parameters from the model.
+        Convert to torch, optionally append GMM-boost features, and move to device.
         """
-        if self._model is None:
-            raise RuntimeError("The model has not been fit yet. Call 'fit' first.")
+        device = self._model_device()
+        X_t = torch.tensor(X, dtype=torch.float32, device=device)
 
-        X_tensor = torch.tensor(X, dtype=torch.float32)
+        if (
+            getattr(self, "_gmm_boost", False)
+            and getattr(self, "_clusterer", None) is not None
+        ):
+            cluster_probs = self._clusterer.predict_proba(X)  # numpy
+            cp_t = torch.tensor(cluster_probs, dtype=torch.float32, device=device)
+            X_t = torch.cat([X_t, cp_t], dim=1)
 
-        if self._gmm_boost and self._clusterer is not None:
-            cluster_probs = self._clusterer.predict_proba(X)
-            X_tensor = torch.cat(
-                [X_tensor, torch.tensor(cluster_probs, dtype=torch.float32)], dim=1
-            )
+        return X_t
 
-        with torch.no_grad():
-            pi, mu, sigma = self._model(X_tensor)
-            return pi.numpy(), mu.numpy(), sigma.numpy()
+    def _apply_temperature(
+        self, sigma: torch.Tensor, temperature: float
+    ) -> torch.Tensor:
+        """
+        Temperature scaling for component scales (σ is std/scale).
+        temperature > 1.0 increases variance; < 1.0 decreases.
+        """
+        if temperature == 1.0:
+            return sigma
+        return sigma * float(temperature)
 
 
-# ----------------------------------------------------------------------
-# Helper Functions for Visualization and Data Handling
-# ----------------------------------------------------------------------
+# ======================================================================
+# Visualization & helpers
+# ======================================================================
 
 
 def plot_predict_dist(
@@ -527,42 +774,44 @@ def plot_predict_dist(
     non_linear: bool = False,
 ):
     """
-    Plots the conditional mixture distributions using Plotly Express.
-
-    Args:
-        model: The trained MDNEstimator model.
-        X: The input data (e.g., objectives).
-        y: The output data (e.g., decisions).
-        non_linear: Whether to use UMAP (True) or PCA (False) for dimensionality reduction.
+    Plot conditional mixture components (μ) against reduced X, with size ~ π.
+    For multi-dimensional y, uses y[..., 0].
     """
     pi, mu, sigma = model.get_mixture_parameters(X)
-    X_reduced = _reduce_dim(X, non_linear)
+    X_reduced = _reduce_dim(X, non_linear).reshape(-1)
 
-    # Prepare data for plotting
+    # select first output dimension for plotting if needed
+    if mu.ndim == 3 and mu.shape[-1] > 1:
+        mu_plot = mu[..., 0]
+        sigma_plot = sigma[..., 0]
+        y_plot = y[..., 0]
+    else:
+        mu_plot = mu.reshape(mu.shape[0], mu.shape[1])
+        sigma_plot = sigma.reshape(sigma.shape[0], sigma.shape[1])
+        y_plot = y.reshape(y.shape[0])
+
     df_mixtures = pd.DataFrame(
         {
-            "x": np.repeat(X_reduced.squeeze(), mu.shape[1]),
-            "y": mu.reshape(-1, 1).squeeze(),
-            "sigma": sigma.reshape(-1, 1).squeeze(),
-            "pi": pi.reshape(-1, 1).squeeze(),
-            "Mixture": np.tile(np.arange(mu.shape[1]), mu.shape[0]),
+            "x": np.repeat(X_reduced, mu_plot.shape[1]),
+            "y": mu_plot.reshape(-1),
+            "sigma": sigma_plot.reshape(-1),
+            "pi": pi.reshape(-1),
+            "Mixture": np.tile(np.arange(mu_plot.shape[1]), mu_plot.shape[0]),
         }
     )
 
-    # Create the scatter plot for mixture components
     fig = px.scatter(
         df_mixtures,
         x="x",
         y="y",
         color="Mixture",
-        size="pi",  # Use pi for size
+        size="pi",
         hover_data={"sigma": True},
         title="Conditional Mixture Distributions",
-        labels={"x": "Reduced Input Dimension", "y": "Output"},
+        labels={"x": "Reduced Input Dimension", "y": "Output (dim 0)"},
     )
 
-    # Add the true data points as a separate trace
-    df_true = pd.DataFrame({"x": X_reduced.squeeze(), "y": y.squeeze()})
+    df_true = pd.DataFrame({"x": X_reduced, "y": y_plot})
     fig.add_scatter(
         x=df_true["x"],
         y=df_true["y"],
@@ -570,7 +819,6 @@ def plot_predict_dist(
         marker={"color": "black", "size": 5, "opacity": 0.2},
         name="True Data",
     )
-
     fig.show()
 
 
@@ -581,22 +829,25 @@ def plot_samples_vs_true(
     non_linear: bool = False,
 ):
     """
-    Plots generated samples against true data using Plotly Express.
-
-    Args:
-        model: The trained MDNEstimator model.
-        X: The input data (e.g., objectives).
-        y: The output data (e.g., decisions).
-        non_linear: Whether to use UMAP (True) or PCA (False) for dimensionality reduction.
+    Compare one generated sample vs ground truth along reduced X.
+    For multi-dimensional y, uses y[..., 0].
     """
-    samples = model.predict(X, mode="samples", n_samples=1)
-    X_reduced = _reduce_dim(X, non_linear)
+    samples = model.sample(X, n_samples=1)  # (n, out)
+    X_reduced = _reduce_dim(X, non_linear).reshape(-1)
+
+    s = samples
+    if s.ndim == 2 and s.shape[1] > 1:
+        s_plot = s[:, 0]
+        y_plot = y[:, 0]
+    else:
+        s_plot = s.reshape(-1)
+        y_plot = y.reshape(-1)
 
     df = pd.DataFrame(
         {
-            "x": np.concatenate([X_reduced.squeeze(), X_reduced.squeeze()]),
-            "y": np.concatenate([samples.squeeze(), y.squeeze()]),
-            "Type": ["Generated Sample"] * len(samples) + ["True Data"] * len(y),
+            "x": np.concatenate([X_reduced, X_reduced]),
+            "y": np.concatenate([s_plot, y_plot]),
+            "Type": ["Generated Sample"] * len(s_plot) + ["True Data"] * len(y_plot),
         }
     )
 
@@ -606,7 +857,7 @@ def plot_samples_vs_true(
         y="y",
         color="Type",
         title="Generated Samples vs True Data",
-        labels={"x": "Reduced Input Dimension", "y": "Output"},
+        labels={"x": "Reduced Input Dimension", "y": "Output (dim 0)"},
         opacity=0.4,
     )
     fig.show()
@@ -616,11 +867,6 @@ def _reduce_dim(
     X: npt.NDArray[np.float64], non_linear: bool
 ) -> npt.NDArray[np.float64]:
     if X.shape[1] > 1:
-        if non_linear:
-            reducer = UMAP(n_components=1)
-        else:
-            reducer = PCA(n_components=1)
-        X_reduced = reducer.fit_transform(X)
-    else:
-        X_reduced = X
-    return X_reduced
+        reducer = UMAP(n_components=1) if non_linear else PCA(n_components=1)
+        return reducer.fit_transform(X)
+    return X

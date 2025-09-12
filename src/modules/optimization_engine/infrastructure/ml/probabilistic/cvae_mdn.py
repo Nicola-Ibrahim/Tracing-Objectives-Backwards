@@ -17,9 +17,14 @@ from ....domain.modeling.interfaces.base_estimator import (
 LOG2PI = float(np.log(2.0 * np.pi))
 
 
-# -------------------- Conditional prior p(z|X) -------------------- #
+# -------------------- Conditional prior network -------------------- #
 class PriorNet(nn.Module):
-    """Gaussian prior p(z | X): returns (mu_p, logvar_p)."""
+    """
+    Conditional prior p(z | X) with clamped log-variance for stability.
+
+    Maps condition X (inputs) -> (μ_p(X), log σ_p^2(X)).
+    Used in training (KL term) and inference (sampling z | X).
+    """
 
     def __init__(
         self,
@@ -39,15 +44,20 @@ class PriorNet(nn.Module):
     def forward(self, X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         h = F.relu(self.fc1(X))
         mu = self.fc_mu(h)
+        # Clamp variance range for numerical stability.
         logvar = torch.clamp(
             self.fc_logvar(h), min=self.min_logvar, max=self.max_logvar
         )
         return mu, logvar
 
 
-# -------------------- Encoder q(z|y,X) -------------------- #
+# -------------------- Encoder -------------------- #
 class CVAEEncoder(nn.Module):
-    """Amortized posterior q(z | y, X) -> (mu_q, logvar_q)."""
+    """
+    Amortized posterior q(z | y, X) -> (μ_q, log σ_q^2).
+
+    Used ONLY during training: encodes target y with condition X to infer z.
+    """
 
     def __init__(self, y_dim: int, X_dim: int, latent_dim: int = 8, hidden: int = 128):
         super().__init__()
@@ -63,15 +73,17 @@ class CVAEEncoder(nn.Module):
     def forward(
         self, y: torch.Tensor, X: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        # Concatenate y (target) and X (condition) to infer z.
         h = self.net(torch.cat([y, X], dim=1))
         return self.fc_mu(h), self.fc_logvar(h)
 
 
-# -------------------- Gaussian decoder p(y|z,X) -------------------- #
-class CVAEDecoderGaussian(nn.Module):
+# -------------------- MDN decoder -------------------- #
+class CVAEDecoderMDN(nn.Module):
     """
-    Decoder p(y | z, X) = N(mu(z,X), diag(exp(logvar(z,X)))).
-    Returns (mu, logvar) of shape (B, Dy).
+    Decoder p(y | z, X) as a K-component diagonal-Gaussian mixture.
+
+    Given (z, X), predicts mixture logits π, component means μ, and log-variances.
     """
 
     def __init__(
@@ -79,12 +91,14 @@ class CVAEDecoderGaussian(nn.Module):
         latent_dim: int,
         X_dim: int,
         y_dim: int,
+        n_components: int = 5,
         hidden: int = 128,
         min_logvar: float = -6.0,
         max_logvar: float = 4.0,
     ):
         super().__init__()
-        self.y_dim = int(y_dim)
+        self.y_dim = int(y_dim)  # output dimensionality
+        self.K = int(n_components)
         self.min_logvar = float(min_logvar)
         self.max_logvar = float(max_logvar)
 
@@ -95,101 +109,100 @@ class CVAEDecoderGaussian(nn.Module):
             nn.Linear(hidden, hidden),
             nn.ReLU(),
         )
-        self.mu_head = nn.Linear(hidden, self.y_dim)
-        self.logvar_head = nn.Linear(hidden, self.y_dim)
+        # mixture parameters
+        self.pi_head = nn.Linear(hidden, self.K)
+        self.mu_head = nn.Linear(hidden, self.K * self.y_dim)
+        self.logvar_head = nn.Linear(hidden, self.K * self.y_dim)
 
     @property
     def type(self) -> str:
-        return "CVAE-Gaussian"
+        return getattr(EstimatorTypeEnum, "CVAE_MDN", EstimatorTypeEnum.CVAE_MDN).value
 
-    def forward(
-        self, z: torch.Tensor, X: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, z: torch.Tensor, X: torch.Tensor):
+        # Predict mixture parameters π, μ, σ^2 for each (z, X).
         h = self.backbone(torch.cat([z, X], dim=1))
-        mu = self.mu_head(h)  # (B, Dy)
-        logvar = self.logvar_head(h)  # (B, Dy)
+        pi_logits = self.pi_head(h)  # (B, K)
+        mu = self.mu_head(h).view(-1, self.K, self.y_dim)  # (B, K, Dy)
+        logvar = self.logvar_head(h).view(-1, self.K, self.y_dim)
+        # Clamp for stable likelihood and gradients.
         logvar = torch.clamp(logvar, min=self.min_logvar, max=self.max_logvar)
-        return mu, logvar
+        return pi_logits, mu, logvar
 
     @staticmethod
-    def gaussian_nll(
-        y: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
+    def mdn_nll(
+        y: torch.Tensor, pi_logits: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
     ) -> torch.Tensor:
+        """Negative log-likelihood of y under a diagonal-Gaussian mixture.
+
+        Computes -log ∑_k π_k N(y; μ_k, σ_k^2) using log-sum-exp for stability.
         """
-        Mean negative log-likelihood under N(mu, diag(exp(logvar))).
-        """
+        # y: (B, Dy) -> (B, 1, Dy) to broadcast across K.
+        y = y.unsqueeze(1)
+        log_pi = F.log_softmax(pi_logits, dim=-1)  # (B, K)
         inv_var = torch.exp(-logvar)
-        nll_per_sample = 0.5 * (
-            torch.sum(logvar + (y - mu) ** 2 * inv_var, dim=-1) + y.size(-1) * LOG2PI
+        # Component log-prob: log N(y; μ, σ^2) → (B, K)
+        log_prob = -0.5 * (
+            torch.sum(logvar + (y - mu) ** 2 * inv_var, dim=-1) + mu.shape[-1] * LOG2PI
         )
-        return torch.mean(nll_per_sample)
+        # log ∑_k exp(log π_k + log N_k)
+        log_mix = torch.logsumexp(log_pi + log_prob, dim=-1)  # (B,)
+        return -torch.mean(log_mix)
 
-    @staticmethod
-    def sample(
-        mu: torch.Tensor,
-        logvar: torch.Tensor,
-        generator: torch.Generator | None = None,
+    def sample_from_components(
+        self, pi_logits: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
     ) -> torch.Tensor:
-        """One draw per row."""
-        std = torch.exp(0.5 * logvar)
-        # torch.randn_like may not accept `generator` on some versions -> use randn
-        eps = torch.randn(
-            std.shape,
-            device=std.device,
-            dtype=std.dtype,
-            generator=generator,  # safe here
-        )
-        return mu + std * eps
+        """Draw one sample per row from the mixture.
+
+        Steps: sample component index k ~ Cat(softmax(π)); then y ~ N(μ_k, σ_k^2).
+        """
+        with torch.no_grad():
+            pi = F.softmax(pi_logits, dim=-1)  # (B, K)
+            comp = torch.multinomial(pi, num_samples=1).squeeze(-1)  # (B,)
+            idx = comp.unsqueeze(-1).unsqueeze(-1).expand(-1, 1, mu.size(-1))
+            sel_mu = torch.gather(mu, 1, idx).squeeze(1)  # (B, Dy)
+            sel_std = torch.exp(0.5 * torch.gather(logvar, 1, idx).squeeze(1))
+            eps = torch.randn_like(sel_mu)
+            return sel_mu + sel_std * eps
 
 
-# -------------------- CVAE (Gaussian) Estimator -------------------- #
-class CVAEEstimator(ProbabilisticEstimator):
+# -------------------- CVAE Estimator (MDN decoder) -------------------- #
+class CVAEMDNEstimator(ProbabilisticEstimator):
     """
-    CVAE with a single Gaussian decoder (no MDN).
+    CVAE with MDN decoder for multi-modal p(y | X).
 
-    Trains by minimizing: NLL(y | z, X) + β * KL[q(z|y,X) || p(z|X)]
-      - Reconstruction: Gaussian NLL
-      - KL: conditional prior alignment with warm-up and optional free-bits
+    Training minimizes:  NLL(y | z, X)  +  β * KL[q(z|y,X) || p(z|X)]
+      - Reconstruction: MDN negative log-likelihood (not MSE).
+      - KL: aligns encoder posterior with conditional prior; warm-up & free-bits supported.
     """
 
     def __init__(
         self,
         latent_dim: int = 8,
         learning_rate: float = 1e-3,
+        n_components: int = 5,
         beta: float = 0.1,
         kl_warmup: int = 100,
         free_nats: float = 0.0,
-        hidden: int = 128,
-        decoder_min_logvar: float = -6.0,
-        decoder_max_logvar: float = 4.0,
-        prior_min_logvar: float = -4.0,
-        prior_max_logvar: float = 2.0,
     ):
         super().__init__()
         self._latent_dim = int(latent_dim)
         self._learning_rate = float(learning_rate)
+        self._n_components = int(n_components)
         self._beta = float(beta)
         self._kl_warmup = int(kl_warmup)
         self._free_nats = float(free_nats)
-        self._hidden = int(hidden)
-        self._dec_min_lv = float(decoder_min_logvar)
-        self._dec_max_lv = float(decoder_max_logvar)
-        self._prior_min_lv = float(prior_min_logvar)
-        self._prior_max_lv = float(prior_max_logvar)
 
         self._encoder: Optional[CVAEEncoder] = None
-        self._decoder: Optional[CVAEDecoderGaussian] = None
+        self._decoder: Optional[CVAEDecoderMDN] = None
         self._prior_net: Optional[PriorNet] = None
 
-        self._X_dim: Optional[int] = None
-        self._y_dim: Optional[int] = None
-
+        self._X_dim: Optional[int] = None  # input/condition dimension
+        self._y_dim: Optional[int] = None  # output/target dimension
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @property
     def type(self) -> str:
-        # Add EstimatorTypeEnum.CVAE_GAUSS (or rename to your enum value)
-        return getattr(EstimatorTypeEnum, "CVAE", EstimatorTypeEnum.CVAE).value
+        return getattr(EstimatorTypeEnum, "CVAE_MDN", EstimatorTypeEnum.CVAE_MDN).value
 
     # ---- data ---- #
     def _prepare_dataloaders(
@@ -200,6 +213,7 @@ class CVAEEstimator(ProbabilisticEstimator):
         val_size: float = 0.2,
         random_state: int = 42,
     ):
+        # Standard train/val split on numpy arrays, then wrap to torch.
         Xtr, Xval, ytr, yval = train_test_split(
             X, y, test_size=val_size, random_state=random_state
         )
@@ -217,10 +231,14 @@ class CVAEEstimator(ProbabilisticEstimator):
         """
         kwargs:
           epochs, batch_size, val_size, random_state
-          beta, kl_warmup, free_nats
+          beta (float)         : final KL weight (default self._beta)
+          kl_warmup (int)      : epochs to ramp from 0 -> beta (default self._kl_warmup)
+          free_nats (float)    : per-dim KL floor in nats (default self._free_nats)
+          min_prior_logvar, max_prior_logvar (floats)
         """
         super().fit(X, y)
 
+        # ---- hyperparameters ----
         epochs = int(kwargs.get("epochs", 200))
         batch_size = int(kwargs.get("batch_size", 128))
         val_size = float(kwargs.get("val_size", 0.2))
@@ -229,37 +247,32 @@ class CVAEEstimator(ProbabilisticEstimator):
         kl_warmup = int(kwargs.get("kl_warmup", self._kl_warmup))
         free_nats = float(kwargs.get("free_nats", self._free_nats))
 
+        # Shapes: X is condition/input, y is target/output.
         self._X_dim = int(X.shape[1])
         self._y_dim = int(y.shape[1])
 
+        # ---- model components ----
         self._encoder = CVAEEncoder(
-            y_dim=self._y_dim,
-            X_dim=self._X_dim,
-            latent_dim=self._latent_dim,
-            hidden=self._hidden,
+            y_dim=self._y_dim, X_dim=self._X_dim, latent_dim=self._latent_dim
         ).to(self.device)
 
-        self._decoder = CVAEDecoderGaussian(
+        self._decoder = CVAEDecoderMDN(
             latent_dim=self._latent_dim,
             X_dim=self._X_dim,
             y_dim=self._y_dim,
-            hidden=self._hidden,
-            min_logvar=self._dec_min_lv,
-            max_logvar=self._dec_max_lv,
+            n_components=self._n_components,
         ).to(self.device)
 
         self._prior_net = PriorNet(
-            cond_dim=self._X_dim,
-            latent_dim=self._latent_dim,
-            hidden=self._hidden,
-            min_logvar=self._prior_min_lv,
-            max_logvar=self._prior_max_lv,
+            cond_dim=self._X_dim, latent_dim=self._latent_dim, hidden=128
         ).to(self.device)
 
+        # Data loaders
         train_loader, val_loader = self._prepare_dataloaders(
             X, y, batch_size=batch_size, val_size=val_size, random_state=random_state
         )
 
+        # Single optimizer over encoder, decoder, and prior net.
         params = (
             list(self._encoder.parameters())
             + list(self._decoder.parameters())
@@ -267,19 +280,24 @@ class CVAEEstimator(ProbabilisticEstimator):
         )
         opt = torch.optim.Adam(params, lr=self._learning_rate)
 
+        # Track loss curves etc.
         self._training_history = TrainingHistory()
 
+        # KL(q||p) for diagonal Gaussians (per-sample mean).
         def kl_gaussians(mu_q, logvar_q, mu_p, logvar_p):
+            # Closed-form KL for diag Gaussians: sum over dims, average over batch.
             kl_per_dim = 0.5 * (
                 (logvar_p - logvar_q)
                 + (torch.exp(logvar_q) + (mu_q - mu_p) ** 2) / torch.exp(logvar_p)
                 - 1.0
             )
+            # Free-bits (free_nats) prevents KL from collapsing to zero immediately.
             if free_nats > 0.0:
                 kl_per_dim = torch.clamp(kl_per_dim, min=free_nats / self._latent_dim)
             return torch.mean(torch.sum(kl_per_dim, dim=1))
 
         for epoch in range(1, epochs + 1):
+            # KL warmup: ramp β from 0 → beta_final across `kl_warmup` epochs.
             beta = beta_final * (
                 min(1.0, epoch / max(1, kl_warmup)) if kl_warmup > 0 else 1.0
             )
@@ -292,23 +310,27 @@ class CVAEEstimator(ProbabilisticEstimator):
             train_kl_sum = 0.0
 
             for Xb, yb in train_loader:
-                Xb = Xb.to(self.device)
-                yb = yb.to(self.device)
+                Xb = Xb.to(self.device)  # Xb: conditions/inputs
+                yb = yb.to(self.device)  # yb: targets/outputs
                 opt.zero_grad()
 
-                # q(z|y,X)
+                # (1) Amortized posterior q(z|y,X)
                 mu_q, logvar_q = self._encoder(yb, Xb)
                 std_q = torch.exp(0.5 * logvar_q)
-                z = mu_q + std_q * torch.randn_like(std_q)
+                z = mu_q + std_q * torch.randn_like(std_q)  # reparam trick
 
-                # p(z|X)
+                # (2) Conditional prior p(z|X)
                 mu_p, logvar_p = self._prior_net(Xb)
 
-                # p(y|z,X) Gaussian
-                mu_y, logvar_y = self._decoder(z, Xb)
-                recon_nll = CVAEDecoderGaussian.gaussian_nll(yb, mu_y, logvar_y)
+                # (3) Decoder likelihood p(y|z,X) via MDN
+                pi_logits, mu, logvar = self._decoder(z, Xb)
+
+                # Reconstruction term: NLL under mixture (averaged over batch)
+                recon_nll = CVAEDecoderMDN.mdn_nll(yb, pi_logits, mu, logvar)
+                # Regularization: KL[q(z|y,X) || p(z|X)]
                 kl = kl_gaussians(mu_q, logvar_q, mu_p, logvar_p)
 
+                # (4) Total loss = recon + β * KL  (negative ELBO)
                 loss = recon_nll + beta * kl
                 loss.backward()
                 opt.step()
@@ -316,11 +338,12 @@ class CVAEEstimator(ProbabilisticEstimator):
                 train_nll_sum += float(recon_nll.item())
                 train_kl_sum += float(kl.item())
 
+            # Epoch-level averages (for logging)
             avg_train_nll = train_nll_sum / max(1, len(train_loader))
             avg_train_kl = train_kl_sum / max(1, len(train_loader))
             avg_train = avg_train_nll + beta * avg_train_kl
 
-            # ---- validate ----
+            # ---- validate (same computations, no gradient) ----
             self._encoder.eval()
             self._decoder.eval()
             self._prior_net.eval()
@@ -330,19 +353,16 @@ class CVAEEstimator(ProbabilisticEstimator):
                 for Xv, yv in val_loader:
                     Xv = Xv.to(self.device)
                     yv = yv.to(self.device)
-
                     mu_q_v, logvar_q_v = self._encoder(yv, Xv)
                     z_v = mu_q_v + torch.exp(0.5 * logvar_q_v) * torch.randn_like(
                         logvar_q_v
                     )
                     mu_p_v, logvar_p_v = self._prior_net(Xv)
-
-                    mu_y_v, logvar_y_v = self._decoder(z_v, Xv)
-                    recon_nll_v = CVAEDecoderGaussian.gaussian_nll(
-                        yv, mu_y_v, logvar_y_v
+                    pi_logits_v, mu_v, logvar_v = self._decoder(z_v, Xv)
+                    recon_nll_v = CVAEDecoderMDN.mdn_nll(
+                        yv, pi_logits_v, mu_v, logvar_v
                     )
                     kl_v = kl_gaussians(mu_q_v, logvar_q_v, mu_p_v, logvar_p_v)
-
                     val_nll_sum += float(recon_nll_v.item())
                     val_kl_sum += float(kl_v.item())
 
@@ -350,6 +370,7 @@ class CVAEEstimator(ProbabilisticEstimator):
             avg_val_kl = val_kl_sum / max(1, len(val_loader))
             avg_val = avg_val_nll + beta * avg_val_kl
 
+            # Persist per-epoch metrics (useful for visualizer)
             self._training_history.log(
                 epoch=epoch,
                 train_loss=avg_train,
@@ -361,21 +382,29 @@ class CVAEEstimator(ProbabilisticEstimator):
                 beta=beta,
             )
 
-    # ---- latent helper ---- #
-    def _sample_z_given_X(
+    # ---- latent sampling ---- #
+    def _sample_z_given_y(
         self,
         X_tensor: torch.Tensor,
         n_samples: int,
         temperature: float,
         seed: Optional[int],
     ) -> torch.Tensor:
+        """
+        Draw S latent samples z ~ p(z|X) for each input X (inference helper).
+
+        Reparameterization using PriorNet stats:
+          z = μ_p(X) + (temperature * σ_p(X)) * ε, ε ~ N(0, I)
+        """
         if n_samples < 1:
             raise ValueError("n_samples must be >= 1")
+
         n = X_tensor.shape[0]
         gen = None
         if seed is not None:
             gen = torch.Generator(device=self.device)
             gen.manual_seed(int(seed))
+
         mu_p, logvar_p = self._prior_net(X_tensor)  # (n, latent)
         std_p = torch.exp(0.5 * logvar_p)
         eps = torch.randn(
@@ -383,9 +412,9 @@ class CVAEEstimator(ProbabilisticEstimator):
         )
         return (
             mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
-        )  # (n,S,latent)
+        )  # (n, S, latent)
 
-    # ---- public API ---- #
+    # ---- public API: sample / predict ---- #
     def sample(
         self,
         X: NDArray[np.float64],
@@ -396,8 +425,10 @@ class CVAEEstimator(ProbabilisticEstimator):
         max_outputs_per_chunk: int = 20_000,
     ) -> NDArray[np.float64]:
         """
-        Draw `n_samples` IID samples per input from p(y|X):
-          z ~ p(z|X) (or N(0,I) if use_prior=False), then y ~ N(mu(z,X), diag(exp(logvar))).
+        Draw `n_samples` IID samples per input from the CVAE-implied p(y|X):
+        z ~ p(z|X) (or N(0,I) if use_prior=False), then y ~ decoder(z, X) mixture.
+
+        Returns either (n, Dy) if n_samples==1 or (n, n_samples, Dy) otherwise.
         """
         if self._decoder is None:
             raise RuntimeError("Model not fitted.")
@@ -407,15 +438,15 @@ class CVAEEstimator(ProbabilisticEstimator):
         self._decoder.eval()
         self._prior_net.eval()
 
-        X_t = torch.tensor(X, dtype=torch.float32, device=self.device)
-        n = X_t.shape[0]
+        X_tensor = torch.tensor(X, dtype=torch.float32, device=self.device)
+        n = X_tensor.shape[0]
         S = int(n_samples)
         Dy = int(self._y_dim)
 
-        # latent z
+        # Sample latent z per input, conditionally (preferred) or unconditionally.
         if use_prior:
-            z = self._sample_z_given_X(
-                X_t, n_samples=S, temperature=temperature, seed=seed
+            z = self._sample_z_given_y(
+                X_tensor, n_samples=S, temperature=temperature, seed=seed
             )  # (n,S,latent)
         else:
             gen = None
@@ -426,24 +457,34 @@ class CVAEEstimator(ProbabilisticEstimator):
                 (n, S, self._latent_dim), generator=gen, device=self.device
             ) * float(temperature)
 
+        # Flatten samples and repeat conditions to run decoder in a single pass.
         total = n * S
-        z_flat = z.reshape(total, self._latent_dim)
-        X_rep = X_t.unsqueeze(1).expand(n, S, self._X_dim).reshape(total, self._X_dim)
+        z_flat = z.reshape(total, self._latent_dim)  # (T, latent)
+        X_rep = (
+            X_tensor.unsqueeze(1).expand(n, S, self._X_dim).reshape(total, self._X_dim)
+        )  # (T, DX)
 
-        # decode in chunks and draw one y per row
-        results = []
         with torch.no_grad():
+            # Chunked decoding to bound memory.
             if total <= max_outputs_per_chunk:
-                mu, logvar = self._decoder(z_flat, X_rep)  # (T,Dy)
-                y_flat = CVAEDecoderGaussian.sample(mu, logvar)  # (T,Dy)
+                pi_logits, mu, logvar = self._decoder(
+                    z_flat, X_rep
+                )  # (T,K), (T,K,Dy), (T,K,Dy)
+                y_flat = self._decoder.sample_from_components(
+                    pi_logits, mu, logvar
+                )  # (T, Dy)
             else:
-                chunks = []
+                out_chunks = []
                 for start in range(0, total, max_outputs_per_chunk):
                     end = min(total, start + max_outputs_per_chunk)
-                    mu_c, lv_c = self._decoder(z_flat[start:end], X_rep[start:end])
-                    y_c = CVAEDecoderGaussian.sample(mu_c, lv_c)
-                    chunks.append(y_c)
-                y_flat = torch.cat(chunks, dim=0)
+                    pi_l, mu_c, lv_c = self._decoder(
+                        z_flat[start:end], X_rep[start:end]
+                    )
+                    y_c = self._decoder.sample_from_components(
+                        pi_l, mu_c, lv_c
+                    )  # (chunk, Dy)
+                    out_chunks.append(y_c)
+                y_flat = torch.cat(out_chunks, dim=0)
 
         out = y_flat.view(n, S, Dy).cpu().numpy().astype(np.float64, copy=False)
         return out[:, 0, :] if S == 1 else out
@@ -458,7 +499,9 @@ class CVAEEstimator(ProbabilisticEstimator):
         *,
         max_outputs_per_chunk: int = 20_000,
     ) -> np.typing.NDArray[np.float64]:
-        """One stochastic draw per input (wrapper over sample)."""
+        """
+        One **stochastic** draw per input (wrapper over sample with n_samples=1).
+        """
         s = self.sample(
             X,
             n_samples=n_samples,
@@ -482,10 +525,9 @@ class CVAEEstimator(ProbabilisticEstimator):
         Conditional mean E[y|X].
 
         deterministic=True:
-          Use a single z = μ_p(X), decode once, and return μ(z,X) (no observation sampling).
+          Use a single z = μ_p(X), then return analytic mixture mean Σ_k softmax(π)_k μ_k.
         deterministic=False:
-          Monte-Carlo over z ~ p(z|X): compute μ(z_i,X) for i=1..S and average across i.
-          (Integrates out observation noise analytically; no y sampling.)
+          Monte-Carlo over z ~ p(z|X): take mixture mean per z, then average across S.
         """
         if self._decoder is None:
             raise RuntimeError("Model not fitted.")
@@ -499,24 +541,28 @@ class CVAEEstimator(ProbabilisticEstimator):
         n = X_t.shape[0]
         Dy = int(self._y_dim)
 
+        # RNG for latent sampling
         gen = None
         if seed is not None:
             gen = torch.Generator(device=self.device)
             gen.manual_seed(int(seed))
 
         with torch.no_grad():
-            mu_p, logvar_p = self._prior_net(X_t)
+            # PriorNet provides p(z|X) parameters.
+            mu_p, logvar_p = self._prior_net(X_t)  # (n, latent)
             std_p = torch.exp(0.5 * logvar_p)
 
             if deterministic:
                 S = 1
-                z = mu_p.unsqueeze(1)
+                z = mu_p.unsqueeze(1)  # (n,1,latent)
             else:
                 S = int(max(1, n_samples))
                 eps = torch.randn(
                     (n, S, self._latent_dim), generator=gen, device=self.device
                 )
-                z = mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
+                z = (
+                    mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
+                )  # (n,S,latent)
 
             total = n * S
             z_flat = z.reshape(total, self._latent_dim)
@@ -524,19 +570,25 @@ class CVAEEstimator(ProbabilisticEstimator):
                 X_t.unsqueeze(1).expand(n, S, self._X_dim).reshape(total, self._X_dim)
             )
 
-            # decode to (mu, logvar); take μ only (no component/obs sampling)
+            # Decode (z,X) and compute analytic mixture means per row (no component sampling).
+            def _mix_means_for_slice(start: int, end: int) -> torch.Tensor:
+                pi_logits, mu, logvar = self._decoder(
+                    z_flat[start:end], X_rep[start:end]
+                )
+                pi = torch.softmax(pi_logits, dim=1)  # (chunk, K)
+                return torch.sum(pi.unsqueeze(-1) * mu, dim=1)  # (chunk, Dy)
+
             if total <= max_outputs_per_chunk:
-                mu_flat, _ = self._decoder(z_flat, X_rep)  # (T,Dy)
+                mix_mean_flat = _mix_means_for_slice(0, total)  # (T, Dy)
             else:
-                mus = []
+                chunks = []
                 for start in range(0, total, max_outputs_per_chunk):
                     end = min(total, start + max_outputs_per_chunk)
-                    mu_c, _ = self._decoder(z_flat[start:end], X_rep[start:end])
-                    mus.append(mu_c)
-                mu_flat = torch.cat(mus, dim=0)
+                    chunks.append(_mix_means_for_slice(start, end))
+                mix_mean_flat = torch.cat(chunks, dim=0)  # (T, Dy)
 
-            mu = mu_flat.view(n, S, Dy)
-            out = mu.mean(dim=1) if S > 1 else mu.squeeze(1)
+            mix_mean = mix_mean_flat.view(n, S, Dy)  # (n,S,Dy)
+            out = mix_mean.mean(dim=1) if S > 1 else mix_mean.squeeze(1)  # (n,Dy)
 
         return out.cpu().numpy().astype(np.float64, copy=False)
 
@@ -551,8 +603,10 @@ class CVAEEstimator(ProbabilisticEstimator):
         max_outputs_per_chunk: int = 20_000,
     ) -> NDArray[np.float64]:
         """
-        Monte-Carlo quantiles per input (marginal per output dim).
-        Samples full y to include both latent and observation noise.
+        Monte-Carlo quantiles over p(y|X).
+
+        Draw S samples via `sample`, then compute percentiles across the sample axis.
+        Returns (n, len(qs), Dy).
         """
         if n_samples < 1:
             raise ValueError("n_samples must be >= 1")

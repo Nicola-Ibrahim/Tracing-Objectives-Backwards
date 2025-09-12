@@ -2,6 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RBFInterpolator
 
+from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
@@ -36,7 +37,7 @@ class RBFEstimator(DeterministicEstimator):
 
     @property
     def type(self) -> str:
-        return "RBF"
+        return EstimatorTypeEnum.RBF.value
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64], **kwargs) -> None:
         super().fit(X, y)
