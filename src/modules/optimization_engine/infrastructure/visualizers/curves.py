@@ -267,23 +267,23 @@ class ModelCurveVisualizer(BaseVisualizer):
         grid_res: int = 50,
     ) -> None:
         """
-        2D→2D case: render two 3D surfaces x1(y1,y2) and x2(y1,y2) plus
+        2D→2D case: render two 3D surfaces y1(x1,x2) and y2(x1,x2) plus
         training/validation curves and residual diagnostics. Axes across both
         3D scenes are forced to share the same x/y/z ranges and aspect.
         """
 
-        # --- build grid over TRAIN *Y* domain (y1,y2) ---
-        y1_min, y1_max = float(np.min(Ytr[:, 0])), float(np.max(Ytr[:, 0]))
-        y2_min, y2_max = float(np.min(Ytr[:, 1])), float(np.max(Ytr[:, 1]))
-        gy1 = np.linspace(y1_min, y1_max, grid_res)
-        gy2 = np.linspace(y2_min, y2_max, grid_res)
-        GY1, GY2 = np.meshgrid(gy1, gy2, indexing="xy")
-        Y_grid = np.stack([GY1.ravel(), GY2.ravel()], axis=1)
+        # --- build grid over TRAIN *X* domain (x1,x2) ---
+        x1_min, x1_max = float(np.min(Xtr[:, 0])), float(np.max(Xtr[:, 0]))
+        x2_min, x2_max = float(np.min(Xtr[:, 1])), float(np.max(Xtr[:, 1]))
+        gx1 = np.linspace(x1_min, x1_max, grid_res)
+        gx2 = np.linspace(x2_min, x2_max, grid_res)
+        GX1, GX2 = np.meshgrid(gx1, gx2, indexing="xy")
+        X_grid = np.stack([GX1.ravel(), GX2.ravel()], axis=1)
 
-        # predict X on the Y-grid (model maps y -> X). Returns (n, 2) for x1,x2
-        Xg = self._predict_pointwise_mean(estimator, Y_grid, n_samples)
-        z_x1 = Xg[:, 0].reshape(grid_res, grid_res)
-        z_x2 = Xg[:, 1].reshape(grid_res, grid_res)
+        # predict Y on the X-grid (model maps x -> y). Returns (n, 2) for y1,y2
+        Yg = self._predict_pointwise_mean(estimator, X_grid, n_samples)
+        z_y1 = Yg[:, 0].reshape(grid_res, grid_res)
+        z_y2 = Yg[:, 1].reshape(grid_res, grid_res)
 
         fig = make_subplots(
             rows=5,
@@ -296,8 +296,8 @@ class ModelCurveVisualizer(BaseVisualizer):
                 [{"type": "xy", "colspan": 2}, None],  # row5: joint resid dist
             ],
             subplot_titles=[
-                "(y1,y2) → x1 (normalized)",
-                "(y1,y2) → x2 (normalized)",
+                "(x1,x2) → y1 (normalized)",
+                "(x1,x2) → y2 (normalized)",
                 "Training / Validation / Test",
                 "Residuals vs Fitted (y1)",
                 "Residuals vs Fitted (y2)",
@@ -310,30 +310,30 @@ class ModelCurveVisualizer(BaseVisualizer):
             row_heights=[0.42, 0.14, 0.18, 0.18, 0.08],
         )
 
-        # -------- row1: surfaces + TRAIN/TEST point clouds (y on axes; x as height) -----
+        # -------- row1: surfaces + TRAIN/TEST point clouds (x on axes; y as height) -----
         fig.add_trace(
             go.Surface(
-                x=GY1, y=GY2, z=z_x1, opacity=0.45, showscale=False, name="x1(y)"
+                x=GX1, y=GX2, z=z_y1, opacity=0.45, showscale=False, name="y1(x)"
             ),
             row=1,
             col=1,
         )
         fig.add_trace(
             go.Surface(
-                x=GY1, y=GY2, z=z_x2, opacity=0.45, showscale=False, name="x2(y)"
+                x=GX1, y=GX2, z=z_y2, opacity=0.45, showscale=False, name="y2(x)"
             ),
             row=1,
             col=2,
         )
 
-        # TRAIN points: (y1,y2) on plane; z = x1 / x2
+        # TRAIN points: (x1,x2) on plane; z = y1 / y2
         fig.add_trace(
             go.Scatter3d(
-                x=Ytr[:, 0],
-                y=Ytr[:, 1],
-                z=Xtr[:, 0],
+                x=Xtr[:, 0],
+                y=Xtr[:, 1],
+                z=Ytr[:, 0],
                 mode="markers",
-                name="Train (x1)",
+                name="Train (y1)",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=1,
@@ -341,11 +341,11 @@ class ModelCurveVisualizer(BaseVisualizer):
         )
         fig.add_trace(
             go.Scatter3d(
-                x=Ytr[:, 0],
-                y=Ytr[:, 1],
-                z=Xtr[:, 1],
+                x=Xtr[:, 0],
+                y=Xtr[:, 1],
+                z=Ytr[:, 1],
                 mode="markers",
-                name="Train (x2)",
+                name="Train (y2)",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=1,
@@ -356,11 +356,11 @@ class ModelCurveVisualizer(BaseVisualizer):
         if Xte is not None and Yte is not None:
             fig.add_trace(
                 go.Scatter3d(
-                    x=Yte[:, 0],
-                    y=Yte[:, 1],
-                    z=Xte[:, 0],
+                    x=Xte[:, 0],
+                    y=Xte[:, 1],
+                    z=Yte[:, 0],
                     mode="markers",
-                    name="Test (x1)",
+                    name="Test (y1)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
@@ -368,11 +368,11 @@ class ModelCurveVisualizer(BaseVisualizer):
             )
             fig.add_trace(
                 go.Scatter3d(
-                    x=Yte[:, 0],
-                    y=Yte[:, 1],
-                    z=Xte[:, 1],
+                    x=Xte[:, 0],
+                    y=Xte[:, 1],
+                    z=Yte[:, 1],
                     mode="markers",
-                    name="Test (x2)",
+                    name="Test (y2)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
@@ -446,16 +446,16 @@ class ModelCurveVisualizer(BaseVisualizer):
             v = v[np.isfinite(v)]
             return (float(v.min()), float(v.max())) if v.size else (0.0, 1.0)
 
-        # common XY ranges taken from Y (domain); include the grid and any test Ys
-        x_rng = _minmax(Ytr[:, 0], (Yte[:, 0] if Yte is not None else None), GY1)
-        y_rng = _minmax(Ytr[:, 1], (Yte[:, 1] if Yte is not None else None), GY2)
+        # common XY ranges taken from X (domain); include the grid and any test Xs
+        x_rng = _minmax(Xtr[:, 0], (Xte[:, 0] if Xte is not None else None), GX1)
+        y_rng = _minmax(Xtr[:, 1], (Xte[:, 1] if Xte is not None else None), GX2)
 
-        # Z ranges from X (targets) + predicted surfaces
+        # Z ranges from Y (targets) + predicted surfaces
         z1_min, z1_max = _minmax(
-            Xtr[:, 0], (Xte[:, 0] if Xte is not None else None), z_x1
+            Ytr[:, 0], (Yte[:, 0] if Yte is not None else None), z_y1
         )
         z2_min, z2_max = _minmax(
-            Xtr[:, 1], (Xte[:, 1] if Xte is not None else None), z_x2
+            Ytr[:, 1], (Yte[:, 1] if Yte is not None else None), z_y2
         )
         z_rng = (min(z1_min, z2_min), max(z1_max, z2_max))
 
@@ -477,19 +477,19 @@ class ModelCurveVisualizer(BaseVisualizer):
 
         scene1_axes = dict(
             xaxis=dict(
-                title="y1 (norm)",
+                title="x1 (norm)",
                 range=list(x_rng),
                 tickmode="array",
                 tickvals=_ticks(x_rng),
             ),
             yaxis=dict(
-                title="y2 (norm)",
+                title="x2 (norm)",
                 range=list(y_rng),
                 tickmode="array",
                 tickvals=_ticks(y_rng),
             ),
             zaxis=dict(
-                title="x1 (norm)",
+                title="y1 (norm)",
                 range=list(z_rng),
                 tickmode="array",
                 tickvals=_ticks(z_rng),
@@ -498,19 +498,19 @@ class ModelCurveVisualizer(BaseVisualizer):
         )
         scene2_axes = dict(
             xaxis=dict(
-                title="y1 (norm)",
+                title="x1 (norm)",
                 range=list(x_rng),
                 tickmode="array",
                 tickvals=_ticks(x_rng),
             ),
             yaxis=dict(
-                title="y2 (norm)",
+                title="x2 (norm)",
                 range=list(y_rng),
                 tickmode="array",
                 tickvals=_ticks(y_rng),
             ),
             zaxis=dict(
-                title="x2 (norm)",
+                title="y2 (norm)",
                 range=list(z_rng),
                 tickmode="array",
                 tickvals=_ticks(z_rng),
@@ -907,7 +907,7 @@ class ModelCurveVisualizer(BaseVisualizer):
                 n = X.shape[0]
                 if y.shape[0] == n:
                     return y.mean(axis=1)
-                elif y.shape[1] == n:
+                if y.shape[1] == n:
                     return y.mean(axis=0)
         except Exception:
             pass
@@ -920,7 +920,31 @@ class ModelCurveVisualizer(BaseVisualizer):
                 return np.sum(pi[..., None] * mu, axis=1)
             except Exception:
                 pass
-        s = estimator.predict(X, n_samples=max(64, n_samples))
+        # Prefer analytic/Monte Carlo mean helpers when available
+        if hasattr(estimator, "predict_mean"):
+            try:
+                return np.asarray(
+                    estimator.predict_mean(X, n_samples=max(64, n_samples))
+                )
+            except Exception:
+                pass
+
+        if hasattr(estimator, "sample"):
+            try:
+                s = estimator.sample(X, n_samples=max(64, n_samples))
+                s = np.asarray(s)
+                if s.ndim == 2:
+                    return s
+                n = X.shape[0]
+                if s.ndim == 3:
+                    if s.shape[0] == n:
+                        return s.mean(axis=1)
+                    if s.shape[1] == n:
+                        return s.mean(axis=0)
+            except Exception:
+                pass
+
+        s = estimator.predict(X)
         s = np.asarray(s)
         if s.ndim == 2:
             return s
@@ -928,7 +952,7 @@ class ModelCurveVisualizer(BaseVisualizer):
         if s.ndim == 3:
             if s.shape[0] == n:
                 return s.mean(axis=1)
-            elif s.shape[1] == n:
+            if s.shape[1] == n:
                 return s.mean(axis=0)
         return np.squeeze(s)
 

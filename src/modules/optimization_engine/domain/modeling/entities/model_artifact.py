@@ -1,5 +1,4 @@
 import pickle
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Self
 from uuid import uuid4
@@ -7,15 +6,8 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from ..interfaces.base_estimator import BaseEstimator
-
-
-@dataclass
-class TrainingHistory:
-    """Epoch-level history for iterative models (optional)."""
-
-    epochs: list[int]
-    train_loss: list[float]
-    val_loss: list[float]
+from ..value_objects.loss_history import LossHistory
+from ..value_objects.metrics import Metrics
 
 
 class ModelArtifact(BaseModel):
@@ -39,32 +31,20 @@ class ModelArtifact(BaseModel):
         description="The actual fitted inverse decision mapper instance from this run.",
     )
 
-    train_scores: dict[str, float] = Field(
-        default_factory=dict,
-        description="Performance metrics for a single training run (e.g., from a train-test split).",
-    )
-    test_scores: dict[str, float] = Field(
-        default_factory=dict,
-        description="Performance metrics for the test set (if applicable).",
-    )
-    cv_scores: dict[str, list[float]] = Field(
-        default_factory=dict,
-        description="Aggregated performance metrics (mean and std) from cross-validation. Only present for CV runs.",
-    )
-
     trained_at: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp indicating when this model version was trained.",
     )
 
     version: int | None = Field(
-        None,
+        default=None,
         description="Automatically assigned sequential version number for the training run",
     )
 
-    loss_history: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Training loss history for the model.",
+    metrics: Metrics = Field(description="Metrics fo the the artifact")
+
+    loss_history: LossHistory = Field(
+        description="Training loss history for the model."
     )
 
     # ---- (De)serialization for the estimator field only ----
@@ -95,24 +75,45 @@ class ModelArtifact(BaseModel):
         }  # Ensure datetime is deserialized from ISO format
 
     @classmethod
-    def create(
+    def from_data(
         cls,
-        *,
-        estimator: BaseEstimator,
+        id: str,
         parameters: dict[str, Any],
-        train_scores: dict[str, float] | None = None,
-        test_scores: dict[str, float] | None = None,
-        cv_scores: dict[str, list[float]] | None = None,
-        loss_history: dict[str, Any] | None = None,
+        estimator: BaseEstimator,
+        metrics: Metrics,
+        loss_history: LossHistory,
+        trained_at: datetime | None = None,
+        version: int | None = None,
     ) -> Self:
         """
         Convenience factory that fills sensible defaults; pass only what you have.
         """
+
+        return cls(
+            id=id,
+            estimator=estimator,
+            parameters=parameters,
+            metrics=metrics,
+            loss_history=loss_history,
+            trained_at=trained_at,
+            version=version,
+        )
+
+    @classmethod
+    def create(
+        cls,
+        parameters: dict[str, Any],
+        estimator: BaseEstimator,
+        metrics: Metrics,
+        loss_history: LossHistory,
+    ) -> Self:
+        """
+        Convenience factory that fills sensible defaults; pass only what you have.
+        """
+
         return cls(
             estimator=estimator,
             parameters=parameters,
-            train_scores=train_scores or {},
-            test_scores=test_scores or {},
-            cv_scores=cv_scores or {},
-            loss_history=loss_history or {},
+            metrics=metrics,
+            loss_history=loss_history,
         )

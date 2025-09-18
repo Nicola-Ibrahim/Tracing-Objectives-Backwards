@@ -1,39 +1,39 @@
 import time
 
-from ...application.factories.estimator import (
-    EstimatorFactory,
-)
-from ...application.factories.mertics import MetricFactory
-from ...application.factories.normalizer import NormalizerFactory
-from ...application.model_management.dtos import (
+from ...application.dtos import (
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
     NeuralNetworkEstimatorParams,
     RBFEstimatorParams,
 )
-from ...application.model_management.train_model.train_model_command import (
+from ...application.factories.estimator import (
+    EstimatorFactory,
+)
+from ...application.factories.mertics import MetricFactory
+from ...application.factories.normalizer import NormalizerFactory
+from ...application.modeling.train_model.train_model_command import (
     NormalizerConfig,
     TrainModelCommand,
     ValidationMetricConfig,
 )
-from ...application.model_management.train_model.train_model_handler import (
+from ...application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.generation.data_model_repo import (
-    FileSystemDataModelRepository,
+from ...infrastructure.repositories.datasets.generated_dataset_repo import (
+    FileSystemGeneratedDatasetRepository,
 )
-from ...infrastructure.repositories.model_management.model_artifact_repo import (
-    FileSystemModelArtifcatRepository,
+from ...infrastructure.repositories.modeling.model_artifact_repo import (
+    FileSystemModelArtifactRepository,
 )
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
     command_handler = TrainModelCommandHandler(
-        data_repository=FileSystemDataModelRepository(),
+        data_repository=FileSystemGeneratedDatasetRepository(),
         estimator_factory=EstimatorFactory(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        model_repository=FileSystemModelArtifcatRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
         normalizer_factory=NormalizerFactory(),
         metric_factory=MetricFactory(),
     )
@@ -52,13 +52,13 @@ if __name__ == "__main__":
 
     # Loop through each model type
     for param_class in model_param_classes:
-        model_type_name = param_class.__name__.replace("EstimatorParams", "")
+        estimator_type_name = param_class.__name__.replace("EstimatorParams", "")
 
         # Loop multiple times for each model type
         for i in range(num_runs_per_type):
             version_number = i + 1
             print(
-                f"  > Run {version_number}/{num_runs_per_type} for { model_type_name}"
+                f"  > Run {version_number}/{num_runs_per_type} for { estimator_type_name}"
             )
 
             # Instantiate the parameters for the current interpolator type
@@ -76,7 +76,7 @@ if __name__ == "__main__":
                 decisions_normalizer_config=NormalizerConfig(
                     type="MinMaxScaler", params={"feature_range": (0, 1)}
                 ),
-                model_performance_metric_configs=[
+                estimator_performance_metric_configs=[
                     ValidationMetricConfig(type="MSE", params={}),
                     ValidationMetricConfig(type="MAE", params={}),
                     ValidationMetricConfig(type="R2", params={}),
@@ -86,6 +86,6 @@ if __name__ == "__main__":
             # Execute the command handler
             command_handler.execute(command)
             print(
-                f"  Successfully completed run {version_number} for { model_type_name}"
+                f"  Successfully completed run {version_number} for { estimator_type_name}"
             )
             time.sleep(0.8)

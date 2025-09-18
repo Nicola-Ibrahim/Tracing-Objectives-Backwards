@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable, Dict
 
 from ...domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
@@ -19,8 +19,10 @@ from ...infrastructure.ml.deterministic import (
 )
 from ...infrastructure.ml.probabilistic import (
     CVAEEstimator,
+    CVAEMDNEstimator,
     MDNEstimator,
 )
+from ...infrastructure.ml.deterministic.coco_biobj_forward import COCOEstimator
 
 
 class EstimatorFactory:
@@ -42,6 +44,7 @@ class EstimatorFactory:
         EstimatorTypeEnum.SVR_ND.value: SVREstimator,
         EstimatorTypeEnum.CVAE.value: CVAEEstimator,
         EstimatorTypeEnum.MDN.value: MDNEstimator,
+        EstimatorTypeEnum.CVAE_MDN.value: CVAEMDNEstimator,
     }
 
     def create(self, params: dict[str, Any]) -> BaseEstimator:
@@ -74,3 +77,23 @@ class EstimatorFactory:
         # Create a shallow copy of params without mutating the caller's dict
         ctor_params = {k: v for k, v in params.items() if k != "type"}
         return mapper_ctor(**ctor_params)
+
+    # -------- Forward models --------
+    _forward_registry: Dict[str, Callable[..., BaseEstimator]] = {
+        "coco_biobj": lambda **p: COCOEstimator(**p),
+    }
+
+    def create_forward(self, config: dict[str, Any]) -> BaseEstimator:
+        """Create a forward objective evaluator (forward decision mapper).
+
+        Example config: {"type": "coco_biobj", "function_indices": 5}
+        """
+        ftype = config.get("type")
+        if not ftype:
+            raise ValueError("Forward model config must include 'type'.")
+        try:
+            ctor = self._forward_registry[ftype]
+        except KeyError as e:
+            raise ValueError(f"Unknown forward model type: {ftype}") from e
+        params = {k: v for k, v in config.items() if k != "type"}
+        return ctor(**params)

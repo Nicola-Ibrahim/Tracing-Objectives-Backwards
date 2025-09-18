@@ -31,8 +31,8 @@ class ProcessDatasetCommandHandler:
         raw = self._raw_repo.load(filename=command.source_filename)
 
         # 2) Split
-        X_raw = np.asarray(raw.historical_solutions)
-        y_raw = np.asarray(raw.historical_objectives)
+        X_raw = np.asarray(raw.historical_objectives)
+        y_raw = np.asarray(raw.historical_solutions)
 
         self._logger.log_info(f"[postprocess] data: X{X_raw.shape}, y{y_raw.shape}")
 

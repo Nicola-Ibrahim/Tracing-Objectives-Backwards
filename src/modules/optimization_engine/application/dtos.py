@@ -2,9 +2,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from ..domain.modeling.enums.estimator_type_enum import (
+from ..domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
 )
+from ..domain.modeling.enums.metric_type import MetricTypeEnum
+from ..domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 
 
 class EstimatorParams(BaseModel):
@@ -12,17 +14,18 @@ class EstimatorParams(BaseModel):
 
 
 class CloughTocherEstimatorParams(EstimatorParams):
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.CLOUGH_TOCHER_ND.value,
         description="Type of the Clough-Tocher interpolation method.",
     )
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class NeuralNetworkEstimatorParams(EstimatorParams):
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
@@ -39,6 +42,7 @@ class NeuralNetworkEstimatorParams(EstimatorParams):
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class GeodesicInterpolatorParams(EstimatorParams):
@@ -52,7 +56,7 @@ class GeodesicInterpolatorParams(EstimatorParams):
 
 
 class NearestNeighborEstimatorParams(EstimatorParams):
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,
         description="Type of the nearest neighbor interpolation method.",
     )
@@ -62,13 +66,14 @@ class NearestNeighborEstimatorParams(EstimatorParams):
 
 
 class LinearEstimatorParams(EstimatorParams):
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.LINEAR_ND.value,
         description="Type of the linear interpolation method.",
     )
 
     class Config:
         extra = "forbid"
+        use_enum_values = True
 
 
 class RBFEstimatorParams(EstimatorParams):
@@ -77,8 +82,8 @@ class RBFEstimatorParams(EstimatorParams):
     RBFEstimator.
     """
 
-    type: str = Field(
-        EstimatorTypeEnum.RBF_ND.value,
+    type: EstimatorTypeEnum = Field(
+        EstimatorTypeEnum.RBF.value,
         description="Type of the radial basis function interpolation method.",
     )
     n_neighbors: int = Field(
@@ -111,6 +116,7 @@ class RBFEstimatorParams(EstimatorParams):
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class GaussianProcessEstimatorParams(EstimatorParams):
@@ -119,7 +125,7 @@ class GaussianProcessEstimatorParams(EstimatorParams):
     GaussianProcessEstimator.
     """
 
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value,
         description="Type of the gaussian process interpolation method.",
     )
@@ -152,12 +158,13 @@ class GaussianProcessEstimatorParams(EstimatorParams):
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
         arbitrary_types_allowed = True
+        use_enum_values = True
 
 
 class SplineEstimatorParams(EstimatorParams):
     """Pydantic model for SmoothBivariateSpline mapper parameters."""
 
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.SPLINE_ND.value,
         description="Type of the spline interpolation method.",
     )
@@ -171,11 +178,13 @@ class SplineEstimatorParams(EstimatorParams):
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
 
+        use_enum_values = True
+
 
 class KrigingEstimatorParams(EstimatorParams):
     """Pydantic model for OrdinaryKriging mapper parameters."""
 
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.KRIGING_ND.value,
         description="Type of the Kriging interpolation method.",
     )
@@ -193,12 +202,13 @@ class KrigingEstimatorParams(EstimatorParams):
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class SVREstimatorParams(EstimatorParams):
     """Pydantic model for SVR mapper parameters."""
 
-    type: str = Field(
+    type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.SVR_ND.value,
         description="Type of the SVR interpolation method.",
     )
@@ -219,6 +229,7 @@ class SVREstimatorParams(EstimatorParams):
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class MDNEstimatorParams(EstimatorParams):
@@ -227,20 +238,26 @@ class MDNEstimatorParams(EstimatorParams):
     MDNEstimator.
     """
 
-    type: str = Field(
-        EstimatorTypeEnum.MDN_ND.value,
+    type: EstimatorTypeEnum = Field(
+        EstimatorTypeEnum.MDN.value,
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
         5, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
-    # epochs: int = Field(500, gt=0, description="Number of epochs for training the MDN.")
+    # epochs: int = Field(
+    #     500, gt=0, description="Number of epochs for training the CVAE."
+    # )
+
     learning_rate: float = Field(
         1e-3, gt=0, description="Learning rate for the Adam optimizer."
     )
 
+    # batch_size: int = Field(64, gt=2, description="Batch size")
+
     class Config:
         extra = "forbid"
+        use_enum_values = True
 
 
 class CVAEEstimatorParams(EstimatorParams):
@@ -249,25 +266,48 @@ class CVAEEstimatorParams(EstimatorParams):
     CVAEEstimator.
     """
 
-    type: str = Field(
-        EstimatorTypeEnum.CVAE_ND.value,
+    type: EstimatorTypeEnum = Field(
+        EstimatorTypeEnum.CVAE.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
     latent_dim: int = Field(
         8, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
-    # epochs: int = Field(
-    #     500, gt=0, description="Number of epochs for training the CVAE."
-    # )
+    # epochsmake
     learning_rate: float = Field(
         1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
-    # device: Literal["cpu", "cuda"] = Field(
-    #     "cpu", description="The device to run the CVAE model on ('cpu' or 'cuda')."
-    # )
+
+    # batch_size: int = Field(64, gt=2, description="Batch size")
 
     class Config:
         extra = "forbid"
+        use_enum_values = True
+
+
+class CVAEMDNEstimatorParams(EstimatorParams):
+    """
+    Pydantic model to define and validate parameters for a
+    CVAEEstimator.
+    """
+
+    type: EstimatorTypeEnum = Field(
+        EstimatorTypeEnum.CVAE_MDN.value,
+        description="Type of the Conditional Variational Autoencoder interpolation method.",
+    )
+    latent_dim: int = Field(
+        8, gt=0, description="Dimensionality of the latent space in the CVAE."
+    )
+    # epochsmake
+    learning_rate: float = Field(
+        1e-4, gt=0, description="Learning rate for the Adam optimizer."
+    )
+
+    # batch_size: int = Field(64, gt=2, description="Batch size")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
 
 
 class NormalizerConfig(BaseModel):
@@ -275,16 +315,15 @@ class NormalizerConfig(BaseModel):
     Configuration for a normalizer.
     """
 
-    type: Literal[
-        "MinMaxScaler",
-        "HypercubeNormalizer",
-        "StandardNormalizer",
-        "UnitVectorNormalizer",
-        "LogNormalizer",
-    ] = Field(..., description="The type of the normalizer to use.")
+    type: NormalizerTypeEnum = Field(
+        ..., description="The type of the normalizer to use."
+    )
     params: dict[str, Any] = Field(
         {}, description="Parameters specific to the normalizer type."
     )
+
+    class Config:
+        use_enum_values = True
 
 
 class ValidationMetricConfig(BaseModel):
@@ -292,7 +331,10 @@ class ValidationMetricConfig(BaseModel):
     Configuration for a validation metric.
     """
 
-    type: str = Field(..., description="The type of the metric to use.")
+    type: MetricTypeEnum = Field(..., description="The type of the metric to use.")
     params: dict[str, Any] = Field(
         {}, description="Parameters specific to the metric type."
     )
+
+    class Config:
+        use_enum_values = True

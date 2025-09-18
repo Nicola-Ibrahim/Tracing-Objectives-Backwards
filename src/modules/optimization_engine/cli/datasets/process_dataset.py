@@ -30,9 +30,7 @@ handler = ProcessDatasetCommandHandler(
 cmd = ProcessDatasetCommand(
     source_filename="dataset",
     dest_filename="processed_v1",
-    normalizer_config=NormalizerConfig(
-        type="MinMaxScaler", params={"feature_range": (0, 1)}
-    ),
+    normalizer_config=NormalizerConfig(type="HypercubeNormalizer", params={}),
     test_size=0.2,
     random_state=42,
     include_original=True,

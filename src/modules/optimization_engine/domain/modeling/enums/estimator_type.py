@@ -19,3 +19,4 @@ class EstimatorTypeEnum(Enum):
     SVR_ND = "svr_nd"
     CVAE = "CVAE"
     MDN = "MDN"
+    CVAE_MDN = "CVAE_MDN"

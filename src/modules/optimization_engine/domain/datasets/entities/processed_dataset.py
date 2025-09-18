@@ -48,18 +48,15 @@ class ProcessedDataset(BaseModel):
     ) -> Self:
         """Coerce arrays and build the entity."""
 
-        def _arr(a):
-            return None if a is None else np.asarray(a)
-
         return cls(
-            name=str(name),
-            X_train=_arr(X_train),
-            y_train=_arr(y_train),
-            X_test=_arr(X_test),
-            y_test=_arr(y_test),
+            name=name,
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
             X_normalizer=X_normalizer,
             y_normalizer=y_normalizer,
-            pareto_set=_arr(pareto_set),
-            pareto_front=_arr(pareto_front),
-            metadata=dict(metadata or {}),
+            pareto_set=pareto_set,
+            pareto_front=pareto_front,
+            metadata=metadata,
         )

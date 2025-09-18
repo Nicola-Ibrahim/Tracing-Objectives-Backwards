@@ -54,6 +54,10 @@ class TrainModelCommand(BaseModel):
         50, description="The number of step to train the deterministic model"
     )
 
+    epochs: int = Field(
+        100, description="The number of epochs for training Probabilistic model"
+    )
+
     class Config:
         arbitrary_types_allowed = True
         use_enum_values = True

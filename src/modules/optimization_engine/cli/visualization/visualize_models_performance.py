@@ -5,7 +5,7 @@ from ...application.visualization.visualize_models_performace.visualize_models_p
     VisualizeModelsPerformanceCommandHandler,
 )
 from ...domain.visualization.loaders.estimators_metrics import InterpolatorMetricsLoader
-from ...infrastructure.visualizers.model_artifcat_metrics import (
+from ...infrastructure.visualizers.model_Artifact_metrics import (
     PlotlyModelArtifactMetricsVisualizer,
 )
 

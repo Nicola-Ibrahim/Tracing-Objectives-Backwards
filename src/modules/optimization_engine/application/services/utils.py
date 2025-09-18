@@ -67,19 +67,14 @@ def split_and_normalize(
 def safe_predict(estimator: BaseEstimator, X: np.ndarray) -> np.ndarray | None:
     """
     Defensive predict wrapper:
-      - If estimator is ProbabilisticEstimator try predict(X, mode='mean') then fallback to predict(X)
+      - Probabilistic estimators default to posterior mean via ``predict_mean``.
+      - Deterministic estimators call ``predict`` directly.
       - Return None if predict fails.
     """
-    try:
-        if isinstance(estimator, ProbabilisticEstimator):
-            try:
-                return estimator.predict(X, mode="mean")
-            except TypeError:
-                return estimator.predict(X)
-        else:
-            return estimator.predict(X)
-    except Exception:
-        return None
+    if isinstance(estimator, ProbabilisticEstimator):
+        estimator.predict_mean(X)
+
+    return estimator.predict(X)
 
 
 def evaluate_metrics(

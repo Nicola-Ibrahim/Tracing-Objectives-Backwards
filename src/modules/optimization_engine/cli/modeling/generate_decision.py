@@ -4,16 +4,17 @@ from ...application.modeling.generate_decision.generate_decision_command import 
 from ...application.modeling.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
 )
-from ...domain.modeling.enums.estimator_type_enum import (
+from ...domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.datasets.generated_dataset_repo import (
-    FileSystemGeneratedDatasetRepository,
+from ...infrastructure.repositories.datasets.processed_dataset_repo import (
+    FileSystemProcessedDatasetRepository,
 )
 from ...infrastructure.repositories.modeling.model_artifact_repo import (
-    FileSystemModelArtifcatRepository,
+    FileSystemModelArtifactRepository,
 )
+from ...application.factories.estimator import EstimatorFactory
 
 
 def main():
@@ -25,16 +26,22 @@ def main():
     # Specify the target objective point (f1, f2, ...).
     target_objective_point = [411, 1242]
 
-    # Initialize the handler with the repository
+    # Build forward model via EstimatorFactory (configurable)
+    forward_model = EstimatorFactory().create_forward(
+        {"type": "coco_biobj", "function_indices": 5}
+    )
+
+    # Initialize the handler with the repositories and forward model
     handler = GenerateDecisionCommandHandler(
-        interpolation_model_repo=FileSystemModelArtifcatRepository(),
-        data_repository=FileSystemGeneratedDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        processed_data_repository=FileSystemProcessedDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
+        forward_model=forward_model,
     )
 
     # Create the command object using the hardcoded values
     command = GenerateDecisionCommand(
-        model_type=EstimatorTypeEnum.KRIGING_ND.value,
+        estimator_type=EstimatorTypeEnum.KRIGING_ND.value,
         target_objective=target_objective_point,
         distance_tolerance=0.02,
         num_suggestions=5,

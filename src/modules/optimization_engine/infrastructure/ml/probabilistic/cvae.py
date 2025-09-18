@@ -413,18 +413,19 @@ class CVAEEstimator(ProbabilisticEstimator):
         Dy = int(self._y_dim)
 
         # latent z
+        if seed is not None:
+            torch.manual_seed(int(seed))
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(int(seed))
+
         if use_prior:
             z = self._sample_z_given_X(
                 X_t, n_samples=S, temperature=temperature, seed=seed
             )  # (n,S,latent)
         else:
-            gen = None
-            if seed is not None:
-                gen = torch.Generator(device=self.device)
-                gen.manual_seed(int(seed))
-            z = torch.randn(
-                (n, S, self._latent_dim), generator=gen, device=self.device
-            ) * float(temperature)
+            z = torch.randn((n, S, self._latent_dim), device=self.device) * float(
+                temperature
+            )
 
         total = n * S
         z_flat = z.reshape(total, self._latent_dim)
@@ -499,10 +500,10 @@ class CVAEEstimator(ProbabilisticEstimator):
         n = X_t.shape[0]
         Dy = int(self._y_dim)
 
-        gen = None
         if seed is not None:
-            gen = torch.Generator(device=self.device)
-            gen.manual_seed(int(seed))
+            torch.manual_seed(int(seed))
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(int(seed))
 
         with torch.no_grad():
             mu_p, logvar_p = self._prior_net(X_t)
@@ -513,9 +514,7 @@ class CVAEEstimator(ProbabilisticEstimator):
                 z = mu_p.unsqueeze(1)
             else:
                 S = int(max(1, n_samples))
-                eps = torch.randn(
-                    (n, S, self._latent_dim), generator=gen, device=self.device
-                )
+                eps = torch.randn((n, S, self._latent_dim), device=self.device)
                 z = mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
 
             total = n * S

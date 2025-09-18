@@ -74,6 +74,7 @@ class TrainModelCommandHandler:
         tune_param_name = command.tune_param_name
         tune_param_range = command.tune_param_range
         learning_curve_steps = command.learning_curve_steps
+        epochs = command.epochs
 
         estimator = self._estimator_factory.create(params=estimator_params)
         validation_metrics = self._metric_factory.create_multiple(
@@ -86,7 +87,7 @@ class TrainModelCommandHandler:
 
         if tune_param_name and tune_param_range:
             self._logger.log_info("Starting hyperparameter tuning workflow.")
-            artifact = CrossValidationTrainer().search(
+            fitted_estimator, loss_history, metrics = CrossValidationTrainer().search(
                 estimator=estimator,
                 X_train=X_train,
                 y_train=y_train,
@@ -94,7 +95,7 @@ class TrainModelCommandHandler:
                 y_test=y_test,
                 param_name=tune_param_name,
                 param_range=tune_param_range,
-                metrics=validation_metrics,
+                validation_metrics=validation_metrics,
                 X_normalizer=X_normalizer,
                 y_normalizer=y_normalizer,
                 parameters=parameters,
@@ -105,52 +106,51 @@ class TrainModelCommandHandler:
 
         elif cv_splits > 1:
             self._logger.log_info("Starting cross-validation workflow.")
-            outcome = CrossValidationTrainer().validate(
+            fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
                 estimator=estimator,
                 X_train=X_train,
                 y_train=y_train,
                 X_test=X_test,
                 y_test=y_test,
-                X_normalizer=X_normalizer,
-                y_normalizer=y_normalizer,
                 validation_metrics=validation_metrics,
-                parameters=parameters,
+                epochs=epochs,
                 n_splits=cv_splits,
                 random_state=random_state,
-                verbose=False,
             )
             self._logger.log_info("Cross-validation workflow completed.")
 
         else:
             self._logger.log_info("Starting single train/test split workflow.")
             if isinstance(estimator, ProbabilisticEstimator):
-                outcome = ProbabilisticModelTrainer().train(
-                    estimator=estimator,
-                    X_train=X_train,
-                    y_train=y_train,
+                fitted_estimator, loss_history, metrics = (
+                    ProbabilisticModelTrainer().train(
+                        estimator=estimator,
+                        X_train=X_train,
+                        y_train=y_train,
+                    )
                 )
 
             elif isinstance(estimator, DeterministicEstimator):
-                outcome = DeterministicModelTrainer().train(
-                    estimator=estimator,
-                    X_train=X_train,
-                    y_train=y_train,
-                    X_test=X_test,
-                    y_test=y_test,
-                    learning_curve_steps=learning_curve_steps,
-                    metrics=validation_metrics,
-                    random_state=random_state,
+                fitted_estimator, loss_history, metrics = (
+                    DeterministicModelTrainer().train(
+                        estimator=estimator,
+                        X_train=X_train,
+                        y_train=y_train,
+                        X_test=X_test,
+                        y_test=y_test,
+                        learning_curve_steps=learning_curve_steps,
+                        validation_metrics=validation_metrics,
+                        random_state=random_state,
+                    )
                 )
 
             self._logger.log_info("Model training (single split) completed.")
 
         artifact = ModelArtifact.create(
             parameters=parameters,
-            estimator=outcome.estimator,
-            train_scores=outcome.train_scores,
-            test_scores=outcome.test_scores,
-            cv_scores=outcome.cv_scores,
-            loss_history=outcome.loss_history.model_dump(),
+            estimator=fitted_estimator,
+            metrics=metrics,
+            loss_history=loss_history,
         )
 
         # 3) Persist artifact

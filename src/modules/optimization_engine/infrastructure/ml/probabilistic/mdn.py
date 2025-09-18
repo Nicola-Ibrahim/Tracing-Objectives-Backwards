@@ -255,7 +255,6 @@ class MDNEstimator(ProbabilisticEstimator):
         self,
         num_mixtures: int = -1,
         learning_rate: float = 1e-4,
-        early_stopping_patience: int = 10,
         distribution_family: DistributionFamilyEnum = DistributionFamilyEnum.NORMAL,
         gmm_boost: bool = False,
         hidden_layers: list[int] = [64],
@@ -266,7 +265,6 @@ class MDNEstimator(ProbabilisticEstimator):
         super().__init__()
         self._num_mixtures = num_mixtures
         self._learning_rate = learning_rate
-        self._early_stopping_patience = early_stopping_patience
         self._distribution_family = distribution_family
         self._gmm_boost = gmm_boost
         self._hidden_layers = hidden_layers
@@ -402,7 +400,7 @@ class MDNEstimator(ProbabilisticEstimator):
         )
 
         best_loss = float("inf")
-        patience_counter = 0
+        self._best_model_state_dict = None
 
         # Training loop
         for epoch in range(epochs):
@@ -443,25 +441,16 @@ class MDNEstimator(ProbabilisticEstimator):
 
             avg_val = val_loss / max(1, len(val_loader))
 
-            # Early stopping
+            # Track best validation performance
             if avg_val < best_loss:
                 best_loss = avg_val
-                patience_counter = 0
                 self._best_model_state_dict = self._model.state_dict()
-            else:
-                patience_counter += 1
-                if patience_counter >= self._early_stopping_patience:
-                    if self._verbose:
-                        print(
-                            f"Early stopping at epoch {epoch}. Best val loss: {best_loss:.4f}"
-                        )
-                    if self._best_model_state_dict:
-                        self._model.load_state_dict(self._best_model_state_dict)
-                    break
 
             self._training_history.epochs.append(epoch)
             self._training_history.train_loss.append(float(avg_train))
             self._training_history.val_loss.append(float(avg_val))
+        if self._best_model_state_dict is not None:
+            self._model.load_state_dict(self._best_model_state_dict)
 
         self._model.eval()
 
@@ -523,10 +512,10 @@ class MDNEstimator(ProbabilisticEstimator):
         n_samples = int(n_samples)
 
         # RNG
-        gen = None
         if seed is not None:
-            gen = torch.Generator(device=device)
-            gen.manual_seed(int(seed))
+            torch.manual_seed(int(seed))
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(int(seed))
 
         total_outputs = n * max(1, n_samples)
 
@@ -540,10 +529,10 @@ class MDNEstimator(ProbabilisticEstimator):
                     pi, mu, sigma, self._distribution_family
                 )
                 if n_samples == 1:
-                    y = dist.sample(generator=gen)  # (n, out)
+                    y = dist.sample()  # (n, out)
                     return y.cpu().numpy().astype(np.float64, copy=False)
                 else:
-                    y = dist.sample((n_samples,), generator=gen)  # (n_s, n, out)
+                    y = dist.sample((n_samples,))  # (n_s, n, out)
                     return (
                         y.permute(1, 0, 2).cpu().numpy().astype(np.float64, copy=False)
                     )
@@ -562,12 +551,10 @@ class MDNEstimator(ProbabilisticEstimator):
                     pi_c, mu_c, sigma_c, self._distribution_family
                 )
                 if n_samples == 1:
-                    s_chunk = dist_c.sample(generator=gen)  # (chunk, out)
+                    s_chunk = dist_c.sample()  # (chunk, out)
                     results.append(s_chunk.cpu())
                 else:
-                    s_chunk = dist_c.sample(
-                        (n_samples,), generator=gen
-                    )  # (n_s, chunk, out)
+                    s_chunk = dist_c.sample((n_samples,))  # (n_s, chunk, out)
                     s_chunk = s_chunk.permute(1, 0, 2).cpu()  # (chunk, n_s, out)
                     results.append(s_chunk)
 
@@ -728,7 +715,7 @@ class MDNEstimator(ProbabilisticEstimator):
 
     def _ensure_fitted(self) -> None:
         if getattr(self, "_model", None) is None:
-            raise RuntimeError("Model not fitted. Call 'fit' first.")
+            raise RuntimeError("Estimator not fitted. Call 'fit' first.")
 
     def _model_device(self) -> torch.device:
         return next(self._model.parameters()).device

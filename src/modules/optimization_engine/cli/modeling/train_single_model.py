@@ -1,52 +1,41 @@
-from ...application.factories.estimator import (
-    EstimatorFactory,
-)
-from ...application.factories.mertics import MetricFactory
-from ...application.factories.normalizer import NormalizerFactory
-from ...application.model_management.dtos import (
+from ...application.dtos import (
     CVAEEstimatorParams,
+    CVAEMDNEstimatorParams,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
     NeuralNetworkEstimatorParams,
     RBFEstimatorParams,
 )
-from ...application.model_management.train_model.train_model_command import (
-    NormalizerConfig,
+from ...application.factories.estimator import (
+    EstimatorFactory,
+)
+from ...application.factories.mertics import MetricFactory
+from ...application.modeling.train_model.train_model_command import (
     TrainModelCommand,
     ValidationMetricConfig,
 )
-from ...application.model_management.train_model.train_model_handler import (
+from ...application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.generation.data_model_repo import (
-    FileSystemDataModelRepository,
+from ...infrastructure.repositories.datasets.processed_dataset_repo import (
+    FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.repositories.model_management.model_artifact_repo import (
-    FileSystemModelArtifcatRepository,
-)
-from ...infrastructure.visualizers.training_performace import (
-    LearningCurveVisualizer,
+from ...infrastructure.repositories.modeling.model_artifact_repo import (
+    FileSystemModelArtifactRepository,
 )
 
 if __name__ == "__main__":
     handler = TrainModelCommandHandler(
-        data_repository=FileSystemDataModelRepository(),
-        model_repository=FileSystemModelArtifcatRepository(),
+        processed_data_repository=FileSystemProcessedDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        normalizer_factory=NormalizerFactory(),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
-        visualizer=LearningCurveVisualizer(
-            metric=MetricFactory().create(config={"type": "nll", "params": {}})
-        ),
     )
 
     command = TrainModelCommand(
-        estimator_params=RBFEstimatorParams(),
-        normalizer_config=NormalizerConfig(
-            type="MinMaxScaler", params={"feature_range": (0, 1)}
-        ),
+        estimator_params=CVAEEstimatorParams(),
         model_performance_metric_configs=[
             ValidationMetricConfig(type="MSE", params={}),
             ValidationMetricConfig(type="MAE", params={}),
@@ -54,8 +43,10 @@ if __name__ == "__main__":
         ],
         test_size=0.2,
         random_state=42,
+        learning_curve_steps=50,
         # cv_splits=10,
+        # tune_param_name="n_neighbors",
+        # tune_param_range=[5, 10, 20, 50],
     )
 
-    # Execute the command handler
     handler.execute(command)
