@@ -1,10 +1,15 @@
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
 
+from ...domain.modeling.interfaces.base_estimator import (
+    DeterministicEstimator,
+    ProbabilisticEstimator,
+)
 from ...domain.visualization.interfaces.base_visualizer import BaseVisualizer
 
 try:
@@ -26,244 +31,298 @@ class ModelPerformanceVisualizer(BaseVisualizer):
       - n_samples (int, default 200)
       - non_linear (bool, default False)  # for dimensionality reduction of X to 1D
       - title (str, optional)
-      - loss_history (dict, optional)     # e.g. outcome.loss_history.model_dump()
-      - show_train_residuals (bool, default False)
+      - loss_history (dict)     # e.g. outcome.loss_history.model_dump()
     """
 
     # ------------------------------- public ------------------------------- #
 
+    @dataclass
+    class _Payload:
+        estimator: Any
+        X_train: np.ndarray
+        y_train: np.ndarray
+        X_test: Optional[np.ndarray]
+        y_test: Optional[np.ndarray]
+        n_samples: int
+        non_linear: bool
+        title: str
+        loss_history: Any
+
+    @dataclass
+    class _Predictions:
+        train_pred: np.ndarray
+        train_resid: np.ndarray
+        test_pred: Optional[np.ndarray]
+        test_resid: Optional[np.ndarray]
+
+    @dataclass
+    class _ReducedInputs:
+        reducer: Any
+        train: Optional[np.ndarray]
+        test: Optional[np.ndarray]
+
     def plot(self, data: Any) -> None:
-        if not isinstance(data, dict):
-            raise TypeError("ModelPerformanceVisualizer expects `data` to be a dict.")
+        payload, dims = self._prepare_payload(data)
+        predictions = self._compute_predictions(payload)
 
-        est = data["estimator"]
-        Xtr = np.asarray(data["X_train"])
-        ytr = np.asarray(data["y_train"])
-        Xte = np.asarray(data["X_test"]) if data.get("X_test") is not None else None
-        yte = np.asarray(data["y_test"]) if data.get("y_test") is not None else None
-
-        n_samples = int(data.get("n_samples", 200))
-        non_linear = bool(data.get("non_linear", False))
-        title = data.get("title", f"Model fit ({type(est).__name__})")
-        loss_history: Optional[Dict[str, Any]] = data.get("loss_history")
-        show_train_residuals: bool = bool(data.get("show_train_residuals", False))
-
-        ntr, x_dim = Xtr.shape
-        _, y_dim = ytr.shape
-
-        # Fit reducer on TRAIN ONLY; transform TRAIN (and TEST if provided)
-        reducer, Xtr_red = (
-            self._fit_reducer_to_1d(Xtr, non_linear)
-            if not (x_dim == 2 and y_dim == 2)
-            else (None, None)
-        )
-        Xte_red = (
-            self._transform_reducer(reducer, Xte)
-            if (reducer is not None and Xte is not None)
-            else (
-                Xte[:, 0]
-                if (Xte is not None and Xte.shape[1] == 1 and reducer is None)
-                else None
-            )
-        )
-
-        # Mean predictions and residuals (normalized) on TRAIN and TEST separately
-        Y_pred_train = self._predict_pointwise_mean(est, Xtr, n_samples)  # (ntr, y_dim)
-        Resid_train = ytr - Y_pred_train
-
-        if Xte is not None and yte is not None:
-            Y_pred_test = self._predict_pointwise_mean(
-                est, Xte, n_samples
-            )  # (nte, y_dim)
-            Resid_test = yte - Y_pred_test
-        else:
-            Y_pred_test = None
-            Resid_test = None
-
-        # --- 2D → 2D path: 2 surfaces (grid from TRAIN) + residual panels ---
+        x_dim, y_dim = dims
         if x_dim == 2 and y_dim == 2:
-            self._plot_2d2d_with_curves_and_residuals(
-                estimator=est,
-                Xtr=Xtr,
-                Ytr=ytr,
-                Xte=Xte,
-                Yte=yte,
-                n_samples=n_samples,
-                title=title,
-                loss_history=loss_history,
-                y_pred_test=Y_pred_test,
-                resid_test=Resid_test,
-                y_pred_train=Y_pred_train if show_train_residuals else None,
-                resid_train=Resid_train if show_train_residuals else None,
-                grid_res=50,
-            )
+            self._plot_2d_case(payload, predictions)
             return
 
-        # --- general path: one figure per output (fit + residual panels) ---
-        has_mdn = self._estimator_has_mdn(est)
-        is_prob = self._is_probabilistic(est)
-
+        reduced = self._reduce_inputs(payload, x_dim, y_dim)
         for out_idx in range(y_dim):
-            ytr_1d = ytr[:, out_idx : out_idx + 1]
-            yte_1d = yte[:, out_idx : out_idx + 1] if yte is not None else None
-
-            y_pred_tr = Y_pred_train[:, out_idx]
-            resid_tr = Resid_train[:, out_idx]
-
-            if Y_pred_test is not None:
-                y_pred_te = Y_pred_test[:, out_idx]
-                resid_te = Resid_test[:, out_idx]
-            else:
-                y_pred_te = None
-                resid_te = None
-
-            fig = make_subplots(
-                rows=4,
-                cols=1,
-                shared_xaxes=False,
-                vertical_spacing=0.12,
-                subplot_titles=(
-                    f"{title} — y{out_idx} (normalized)",
-                    "Training / Validation / Test",
-                    "Residuals vs Fitted (test)"
-                    + (" + train" if show_train_residuals else ""),
-                    "Residual distribution (test)"
-                    + (" + train" if show_train_residuals else ""),
-                ),
+            fig = self._build_general_figure(payload.title, out_idx)
+            y_train = payload.y_train[:, out_idx : out_idx + 1]
+            y_test = (
+                payload.y_test[:, out_idx : out_idx + 1]
+                if payload.y_test is not None
+                else None
             )
 
-            # Row 1: fit curves using TRAIN ONLY; overlay TEST points if present
-            if has_mdn:
-                try:
-                    self._add_mdn_fit_row(
-                        fig,
-                        row=1,
-                        estimator=est,
-                        X=Xtr,
-                        X_red=Xtr_red,
-                        y_raw_1d=ytr_1d,
-                        out_idx=out_idx,
-                    )
-                except Exception:
-                    self._add_prob_fit_row(
-                        fig,
-                        row=1,
-                        estimator=est,
-                        X_red=Xtr_red,
-                        X=Xtr,
-                        y_raw_1d=ytr_1d,
-                    )
-            elif is_prob:
-                self._add_prob_fit_row(
-                    fig,
-                    row=1,
-                    estimator=est,
-                    X_red=Xtr_red,
-                    X=Xtr,
-                    y_raw_1d=ytr_1d,
-                )
-            else:
-                self._add_det_fit_row(
-                    fig,
-                    row=1,
-                    estimator=est,
-                    X_red=Xtr_red,
-                    X=Xtr,
-                    y_raw_1d=ytr_1d,
-                )
+            self._add_fit_row_general(
+                fig=fig,
+                estimator=payload.estimator,
+                X=payload.X_train,
+                X_reduced=reduced.train,
+                y_train=y_train,
+                out_idx=out_idx,
+            )
+            self._overlay_training_testing_points(
+                fig=fig,
+                X_train_reduced=reduced.train,
+                X_test_reduced=reduced.test,
+                y_train=y_train,
+                y_test=y_test,
+            )
 
-            # Overlay TRAIN/TEST scatter on the fit row
-            if Xtr_red is not None:
-                fig.add_trace(
-                    go.Scatter(
-                        x=Xtr_red,
-                        y=ytr_1d[:, 0],
-                        mode="markers",
-                        name="Train",
-                        marker=dict(opacity=0.35),
-                    ),
-                    row=1,
-                    col=1,
-                )
-                if Xte_red is not None and yte_1d is not None:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=Xte_red,
-                            y=yte_1d[:, 0],
-                            mode="markers",
-                            name="Test",
-                            marker=dict(opacity=0.35),
-                        ),
-                        row=1,
-                        col=1,
-                    )
+            self._add_loss_curves_row(fig, row=2, loss_history=payload.loss_history)
 
-            # Row 2: training/validation/test curves
-            self._add_loss_curves_row(fig, row=2, loss_history=loss_history)
-
-            # Row 3: residuals vs fitted (TEST, optionally TRAIN overlay)
-            if y_pred_te is not None:
-                self._add_residuals_vs_fitted(
-                    fig,
-                    row=3,
-                    fitted=y_pred_te,
-                    resid=resid_te,
-                    output_name=f"y{out_idx} (test)",
-                )
-            else:
-                # no test -> use train so panel isn't empty
-                self._add_residuals_vs_fitted(
-                    fig,
-                    row=3,
-                    fitted=y_pred_tr,
-                    resid=resid_tr,
-                    output_name=f"y{out_idx} (train)",
-                )
-            if show_train_residuals and y_pred_tr is not None:
-                self._add_residuals_vs_fitted(
-                    fig,
-                    row=3,
-                    fitted=y_pred_tr,
-                    resid=resid_tr,
-                    output_name=f"y{out_idx} (train)",
-                )
-
-            # Row 4: residual histogram (TEST, optionally TRAIN overlay)
-            if resid_te is not None:
-                self._add_residual_hist(
-                    fig, row=4, resid=resid_te, output_name=f"y{out_idx} (test)"
-                )
-            else:
-                self._add_residual_hist(
-                    fig, row=4, resid=resid_tr, output_name=f"y{out_idx} (train)"
-                )
-            if show_train_residuals and resid_tr is not None:
-                self._add_residual_hist(
-                    fig, row=4, resid=resid_tr, output_name=f"y{out_idx} (train)"
-                )
+            self._add_residual_panels(
+                fig=fig,
+                predictions=predictions,
+                out_idx=out_idx,
+            )
 
             fig.update_xaxes(title_text="X (reduced, normalized)", row=1, col=1)
             fig.update_yaxes(title_text="y (normalized)", row=1, col=1)
             fig.update_layout(template="plotly_white", height=1100)
             fig.show()
 
-    # ---------------------- 2D→2D (surfaces + panels) --------------------- #
+    # ----------------------------- preparation ----------------------------- #
 
-    def _plot_2d2d_with_curves_and_residuals(
+    def _prepare_payload(
+        self, data: Any
+    ) -> Tuple["ModelPerformanceVisualizer._Payload", Tuple[int, int]]:
+        if not isinstance(data, dict):
+            raise TypeError("ModelPerformanceVisualizer expects `data` to be a dict.")
+
+        estimator = data["estimator"]
+        X_train = np.asarray(data["X_train"])
+        y_train = np.asarray(data["y_train"])
+        X_test = np.asarray(data["X_test"]) if data.get("X_test") is not None else None
+        y_test = np.asarray(data["y_test"]) if data.get("y_test") is not None else None
+
+        if data.get("loss_history") is None:
+            raise ValueError(
+                "ModelPerformanceVisualizer requires `loss_history` in data."
+            )
+
+        payload = self._Payload(
+            estimator=estimator,
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            n_samples=int(data.get("n_samples", 200)),
+            non_linear=bool(data.get("non_linear", False)),
+            title=data.get("title", f"Model fit ({type(estimator).__name__})"),
+            loss_history=data["loss_history"],
+        )
+
+        x_dim = X_train.shape[1]
+        y_dim = y_train.shape[1]
+        return payload, (x_dim, y_dim)
+
+    def _compute_predictions(
+        self, payload: "ModelPerformanceVisualizer._Payload"
+    ) -> "ModelPerformanceVisualizer._Predictions":
+        train_pred = self._predict_pointwise(
+            payload.estimator, payload.X_train, payload.n_samples
+        )
+        train_resid = payload.y_train - train_pred
+
+        if payload.X_test is not None and payload.y_test is not None:
+            test_pred = self._predict_pointwise(
+                payload.estimator, payload.X_test, payload.n_samples
+            )
+            test_resid = payload.y_test - test_pred
+        else:
+            test_pred = None
+            test_resid = None
+
+        return self._Predictions(
+            train_pred=train_pred,
+            train_resid=train_resid,
+            test_pred=test_pred,
+            test_resid=test_resid,
+        )
+
+    def _reduce_inputs(
+        self,
+        payload: "ModelPerformanceVisualizer._Payload",
+        x_dim: int,
+        y_dim: int,
+    ) -> "ModelPerformanceVisualizer._ReducedInputs":
+        if x_dim == 2 and y_dim == 2:
+            return self._ReducedInputs(reducer=None, train=None, test=None)
+
+        reducer, X_train_reduced = self._fit_reducer_to_1d(
+            payload.X_train, payload.non_linear
+        )
+        if payload.X_test is None:
+            X_test_reduced = None
+        elif reducer is None:
+            X_test_reduced = (
+                payload.X_test[:, 0] if payload.X_test.shape[1] == 1 else None
+            )
+        else:
+            X_test_reduced = self._transform_reducer(reducer, payload.X_test)
+
+        return self._ReducedInputs(
+            reducer=reducer,
+            train=X_train_reduced,
+            test=X_test_reduced,
+        )
+
+    # ------------------------------- general ------------------------------- #
+
+    def _build_general_figure(self, title: str, out_idx: int) -> go.Figure:
+        return make_subplots(
+            rows=4,
+            cols=1,
+            shared_xaxes=False,
+            vertical_spacing=0.12,
+            subplot_titles=(
+                f"{title} — y{out_idx} (normalized)",
+                "Training / Validation / Test",
+                "Residuals vs Fitted (train + test)",
+                "Residual distribution (train + test)",
+            ),
+        )
+
+    def _add_fit_row_general(
         self,
         *,
-        estimator,
-        Xtr: np.ndarray,  # normalized (train)  -> targets (z) for row-1 overlays
-        Ytr: np.ndarray,  # normalized (train)  -> grid domain (x,y) for row-1
-        Xte: Optional[np.ndarray],
-        Yte: Optional[np.ndarray],
-        n_samples: int,
-        title: str,
-        loss_history: Optional[Dict[str, Any]],
-        y_pred_test: Optional[np.ndarray],
-        resid_test: Optional[np.ndarray],
-        y_pred_train: Optional[np.ndarray] = None,
-        resid_train: Optional[np.ndarray] = None,
+        fig: go.Figure,
+        estimator: Any,
+        X: np.ndarray,
+        X_reduced: Optional[np.ndarray],
+        y_train: np.ndarray,
+        out_idx: int,
+    ) -> None:
+        if isinstance(estimator, ProbabilisticEstimator):
+            self._add_prob_fit_row(
+                fig,
+                row=1,
+                estimator=estimator,
+                X_red=X_reduced,
+                X=X,
+                y_raw_1d=y_train,
+            )
+        else:
+            self._add_det_fit_row(
+                fig,
+                row=1,
+                estimator=estimator,
+                X_red=X_reduced,
+                X=X,
+                y_raw_1d=y_train,
+            )
+
+    def _overlay_training_testing_points(
+        self,
+        *,
+        fig: go.Figure,
+        X_train_reduced: Optional[np.ndarray],
+        X_test_reduced: Optional[np.ndarray],
+        y_train: np.ndarray,
+        y_test: Optional[np.ndarray],
+    ) -> None:
+        if X_train_reduced is None:
+            return
+        fig.add_trace(
+            go.Scatter(
+                x=X_train_reduced,
+                y=y_train[:, 0],
+                mode="markers",
+                name="Train",
+                marker=dict(opacity=0.35),
+            ),
+            row=1,
+            col=1,
+        )
+        if X_test_reduced is not None and y_test is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=X_test_reduced,
+                    y=y_test[:, 0],
+                    mode="markers",
+                    name="Test",
+                    marker=dict(opacity=0.35),
+                ),
+                row=1,
+                col=1,
+            )
+
+    def _add_residual_panels(
+        self,
+        *,
+        fig: go.Figure,
+        predictions: "ModelPerformanceVisualizer._Predictions",
+        out_idx: int,
+    ) -> None:
+        y_pred_train = predictions.train_pred[:, out_idx]
+        resid_train = predictions.train_resid[:, out_idx]
+
+        if predictions.test_pred is not None and predictions.test_resid is not None:
+            y_pred_test = predictions.test_pred[:, out_idx]
+            resid_test = predictions.test_resid[:, out_idx]
+            self._add_residuals_vs_fitted(
+                fig,
+                row=3,
+                fitted=y_pred_test,
+                resid=resid_test,
+                output_name=f"y{out_idx} (test)",
+            )
+        self._add_residuals_vs_fitted(
+            fig,
+            row=3,
+            fitted=y_pred_train,
+            resid=resid_train,
+            output_name=f"y{out_idx} (train)",
+        )
+
+        if predictions.test_resid is not None:
+            self._add_residual_hist(
+                fig,
+                row=4,
+                resid=predictions.test_resid[:, out_idx],
+                output_name=f"y{out_idx} (test)",
+            )
+        self._add_residual_hist(
+            fig,
+            row=4,
+            resid=resid_train,
+            output_name=f"y{out_idx} (train)",
+        )
+
+    # ---------------------- 2D→2D (surfaces + panels) --------------------- #
+
+    def _plot_2d_case(
+        self,
+        payload: "ModelPerformanceVisualizer._Payload",
+        predictions: "ModelPerformanceVisualizer._Predictions",
         grid_res: int = 50,
     ) -> None:
         """
@@ -271,6 +330,19 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         training/validation curves and residual diagnostics. Axes across both
         3D scenes are forced to share the same x/y/z ranges and aspect.
         """
+
+        estimator = payload.estimator
+        Xtr = payload.X_train
+        Ytr = payload.y_train
+        Xte = payload.X_test
+        Yte = payload.y_test
+        title = payload.title
+        loss_history = payload.loss_history
+
+        y_pred_test = predictions.test_pred
+        resid_test = predictions.test_resid
+        y_pred_train = predictions.train_pred
+        resid_train = predictions.train_resid
 
         # --- build grid over TRAIN *X* domain (x1,x2) ---
         x1_min, x1_max = float(np.min(Xtr[:, 0])), float(np.max(Xtr[:, 0]))
@@ -281,7 +353,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         X_grid = np.stack([GX1.ravel(), GX2.ravel()], axis=1)
 
         # predict Y on the X-grid (model maps x -> y). Returns (n, 2) for y1,y2
-        Yg = self._predict_pointwise_mean(estimator, X_grid, n_samples)
+        Yg = self._predict_pointwise(estimator, X_grid, payload.n_samples)
         z_y1 = Yg[:, 0].reshape(grid_res, grid_res)
         z_y2 = Yg[:, 1].reshape(grid_res, grid_res)
 
@@ -399,23 +471,22 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 resid=resid_test[:, 1],
                 output_name="y2 (test)",
             )
-        if y_pred_train is not None and resid_train is not None:
-            self._add_residuals_vs_fitted(
-                fig,
-                row=3,
-                col=1,
-                fitted=y_pred_train[:, 0],
-                resid=resid_train[:, 0],
-                output_name="y1 (train)",
-            )
-            self._add_residuals_vs_fitted(
-                fig,
-                row=3,
-                col=2,
-                fitted=y_pred_train[:, 1],
-                resid=resid_train[:, 1],
-                output_name="y2 (train)",
-            )
+        self._add_residuals_vs_fitted(
+            fig,
+            row=3,
+            col=1,
+            fitted=y_pred_train[:, 0],
+            resid=resid_train[:, 0],
+            output_name="y1 (train)",
+        )
+        self._add_residuals_vs_fitted(
+            fig,
+            row=3,
+            col=2,
+            fitted=y_pred_train[:, 1],
+            resid=resid_train[:, 1],
+            output_name="y2 (train)",
+        )
 
         if resid_test is not None:
             self._add_residual_hist(
@@ -424,13 +495,12 @@ class ModelPerformanceVisualizer(BaseVisualizer):
             self._add_residual_hist(
                 fig, row=4, col=2, resid=resid_test[:, 1], output_name="y2 (test)"
             )
-        if resid_train is not None:
-            self._add_residual_hist(
-                fig, row=4, col=1, resid=resid_train[:, 0], output_name="y1 (train)"
-            )
-            self._add_residual_hist(
-                fig, row=4, col=2, resid=resid_train[:, 1], output_name="y2 (train)"
-            )
+        self._add_residual_hist(
+            fig, row=4, col=1, resid=resid_train[:, 0], output_name="y1 (train)"
+        )
+        self._add_residual_hist(
+            fig, row=4, col=2, resid=resid_train[:, 1], output_name="y2 (train)"
+        )
 
         if resid_test is not None:
             self._add_joint_residual_distribution(
@@ -772,7 +842,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         X,
         y_raw_1d,
     ):
-        pred = estimator.predict(X, n_samples=max(64, 200))
+        pred = estimator.predict(X)
         arr = np.asarray(pred)
         if arr.ndim == 2:
             arr = arr[:, None, :]  # (n, 1, ydim)
@@ -899,107 +969,17 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         xr = reducer.transform(X).squeeze()
         return xr
 
-    def _predict_pointwise_mean(
+    def _predict_pointwise(
         self,
         estimator: Any,
-        X: np.ndarray,  # normalized inputs
+        X: np.ndarray,
         n_samples: int,
     ) -> np.ndarray:
         """Return mean prediction in normalized space, shape (n, y_dim)."""
-        try:
-            y = np.atleast_2d(estimator.predict(X))
-            if y.ndim == 2:
-                return y
-            if y.ndim == 3:
-                n = X.shape[0]
-                if y.shape[0] == n:
-                    return y.mean(axis=1)
-                if y.shape[1] == n:
-                    return y.mean(axis=0)
-        except Exception:
-            pass
-        if self._estimator_has_mdn(estimator):
-            try:
-                mp = self._get_mdn_params(estimator, X)
-                pi, mu = mp["pi"], mp["mu"]
-                if mu.ndim == 2:
-                    mu = mu[..., None]
-                return np.sum(pi[..., None] * mu, axis=1)
-            except Exception:
-                pass
-        # Prefer analytic/Monte Carlo mean helpers when available
-        if hasattr(estimator, "predict_mean"):
-            try:
-                return np.asarray(
-                    estimator.predict_mean(X, n_samples=max(64, n_samples))
-                )
-            except Exception:
-                pass
+        if isinstance(estimator, ProbabilisticEstimator):
+            return estimator.predict_map(X, n_samples=n_samples)
 
-        if hasattr(estimator, "sample"):
-            try:
-                s = estimator.sample(X, n_samples=max(64, n_samples))
-                s = np.asarray(s)
-                if s.ndim == 2:
-                    return s
-                n = X.shape[0]
-                if s.ndim == 3:
-                    if s.shape[0] == n:
-                        return s.mean(axis=1)
-                    if s.shape[1] == n:
-                        return s.mean(axis=0)
-            except Exception:
-                pass
+        if isinstance(estimator, DeterministicEstimator):
+            return estimator.predict(X)
 
-        s = estimator.predict(X)
-        s = np.asarray(s)
-        if s.ndim == 2:
-            return s
-        n = X.shape[0]
-        if s.ndim == 3:
-            if s.shape[0] == n:
-                return s.mean(axis=1)
-            if s.shape[1] == n:
-                return s.mean(axis=0)
-        return np.squeeze(s)
-
-    def _is_probabilistic(self, estimator: Any) -> bool:
-        try:
-            import inspect
-
-            if "n_samples" in inspect.signature(estimator.predict).parameters:
-                return True
-        except Exception:
-            pass
-        t = str(getattr(estimator, "type", "")).lower()
-        return any(k in t for k in ("mdn", "vae", "prob", "bayes"))
-
-    def _estimator_has_mdn(self, estimator: Any) -> bool:
-        return any(
-            hasattr(estimator, n)
-            for n in ("get_mixture_parameters", "get_mixture_params")
-        )
-
-    def _get_mdn_params(self, estimator: Any, X: np.ndarray) -> Dict[str, np.ndarray]:
-        params = (
-            estimator.get_mixture_parameters(X)
-            if hasattr(estimator, "get_mixture_parameters")
-            else estimator.get_mixture_params(X)
-        )
-        if isinstance(params, tuple) and len(params) >= 2:
-            pi, mu = params[0], params[1]
-            sigma = params[2] if len(params) > 2 else None
-            return {
-                "pi": np.asarray(pi),
-                "mu": np.asarray(mu),
-                "sigma": None if sigma is None else np.asarray(sigma),
-            }
-        if isinstance(params, dict):
-            return {
-                "pi": np.asarray(params["pi"]),
-                "mu": np.asarray(params["mu"]),
-                "sigma": None
-                if params.get("sigma") is None
-                else np.asarray(params["sigma"]),
-            }
-        raise TypeError("Unsupported MDN parameter format.")
+        raise TypeError("Unsupported estimator type for prediction.")
