@@ -37,8 +37,9 @@ class TrainModelCommand(BaseModel):
 
     cv_splits: int = Field(
         1,
-        gt=1,
-        description="Number of cross-validation splits. If specified, a full cross-validation workflow is executed. Otherwise, a single train-test split is used.",
+        ge=1,
+        description="Number of cross-validation splits. Values greater than 1 trigger "
+        "k-fold training; a value of 1 keeps the single train/test workflow.",
     )
 
     tune_param_name: str | None = Field(
