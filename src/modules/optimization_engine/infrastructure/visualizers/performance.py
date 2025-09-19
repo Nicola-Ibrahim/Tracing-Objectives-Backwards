@@ -15,7 +15,7 @@ except Exception:
     _HAS_UMAP = False
 
 
-class ModelCurveVisualizer(BaseVisualizer):
+class ModelPerformanceVisualizer(BaseVisualizer):
     """
     Visualize model fits on *normalized* data + residual diagnostics.
 
@@ -34,7 +34,7 @@ class ModelCurveVisualizer(BaseVisualizer):
 
     def plot(self, data: Any) -> None:
         if not isinstance(data, dict):
-            raise TypeError("ModelCurveVisualizer expects `data` to be a dict.")
+            raise TypeError("ModelPerformanceVisualizer expects `data` to be a dict.")
 
         est = data["estimator"]
         Xtr = np.asarray(data["X_train"])
@@ -690,6 +690,13 @@ class ModelCurveVisualizer(BaseVisualizer):
         loss_history: Optional[Dict[str, Any]],
         col: int = 1,
     ) -> None:
+        if loss_history is None:
+            return
+        # Allow pydantic value-objects (e.g. LossHistory) as well as raw dicts
+        if hasattr(loss_history, "model_dump"):
+            loss_history = loss_history.model_dump()
+        elif hasattr(loss_history, "dict"):
+            loss_history = loss_history.dict()
         if not isinstance(loss_history, dict):
             return
         bins: List[float] = list(loss_history.get("bins", []))

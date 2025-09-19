@@ -1,8 +1,5 @@
-# plotly_pareto_visualizer.py
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -41,7 +38,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
     _POINT_SIZE = 4
 
     # Subplot layout & how to read/overlay series
-    _SUBPLOT_CONFIG: Dict[Tuple[int, int], Dict[str, Any]] = {
+    _SUBPLOT_CONFIG: dict[tuple[int, int], dict[str, Any]] = {
         # Row 1: RAW 2D scatters
         (1, 1): {
             "type": "scatter_from2d",
@@ -307,7 +304,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
 
     # ------------------------------- public ------------------------------- #
 
-    def plot(self, data: Dict[str, Any]):
+    def plot(self, data: dict[str, Any]):
         if not isinstance(data, dict):
             raise TypeError("Visualizer expects a dict prepared by the handler.")
 
@@ -405,7 +402,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
 
     # ------------------------------ build plots ---------------------------- #
 
-    def _add_all_subplots(self, fig: go.Figure, data: Dict[str, Any]) -> None:
+    def _add_all_subplots(self, fig: go.Figure, data: dict[str, Any]) -> None:
         for (row, col), cfg in self._SUBPLOT_CONFIG.items():
             t = cfg["type"]
 
@@ -532,7 +529,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
 
     # ------------------------------ helpers -------------------------------- #
 
-    def _get_2d(self, data: Dict[str, Any], key: str) -> np.ndarray:
+    def _get_2d(self, data: dict[str, Any], key: str) -> np.ndarray:
         arr = np.asarray(data.get(key, []))
         if arr.size == 0:
             return np.empty((0, 2))
@@ -542,7 +539,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         # ensure 2 columns at most
         return arr[:, :2]
 
-    def _concat_mats(self, data: Dict[str, Any], keys: List[str]) -> np.ndarray:
+    def _concat_mats(self, data: dict[str, Any], keys: list[str]) -> np.ndarray:
         mats = [self._get_2d(data, k) for k in keys]
         mats = [m for m in mats if m.size]
         if not mats:
@@ -550,7 +547,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         return np.vstack(mats)
 
     def _concat_vecs(
-        self, data: Dict[str, Any], keys: List[str], col: int
+        self, data: dict[str, Any], keys: list[str], col: int
     ) -> np.ndarray:
         chunks = []
         for k in keys:
