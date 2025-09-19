@@ -1,44 +1,16 @@
 import ast
-from typing import Iterable, Sequence, Type
+from typing import Sequence
 
 import click
 
-from ...application.dtos import (
-    CVAEEstimatorParams,
-    CVAEMDNEstimatorParams,
-    EstimatorParams,
-    GaussianProcessEstimatorParams,
-    MDNEstimatorParams,
-    NeuralNetworkEstimatorParams,
-    RBFEstimatorParams,
+from ...application.modeling.train_model.train_model_command import TrainModelCommand
+from .common import (
+    DEFAULT_VALIDATION_METRICS,
+    ESTIMATOR_REGISTRY,
+    build_processed_training_handler,
+    create_estimator_params,
+    make_validation_metric_configs,
 )
-from ...application.factories.estimator import EstimatorFactory
-from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_model.train_model_command import (
-    TrainModelCommand,
-    ValidationMetricConfig,
-)
-from ...application.modeling.train_model.train_model_handler import (
-    TrainModelCommandHandler,
-)
-from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.datasets.processed_dataset_repo import (
-    FileSystemProcessedDatasetRepository,
-)
-from ...infrastructure.repositories.modeling.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
-)
-
-DEFAULT_METRICS = ("MSE", "MAE", "R2")
-
-ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
-    "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
-    "gaussian_process": GaussianProcessEstimatorParams,
-    "mdn": MDNEstimatorParams,
-    "neural_network": NeuralNetworkEstimatorParams,
-    "rbf": RBFEstimatorParams,
-}
 
 
 def _literal(value: str):
@@ -65,33 +37,6 @@ def _parse_overrides(pairs: Sequence[str]) -> dict[str, object]:
     return overrides
 
 
-def _build_handler() -> TrainModelCommandHandler:
-    """Construct the command handler with shared infrastructure dependencies."""
-
-    return TrainModelCommandHandler(
-        processed_data_repository=FileSystemProcessedDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="InterpolationCMDLogger"),
-        estimator_factory=EstimatorFactory(),
-        metric_factory=MetricFactory(),
-    )
-
-
-def _make_metrics(metric_names: Iterable[str]) -> list[ValidationMetricConfig]:
-    return [ValidationMetricConfig(type=name, params={}) for name in metric_names]
-
-
-def _instantiate_estimator(
-    estimator_key: str, overrides: dict[str, object]
-) -> EstimatorParams:
-    try:
-        params_cls = ESTIMATOR_REGISTRY[estimator_key]
-    except KeyError as exc:  # pragma: no cover - argparse already guards
-        raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
-
-    return params_cls(**overrides) if overrides else params_cls()
-
-
 def _common_options(func):
     options = [
         click.option(
@@ -112,7 +57,7 @@ def _common_options(func):
             "--metric",
             "metrics",
             multiple=True,
-            default=DEFAULT_METRICS,
+            default=DEFAULT_VALIDATION_METRICS,
             show_default=True,
             help="Validation metrics to report",
         ),
@@ -159,12 +104,12 @@ def command_standard(
     learning_curve_steps: int,
     epochs: int,
 ) -> None:
-    handler = _build_handler()
+    handler = build_processed_training_handler()
     overrides = _parse_overrides(params)
-    estimator_params = _instantiate_estimator(estimator, overrides)
+    estimator_params = create_estimator_params(estimator, overrides)
     command = TrainModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_metrics(metrics),
+        estimator_performance_metric_configs=make_validation_metric_configs(metrics),
         random_state=random_state,
         cv_splits=1,
         learning_curve_steps=learning_curve_steps,
@@ -197,12 +142,12 @@ def command_cv(
             param_hint="--cv-splits",
         )
 
-    handler = _build_handler()
+    handler = build_processed_training_handler()
     overrides = _parse_overrides(params)
-    estimator_params = _instantiate_estimator(estimator, overrides)
+    estimator_params = create_estimator_params(estimator, overrides)
     command = TrainModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_metrics(metrics),
+        estimator_performance_metric_configs=make_validation_metric_configs(metrics),
         random_state=random_state,
         cv_splits=cv_splits,
         learning_curve_steps=learning_curve_steps,
@@ -259,12 +204,12 @@ def command_grid(
             param_hint="--tune-param-value",
         )
 
-    handler = _build_handler()
+    handler = build_processed_training_handler()
     overrides = _parse_overrides(params)
-    estimator_params = _instantiate_estimator(estimator, overrides)
+    estimator_params = create_estimator_params(estimator, overrides)
     command = TrainModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_metrics(metrics),
+        estimator_performance_metric_configs=make_validation_metric_configs(metrics),
         random_state=random_state,
         cv_splits=cv_splits,
         tune_param_name=tune_param_name,

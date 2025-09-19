@@ -1,21 +1,16 @@
 import time
 
 from ...application.dtos import (
+    EstimatorParams,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
     NeuralNetworkEstimatorParams,
     RBFEstimatorParams,
 )
-from ...application.factories.estimator import (
-    EstimatorFactory,
-)
+from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
 from ...application.factories.normalizer import NormalizerFactory
-from ...application.modeling.train_model.train_model_command import (
-    NormalizerConfig,
-    TrainModelCommand,
-    ValidationMetricConfig,
-)
+from ...application.modeling.train_model.train_model_command import TrainModelCommand
 from ...application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
@@ -26,6 +21,23 @@ from ...infrastructure.repositories.datasets.generated_dataset_repo import (
 from ...infrastructure.repositories.modeling.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
+from .common import (
+    DEFAULT_VALIDATION_METRICS,
+    make_validation_metric_configs,
+)
+
+
+def _build_command(param_cls: type[EstimatorParams]) -> TrainModelCommand:
+    """Assemble a TrainModelCommand for the provided estimator parameter class."""
+
+    params_instance = param_cls()
+    metric_configs = make_validation_metric_configs(DEFAULT_VALIDATION_METRICS)
+
+    return TrainModelCommand(
+        estimator_params=params_instance,
+        estimator_performance_metric_configs=metric_configs,
+    )
+
 
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
@@ -55,37 +67,17 @@ if __name__ == "__main__":
         estimator_type_name = param_class.__name__.replace("EstimatorParams", "")
 
         # Loop multiple times for each model type
-        for i in range(num_runs_per_type):
-            version_number = i + 1
+        for run_idx in range(num_runs_per_type):
+            version_number = run_idx + 1
             print(
-                f"  > Run {version_number}/{num_runs_per_type} for { estimator_type_name}"
+                f"  > Run {version_number}/{num_runs_per_type} for {estimator_type_name}"
             )
 
-            # Instantiate the parameters for the current interpolator type
-            # You might want to pass specific args/kwargs if these DTOs have required params
-            # For simplicity, we assume they can be instantiated without args here.
-            model_params_instance = param_class()
-
-            # Construct the command with the appropriate parameters
-            command = TrainModelCommand(
-                estimator_params=model_params_instance,
-                # --- NEW NORMALIZER & METRIC CONFIGURATIONS ---
-                objectives_normalizer_config=NormalizerConfig(
-                    type="MinMaxScaler", params={"feature_range": (0, 1)}
-                ),
-                decisions_normalizer_config=NormalizerConfig(
-                    type="MinMaxScaler", params={"feature_range": (0, 1)}
-                ),
-                estimator_performance_metric_configs=[
-                    ValidationMetricConfig(type="MSE", params={}),
-                    ValidationMetricConfig(type="MAE", params={}),
-                    ValidationMetricConfig(type="R2", params={}),
-                ],
-            )
+            command = _build_command(param_class)
 
             # Execute the command handler
             command_handler.execute(command)
             print(
-                f"  Successfully completed run {version_number} for { estimator_type_name}"
+                f"  Successfully completed run {version_number} for {estimator_type_name}"
             )
             time.sleep(0.8)

@@ -10,7 +10,7 @@ from ...infrastructure.repositories.datasets.generated_dataset_repo import (
 from ...infrastructure.repositories.datasets.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.visualizers.pareto_data import PlotlyDatasetVisualizer
+from ...infrastructure.visualizers.dataset import PlotlyDatasetVisualizer
 
 command = VisualizeDatasetCommand(
     data_file_name="dataset", processed_file_name="dataset"
