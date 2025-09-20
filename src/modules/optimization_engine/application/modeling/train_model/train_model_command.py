@@ -2,10 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ...dtos import (
-    EstimatorParams,
-    ValidationMetricConfig,
-)
+from ...dtos import EstimatorParams, ValidationMetricConfig
 
 
 class TrainModelCommand(BaseModel):

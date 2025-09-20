@@ -15,7 +15,7 @@ from ...domain.modeling.interfaces.base_validation_metric import (
 )
 from ...domain.modeling.value_objects.loss_history import LossHistory
 from ...domain.modeling.value_objects.metrics import Metrics
-from .utils import apply_param, evaluate_metrics
+from .utils import evaluate_metrics
 
 
 class DeterministicModelTrainer:
@@ -171,7 +171,8 @@ class ProbabilisticModelTrainer:
             raise TypeError("EpochsCurve is for ProbabilisticEstimator only")
 
         # 1) Fit estimator for given number of epochs (estimator should internally record history)
-        estimator.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
+
+        estimator.fit(X_train, y_train)
 
         # 2) Try to read history from common accessor names
         history = estimator.get_loss_history()
@@ -357,19 +358,19 @@ class CrossValidationTrainer:
         }
 
         for val in param_vals:
-            c = estimator.clone()
+            estimator_clonned = estimator.clone()
             try:
-                self._apply_param(c, param_name, val)
+                setattr(estimator_clonned, param_name, val)
             except Exception:
                 pass
 
             res = self.validate(
-                c,
-                X_train,
-                y_train,
-                X_test,
-                y_test,
-                validation_metrics,
+                estimator=estimator_clonned,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
+                validation_metrics=validation_metrics,
                 parameters={**parameters, param_name: val},
                 X_normalizer=X_normalizer,
                 y_normalizer=y_normalizer,
@@ -396,7 +397,7 @@ class CrossValidationTrainer:
 
         best_clone = estimator.clone()
 
-        apply_param(best_clone, param_name, best_val)
+        setattr(best_clone, param_name, best_val)
 
         estimator, loss_history, metrics = self.validate(
             best_clone,
