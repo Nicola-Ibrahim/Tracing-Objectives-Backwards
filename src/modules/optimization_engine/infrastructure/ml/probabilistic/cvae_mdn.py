@@ -1,5 +1,3 @@
-from typing import Optional, Sequence
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -183,22 +181,32 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         beta: float = 0.1,
         kl_warmup: int = 100,
         free_nats: float = 0.0,
+        epochs: int = 200,
+        batch_size: int = 128,
+        val_size: float = 0.2,
+        random_state: int = 42,
     ):
         super().__init__()
         self._latent_dim = int(latent_dim)
         self._learning_rate = float(learning_rate)
         self._n_components = int(n_components)
-        self._beta = float(beta)
-        self._kl_warmup = int(kl_warmup)
-        self._free_nats = float(free_nats)
+        self.beta = float(beta)
+        self.beta_final = float(beta)
+        self.kl_warmup = int(kl_warmup)
+        self.free_nats = float(free_nats)
 
-        self._encoder: Optional[CVAEEncoder] = None
-        self._decoder: Optional[CVAEDecoderMDN] = None
-        self._prior_net: Optional[PriorNet] = None
+        self._encoder: CVAEEncoder
+        self._decoder: CVAEDecoderMDN
+        self._prior_net: PriorNet
 
-        self._X_dim: Optional[int] = None  # input/condition dimension
-        self._y_dim: Optional[int] = None  # output/target dimension
+        self._X_dim: int | None = None  # input/condition dimension
+        self._y_dim: int | None = None  # output/target dimension
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.val_size = val_size
+        self.random_state = random_state
 
     @property
     def type(self) -> str:
@@ -209,43 +217,28 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         self,
         X: NDArray[np.float64],
         y: NDArray[np.float64],
-        batch_size: int = 128,
-        val_size: float = 0.2,
-        random_state: int = 42,
     ):
         # Standard train/val split on numpy arrays, then wrap to torch.
         Xtr, Xval, ytr, yval = train_test_split(
-            X, y, test_size=val_size, random_state=random_state
+            X, y, test_size=self.val_size, random_state=self.random_state
         )
         to_t = lambda a: torch.tensor(a, dtype=torch.float32)
         train_loader = DataLoader(
-            TensorDataset(to_t(Xtr), to_t(ytr)), batch_size=batch_size, shuffle=True
+            TensorDataset(to_t(Xtr), to_t(ytr)),
+            batch_size=self.batch_size,
+            shuffle=True,
         )
         val_loader = DataLoader(
-            TensorDataset(to_t(Xval), to_t(yval)), batch_size=batch_size, shuffle=False
+            TensorDataset(to_t(Xval), to_t(yval)),
+            batch_size=self.batch_size,
+            shuffle=False,
         )
         return train_loader, val_loader
 
     # ---- training ---- #
-    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64], **kwargs) -> None:
-        """
-        kwargs:
-          epochs, batch_size, val_size, random_state
-          beta (float)         : final KL weight (default self._beta)
-          kl_warmup (int)      : epochs to ramp from 0 -> beta (default self._kl_warmup)
-          free_nats (float)    : per-dim KL floor in nats (default self._free_nats)
-          min_prior_logvar, max_prior_logvar (floats)
-        """
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
+        """Fit the CVAE-MDN using the configured training hyperparameters."""
         super().fit(X, y)
-
-        # ---- hyperparameters ----
-        epochs = int(kwargs.get("epochs", 200))
-        batch_size = int(kwargs.get("batch_size", 128))
-        val_size = float(kwargs.get("val_size", 0.2))
-        random_state = int(kwargs.get("random_state", 42))
-        beta_final = float(kwargs.get("beta", self._beta))
-        kl_warmup = int(kwargs.get("kl_warmup", self._kl_warmup))
-        free_nats = float(kwargs.get("free_nats", self._free_nats))
 
         # Shapes: X is condition/input, y is target/output.
         self._X_dim = int(X.shape[1])
@@ -268,9 +261,7 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         ).to(self.device)
 
         # Data loaders
-        train_loader, val_loader = self._prepare_dataloaders(
-            X, y, batch_size=batch_size, val_size=val_size, random_state=random_state
-        )
+        train_loader, val_loader = self._prepare_dataloaders(X, y)
 
         # Single optimizer over encoder, decoder, and prior net.
         params = (
@@ -292,14 +283,16 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
                 - 1.0
             )
             # Free-bits (free_nats) prevents KL from collapsing to zero immediately.
-            if free_nats > 0.0:
-                kl_per_dim = torch.clamp(kl_per_dim, min=free_nats / self._latent_dim)
+            if self.free_nats > 0.0:
+                kl_per_dim = torch.clamp(
+                    kl_per_dim, min=self.free_nats / self._latent_dim
+                )
             return torch.mean(torch.sum(kl_per_dim, dim=1))
 
-        for epoch in range(1, epochs + 1):
+        for epoch in range(1, self.epochs + 1):
             # KL warmup: ramp β from 0 → beta_final across `kl_warmup` epochs.
-            beta = beta_final * (
-                min(1.0, epoch / max(1, kl_warmup)) if kl_warmup > 0 else 1.0
+            beta = self.beta_final * (
+                min(1.0, epoch / max(1, self.kl_warmup)) if self.kl_warmup > 0 else 1.0
             )
 
             # ---- train ----
@@ -388,7 +381,7 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         X_tensor: torch.Tensor,
         n_samples: int,
         temperature: float,
-        seed: Optional[int],
+        seed: int,
     ) -> torch.Tensor:
         """
         Draw S latent samples z ~ p(z|X) for each input X (inference helper).
@@ -400,10 +393,8 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
             raise ValueError("n_samples must be >= 1")
 
         n = X_tensor.shape[0]
-        gen = None
-        if seed is not None:
-            gen = torch.Generator(device=self.device)
-            gen.manual_seed(int(seed))
+        gen = torch.Generator(device=self.device)
+        gen.manual_seed(int(seed))
 
         mu_p, logvar_p = self._prior_net(X_tensor)  # (n, latent)
         std_p = torch.exp(0.5 * logvar_p)
@@ -419,7 +410,7 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         self,
         X: NDArray[np.float64],
         n_samples: int = 200,
-        seed: int | None = None,
+        seed: int = 44,
         temperature: float = 1.0,
         use_prior: bool = True,
         max_outputs_per_chunk: int = 20_000,
@@ -495,7 +486,7 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         X: np.typing.NDArray[np.float64],
         n_samples: int = 1,
         temperature: float = 1.0,
-        seed: int | None = None,
+        seed: int = 43,
         use_prior: bool = True,
         *,
         max_outputs_per_chunk: int = 20_000,
@@ -517,7 +508,7 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         self,
         X: NDArray[np.float64],
         n_samples: int = 256,
-        seed: int | None = None,
+        seed: int = 43,
         temperature: float = 1.0,
         deterministic: bool = False,
         max_outputs_per_chunk: int = 20_000,
@@ -591,26 +582,58 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
 
         return out.cpu().numpy().astype(np.float64, copy=False)
 
-    def predict_quantiles(
+    def predict_map(
         self,
         X: NDArray[np.float64],
-        n_samples: int = 1000,
-        qs: Sequence[float] = (0.05, 0.95),
+        *,
         seed: int | None = None,
+        use_prior: bool = True,
+    ) -> NDArray[np.float64]:
+        """MAP estimate via the highest-weight mixture component with latent z=μ_p(X)."""
+
+        if self._decoder is None:
+            raise RuntimeError("Model not fitted.")
+
+        self._decoder.eval()
+        self._prior_net.eval()
+
+        X_t = torch.tensor(X, dtype=torch.float32, device=self.device)
+        if seed is not None:
+            torch.manual_seed(int(seed))
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(int(seed))
+
+        with torch.no_grad():
+            if use_prior:
+                mu_p, _ = self._prior_net(X_t)
+            else:
+                mu_p = torch.zeros((X_t.size(0), self._latent_dim), device=self.device)
+            z = mu_p
+            pi_logits, mu, _ = self._decoder(z, X_t)
+            pi = torch.softmax(pi_logits, dim=1)
+            k_star = torch.argmax(pi, dim=1)
+            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]
+
+        return out.cpu().numpy().astype(np.float64, copy=False)
+
+    def predict_median(
+        self,
+        X: NDArray[np.float64],
+        n_samples: int = 501,
+        seed: int = 43,
+        *,
         temperature: float = 1.0,
         use_prior: bool = True,
         max_outputs_per_chunk: int = 20_000,
     ) -> NDArray[np.float64]:
-        """
-        Monte-Carlo quantiles over p(y|X).
+        """Approximate posterior median via Monte-Carlo draws from p(y|X)."""
 
-        Draw S samples via `sample`, then compute percentiles across the sample axis.
-        Returns (n, len(qs), Dy).
-        """
+        if self._decoder is None:
+            raise RuntimeError("Model not fitted.")
         if n_samples < 1:
             raise ValueError("n_samples must be >= 1")
 
-        s = self.sample(
+        draws = self.sample(
             X,
             n_samples=n_samples,
             seed=seed,
@@ -618,8 +641,9 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
             use_prior=use_prior,
             max_outputs_per_chunk=max_outputs_per_chunk,
         )
-        if s.ndim == 2:
-            s = s[:, None, :]
-        perc = [100.0 * float(q) for q in qs]
-        q_arr = np.percentile(s, perc, axis=1)  # (len(qs), n, Dy)
-        return np.transpose(q_arr, (1, 0, 2)).astype(np.float64, copy=False)
+
+        if draws.ndim == 2:
+            return draws.astype(np.float64, copy=False)
+
+        median = np.median(draws, axis=1)
+        return median.astype(np.float64, copy=False)

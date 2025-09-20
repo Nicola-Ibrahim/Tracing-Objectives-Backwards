@@ -170,16 +170,14 @@ class MDN(nn.Module):
           - Laplace(mu, sigma)    if LAPLACE
           - LogNormal(mu, sigma)  if LOGNORMAL  (mu, sigma are log-space)
         """
-        if distribution_family == DistributionFamilyEnum.NORMAL:
-            comp = Normal(mu, sigma)
-        elif distribution_family == DistributionFamilyEnum.LAPLACE:
-            comp = Laplace(mu, sigma)
-        elif distribution_family == DistributionFamilyEnum.LOGNORMAL:
-            comp = LogNormal(mu, sigma)
-        else:
-            raise ValueError(
-                f"Unsupported distribution family: {distribution_family.value}"
-            )
+
+        mapping = {
+            DistributionFamilyEnum.NORMAL: Normal(mu, sigma),
+            DistributionFamilyEnum.LAPLACE: Laplace(mu, sigma),
+            DistributionFamilyEnum.LOGNORMAL: LogNormal(mu, sigma),
+        }
+
+        comp = mapping[distribution_family]
 
         return MixtureSameFamily(Categorical(probs=pi), Independent(comp, 1))
 
@@ -228,7 +226,7 @@ class MDN(nn.Module):
         # 2) exp(large_positive) => huge sigma -> underflow/very flat Gaussian -> training might be unstable
         sigma = self.fc_sigma(h)  # [batch_size, num_mixtures * output_dim]
         sigma = (
-            F.softplus(sigma) + 1e-6
+            F.softplus(sigma) + 1e-2
         )  # Enforce positive stddev so the Gaussian is well-defined and gradients behave predictably
         sigma = sigma.view(-1, self.num_mixtures, self.output_dim)
         return pi, mu, sigma
@@ -246,8 +244,7 @@ class MDNEstimator(ProbabilisticEstimator):
     Public API:
       - predict(X, ...) -> one stochastic draw per x: (n, out_dim)
       - sample(X, n_samples, ...) -> many draws: (n, n_samples, out_dim)
-      - predict_mean / predict_map / predict_std (analytic where possible)
-      - predict_median / predict_quantiles (sampling-based)
+      - predict_mean / predict_median / predict_map
       - get_mixture_parameters(X) -> (pi, mu, sigma) as numpy arrays
     """
 
@@ -257,10 +254,16 @@ class MDNEstimator(ProbabilisticEstimator):
         learning_rate: float = 1e-4,
         distribution_family: DistributionFamilyEnum = DistributionFamilyEnum.NORMAL,
         gmm_boost: bool = False,
-        hidden_layers: list[int] = [64],
+        hidden_layers: list[int] = [256, 128, 128],
         hidden_activation_fn_name: ActivationFunctionEnum = ActivationFunctionEnum.RELU,
         optimizer_fn_name: OptimizerFunctionEnum = OptimizerFunctionEnum.ADAM,
         verbose: bool = False,
+        epochs: int = 100,
+        batch_size: int = 32,
+        val_size: float = 0.2,
+        weight_decay: float = 0.0,
+        clip_grad_norm: float | None = None,
+        seed: int = 44,
     ):
         super().__init__()
         self._num_mixtures = num_mixtures
@@ -277,6 +280,13 @@ class MDNEstimator(ProbabilisticEstimator):
         self._best_model_state_dict: dict = None
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.val_size = val_size
+        self.weight_decay = weight_decay
+        self.clip_grad_norm = clip_grad_norm
+        self.seed = seed
 
     @property
     def type(self) -> str:
@@ -335,11 +345,9 @@ class MDNEstimator(ProbabilisticEstimator):
         self,
         X: npt.NDArray[np.float64],
         y: npt.NDArray[np.float64],
-        batch_size: int = 32,
-        test_size: float = 0.2,
     ) -> tuple[DataLoader, DataLoader]:
         X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=test_size, random_state=42
+            X, y, test_size=self.val_size, random_state=42
         )
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
         y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
@@ -349,8 +357,10 @@ class MDNEstimator(ProbabilisticEstimator):
         train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
         val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
 
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        train_loader = DataLoader(
+            train_dataset, batch_size=self.batch_size, shuffle=True
+        )
+        val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
         return train_loader, val_loader
 
     def _maybe_fail_on_lognormal(self, y: npt.NDArray[np.float64]) -> None:
@@ -366,44 +376,32 @@ class MDNEstimator(ProbabilisticEstimator):
         self,
         X: npt.NDArray[np.float64],
         y: npt.NDArray[np.float64],
-        **kwargs,
     ) -> None:
-        """
-        Fit the MDN with early stopping.
-        kwargs:
-            epochs: int = 100
-            batch_size: int = 32
-            weight_decay: float = 0.0
-            clip_grad_norm: Optional[float] = None
-            seed: int = None  (for reproducibility)
-        """
+        """Fit the MDN using the configured training hyperparameters."""
         super().fit(X, y)
 
         # Optional reproducibility
-        seed = kwargs.get("seed", None)
+        seed = self.seed
         if seed is not None:
             torch.manual_seed(int(seed))
             np.random.seed(int(seed))
 
-        epochs = int(kwargs.get("epochs", 100))
-        batch_size = int(kwargs.get("batch_size", 32))
-        weight_decay = float(kwargs.get("weight_decay", 0.0))
-        clip_grad_norm = kwargs.get("clip_grad_norm", None)
-
         self._maybe_fail_on_lognormal(y)
         self._prepare_model(X, y)
-        train_loader, val_loader = self._prepare_dataloaders(X, y, batch_size)
+        train_loader, val_loader = self._prepare_dataloaders(X, y)
 
         optimizer_fn = self._get_optimizer_fn(self._optimizer_fn_name)
         optimizer = optimizer_fn(
-            self._model.parameters(), lr=self._learning_rate, weight_decay=weight_decay
+            self._model.parameters(),
+            lr=self._learning_rate,
+            weight_decay=self.weight_decay,
         )
 
         best_loss = float("inf")
         self._best_model_state_dict = None
 
         # Training loop
-        for epoch in range(epochs):
+        for epoch in range(self.epochs):
             self._model.train()
             train_loss = 0.0
             for batch_X, batch_y in train_loader:
@@ -417,9 +415,9 @@ class MDNEstimator(ProbabilisticEstimator):
                 )
                 loss = -dist.log_prob(batch_y).mean()
                 loss.backward()
-                if clip_grad_norm is not None:
+                if self.clip_grad_norm is not None:
                     torch.nn.utils.clip_grad_norm_(
-                        self._model.parameters(), float(clip_grad_norm)
+                        self._model.parameters(), self.clip_grad_norm
                     )
                 optimizer.step()
                 train_loss += loss.item()
@@ -509,7 +507,6 @@ class MDNEstimator(ProbabilisticEstimator):
         X_tensor = self._prepare_inputs(X)
         device = self._model_device()
         n = X_tensor.shape[0]
-        n_samples = int(n_samples)
 
         # RNG
         if seed is not None:
@@ -622,71 +619,12 @@ class MDNEstimator(ProbabilisticEstimator):
             return s.astype(np.float64, copy=False)
         return np.median(s, axis=1).astype(np.float64, copy=False)
 
-    def predict_quantiles(
+    def predict_map(
         self,
         X: npt.NDArray[np.float64],
-        qs: Sequence[float] = (0.05, 0.95),
-        n_samples: int = 500,
-        seed: int | None = None,
-        *,
-        temperature: float = 1.0,
-        max_outputs_per_chunk: int = 20_000,
     ) -> npt.NDArray[np.float64]:
         """
-        **Monte-Carlo quantiles** per input (marginal, per output dimension).
-
-        Shapes:
-        - X: (n, in_dim)
-        - return: (n, len(qs), out_dim)
-        """
-        s = self.sample(
-            X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            max_outputs_per_chunk=max_outputs_per_chunk,
-        )
-        if s.ndim == 2:
-            s = s[:, None, :]
-        percents = [float(q) * 100.0 for q in qs]
-        q_arr = np.percentile(s, percents, axis=1)  # (len(qs), n, out)
-        return np.transpose(q_arr, (1, 0, 2)).astype(np.float64, copy=False)
-
-    def predict_std(
-        self,
-        X: npt.NDArray[np.float64],
-        n_samples: int = 500,
-        seed: int | None = None,
-        *,
-        temperature: float = 1.0,
-        max_outputs_per_chunk: int = 20_000,
-    ) -> npt.NDArray[np.float64]:
-        """
-        **Monte-Carlo standard deviation** per input (marginal, per output dimension).
-
-        Notes:
-        - Uses sample variance across draws from p(x|y).
-        - Prefer MC here to keep semantics aligned with CVAE and other models.
-
-        Shapes:
-        - X: (n, in_dim)
-        - return: (n, out_dim)
-        """
-        s = self.sample(
-            X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            max_outputs_per_chunk=max_outputs_per_chunk,
-        )
-        if s.ndim == 2:
-            # with one sample, std is undefined; return zeros
-            return np.zeros_like(s, dtype=np.float64)
-        return s.std(axis=1, ddof=0).astype(np.float64, copy=False)
-
-    def predict_map(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-        """
-        **Deterministic** mean of the **MAP component** per input:
+        **Deterministic** mean of the MAP component per input:
         k* = argmax_k π_k(y); returns μ_{k*}(y).
 
         Shapes:
@@ -698,7 +636,7 @@ class MDNEstimator(ProbabilisticEstimator):
         with torch.no_grad():
             pi, mu, sigma = self._model(X_t)
             k_star = torch.argmax(pi, dim=1)  # (n,)
-            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]  # (n, out)
+            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]
         return out.cpu().numpy().astype(np.float64, copy=False)
 
     def get_mixture_parameters(
@@ -714,7 +652,7 @@ class MDNEstimator(ProbabilisticEstimator):
     # -------------------- internal helpers --------------------
 
     def _ensure_fitted(self) -> None:
-        if getattr(self, "_model", None) is None:
+        if self._model is None:
             raise RuntimeError("Estimator not fitted. Call 'fit' first.")
 
     def _model_device(self) -> torch.device:
@@ -727,10 +665,7 @@ class MDNEstimator(ProbabilisticEstimator):
         device = self._model_device()
         X_t = torch.tensor(X, dtype=torch.float32, device=device)
 
-        if (
-            getattr(self, "_gmm_boost", False)
-            and getattr(self, "_clusterer", None) is not None
-        ):
+        if self._gmm_boost and self._clusterer is not None:
             cluster_probs = self._clusterer.predict_proba(X)  # numpy
             cp_t = torch.tensor(cluster_probs, dtype=torch.float32, device=device)
             X_t = torch.cat([X_t, cp_t], dim=1)
