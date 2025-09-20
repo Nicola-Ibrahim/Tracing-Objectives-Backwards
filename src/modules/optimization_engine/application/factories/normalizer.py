@@ -1,3 +1,4 @@
+from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
 from ...infrastructure.normalizers import (
     HypercubeNormalizer,
@@ -14,11 +15,11 @@ class NormalizerFactory:
     """
 
     _registry = {
-        "MinMaxScaler": MinMaxScalerNormalizer,
-        "HypercubeNormalizer": HypercubeNormalizer,
-        "StandardNormalizer": StandardNormalizer,
-        "UnitVectorNormalizer": UnitVectorNormalizer,
-        "LogNormalizer": LogNormalizer,
+        NormalizerTypeEnum.MIN_MAX: MinMaxScalerNormalizer,
+        NormalizerTypeEnum.HYPERCUBE: HypercubeNormalizer,
+        NormalizerTypeEnum.STANDARD: StandardNormalizer,
+        NormalizerTypeEnum.UNIT_VECTOR: UnitVectorNormalizer,
+        NormalizerTypeEnum.LOG: LogNormalizer,
     }
 
     def create(self, config: dict) -> BaseNormalizer:
