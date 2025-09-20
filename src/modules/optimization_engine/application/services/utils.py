@@ -13,30 +13,6 @@ from ...domain.modeling.interfaces.base_validation_metric import (
 from .data_preparer import DataPreparer
 
 
-def apply_param(estimator: BaseEstimator, name: str, value: Any) -> None:
-    """Best-effort apply parameter on estimator."""
-    if hasattr(estimator, "set_params"):
-        try:
-            estimator.set_params(**{name: value})
-            return
-        except Exception:
-            pass
-    if hasattr(estimator, "params") and isinstance(getattr(estimator, "params"), dict):
-        estimator.params[name] = value
-        return
-    if hasattr(estimator, name):
-        try:
-            setattr(estimator, name, value)
-            return
-        except Exception:
-            pass
-    try:
-        estimator.__dict__[name] = value
-        return
-    except Exception:
-        return
-
-
 def split_and_normalize(
     X: np.ndarray,
     y: np.ndarray,

@@ -15,14 +15,14 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
 
     Expected keys in `data`:
       # RAW (not normalized)
-      - pareto_set                : (n, 2) raw decisions [x1, x2]
-      - pareto_front              : (n, 2) raw objectives [f1, f2]
+      - pareto_front              : (n, 2) raw objectives [x1, x2]
+      - pareto_set                : (n, 2) raw decisions [y1, y2]
       - historical_solutions      : (m, 2) raw decisions
       - historical_objectives     : (k, 2) raw objectives
 
       # NORMALIZED (already normalized in processing)
-      - X_train, X_test           : (.., 2) normalized decisions
-      - y_train, y_test           : (.., 2) normalized objectives
+      - X_train, X_test           : (.., 2) normalized objectives (Pareto front)
+      - y_train, y_test           : (.., 2) normalized decisions
     """
 
     _PARETO_COLOR = "#3498db"
@@ -42,31 +42,9 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         # Row 1: RAW 2D scatters
         (1, 1): {
             "type": "scatter_from2d",
-            "title": "Decision Space (raw x1 vs x2)",
+            "title": "Objective Space (raw x1 vs x2)",
             "x_label": "$x_1$",
             "y_label": "$x_2$",
-            "array2d_key": "pareto_set",
-            "xy_cols": (0, 1),
-            "base_name": "Pareto Set",
-            "base_color": _PARETO_COLOR,
-            "base_symbol": "circle",
-            "base_size": 7,
-            "overlays": [
-                {
-                    "key": "historical_solutions",
-                    "name": "Historical (X)",
-                    "symbol": "cross",
-                    "size": 5,
-                    "opacity": 0.5,
-                    "color": _HISTORY_COLOR,
-                },
-            ],
-        },
-        (1, 2): {
-            "type": "scatter_from2d",
-            "title": "Objective Space (raw f1 vs f2)",
-            "x_label": "$f_1$",
-            "y_label": "$f_2$",
             "array2d_key": "pareto_front",
             "xy_cols": (0, 1),
             "base_name": "Pareto Front",
@@ -76,7 +54,29 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
             "overlays": [
                 {
                     "key": "historical_objectives",
-                    "name": "Historical (F)",
+                    "name": "Historical (Objectives)",
+                    "symbol": "cross",
+                    "size": 5,
+                    "opacity": 0.5,
+                    "color": _HISTORY_COLOR,
+                },
+            ],
+        },
+        (1, 2): {
+            "type": "scatter_from2d",
+            "title": "Decision Space (raw y1 vs y2)",
+            "x_label": "$y_1$",
+            "y_label": "$y_2$",
+            "array2d_key": "pareto_set",
+            "xy_cols": (0, 1),
+            "base_name": "Pareto Set",
+            "base_color": _PARETO_COLOR,
+            "base_symbol": "circle",
+            "base_size": 7,
+            "overlays": [
+                {
+                    "key": "historical_solutions",
+                    "name": "Historical (Decisions)",
                     "symbol": "cross",
                     "size": 5,
                     "opacity": 0.5,
@@ -88,41 +88,41 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         (2, 1): {
             "type": "pdf1d_from2d",
             "title": "Raw KDE: x1",
-            "source_2d_key": "pareto_set",
+            "source_2d_key": "pareto_front",
             "col": 0,
             "x_label": "$x_1$",
         },
         (2, 2): {
             "type": "pdf1d_from2d",
             "title": "Raw KDE: x2",
-            "source_2d_key": "pareto_set",
+            "source_2d_key": "pareto_front",
             "col": 1,
             "x_label": "$x_2$",
         },
         (3, 1): {
             "type": "pdf1d_from2d",
-            "title": "Raw KDE: f1",
-            "source_2d_key": "pareto_front",
+            "title": "Raw KDE: y1",
+            "source_2d_key": "pareto_set",
             "col": 0,
-            "x_label": "$f_1$",
+            "x_label": "$y_1$",
         },
         (3, 2): {
             "type": "pdf1d_from2d",
-            "title": "Raw KDE: f2",
-            "source_2d_key": "pareto_front",
+            "title": "Raw KDE: y2",
+            "source_2d_key": "pareto_set",
             "col": 1,
-            "x_label": "$f_2$",
+            "x_label": "$y_2$",
         },
         # Row 4: NORMALIZED 2D scatters (train/test only)
         (4, 1): {
             "type": "scatter_many",
-            "title": "Normalized Decisions (x1, x2)",
+            "title": "Normalized Objectives (x1, x2)",
             "x_label": "Norm $x_1$",
             "y_label": "Norm $x_2$",
             "series": [
                 {
                     "key": "X_train",
-                    "name": "Train (X)",
+                    "name": "Train (Objectives)",
                     "symbol": "circle-open",
                     "size": 6,
                     "opacity": 0.7,
@@ -130,7 +130,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 },
                 {
                     "key": "X_test",
-                    "name": "Test (X)",
+                    "name": "Test (Objectives)",
                     "symbol": "x",
                     "size": 7,
                     "opacity": 0.9,
@@ -140,13 +140,13 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         },
         (4, 2): {
             "type": "scatter_many",
-            "title": "Normalized Objectives (f1, f2)",
-            "x_label": "Norm $f_1$",
-            "y_label": "Norm $f_2$",
+            "title": "Normalized Decisions (y1, y2)",
+            "x_label": "Norm $y_1$",
+            "y_label": "Norm $y_2$",
             "series": [
                 {
                     "key": "y_train",
-                    "name": "Train (F)",
+                    "name": "Train (Decisions)",
                     "symbol": "circle-open",
                     "size": 6,
                     "opacity": 0.7,
@@ -154,7 +154,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 },
                 {
                     "key": "y_test",
-                    "name": "Test (F)",
+                    "name": "Test (Decisions)",
                     "symbol": "x",
                     "size": 7,
                     "opacity": 0.9,
@@ -177,13 +177,13 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         },
         (6, 1): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $f_1$",
+            "title": "PDF: Norm $y_1$",
             "vec_keys": ["y_train", "y_test"],
             "col": 0,
         },
         (6, 2): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $f_2$",
+            "title": "PDF: Norm $y_2$",
             "vec_keys": ["y_train", "y_test"],
             "col": 1,
         },
@@ -199,20 +199,20 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         },
         (7, 2): {
             "type": "pdf2d_concat",
-            "title": "2D PDF: (Norm f1, Norm f2)",
+            "title": "2D PDF: (Norm y1, Norm y2)",
             "mat_keys": ["y_train", "y_test"],
             "x_col": 0,
             "y_col": 1,
-            "x_label": "Norm $f_1$",
-            "y_label": "Norm $f_2$",
+            "x_label": "Norm $y_1$",
+            "y_label": "Norm $y_2$",
         },
-        # Row 8: 3D (normalized): (x1, x2, f1) and (x1, x2, f2) with train/test overlays
+        # Row 8: 3D (normalized): (x1, x2, y1) and (x1, x2, y2) with train/test overlays
         (8, 1): {
             "type": "3d_many",
-            "title": "3D (normalized): (x1, x2, f1)",
+            "title": "3D (normalized): (x1, x2, y1)",
             "x_label": "x1 (norm)",
             "y_label": "x2 (norm)",
-            "z_label": "f1 (norm)",
+            "z_label": "y1 (norm)",
             "series": [
                 {
                     "x_key": "X_train",
@@ -242,10 +242,10 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         },
         (8, 2): {
             "type": "3d_many",
-            "title": "3D (normalized): (x1, x2, f2)",
+            "title": "3D (normalized): (x1, x2, y2)",
             "x_label": "x1 (norm)",
             "y_label": "x2 (norm)",
-            "z_label": "f2 (norm)",
+            "z_label": "y2 (norm)",
             "series": [
                 {
                     "x_key": "X_train",

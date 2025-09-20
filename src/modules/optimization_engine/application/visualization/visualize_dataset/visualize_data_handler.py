@@ -30,26 +30,16 @@ class VisualizeDatasetCommandHandler:
             filename=command.processed_file_name
         )
 
-        X_train = processed.X_train
-        y_train = processed.y_train
-        X_test = processed.X_test
-        y_test = processed.y_test
-
-        pareto_set = raw.pareto_set  # (n, 2)
-        pareto_front = raw.pareto_front  # (n, 2)
-        hist_solutions = raw.historical_solutions  # optional (m, 2)
-        hist_objectives = raw.historical_objectives  # optional (k, 2)
-
         # 3) Package payload (arrays only)
         payload = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-            "pareto_set": pareto_set,
-            "pareto_front": pareto_front,
-            "historical_solutions": hist_solutions,
-            "historical_objectives": hist_objectives,
+            "X_train": processed.X_train,
+            "y_train": processed.y_train,
+            "X_test": processed.X_test,
+            "y_test": processed.y_test,
+            "pareto_set": processed.pareto_set,
+            "pareto_front": processed.pareto_front,
+            "historical_solutions": raw.historical_solutions,
+            "historical_objectives": raw.historical_objectives,
         }
 
         # 7) Plot

@@ -30,13 +30,11 @@ class ProcessDatasetCommandHandler:
         # 1) Load raw bundle
         raw = self._raw_repo.load(filename=command.source_filename)
 
-        # 2) Split
-        X_raw = np.asarray(raw.historical_objectives)
-        y_raw = np.asarray(raw.historical_solutions)
+        self._logger.log_info(
+            f"[postprocess] data: X{raw.historical_objectives.shape}, y{raw.historical_solutions.shape}"
+        )
 
-        self._logger.log_info(f"[postprocess] data: X{X_raw.shape}, y{y_raw.shape}")
-
-        # 3) Build normalizers (one per space)
+        # 2) Build normalizers (one per space)
         X_normalizer = self._normalizer_factory.create(
             command.normalizer_config.model_dump()
         )
@@ -44,11 +42,11 @@ class ProcessDatasetCommandHandler:
             command.normalizer_config.model_dump()
         )
 
-        # 4) Split + normalize (returns normalized arrays + the fitted normalizers)
+        # 3) Split + normalize (returns normalized arrays + the fitted normalizers)
         X_train, X_test, y_train, y_test, X_normalizer_fitted, y_normalizer_fitted = (
             split_and_normalize(
-                X=X_raw,
-                y=y_raw,
+                X=raw.historical_objectives,
+                y=raw.historical_solutions,
                 X_normalizer=X_normalizer,
                 y_normalizer=y_normalizer,
                 test_size=command.test_size,
@@ -56,7 +54,7 @@ class ProcessDatasetCommandHandler:
             )
         )
 
-        # 5) Bundle output
+        # 4) Bundle output
         prcessed_dataset = ProcessedDataset.create(
             name="processed_dataset",
             X_train=X_train,
@@ -75,7 +73,7 @@ class ProcessDatasetCommandHandler:
             },
         )
 
-        # 6) Save to processed repository
+        # 5) Save to processed repository
         self._processed_repo.save(prcessed_dataset)
 
         self._logger.log_info(

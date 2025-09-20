@@ -73,19 +73,19 @@ data-visualize:  # Visualize the generated data
 .PHONY: model-train-single
 model-train-single:  # Train a single inverse decision mapper using a train/test split
 	@echo "$(BLUE)Training a single model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model standard
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model standard --estimator mdn
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
 .PHONY: model-train-cv
 model-train-cv:  # Train a single model using k-fold cross-validation
 	@echo "$(BLUE)Training a single model with cross-validation...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model cv --cv-splits 5 --estimator rbf
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model cv --cv-splits 10in  --estimator rbf
 	@echo "$(GREEN)Cross-validation training complete.$(RESET)"
 
 .PHONY: model-train-grid
 model-train-grid:  # Run grid search with cross-validation for a single model
 	@echo "$(BLUE)Running grid search for a single model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model grid --cv-splits 5 --estimator rbf --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model grid --cv-splits 10 --estimator rbf --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
 	@echo "$(GREEN)Grid search training complete.$(RESET)"
 
 .PHONY: model-train-all
@@ -103,8 +103,15 @@ model-generate-decision:  # Use a trained model to generate a decision for a tar
 .PHONY: model-visualize-performance
 model-visualize-performance:  # Visualize the performance of trained models
 	@echo "$(BLUE)Analyzing and visualizing model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator mdn
 	@echo "$(GREEN)Performance analysis complete.$(RESET)"
+
+.PHONY: model-train-and-visualize
+model-train-and-visualize:  # Train a single model then visualize its performance
+	@echo "$(BLUE)Training model and preparing performance report...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model standard --estimator mdn
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator mdn
+	@echo "$(GREEN)Training and visualization complete.$(RESET)"
 
 # ====================================================================================
 # Default Targets

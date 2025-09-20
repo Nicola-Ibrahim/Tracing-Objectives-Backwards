@@ -2,7 +2,7 @@ import enum
 import inspect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Self, Sequence
+from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -211,6 +211,7 @@ class ProbabilisticEstimator(BaseEstimator):
     ) -> npt.NDArray[np.float64]:
         """Draw samples from the predictive distribution p(y|X)."""
 
+    @abstractmethod
     def predict(
         self,
         X: npt.NDArray[np.float64],
@@ -218,24 +219,11 @@ class ProbabilisticEstimator(BaseEstimator):
         seed: int | None = None,
         **kwargs,
     ) -> npt.NDArray[np.float64]:
-        """
-        Return a single stochastic draw from p(y|X).
-        Sub-classes may expose additional keyword arguments (e.g., temperature) via ``**kwargs``.
-        """
+        """Return a single draw or summary prediction for each input."""
 
-        if X is None:
-            raise ValueError("Input X cannot be None.")
+        raise NotImplementedError
 
-        draw = self.sample(X, n_samples=1, seed=seed, **kwargs)
-        draw = np.asarray(draw, dtype=np.float64)
-        if draw.ndim == 3 and draw.shape[1] == 1:
-            return draw[:, 0, :]
-        if draw.ndim == 2:
-            return draw
-        raise ValueError(
-            "ProbabilisticEstimator.sample must return shape (n, out) or (n, 1, out) when n_samples=1."
-        )
-
+    @abstractmethod
     def predict_mean(
         self,
         X: npt.NDArray[np.float64],
@@ -243,13 +231,11 @@ class ProbabilisticEstimator(BaseEstimator):
         seed: int | None = None,
         **kwargs,
     ) -> npt.NDArray[np.float64]:
-        """Monte-Carlo estimate of the posterior mean E[y|X]."""
+        """Compute the posterior mean E[y|X]."""
 
-        draws = self._ensure_samples(
-            X, n_samples=max(1, n_samples), seed=seed, **kwargs
-        )
-        return draws.mean(axis=1)
+        raise NotImplementedError
 
+    @abstractmethod
     def predict_median(
         self,
         X: npt.NDArray[np.float64],
@@ -257,62 +243,16 @@ class ProbabilisticEstimator(BaseEstimator):
         seed: int | None = None,
         **kwargs,
     ) -> npt.NDArray[np.float64]:
-        """Posterior median via Monte-Carlo sampling."""
+        """Compute the posterior median for each input."""
 
-        draws = self._ensure_samples(
-            X, n_samples=max(1, n_samples), seed=seed, **kwargs
-        )
-        return np.median(draws, axis=1)
+        raise NotImplementedError
 
-    def predict_quantiles(
+    @abstractmethod
+    def predict_map(
         self,
         X: npt.NDArray[np.float64],
-        quantiles: Sequence[float] = (0.05, 0.95),
-        n_samples: int = 500,
-        seed: int | None = None,
         **kwargs,
     ) -> npt.NDArray[np.float64]:
-        """Posterior quantiles via Monte-Carlo sampling."""
+        """Compute the posterior mode or MAP estimate for each input."""
 
-        if not quantiles:
-            raise ValueError("quantiles sequence cannot be empty")
-        draws = self._ensure_samples(
-            X, n_samples=max(1, n_samples), seed=seed, **kwargs
-        )
-        percents = [float(q) * 100.0 for q in quantiles]
-        q_arr = np.percentile(draws, percents, axis=1)  # (len(qs), n, out)
-        return np.transpose(q_arr, (1, 0, 2))
-
-    def predict_std(
-        self,
-        X: npt.NDArray[np.float64],
-        n_samples: int = 500,
-        seed: int | None = None,
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Posterior standard deviation via Monte-Carlo sampling."""
-
-        draws = self._ensure_samples(
-            X, n_samples=max(1, n_samples), seed=seed, **kwargs
-        )
-        return draws.std(axis=1, ddof=0)
-
-    def _ensure_samples(
-        self,
-        X: npt.NDArray[np.float64],
-        *,
-        n_samples: int,
-        seed: int | None,
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Utility to obtain draws with consistent (n, n_samples, out_dim) shape."""
-
-        draws = self.sample(X, n_samples=n_samples, seed=seed, **kwargs)
-        draws = np.asarray(draws, dtype=np.float64)
-        if draws.ndim == 2:
-            return draws[:, None, :]
-        if draws.ndim == 3:
-            return draws
-        raise ValueError(
-            "ProbabilisticEstimator.sample must return shape (n, out) or (n, n_samples, out)."
-        )
+        raise NotImplementedError
