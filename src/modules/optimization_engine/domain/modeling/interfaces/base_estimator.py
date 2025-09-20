@@ -85,8 +85,38 @@ class BaseEstimator(ABC):
         self._X_dim = X.shape[1]
         self._y_dim = y.shape[1]
 
-    def to_dict(self):
-        return {k: self._serialize(v) for k, v in self._init_params.items()}
+    # --- NEW: central place to gather init params from the instance state ---
+    def _collect_init_params_from_instance(self) -> dict[str, object]:
+        """Return a mapping of init-parameter names -> current instance values.
+
+        Strategy:
+          1) Inspect subclass __init__ signature.
+          2) For each parameter (except 'self'):
+             - Prefer attribute with the same name.
+             - Else prefer a private attribute with leading underscore.
+             - Else fall back to signature default (if any).
+        """
+        params: dict[str, object] = {}
+        sig = inspect.signature(self.__class__.__init__)
+        for name, param in sig.parameters.items():
+            if name == "self":
+                continue
+            if hasattr(self, name):
+                val = getattr(self, name)
+            elif hasattr(self, f"_{name}"):
+                val = getattr(self, f"_{name}")
+            elif param.default is not inspect._empty:
+                val = param.default
+            else:
+                # No attribute and no default; skip rather than guessing.
+                continue
+            params[name] = val
+        return params
+
+    def to_dict(self) -> dict[str, object]:
+        """Serialize the *actual* initialization (current) values of the estimator."""
+        params = self._collect_init_params_from_instance()
+        return {k: self._serialize(v) for k, v in params.items()}
 
     @classmethod
     def _serialize(cls, v):
