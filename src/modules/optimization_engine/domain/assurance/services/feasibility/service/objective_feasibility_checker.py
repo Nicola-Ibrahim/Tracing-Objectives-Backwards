@@ -2,14 +2,14 @@ import warnings
 
 import numpy as np
 
-from ...domain.assurance.services.feasibility.diversities import (
+from ..diversity import (
     ClosestPointsDiversityStrategy,
     KMeansDiversityStrategy,
     MaxMinDistanceDiversityStrategy,
 )
-from ...domain.assurance.services.feasibility.exceptions import ObjectiveOutOfBoundsError
-from ...domain.assurance.services.feasibility.scorers.base import FeasibilityScoringStrategy
-from ...domain.assurance.services.feasibility.validators import (
+from ..policies.exceptions import ObjectiveOutOfBoundsError
+from ..scoring.base import FeasibilityScoringStrategy
+from .. import (
     BaseFeasibilityValidator,
     HistoricalObjectiveRangeValidator,
     ParetoFrontProximityValidator,

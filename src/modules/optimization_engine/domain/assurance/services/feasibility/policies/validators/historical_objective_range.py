@@ -2,8 +2,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..enums import FeasibilityFailureReason
-from .base import BaseFeasibilityValidator, ValidationResult
+from .....enums.feasibility_failure_reason import FeasibilityFailureReason
+from .base import BaseFeasibilityValidator
+from .result import ValidationResult
 
 
 @dataclass

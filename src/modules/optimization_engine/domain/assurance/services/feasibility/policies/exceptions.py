@@ -1,6 +1,6 @@
 import numpy as np
 
-from .enums import FeasibilityFailureReason
+from ....enums.feasibility_failure_reason import FeasibilityFailureReason
 
 
 class ObjectiveOutOfBoundsError(Exception):
