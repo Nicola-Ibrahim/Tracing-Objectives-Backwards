@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from ..entities.generated_decision_validation_report import Verdict

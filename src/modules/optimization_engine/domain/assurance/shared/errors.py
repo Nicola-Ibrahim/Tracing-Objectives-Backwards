@@ -1,7 +1,5 @@
 """Domain-level error types used across assurance components."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,7 +27,9 @@ class ObjectiveOutOfBoundsError(AssuranceError):
     extra_info: str | None = None
 
     def __post_init__(self) -> None:  # pragma: no cover - defensive
-        if self.suggestions is not None and not isinstance(self.suggestions, np.ndarray):
+        if self.suggestions is not None and not isinstance(
+            self.suggestions, np.ndarray
+        ):
             raise TypeError("suggestions must be an ndarray or None")
 
     def __str__(self) -> str:

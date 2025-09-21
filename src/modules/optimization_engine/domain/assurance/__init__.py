@@ -5,18 +5,21 @@ from .shared import (
     ValidationError,
     FeasibilityFailureReason,
 )
-from .feasibility import ObjectiveFeasibilityChecker, FeasibilityAssessment
+from .feasibility import ObjectiveFeasibilityService, FeasibilityAssessment
 from .decision_validation import (
     DecisionValidationService,
     DecisionValidationCase,
 )
+from .interfaces import FeasibilityScoringStrategy, DiversityStrategy
 
 __all__ = [
     "ObjectiveOutOfBoundsError",
     "ValidationError",
     "FeasibilityFailureReason",
-    "ObjectiveFeasibilityChecker",
+    "ObjectiveFeasibilityService",
     "FeasibilityAssessment",
     "DecisionValidationService",
     "DecisionValidationCase",
+    "FeasibilityScoringStrategy",
+    "DiversityStrategy",
 ]

@@ -1,12 +1,13 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 import numpy as np
 
 from ...feasibility.value_objects.tolerance import Tolerance
 from ..aggregates import DecisionValidationCase
-from ..entities.generated_decision_validation_report import GeneratedDecisionValidationReport
+from ..entities.generated_decision_validation_report import (
+    GeneratedDecisionValidationReport,
+)
+from ..policies import evaluate_two_gate_policy
 from ..strategies import (
     ConformalCalibration,
     ConformalSplitL2,
@@ -15,7 +16,6 @@ from ..strategies import (
     calibrate_mahalanobis,
 )
 from ..value_objects import ConfidenceLevel, OODCalibrationParams, ValidationOutcome
-from ..policies import evaluate_two_gate_policy
 
 
 @dataclass
@@ -57,7 +57,9 @@ class DecisionValidationService:
         y_star_norm: np.ndarray,
     ) -> DecisionValidationCase:
         if self._ood is None or self._conformal is None:
-            raise RuntimeError("DecisionValidationService must be calibrated before validation.")
+            raise RuntimeError(
+                "DecisionValidationService must be calibrated before validation."
+            )
 
         y_hat_norm = self.ensemble.predict_mean(np.atleast_2d(x_norm))[0]
         report: GeneratedDecisionValidationReport = evaluate_two_gate_policy(

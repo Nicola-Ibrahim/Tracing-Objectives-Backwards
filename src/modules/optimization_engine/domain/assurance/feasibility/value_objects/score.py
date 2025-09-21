@@ -1,7 +1,5 @@
 """Feasibility score value object."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 

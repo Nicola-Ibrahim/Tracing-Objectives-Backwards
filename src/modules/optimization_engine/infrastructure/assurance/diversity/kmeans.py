@@ -1,14 +1,14 @@
-from __future__ import annotations
+"""Infrastructure diversity strategy using scikit-learn KMeans."""
 
 import warnings
 
 import numpy as np
 from sklearn.cluster import KMeans
 
-from .base import BaseDiversityStrategy
+from ....domain.assurance.feasibility.interfaces.diversity import DiversityStrategy
 
 
-class KMeansDiversityStrategy(BaseDiversityStrategy):
+class KMeansDiversityStrategy(DiversityStrategy):
     def select_diverse_points(
         self,
         *,
@@ -17,16 +17,18 @@ class KMeansDiversityStrategy(BaseDiversityStrategy):
         num_suggestions: int,
     ) -> np.ndarray:
         if pareto_front_normalized.size == 0 or num_suggestions <= 0:
-            return np.empty((0, pareto_front_normalized.shape[1] if pareto_front_normalized.ndim else 0))
+            return np.empty((0, pareto_front_normalized.shape[1]))
 
         if pareto_front_normalized.shape[0] < num_suggestions:
             warnings.warn(
-                "Insufficient Pareto points for the requested number of clusters; returning all points."
+                "Insufficient Pareto points for KMeans diversity; returning all points."
             )
             return pareto_front_normalized
 
         if num_suggestions == 1:
-            distances = np.linalg.norm(pareto_front_normalized - target_normalized, axis=1)
+            distances = np.linalg.norm(
+                pareto_front_normalized - target_normalized, axis=1
+            )
             return pareto_front_normalized[np.argmin(distances)].reshape(1, -1)
 
         kmeans = KMeans(

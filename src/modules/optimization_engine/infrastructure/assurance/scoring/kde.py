@@ -1,11 +1,11 @@
-"""Kernel density based feasibility scoring."""
-
-from __future__ import annotations
+"""Infrastructure implementation of a KDE-based feasibility score."""
 
 import numpy as np
 from scipy.stats import gaussian_kde
 
-from .base import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    FeasibilityScoringStrategy,
+)
 
 
 class KDEScoreStrategy(FeasibilityScoringStrategy):

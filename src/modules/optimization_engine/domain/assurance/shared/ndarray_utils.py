@@ -1,7 +1,5 @@
 """Utility helpers for working with ndarrays inside the assurance domain."""
 
-from __future__ import annotations
-
 import numpy as np
 
 

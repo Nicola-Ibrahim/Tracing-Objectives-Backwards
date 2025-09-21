@@ -15,6 +15,10 @@ from ...infrastructure.repositories.modeling.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 from ...application.factories.estimator import EstimatorFactory
+from ...application.factories.assurance import (
+    create_default_scoring_strategy,
+    create_default_diversity_registry,
+)
 
 
 def main():
@@ -37,6 +41,8 @@ def main():
         processed_data_repository=FileSystemProcessedDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         forward_model=forward_model,
+        scoring_factory=create_default_scoring_strategy,
+        diversity_registry_factory=create_default_diversity_registry,
     )
 
     # Create the command object using the hardcoded values

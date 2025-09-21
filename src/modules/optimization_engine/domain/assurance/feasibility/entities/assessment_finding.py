@@ -1,7 +1,5 @@
 """Optional entity capturing findings from individual feasibility validators."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from ...shared.reasons import FeasibilityFailureReason

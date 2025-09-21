@@ -1,14 +1,12 @@
 """Validator checking distance to the normalised Pareto front."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 import numpy as np
 
-from .base import BaseFeasibilityValidator, ValidationResult
 from ....shared.reasons import FeasibilityFailureReason
-from ...strategies.scoring.base import FeasibilityScoringStrategy
+from ...interfaces.scoring import FeasibilityScoringStrategy
+from .base import BaseFeasibilityValidator, ValidationResult
 
 
 @dataclass(slots=True)

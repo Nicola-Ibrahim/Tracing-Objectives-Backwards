@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from ....feasibility.value_objects.tolerance import Tolerance
@@ -7,8 +5,8 @@ from ...entities.generated_decision_validation_report import (
     GeneratedDecisionValidationReport,
     Verdict,
 )
-from ...value_objects.validation_outcome import ValidationOutcome
 from ...strategies.calibration import ConformalCalibration, OODCalibration
+from ...value_objects.validation_outcome import ValidationOutcome
 
 
 def _md2(x: np.ndarray, mu: np.ndarray, prec: np.ndarray) -> float:

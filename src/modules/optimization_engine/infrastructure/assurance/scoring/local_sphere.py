@@ -1,8 +1,10 @@
-from __future__ import annotations
+"""Infrastructure scoring based on local sphere coverage."""
 
 import numpy as np
 
-from .base import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    FeasibilityScoringStrategy,
+)
 
 
 class LocalSphereScoreStrategy(FeasibilityScoringStrategy):

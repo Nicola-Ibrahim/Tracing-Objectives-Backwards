@@ -1,3 +1,3 @@
-from .objective_feasibility_checker import ObjectiveFeasibilityChecker
+from .objective_feasibility_service import ObjectiveFeasibilityService
 
-__all__ = ["ObjectiveFeasibilityChecker"]
+__all__ = ["ObjectiveFeasibilityService"]

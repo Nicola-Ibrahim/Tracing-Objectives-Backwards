@@ -1,11 +1,11 @@
-from __future__ import annotations
+"""Diversity strategy port for generating feasible suggestions."""
 
 from abc import ABC, abstractmethod
 
 import numpy as np
 
 
-class BaseDiversityStrategy(ABC):
+class DiversityStrategy(ABC):
     def __init__(self, random_seed: int | None = None) -> None:
         self._random_seed = random_seed
 
@@ -19,4 +19,4 @@ class BaseDiversityStrategy(ABC):
     ) -> np.ndarray: ...
 
 
-__all__ = ["BaseDiversityStrategy"]
+__all__ = ["DiversityStrategy"]

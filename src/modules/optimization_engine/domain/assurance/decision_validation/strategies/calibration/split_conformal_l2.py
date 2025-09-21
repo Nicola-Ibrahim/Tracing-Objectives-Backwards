@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from ..forward_models.forward_ensemble import ForwardEnsemble

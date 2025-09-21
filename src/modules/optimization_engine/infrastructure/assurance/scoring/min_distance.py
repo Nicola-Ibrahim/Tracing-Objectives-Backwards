@@ -1,10 +1,10 @@
-"""Minimum distance feasibility scoring."""
-
-from __future__ import annotations
+"""Infrastructure min-distance scoring strategy."""
 
 import numpy as np
 
-from .base import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    FeasibilityScoringStrategy,
+)
 
 
 class MinDistanceScoreStrategy(FeasibilityScoringStrategy):

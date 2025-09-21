@@ -1,14 +1,12 @@
 """Validator ensuring objectives stay within historical bounds."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 import numpy as np
 
-from .base import BaseFeasibilityValidator, ValidationResult
-from ....shared.reasons import FeasibilityFailureReason
 from ....shared.ndarray_utils import ensure_2d
+from ....shared.reasons import FeasibilityFailureReason
+from .base import BaseFeasibilityValidator, ValidationResult
 
 
 @dataclass(slots=True)

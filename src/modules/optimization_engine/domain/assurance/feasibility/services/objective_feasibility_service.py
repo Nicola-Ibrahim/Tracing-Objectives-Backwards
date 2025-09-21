@@ -1,14 +1,14 @@
 """Domain service orchestrating feasibility validation for objectives."""
 
-from dataclasses import dataclass
+from typing import Dict, Type
 
 import numpy as np
 
-from ...interfaces import DiversityStrategy, FeasibilityScoringStrategy
 from ...shared.errors import ObjectiveOutOfBoundsError
-from ...shared.ndarray_utils import clip01, ensure_2d
+from ...shared.ndarray_utils import clip01
 from ...shared.reasons import FeasibilityFailureReason
 from ..aggregates import FeasibilityAssessment
+from ..interfaces import DiversityStrategy, FeasibilityScoringStrategy
 from ..policies.validators import (
     BaseFeasibilityValidator,
     HistoricalRangeValidator,
@@ -18,30 +18,19 @@ from ..policies.validators import (
 from ..value_objects import ObjectiveVector, ParetoFront, Score, Suggestions
 
 
-@dataclass(slots=True)
-class ObjectiveFeasibilityChecker:
-    pareto_front: np.ndarray
-    pareto_front_normalized: np.ndarray
-    tolerance: float
-    scorer: FeasibilityScoringStrategy
-    diversity_registry: dict[str, type[DiversityStrategy]] | None = None
+class ObjectiveFeasibilityService:
+    """Application of feasibility business rules around provided value objects."""
 
-    def __post_init__(self) -> None:
-        if self.pareto_front.shape != self.pareto_front_normalized.shape:
-            raise ValueError(
-                "Pareto front and normalised front must share the same shape."
-            )
-        if self.pareto_front.size == 0:
-            raise ValueError("Pareto front cannot be empty for feasibility checking.")
-
-        self._pareto_front = ParetoFront(
-            raw=self.pareto_front,
-            normalized=self.pareto_front_normalized,
-        )
-        self._min_raw, self._max_raw = self._pareto_front.bounds()
-        self.diversity_registry = dict(self.diversity_registry or {})
-        if not self.diversity_registry:
+    def __init__(
+        self,
+        *,
+        scorer: FeasibilityScoringStrategy,
+        diversity_registry: Dict[str, Type[DiversityStrategy]],
+    ) -> None:
+        if not diversity_registry:
             raise ValueError("diversity_registry must include at least one strategy.")
+        self._scorer = scorer
+        self._diversity_registry = dict(diversity_registry)
 
     # ------------------------------------------------------------------
     # public API
@@ -49,34 +38,32 @@ class ObjectiveFeasibilityChecker:
     def assess(
         self,
         *,
-        target: np.ndarray,
-        target_normalized: np.ndarray,
+        pareto_front: ParetoFront,
+        tolerance: float,
+        target: ObjectiveVector,
         num_suggestions: int = 3,
         suggestion_noise_scale: float = 0.05,
         diversity_method: str = "euclidean",
         random_seed: int | None = None,
     ) -> FeasibilityAssessment:
-        target_raw = ensure_2d(target)
-        target_norm = ensure_2d(target_normalized)
-        objective_vector = ObjectiveVector(raw=target_raw, normalized=target_norm)
+        min_raw, max_raw = pareto_front.bounds()
 
         validators: list[BaseFeasibilityValidator] = [
             HistoricalRangeValidator(
-                target=target_raw,
-                historical_min=self._min_raw,
-                historical_max=self._max_raw,
+                target=target.raw,
+                historical_min=min_raw,
+                historical_max=max_raw,
             ),
             ParetoProximityValidator(
-                target_normalized=target_norm,
-                scorer=self.scorer,
-                tolerance=self.tolerance,
-                pareto_front_normalized=self.pareto_front_normalized,
+                target_normalized=target.normalized,
+                scorer=self._scorer,
+                tolerance=tolerance,
+                pareto_front_normalized=pareto_front.normalized,
             ),
         ]
 
         failing_result: ValidationResult | None = None
         last_result: ValidationResult | None = None
-
         for validator in validators:
             result = validator.validate()
             last_result = result
@@ -91,17 +78,19 @@ class ObjectiveFeasibilityChecker:
                 else None
             )
             return FeasibilityAssessment(
-                target=objective_vector,
+                target=target,
                 is_feasible=True,
                 score=score_vo,
             )
 
         suggestions_array = self._generate_suggestions(
-            target_normalized=target_norm,
+            pareto_front=pareto_front,
+            target_normalized=target.normalized,
             num_suggestions=num_suggestions,
             suggestion_noise_scale=suggestion_noise_scale,
             diversity_method=diversity_method,
             random_seed=random_seed,
+            tolerance=tolerance,
         )
         suggestions_vo = (
             Suggestions(suggestions_array)
@@ -113,7 +102,7 @@ class ObjectiveFeasibilityChecker:
         )
 
         return FeasibilityAssessment(
-            target=objective_vector,
+            target=target,
             is_feasible=False,
             score=score_vo,
             reason=failing_result.reason
@@ -124,8 +113,26 @@ class ObjectiveFeasibilityChecker:
             },
         )
 
-    def validate(self, **kwargs) -> FeasibilityAssessment:
-        assessment = self.assess(**kwargs)
+    def validate(
+        self,
+        *,
+        pareto_front: ParetoFront,
+        tolerance: float,
+        target: ObjectiveVector,
+        num_suggestions: int = 3,
+        suggestion_noise_scale: float = 0.05,
+        diversity_method: str = "euclidean",
+        random_seed: int | None = None,
+    ) -> FeasibilityAssessment:
+        assessment = self.assess(
+            pareto_front=pareto_front,
+            tolerance=tolerance,
+            target=target,
+            num_suggestions=num_suggestions,
+            suggestion_noise_scale=suggestion_noise_scale,
+            diversity_method=diversity_method,
+            random_seed=random_seed,
+        )
         if not assessment.is_feasible:
             raise ObjectiveOutOfBoundsError(
                 message=assessment.diagnostics.get(
@@ -141,28 +148,30 @@ class ObjectiveFeasibilityChecker:
         return assessment
 
     # ------------------------------------------------------------------
-    # internals
+    # helpers
     # ------------------------------------------------------------------
     def _generate_suggestions(
         self,
         *,
+        pareto_front: ParetoFront,
         target_normalized: np.ndarray,
         num_suggestions: int,
         suggestion_noise_scale: float,
         diversity_method: str,
         random_seed: int | None,
+        tolerance: float,
     ) -> np.ndarray | None:
-        if num_suggestions <= 0 or self.pareto_front_normalized.size == 0:
+        if num_suggestions <= 0 or pareto_front.normalized.size == 0:
             return None
 
-        strategy_cls = self.diversity_registry.get(diversity_method)
+        strategy_cls = self._diversity_registry.get(diversity_method)
         if strategy_cls is None:
             raise ValueError(
-                f"Unknown diversity method '{diversity_method}'. Registered: {list(self.diversity_registry)}"
+                f"Unknown diversity method '{diversity_method}'. Registered: {list(self._diversity_registry)}"
             )
         strategy = strategy_cls(random_seed=random_seed)
         selected = strategy.select_diverse_points(
-            pareto_front_normalized=self.pareto_front_normalized,
+            pareto_front_normalized=pareto_front.normalized,
             target_normalized=target_normalized,
             num_suggestions=num_suggestions,
         )
@@ -171,11 +180,11 @@ class ObjectiveFeasibilityChecker:
             return None
 
         rng = np.random.default_rng(random_seed)
-        perturbation_range = self.tolerance * suggestion_noise_scale
+        perturbation_range = tolerance * suggestion_noise_scale
         noise = rng.uniform(
             -perturbation_range, perturbation_range, size=selected.shape
         )
         return clip01(selected + noise)
 
 
-__all__ = ["ObjectiveFeasibilityChecker"]
+__all__ = ["ObjectiveFeasibilityService"]
