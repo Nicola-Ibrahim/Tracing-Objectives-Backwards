@@ -1,11 +1,14 @@
-from dataclasses import dataclass
+"""Gate result value object."""
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
-@dataclass(slots=True, frozen=True)
-class GateResult:
+class GateResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     name: str
     passed: bool
-    metrics: dict[str, float]
+    metrics: dict[str, float | bool] = Field(default_factory=dict)
     explanation: str
 
 

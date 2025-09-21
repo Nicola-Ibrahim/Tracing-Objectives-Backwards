@@ -1,13 +1,12 @@
 """Optional entity capturing findings from individual feasibility validators."""
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 from ...shared.reasons import FeasibilityFailureReason
 
 
-@dataclass(slots=True)
-class AssessmentFinding:
-    """Outcome of a single feasibility rule evaluation."""
+class AssessmentFinding(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     is_feasible: bool
     reason: FeasibilityFailureReason | None = None

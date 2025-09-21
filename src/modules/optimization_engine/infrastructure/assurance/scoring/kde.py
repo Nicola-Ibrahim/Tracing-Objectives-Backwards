@@ -3,9 +3,7 @@
 import numpy as np
 from scipy.stats import gaussian_kde
 
-from ....domain.assurance.feasibility.interfaces.scoring import (
-    FeasibilityScoringStrategy,
-)
+from ....domain.assurance.interfaces.scoring import FeasibilityScoringStrategy
 
 
 class KDEScoreStrategy(FeasibilityScoringStrategy):

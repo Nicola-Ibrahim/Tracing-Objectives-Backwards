@@ -8,7 +8,7 @@ from ...shared.errors import ObjectiveOutOfBoundsError
 from ...shared.ndarray_utils import clip01
 from ...shared.reasons import FeasibilityFailureReason
 from ..aggregates import FeasibilityAssessment
-from ..interfaces import DiversityStrategy, FeasibilityScoringStrategy
+from ...interfaces import DiversityStrategy, FeasibilityScoringStrategy
 from ..policies.validators import (
     BaseFeasibilityValidator,
     HistoricalRangeValidator,

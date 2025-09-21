@@ -1,11 +1,10 @@
-from .confidence import ConfidenceLevel
-from .calibration_params import OODCalibrationParams
 from .gate_result import GateResult
 from .validation_outcome import ValidationOutcome
+from .calibration import OODCalibration, ConformalCalibration
 
 __all__ = [
-    "ConfidenceLevel",
-    "OODCalibrationParams",
     "GateResult",
     "ValidationOutcome",
+    "OODCalibration",
+    "ConformalCalibration",
 ]

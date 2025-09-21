@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+"""Decision validation service orchestrating policies via injected ports."""
+
+from typing import Optional
 
 import numpy as np
 
@@ -7,47 +9,57 @@ from ..aggregates import DecisionValidationCase
 from ..entities.generated_decision_validation_report import (
     GeneratedDecisionValidationReport,
 )
-from ..policies import evaluate_two_gate_policy
-from ..strategies import (
-    ConformalCalibration,
-    ConformalSplitL2,
-    ForwardEnsemble,
-    OODCalibration,
-    calibrate_mahalanobis,
+from ..interfaces import (
+    ConformalCalibrator,
+    ForwardModel,
+    OODCalibrator,
 )
-from ..value_objects import ConfidenceLevel, OODCalibrationParams, ValidationOutcome
+from ..policies import evaluate_two_gate_policy
+from ..value_objects import (
+    ConformalCalibration,
+    OODCalibration,
+    ValidationOutcome,
+)
 
 
-@dataclass
 class DecisionValidationService:
-    ensemble: ForwardEnsemble
-    tolerance: Tolerance
-    confidence: ConfidenceLevel
-    ood_params: OODCalibrationParams
-
-    _ood: OODCalibration | None = None
-    _conformal: ConformalCalibration | None = None
+    def __init__(
+        self,
+        *,
+        forward_model: ForwardModel,
+        tolerance: Tolerance,
+        ood_calibrator: OODCalibrator,
+        conformal_calibrator: ConformalCalibrator,
+    ) -> None:
+        self._forward_model = forward_model
+        self._tolerance = tolerance
+        self._ood_calibrator = ood_calibrator
+        self._conformal_calibrator = conformal_calibrator
+        self._ood: Optional[OODCalibration] = None
+        self._conformal: Optional[ConformalCalibration] = None
 
     def calibrate(self, X_cal_norm: np.ndarray, Y_cal_norm: np.ndarray) -> None:
-        self._ood = calibrate_mahalanobis(
+        self._ood = self._ood_calibrator.fit(X_cal_norm)
+        self._conformal = self._conformal_calibrator.fit(
             X_cal_norm,
-            percentile=self.ood_params.percentile,
-            cov_reg=self.ood_params.cov_reg,
+            Y_cal_norm,
+            self._forward_model,
         )
-        conformal = ConformalSplitL2(self.confidence.value)
-        conformal.fit(X_cal_norm, Y_cal_norm, self.ensemble)
-        self._conformal = ConformalCalibration(radius_q=conformal.predictive_radius())
 
     @property
     def ood_calibration(self) -> OODCalibration:
         if self._ood is None:
-            raise RuntimeError("Service not calibrated.")
+            raise RuntimeError(
+                "DecisionValidationService must be calibrated before use."
+            )
         return self._ood
 
     @property
     def conformal_calibration(self) -> ConformalCalibration:
         if self._conformal is None:
-            raise RuntimeError("Service not calibrated.")
+            raise RuntimeError(
+                "DecisionValidationService must be calibrated before use."
+            )
         return self._conformal
 
     def validate(
@@ -61,16 +73,19 @@ class DecisionValidationService:
                 "DecisionValidationService must be calibrated before validation."
             )
 
-        y_hat_norm = self.ensemble.predict_mean(np.atleast_2d(x_norm))[0]
+        y_hat_norm = self._forward_model.predict_mean(np.atleast_2d(x_norm))[0]
         report: GeneratedDecisionValidationReport = evaluate_two_gate_policy(
             x_norm=x_norm,
             y_star_norm=y_star_norm,
             y_hat_norm=y_hat_norm,
             ood=self._ood,
             conf=self._conformal,
-            tol=self.tolerance,
+            tol=self._tolerance,
         )
-        outcome = ValidationOutcome(verdict=report.verdict)
+        outcome = ValidationOutcome(
+            verdict=report.verdict,
+            gate_results=report.gate_results,
+        )
         return DecisionValidationCase(outcome=outcome, report=report)
 
 

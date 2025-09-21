@@ -1,12 +1,14 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..entities.generated_decision_validation_report import Verdict
+from .gate_result import GateResult
 
 
-@dataclass(slots=True, frozen=True)
-class ValidationOutcome:
+class ValidationOutcome(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     verdict: Verdict
-    gate_results: tuple[str, ...] = ()
+    gate_results: tuple[GateResult, ...] = Field(default_factory=tuple)
 
 
 __all__ = ["ValidationOutcome"]

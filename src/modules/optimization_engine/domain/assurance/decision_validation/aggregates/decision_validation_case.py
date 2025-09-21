@@ -1,6 +1,6 @@
 """Aggregate root capturing a decision validation execution."""
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 from ..entities.generated_decision_validation_report import (
     GeneratedDecisionValidationReport,
@@ -9,8 +9,9 @@ from ..entities.generated_decision_validation_report import (
 from ..value_objects.validation_outcome import ValidationOutcome
 
 
-@dataclass(slots=True)
-class DecisionValidationCase:
+class DecisionValidationCase(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     outcome: ValidationOutcome
     report: GeneratedDecisionValidationReport
 
