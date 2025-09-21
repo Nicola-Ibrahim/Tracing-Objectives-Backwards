@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
 
 from ...domain.modeling.interfaces.base_estimator import (
+    BaseEstimator,
     DeterministicEstimator,
     ProbabilisticEstimator,
 )
@@ -41,8 +42,8 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         estimator: Any
         X_train: np.ndarray
         y_train: np.ndarray
-        X_test: Optional[np.ndarray]
-        y_test: Optional[np.ndarray]
+        X_test: np.typing.NDArray | None
+        y_test: np.typing.NDArray | None
         n_samples: int
         non_linear: bool
         title: str
@@ -52,14 +53,14 @@ class ModelPerformanceVisualizer(BaseVisualizer):
     class _Predictions:
         train_pred: np.ndarray
         train_resid: np.ndarray
-        test_pred: Optional[np.ndarray]
-        test_resid: Optional[np.ndarray]
+        test_pred: np.typing.NDArray | None
+        test_resid: np.typing.NDArray | None
 
     @dataclass
     class _ReducedInputs:
         reducer: Any
-        train: Optional[np.ndarray]
-        test: Optional[np.ndarray]
+        train: np.typing.NDArray | None
+        test: np.typing.NDArray | None
 
     def plot(self, data: Any) -> None:
         payload, dims = self._prepare_payload(data)
@@ -70,50 +71,59 @@ class ModelPerformanceVisualizer(BaseVisualizer):
             self._plot_2d_case(payload, predictions)
             return
 
-        reduced = self._reduce_inputs(payload, x_dim, y_dim)
-        for out_idx in range(y_dim):
-            fig = self._build_general_figure(payload.title, out_idx)
-            y_train = payload.y_train[:, out_idx : out_idx + 1]
-            y_test = (
-                payload.y_test[:, out_idx : out_idx + 1]
-                if payload.y_test is not None
-                else None
-            )
+        else:
+            reduced = self._reduce_inputs(payload, x_dim, y_dim)
+            for out_idx in range(y_dim):
+                fig = self._build_general_figure(payload.title, out_idx)
+                y_train = payload.y_train[:, out_idx : out_idx + 1]
+                y_test = (
+                    payload.y_test[:, out_idx : out_idx + 1]
+                    if payload.y_test is not None
+                    else None
+                )
 
-            self._add_fit_row_general(
-                fig=fig,
-                estimator=payload.estimator,
-                X=payload.X_train,
-                X_reduced=reduced.train,
-                y_train=y_train,
-                out_idx=out_idx,
-            )
-            self._overlay_training_testing_points(
-                fig=fig,
-                X_train_reduced=reduced.train,
-                X_test_reduced=reduced.test,
-                y_train=y_train,
-                y_test=y_test,
-            )
+                self._add_fit_row_general(
+                    fig=fig,
+                    estimator=payload.estimator,
+                    X=payload.X_train,
+                    X_reduced=reduced.train,
+                    y_train=y_train,
+                    n_samples=payload.n_samples,
+                    out_idx=out_idx,
+                )
+                self._overlay_training_testing_points(
+                    fig=fig,
+                    X_train_reduced=reduced.train,
+                    X_test_reduced=reduced.test,
+                    y_train=y_train,
+                    y_test=y_test,
+                )
 
-            self._add_loss_curves_row(fig, row=2, loss_history=payload.loss_history)
+                self._add_loss_curves_row(fig, row=2, loss_history=payload.loss_history)
 
-            self._add_residual_panels(
-                fig=fig,
-                predictions=predictions,
-                out_idx=out_idx,
-            )
+                self._add_residual_panels(
+                    fig=fig,
+                    predictions=predictions,
+                    out_idx=out_idx,
+                )
 
-            fig.update_xaxes(title_text="X (reduced, normalized)", row=1, col=1)
-            fig.update_yaxes(title_text="y (normalized)", row=1, col=1)
-            fig.update_layout(template="plotly_white", height=1100)
-            fig.show()
+                fig.update_xaxes(
+                    title_text="Objective (reduced, normalized)", row=1, col=1
+                )
+                fig.update_yaxes(title_text="Decision (normalized)", row=1, col=1)
+                self._add_estimator_summary(fig, payload.estimator)
+                fig.update_layout(
+                    template="plotly_white",
+                    height=1100,
+                    margin=dict(l=60, r=240, t=80, b=60),
+                )
+                fig.show()
 
     # ----------------------------- preparation ----------------------------- #
 
     def _prepare_payload(
         self, data: Any
-    ) -> Tuple["ModelPerformanceVisualizer._Payload", Tuple[int, int]]:
+    ) -> tuple["ModelPerformanceVisualizer._Payload", tuple[int, int]]:
         if not isinstance(data, dict):
             raise TypeError("ModelPerformanceVisualizer expects `data` to be a dict.")
 
@@ -217,8 +227,9 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         fig: go.Figure,
         estimator: Any,
         X: np.ndarray,
-        X_reduced: Optional[np.ndarray],
+        X_reduced: np.typing.NDArray | None,
         y_train: np.ndarray,
+        n_samples: int,
         out_idx: int,
     ) -> None:
         if isinstance(estimator, ProbabilisticEstimator):
@@ -229,6 +240,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 X_red=X_reduced,
                 X=X,
                 y_raw_1d=y_train,
+                n_samples=n_samples,
             )
         else:
             self._add_det_fit_row(
@@ -244,10 +256,10 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         self,
         *,
         fig: go.Figure,
-        X_train_reduced: Optional[np.ndarray],
-        X_test_reduced: Optional[np.ndarray],
+        X_train_reduced: np.typing.NDArray | None,
+        X_test_reduced: np.typing.NDArray | None,
         y_train: np.ndarray,
-        y_test: Optional[np.ndarray],
+        y_test: np.typing.NDArray | None,
     ) -> None:
         if X_train_reduced is None:
             return
@@ -344,7 +356,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         y_pred_train = predictions.train_pred
         resid_train = predictions.train_resid
 
-        # --- build grid over TRAIN *X* domain (x1,x2) ---
+        # --- build grid over TRAIN objective domain (x1,x2) ---
         x1_min, x1_max = float(np.min(Xtr[:, 0])), float(np.max(Xtr[:, 0]))
         x2_min, x2_max = float(np.min(Xtr[:, 1])), float(np.max(Xtr[:, 1]))
         gx1 = np.linspace(x1_min, x1_max, grid_res)
@@ -368,13 +380,13 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 [{"type": "xy", "colspan": 2}, None],  # row5: joint resid dist
             ],
             subplot_titles=[
-                "(x1,x2) → y1 (normalized)",
-                "(x1,x2) → y2 (normalized)",
+                "Objectives (x1,x2) → Decision y1 (normalized)",
+                "Objectives (x1,x2) → Decision y2 (normalized)",
                 "Training / Validation / Test",
-                "Residuals vs Fitted (y1)",
-                "Residuals vs Fitted (y2)",
-                "Residual distribution (y1)",
-                "Residual distribution (y2)",
+                "Residuals vs Fitted (decision y1)",
+                "Residuals vs Fitted (decision y2)",
+                "Residual distribution (decision y1)",
+                "Residual distribution (decision y2)",
                 "Residual joint distribution (y1 vs y2)",
             ],
             vertical_spacing=0.06,
@@ -385,14 +397,24 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         # -------- row1: surfaces + TRAIN/TEST point clouds (x on axes; y as height) -----
         fig.add_trace(
             go.Surface(
-                x=GX1, y=GX2, z=z_y1, opacity=0.45, showscale=False, name="y1(x)"
+                x=GX1,
+                y=GX2,
+                z=z_y1,
+                opacity=0.45,
+                showscale=False,
+                name="Decision y1(x)",
             ),
             row=1,
             col=1,
         )
         fig.add_trace(
             go.Surface(
-                x=GX1, y=GX2, z=z_y2, opacity=0.45, showscale=False, name="y2(x)"
+                x=GX1,
+                y=GX2,
+                z=z_y2,
+                opacity=0.45,
+                showscale=False,
+                name="Decision y2(x)",
             ),
             row=1,
             col=2,
@@ -405,7 +427,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 y=Xtr[:, 1],
                 z=Ytr[:, 0],
                 mode="markers",
-                name="Train (y1)",
+                name="Train decisions (y1)",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=1,
@@ -417,7 +439,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 y=Xtr[:, 1],
                 z=Ytr[:, 1],
                 mode="markers",
-                name="Train (y2)",
+                name="Train decisions (y2)",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=1,
@@ -432,7 +454,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                     y=Xte[:, 1],
                     z=Yte[:, 0],
                     mode="markers",
-                    name="Test (y1)",
+                    name="Test decisions (y1)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
@@ -444,7 +466,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                     y=Xte[:, 1],
                     z=Yte[:, 1],
                     mode="markers",
-                    name="Test (y2)",
+                    name="Test decisions (y2)",
                     marker=dict(size=3, opacity=0.5),
                 ),
                 row=1,
@@ -461,7 +483,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 col=1,
                 fitted=y_pred_test[:, 0],
                 resid=resid_test[:, 0],
-                output_name="y1 (test)",
+                output_name="decision y1 (test)",
             )
             self._add_residuals_vs_fitted(
                 fig,
@@ -469,7 +491,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
                 col=2,
                 fitted=y_pred_test[:, 1],
                 resid=resid_test[:, 1],
-                output_name="y2 (test)",
+                output_name="decision y2 (test)",
             )
         self._add_residuals_vs_fitted(
             fig,
@@ -477,7 +499,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
             col=1,
             fitted=y_pred_train[:, 0],
             resid=resid_train[:, 0],
-            output_name="y1 (train)",
+            output_name="decision y1 (train)",
         )
         self._add_residuals_vs_fitted(
             fig,
@@ -485,21 +507,37 @@ class ModelPerformanceVisualizer(BaseVisualizer):
             col=2,
             fitted=y_pred_train[:, 1],
             resid=resid_train[:, 1],
-            output_name="y2 (train)",
+            output_name="decision y2 (train)",
         )
 
         if resid_test is not None:
             self._add_residual_hist(
-                fig, row=4, col=1, resid=resid_test[:, 0], output_name="y1 (test)"
+                fig,
+                row=4,
+                col=1,
+                resid=resid_test[:, 0],
+                output_name="decision y1 (test)",
             )
             self._add_residual_hist(
-                fig, row=4, col=2, resid=resid_test[:, 1], output_name="y2 (test)"
+                fig,
+                row=4,
+                col=2,
+                resid=resid_test[:, 1],
+                output_name="decision y2 (test)",
             )
         self._add_residual_hist(
-            fig, row=4, col=1, resid=resid_train[:, 0], output_name="y1 (train)"
+            fig,
+            row=4,
+            col=1,
+            resid=resid_train[:, 0],
+            output_name="decision y1 (train)",
         )
         self._add_residual_hist(
-            fig, row=4, col=2, resid=resid_train[:, 1], output_name="y2 (train)"
+            fig,
+            row=4,
+            col=2,
+            resid=resid_train[:, 1],
+            output_name="decision y2 (train)",
         )
 
         if resid_test is not None:
@@ -547,19 +585,19 @@ class ModelPerformanceVisualizer(BaseVisualizer):
 
         scene1_axes = dict(
             xaxis=dict(
-                title="x1 (norm)",
+                title="Objective x1 (norm)",
                 range=list(x_rng),
                 tickmode="array",
                 tickvals=_ticks(x_rng),
             ),
             yaxis=dict(
-                title="x2 (norm)",
+                title="Objective x2 (norm)",
                 range=list(y_rng),
                 tickmode="array",
                 tickvals=_ticks(y_rng),
             ),
             zaxis=dict(
-                title="y1 (norm)",
+                title="Decision y1 (norm)",
                 range=list(z_rng),
                 tickmode="array",
                 tickvals=_ticks(z_rng),
@@ -568,19 +606,19 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         )
         scene2_axes = dict(
             xaxis=dict(
-                title="x1 (norm)",
+                title="Objective x1 (norm)",
                 range=list(x_rng),
                 tickmode="array",
                 tickvals=_ticks(x_rng),
             ),
             yaxis=dict(
-                title="x2 (norm)",
+                title="Objective x2 (norm)",
                 range=list(y_rng),
                 tickmode="array",
                 tickvals=_ticks(y_rng),
             ),
             zaxis=dict(
-                title="y2 (norm)",
+                title="Decision y2 (norm)",
                 range=list(z_rng),
                 tickmode="array",
                 tickvals=_ticks(z_rng),
@@ -592,10 +630,11 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         fig.update_layout(
             title=title + " — fit, curves & residuals (normalized)",
             template="plotly_white",
-            height=1600,  # less tall; adjust if you want more vertical space
+            height=1600,
             width=1600,
-            margin=dict(l=40, r=40, t=80, b=40),
+            margin=dict(l=60, r=280, t=80, b=60),
         )
+        self._add_estimator_summary(fig, estimator)
         fig.update_scenes(row=1, col=1, **scene1_axes)
         fig.update_scenes(row=1, col=2, **scene2_axes)
 
@@ -757,7 +796,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         self,
         fig: go.Figure,
         row: int,
-        loss_history: Optional[Dict[str, Any]],
+        loss_history: dict[str, Any] | None,
         col: int = 1,
     ) -> None:
         if loss_history is None:
@@ -769,11 +808,11 @@ class ModelPerformanceVisualizer(BaseVisualizer):
             loss_history = loss_history.dict()
         if not isinstance(loss_history, dict):
             return
-        bins: List[float] = list(loss_history.get("bins", []))
-        train_loss: List[Optional[float]] = list(loss_history.get("train_loss", []))
-        val_loss: List[Optional[float]] = list(loss_history.get("val_loss", []))
-        test_loss: List[Optional[float]] = list(loss_history.get("test_loss", []))
-        n_train: List[int] = list(loss_history.get("n_train", []))
+        bins: list[float] = list(loss_history.get("bins", []))
+        train_loss: list[float] = list(loss_history.get("train_loss", []))
+        val_loss: list[float] = list(loss_history.get("val_loss", []))
+        test_loss: list[float] = list(loss_history.get("test_loss", []))
+        n_train: list[int] = list(loss_history.get("n_train", []))
         bin_type: str = str(loss_history.get("bin_type", "bin"))
         # Choose x-axis and labels
         if bin_type == "train_fraction" and n_train:
@@ -810,6 +849,53 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         fig.update_xaxes(title_text=x_label, row=row, col=col)
         fig.update_yaxes(title_text="Loss / Score", row=row, col=col)
 
+    def _add_estimator_summary(self, fig: go.Figure, estimator: BaseEstimator) -> None:
+        """Add estimator hyperparameters as text annotation on the figure."""
+        if not hasattr(estimator, "to_dict"):
+            return
+        params = estimator.to_dict()
+        if not isinstance(params, dict) or not params:
+            return
+
+        lines = ["Estimator parameters:"]
+        for key, value in params.items():
+            lines.append(f"{key}: {value}")
+        summary = "<br>".join(lines)
+
+        fig.update_layout(
+            legend=dict(
+                x=1.02,
+                y=1.0,
+                xanchor="left",
+                yanchor="top",
+                bgcolor="rgba(255,255,255,0.9)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1,
+                traceorder="normal",
+            )
+        )
+
+        line_count = max(len(lines), 1)
+        # Position the summary below the legend regardless of its size.
+        summary_top = max(0.0, 1.0 - 0.1 - 0.04 * (line_count - 1))
+
+        fig.add_annotation(
+            text=summary,
+            align="left",
+            showarrow=False,
+            xref="paper",
+            yref="paper",
+            x=1.02,
+            y=summary_top,
+            xanchor="left",
+            yanchor="top",
+            bordercolor="rgba(0,0,0,0.2)",
+            borderwidth=1,
+            borderpad=6,
+            bgcolor="rgba(255,255,255,0.9)",
+            font=dict(size=11),
+        )
+
     # ------------------------- 1D fit-row helpers ------------------------ #
 
     def _add_det_fit_row(
@@ -841,25 +927,28 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         X_red,
         X,
         y_raw_1d,
+        n_samples: int,
     ):
-        pred = estimator.predict(X)
-        arr = np.asarray(pred)
+        samples = estimator.sample(X, n_samples=max(2, n_samples))
+        arr = np.asarray(samples)
         if arr.ndim == 2:
-            arr = arr[:, None, :]  # (n, 1, ydim)
-        elif arr.ndim == 3:
-            n = X.shape[0]
-            if arr.shape[0] == n:
-                pass
-            elif arr.shape[1] == n:
-                arr = np.transpose(arr, (1, 0, 2))
-            else:
-                arr = np.transpose(arr, (1, 0, 2))
-        mean = arr.mean(axis=1)[:, 0]
+            arr = arr[:, None, :]
+        elif arr.ndim == 3 and arr.shape[1] != max(2, n_samples):
+            arr = np.transpose(arr, (1, 0, 2))
+
+        try:
+            map_pred = estimator.predict_map(X)
+            if map_pred.ndim == 1:
+                map_pred = map_pred[:, None]
+            center_line = map_pred[:, 0]
+        except Exception:
+            center_line = arr.mean(axis=1)[:, 0]
+
         p05 = np.percentile(arr, 5, axis=1)[:, 0]
         p95 = np.percentile(arr, 95, axis=1)[:, 0]
         order = np.argsort(X_red)
         fig.add_trace(
-            go.Scatter(x=X_red[order], y=mean[order], mode="lines", name="Mean"),
+            go.Scatter(x=X_red[order], y=center_line[order], mode="lines", name="MAP"),
             row=row,
             col=1,
         )
@@ -959,8 +1048,8 @@ class ModelPerformanceVisualizer(BaseVisualizer):
         return reducer, Xr
 
     def _transform_reducer(
-        self, reducer, X: Optional[np.ndarray]
-    ) -> Optional[np.ndarray]:
+        self, reducer, X: np.typing.NDArray | None
+    ) -> np.typing.NDArray | None:
         if X is None:
             return None
         if reducer is None:
@@ -977,7 +1066,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
     ) -> np.ndarray:
         """Return mean prediction in normalized space, shape (n, y_dim)."""
         if isinstance(estimator, ProbabilisticEstimator):
-            return estimator.predict_map(X, n_samples=n_samples)
+            return estimator.predict_mean(X, n_samples=max(2, n_samples))
 
         if isinstance(estimator, DeterministicEstimator):
             return estimator.predict(X)

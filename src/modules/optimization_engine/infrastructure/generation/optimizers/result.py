@@ -151,21 +151,21 @@ class OptimizationResult(BaseModel):
         }
 
     @property
-    def historical_pareto_set(self) -> np.ndarray | None:
+    def historical_solutions(self) -> np.ndarray | None:
         """The Pareto-optimal set across all generations (feasible solutions only)."""
         if self.historical_pareto_data:
             return self.historical_pareto_data["solutions"]
         return None
 
     @property
-    def historical_pareto_front(self) -> np.ndarray | None:
+    def historical_objectives(self) -> np.ndarray | None:
         """The Pareto-optimal front across all generations (feasible solutions only)."""
         if self.historical_pareto_data:
             return self.historical_pareto_data["objectives"]
         return None
 
     # The rest of the methods and properties can be removed from the previous implementation
-    # as they are replaced by the more robust historical_pareto_set/front properties.
+    # as they are replaced by the more robust historical_solutions/front properties.
     # We will keep the get_constraint_violation_stats method as it's useful.
     def get_constraint_violation_stats(self) -> dict[str, Any]:
         """

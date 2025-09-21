@@ -72,7 +72,7 @@ class GenerateDatasetCommandHandler:
             f"Found {len(result.pareto_set) if result.pareto_set is not None else 0} Pareto-optimal solutions."
         )
         self._logger.log_info(
-            f"Historical Pareto set contains {len(result.historical_pareto_set) if result.historical_pareto_set is not None else 0} solutions."
+            f"Historical Pareto set contains {len(result.historical_solutions) if result.historical_solutions is not None else 0} solutions."
         )
 
         # Build the GeneratedDataset from the optimization results and original configurations
@@ -80,8 +80,8 @@ class GenerateDatasetCommandHandler:
             name="dataset",
             pareto_set=result.pareto_set,
             pareto_front=result.pareto_front,
-            historical_solutions=result.historical_pareto_set,
-            historical_objectives=result.historical_pareto_front,
+            historical_solutions=result.historical_solutions,
+            historical_objectives=result.historical_objectives,
             metadata={
                 "algorithm": algorithm_config,
                 "optimizer": optimizer_config,
