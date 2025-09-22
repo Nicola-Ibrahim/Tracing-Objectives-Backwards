@@ -1,0 +1,12 @@
+%-------------------------------------------------------------------------------
+% Abstract
+%-------------------------------------------------------------------------------
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Engineering and scientific design frequently require balancing multiple, conflicting objectives. Established workflows map decisions to outcomes, yet they provide limited support for the inverse question: given a desired pattern of objective values, which decision vectors are likely to realise it?
+
+This thesis presents a data-driven framework for inverse exploration in multi-objective settings. We learn a mapping from objective space back to decision space using representative forward evaluations and use it at query time to propose decision candidates aligned with user-specified targets. The process supports interactive refinement so practitioner knowledge can guide the final choice without repeated end-to-end optimisation runs.
+
+We evaluate the framework on synthetic benchmarks and a real-world case study, showing that inverse search can produce decisions close to desired targets with substantially lower computational effort than repeated forward optimisation. The contributions are: (i) a formalisation of inverse decision mapping for multi-objective problems, (ii) a general approach for data-driven inverse exploration with interactive querying, and (iii) an empirical comparison of deterministic and probabilistic inverse models, highlighting when each is advantageous for capturing complex, potentially multimodal relationships between decisions and objectives.

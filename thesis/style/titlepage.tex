@@ -1,0 +1,54 @@
+% !TeX spellcheck = de_DE
+%% !TeX spellcheck = en_US
+% !TeX encoding = utf-8
+% !TeX root = ../thesis.tex
+% !TeX program = pdflatex
+%
+\newcounter{cAuthorList} 
+\newcounter{cMatrList}
+\setcounter{cMatrList}{0}
+% this is the title page
+\begin{titlepage}
+\begin{center}
+  \begin{figure}\vspace{-1cm}
+    \IfLanguageName{ngerman}{
+      \includegraphics[height=2.5cm]{style/UPBDE}
+    }{
+      \includegraphics[height=2.5cm]{style/UPB.pdf}
+    }
+    \hfill
+    \IfLanguageName{ngerman}{
+      \includegraphics[height=1.5cm]{style/NTLogoDE.pdf}
+    }{
+      \includegraphics[height=1.5cm]{style/NTLogoENG.pdf}
+    }
+  \end{figure}
+$\:$ \newline
+{\textbf{\IfLanguageName{ngerman}{Institut für Elektrotechnik und Informationstechnik}{Faculty for Computer Science, Electrical Engineering and Mathematics}}}\\
+\IfLanguageName{ngerman}{Universität Paderborn}{Paderborn University}\\
+\IfLanguageName{ngerman}{Fachgebiet Nachrichtentechnik}{Communications Engineering}\\
+Prof. Dr.-Ing. Reinhold Häb-Umbach\\
+\vfill
+$\:$ \newline
+\Large{\textbf{\textsf{\WorkType \vspace{1cm} \\ \TitelWithLineBreaks}}}
+\vfill
+\large{\IfLanguageName{ngerman}{von}{by}\\}
+\vfill
+\foreach \n in \authorlist {
+  \addtocounter{cAuthorList}{1}
+  \setcounter{cMatrList}{0}
+  \foreach \m in \matrikellist {
+    \addtocounter{cMatrList}{1}
+    \ifnum\value{cMatrList} = \value{cAuthorList}
+      \Large{\large \n \\ \IfLanguageName{ngerman}{Matr.-Nr.}{Matr.-No.}: \m}
+      \vfill
+    \fi
+  }
+}
+\vfill
+\begin{flushleft}
+\large{\IfLanguageName{ngerman}{Abgabetermin}{Filing date}: \SubmissionDate \\}
+\end{flushleft}
+\renewcommand{\baselinestretch}{1}\normalsize
+\end{center}
+\end{titlepage}

@@ -1,0 +1,104 @@
+%% Thesis master file
+% !TeX spellcheck = en_US
+% !TeX encoding  = utf-8
+% !TeX program   = pdflatex
+% !BIB program   = bibtex
+
+%-------------------------------------------------------------------------------
+% Document class and basic options
+%-------------------------------------------------------------------------------
+\documentclass[
+    a4paper,
+    12pt,
+    oneside,
+    final,
+    numbers=noenddot,
+    toc=bibliography,
+    toc=listof
+]{scrbook}
+
+%-------------------------------------------------------------------------------
+% Language and encoding
+%-------------------------------------------------------------------------------
+\usepackage[english]{babel}
+
+% If not already loaded by your style file:
+\usepackage{ifthen}
+ 
+%-------------------------------------------------------------------------------
+% Style file and packages
+%-------------------------------------------------------------------------------
+\input{style/ntthesis.tex}
+
+%-------------------------------------------------------------------------------
+% Metadata definitions
+%-------------------------------------------------------------------------------
+\newcommand{\WorkType}{Master Thesis}
+
+% --- Title (single-line and line-broken variants) ---
+\newcommand{\Titel}{Tracing the Objectives Backwards: Data-Driven Inverse Exploration of Multi-Objective Problems}
+\newcommand{\TitelWithLineBreaks}{%
+  Tracing the Objectives Backwards: \\
+  Data-Driven Inverse Exploration of Multi-Objective Problems
+}
+
+% --- Author / IDs ---
+\def\authorlist {Nicola Ibrahim}
+\def\matrikellist {0000000}
+
+% --- Supervisor(s): keep one line if only primary; add second with \\ ---
+\newcommand{\Supervisor}{Prof.\ Firstname Lastname (Primary) \\ Dr.\ Secondname Lastname (Second Supervisor)}
+
+% --- Dates / numbers ---
+\newcommand{\SubmissionDate}{\today}
+\newcommand{\SubmissionNumber}{\today}
+
+% --- Confidentiality flag (print clause if true) ---
+\setboolean{WorkIsConfidential}{false}
+\newcommand{\CompanyName}{ }
+\newcommand{\CompanyAddress}{ }
+
+% Macros
+\input{macros.tex}
+\input{chapters/macros.tex}
+
+%-------------------------------------------------------------------------------
+% Hyperref setup
+%-------------------------------------------------------------------------------
+\hypersetup{
+    pdftitle   = {\WorkType: \Titel},
+    pdfauthor  = {\authorlist},
+    pdfkeywords= {inverse design, multi-objective optimization, surrogate modeling, inverse mapping, decision-space exploration, Pareto front, Bayesian modeling},
+    pdfsubject = {\Titel, \SubmissionDate},
+    pdfstartview={FitH}
+}
+
+%-------------------------------------------------------------------------------
+% Begin of the document
+%-------------------------------------------------------------------------------
+\begin{document}
+    \frontmatter
+    \input{style/titlepage}
+    \input{style/declaration}
+    \ifthenelse{\boolean{WorkIsConfidential}}{\input{style/confidentiality}}{}
+    \input{chapters/abstract}
+    \tableofcontents
+
+    \mainmatter
+    \input{chapters/introduction}
+    \input{chapters/motivation_background}
+    \input{chapters/related_work}
+    \input{chapters/problem_statement}
+    \input{chapters/methodology}
+    \input{chapters/implementation}
+    \input{chapters/experiments}
+    \input{chapters/discussion}
+    \input{chapters/conclusion}
+
+    \backmatter
+    \listoffigures
+    \listoftables
+    \input{chapters/symbols}
+    \printglossaries
+    \printbibliography
+\end{document}

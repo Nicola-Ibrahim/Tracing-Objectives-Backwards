@@ -1,0 +1,25 @@
+% !TeX spellcheck = de_DE
+%% !TeX spellcheck = en_US
+% !TeX encoding = utf-8
+% !TeX root = ../thesis.tex
+% !TeX program = pdflatex
+%
+\chapter*{\IfLanguageName{ngerman}{Eidesstattliche Erklärung}{Declaration}}
+%
+
+\IfLanguageName{ngerman}{Ich erkläre hiermit an Eides statt, dass ich die vorliegende \WorkType\xspace mit dem Titel ``\Titel''
+selbstständig und unter Verwendung der angegebenen Hilfsmittel angefertigt 
+habe; die aus fremden Quellen direkt oder indirekt übernommenen Gedanken sind als solche kenntlich gemacht.
+Die Arbeit wurde bisher noch keiner anderen Prüfungsbehörde vorgelegt und auch noch nicht veröffentlicht.}
+{This \WorkType\xspace, with the title ``\Titel'', is the result of my own work and includes nothing that is the outcome of work done in collaboration, except where specifically indicated. It has not been published yet or submitted, in whole or in part, for a degree at any other university.}
+\vspace{1.0cm}
+\foreach \n in \authorlist {
+\begin{tabbing}
+Paderborn, \SubmissionDate  \hspace{1.0cm}\= \rule[-0.15\baselineskip]{6cm}{.4pt}\\
+\renewcommand{\baselinestretch}{0.5}\normalsize
+\>\small{\hspace{0.1cm}(\n)}
+\end{tabbing}
+\vspace{0.6cm}
+}
+
+%\renewcommand{\baselinestretch}{1}\normalsize

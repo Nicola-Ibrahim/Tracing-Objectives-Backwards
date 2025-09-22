@@ -1,0 +1,221 @@
+%-------------------------------------------------------------------------------
+% Background and Motivation
+%-------------------------------------------------------------------------------
+
+\chapter{Background and Motivation}\label{chap:motivation}
+
+The inverse decision mapping problem considered in this thesis builds upon
+concepts from multi‑objective optimisation, decision theory and machine
+learning.  This chapter introduces the fundamental notions of MOO, including
+problem formulation, Pareto dominance and optimality, performance metrics
+and algorithms.  These concepts motivate the development of inverse
+mapping techniques and inform the design of the proposed framework.
+
+\section{Multi‑Objective Optimisation Fundamentals}
+
+\subsection{Problem Formulation}
+
+A multi‑objective optimisation problem (MOP) is defined by a vector of
+decision variables \(\vect{x}=(x_1,\dots,x_n)\in\calX\subset \R^n\) and a
+vector of objective functions \(\vect{f}=(f_1,\dots,f_m)\colon \calX\to
+\calY\subset \R^m\).  Without loss of generality we consider all
+objectives to be minimised.  A MOP can be written compactly as
+
+\begin{align}
+  \min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\
+  \text{s.t.}\; g_j(\vect{x}) &\le 0,\quad j=1,\dots,J,\\
+  h_k(\vect{x}) &= 0,\quad k=1,\dots,K,
+\end{align}
+
+where \(g_j\) and \(h_k\) denote inequality and equality constraints,
+respectively.  The feasible region \(\calX\) is assumed to be a compact,
+connected subset of \(\R^n\).  Each objective \(f_i\) may be
+non‑convex, nonlinear and expensive to evaluate.  MOPs arise in a broad
+ spectrum of application domains, including engineering, economics,
+ logistics, manufacturing and science~\cite{Tan2023}.  In
+practice, objective functions often conflict: improving one performance
+metric deteriorates another.  Consequently, there rarely exists a single
+design that simultaneously minimises all objectives.
+
+\subsection{Pareto Dominance and Optimality}
+
+To compare solutions in a MOP without aggregating objectives, the notion of
+Pareto dominance is employed.  Let \(\vect{u},\vect{v}\in\R^m\).  We say
+that \(\vect{u}\) \emph{dominates} \(\vect{v}\), written \(\vect{u}\preceq
+\vect{v}\), if \(u_i\le v_i\) for all \(i=1,\dots,m\) and there exists
+\(j\) such that \(u_j<v_j\).  A decision vector \(\vect{x}^*\in\calX\) is
+\emph{Pareto optimal} if there is no other feasible \(\vect{x}\in\calX\)
+with \(\vect{f}(\vect{x})\preceq \vect{f}(\vect{x}^*)\).  The set of all
+Pareto optimal decisions is called the 
+\emph{Pareto set} \(\text{PS}\), and its image
+\(\text{PF}=\{\vect{f}(\vect{x})\mid \vect{x}\in\text{PS}\}\) is the
+\emph{Pareto front}.  Figure~\ref{fig:pareto_concept} illustrates these
+concepts in two dimensions.
+
+\placeholderfigure{Conceptual illustration of a Pareto front and set.  The
+shaded region indicates feasible objective vectors; black dots denote
+dominated solutions; the thick line represents the Pareto front.}
+
+Pareto dominance induces a partial order: not all objective vectors can be
+compared.  Consequently, optimisation algorithms strive to identify a
+diverse set of non‑dominated solutions that approximates the Pareto front.
+Discovering the entire front is infeasible for most problems because the
+Pareto set is generally infinite.  Instead, algorithms aim for a finite
+approximation that maximises convergence towards and coverage of the true
+ front~\cite{Tan2023}
+
+\subsection{Performance Indicators}
+
+Because an algorithm produces an approximated Pareto set \(S\), it is
+necessary to quantify its quality relative to the true Pareto front.  A
+variety of performance indicators have been proposed to evaluate MOO
+algorithms.  They can be grouped into convergence metrics (how close
+solutions are to the true front), diversity metrics (how well the front is
+covered) and hybrid metrics combining both aspects.  Among the most
+widespread indicators are:
+
+\paragraph{Generational Distance (GD).}  The generational distance
+indicator measures the average Euclidean distance in objective space from
+each solution in the approximation \(S\) to the closest solution on the
+true Pareto front \(\text{PF}\).  Formally, if \(p\) is a positive
+integer (often \(p=1\) or \(p=2\)), GD is defined as
+
+\begin{equation}
+  \mathrm{GD}(S) = \left( \frac{1}{|S|} \sum_{\vect{y}\in S}
+  \dist(\vect{y}, \text{PF})^p \right)^{1/p},
+  \label{eq:gd}
+\end{equation}
+
+where \(\dist(\vect{y},\text{PF})\) denotes the Euclidean distance from
+\(\vect{y}\) to the closest point in \(\text{PF}\).  The GD provides a
+ measure of convergence: a smaller value indicates that the approximation
+ lies closer to the true front~\cite{Blank2020}.  However, it does
+not capture the diversity of solutions across the front.
+
+\paragraph{Inverted Generational Distance (IGD).}  The IGD indicator
+complements GD by measuring the average distance from each point in the
+true Pareto front to the nearest point in the approximated set.  Using the
+same notation as above, IGD is computed as
+\begin{equation}
+  \mathrm{IGD}(S) = \left( \frac{1}{|\text{PF}|} \sum_{\vect{y}\in \text{PF}}
+  \dist(\vect{y}, S)^p \right)^{1/p}.
+\end{equation}
+In practice the true front is unknown, so a high‑quality reference set
+ \(R\) is used instead.  IGD encourages uniform coverage of the front,
+ because every region of the reference front contributes to the metric~\cite{Blank2020}.
+
+\paragraph{Hypervolume (HV).}  The hypervolume indicator measures the
+Lebesgue measure of the objective space dominated by the approximated set
+\(S\) relative to a reference point.  It captures both convergence and
+diversity and is Pareto compliant, meaning that if one set dominates
+another then its hypervolume is larger.  Computing hypervolume exactly is
+NP‑hard for more than three objectives, but efficient approximations exist.
+
+\paragraph{Other Indicators.}  Many variants and extensions of these
+ indicators have been proposed, including GD\(^{+}\) and IGD\(^{+}\)
+ ~\cite{Blank2020}, the averaged Hausdorff distance and the
+R2 indicator.  Choice of indicator depends on the problem and optimisation
+goals.  In this thesis we primarily use GD and IGD because they are simple
+to compute and reflect both convergence and coverage when used together.
+
+\section{Evolutionary Algorithms and Surrogate Models}
+
+\subsection{Evolutionary Multi‑Objective Algorithms}
+
+Evolutionary algorithms (EAs) have become the method of choice for solving
+ multi‑objective problems~\cite{Liu2024}.  EAs maintain a
+population of candidate solutions, apply genetic operators such as mutation
+and crossover and use selection mechanisms to evolve the population towards
+the Pareto front.  Well‑known algorithms include the Non‑dominated Sorting
+Genetic Algorithm II (NSGA‑II), Strength Pareto Evolutionary Algorithm 2
+(SPEA2), the Multi‑Objective Particle Swarm Optimiser (MOPSO) and
+decomposition‑based methods such as MOEA/D.  Key features of successful
+MOEAs are (i) diversity preservation strategies that encourage sampling
+across the front (e.g. crowding distance in NSGA‑II), and (ii) elitism to
+retain the best non‑dominated solutions between generations.
+
+Decomposition approaches transform the MOP into a set of single‑objective
+sub‑problems using weighted sums, Tchebycheff functions or penalty‑based
+methods.  The resulting scalar problems are solved simultaneously and
+information is exchanged among them.  This yields evenly distributed
+solutions but depends on choosing suitable weight vectors.  Indicator‑based
+algorithms such as IBEA use quality indicators (e.g. hypervolume) directly
+as fitness measures.  Recent research explores adaptive reference
+vector schemes and probabilistic modelling to guide the search, as well as
+hybrid algorithms that combine gradient information with evolutionary
+exploration.
+
+Despite their success, evolutionary algorithms often require tens of
+ thousands of function evaluations to obtain a good approximation of the
+ Pareto front~\cite{Liu2024}.  When each evaluation involves a
+computationally expensive simulation, surrogate models become attractive.
+
+\subsection{Surrogate‑Assisted Optimisation}
+
+Surrogate models, also known as metamodels or response surfaces, emulate
+expensive objective functions to accelerate optimisation.  They are built
+from a set of evaluated samples and provide cheap predictions with
+associated uncertainty estimates.  Common surrogates include Gaussian
+process regression (GPR), radial basis function (RBF) networks,
+support‑vector machines and multi‑layer perceptrons (MLPs).  In
+multi‑objective settings, surrogates can approximate the mapping
+\(\vect{f}\colon \calX\to\calY\), guiding the search without evaluating
+the true objective functions at every iteration.
+
+Surrogate‑assisted multi‑objective evolutionary algorithms (SA‑MOEAs)
+alternate between training the surrogate, performing cheap optimisation on
+the model, and periodically verifying candidate solutions with the true
+objectives.  Diaz‑Manriquez et~al. provide a comprehensive review of
+surrogate‑assisted MOEAs, highlighting design choices such as sampling
+ strategies, model management and infill criteria~\cite{Blank2020}.
+Advanced techniques include adaptive ensembles of multiple surrogates,
+transfer learning across related tasks and active learning to focus
+sampling in uncertain regions.
+
+\subsection{Inverse Models and Pareto Estimation}
+
+The forward surrogate \(\vect{f}\) approximates objective functions given a
+decision vector.  In contrast, the inverse surrogate seeks to map a
+desired objective vector back to one or more decision vectors.  Early
+approaches employed radial basis function networks trained on a set of
+known Pareto optimal pairs \((\vect{x}_i,\vect{y}_i)\).  More recently,
+probabilistic models such as Gaussian processes have been adapted to the
+ inverse setting, capturing uncertainty in the mapping~\cite{Liu2024}.
+Transfer learning techniques exploit data from related optimisation tasks to
+ improve the inverse model when training data is scarce~\cite{Tan2023}.
+These advances enable a new paradigm of Pareto estimation: rather than
+ searching forward for desired trade‑offs, a decision maker queries the
+ inverse model with preferred objectives and obtains candidate decisions
+ on‑demand~\cite{Tan2023}.  The present thesis builds upon these
+ideas to develop a general framework for inverse decision mapping.
+
+\subsection{Forward versus Inverse Design and Machine Learning Workflows}
+
+In many engineering and materials science domains it is instructive to
+contrast the traditional forward design paradigm with the emerging paradigm
+of inverse design.  Forward design maps a composition or structure (denoted
+\textit{ACS} for ``atom–composition–structure'') to its properties via
+simulation or experiment.  Inverse design, by contrast, starts from
+desired properties and works backward to identify the compositions and
+structures that realise them【162445723263614†L140-L153】.  This distinction
+motivates the inverse decision mapping considered in this thesis: given a
+target objective vector \(\vect{y}\), we seek one or more decision vectors
+\(\vect{x}\) that produce it.
+
+Machine learning provides a general workflow for both forward and inverse
+design.  Xu et~al. outline a workflow comprising data collection, feature
+engineering, model selection, evaluation and deployment【714985794466144†L320-L367】.
+High‑quality data are essential, and care must be taken to align samples
+with their corresponding objectives.  Feature engineering encodes
+knowledge into numerical descriptors and selects informative features, for
+example using techniques such as sure independence screening and
+sparsifying operator (SISSO)【714985794466144†L320-L367】.  Models may be
+multi‑output, predicting all objectives simultaneously on a shared feature
+set, or a collection of single‑output models trained on different data
+tables【714985794466144†L320-L347】.  Evaluation involves cross‑validation
+schemes and metrics such as mean relative error, root mean squared error
+and correlation coefficients【714985794466144†L393-L407】.  Understanding this
+workflow helps situate surrogate training and inverse modelling within a
+broad data‑driven optimisation pipeline.  In later chapters we adopt
+similar practices for data generation, normalisation, model training and
+validation to ensure robust inverse surrogates.

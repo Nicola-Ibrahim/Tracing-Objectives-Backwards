@@ -1,0 +1,36 @@
+%-------------------------------------------------------------------------------
+% List of symbols
+%-------------------------------------------------------------------------------
+
+% This chapter lists the mathematical symbols used throughout the thesis.
+
+\chapter{List of Symbols}\label{chap:symbols}
+
+\begin{flushleft}
+  \rarray{1.3}
+  \begin{longtable}{L{4.0cm}L{10.0cm}}
+    $\vect{x}$ & Decision vector in the decision space $\calX$\\
+    $\calX$ & Decision space (feasible region of decision variables)\\
+    $n$ & Dimension of the decision space\\
+    $\vect{f}(\vect{x})$ & Vector of objective functions evaluated at $\vect{x}$\\
+    $\calY$ & Objective space\\
+    $m$ & Number of objectives\\
+    $\vect{y}$ & Objective vector $\vect{f}(\vect{x})$\\
+    $\vect{y}^{\star}$ & User‑specified target objective vector\\
+    $g$ & True (possibly multi‑valued) inverse mapping from objective to decision space\\
+    $\hat{g}$ & Learned inverse surrogate model\\
+    $\hat{f}$ & Surrogate forward model\\
+    $\text{PS}$ & Pareto set of non‑dominated decision vectors\\
+    $\text{PF}$ & Pareto front (image of $\text{PS}$ in objective space)\\
+    $\mathcal{D}$ & Dataset of sampled pairs $(\vect{x}_i,\vect{y}_i)$\\
+    $N$ & Number of sampled pairs in $\mathcal{D}$\\
+    $e_f$ & Forward error $\|\vect{f}(\hat{\vect{x}})-\vect{y}^{\star}\|$\\
+    $\mathrm{GD}$ & Generational distance indicator\\
+    $\mathrm{IGD}$ & Inverted generational distance indicator\\
+    $\hat{\vect{x}}^{(k)}$ & $k$-th candidate decision predicted by the inverse model\\
+    $K$ & Number of candidate decisions generated in the online phase\\
+    $M$ & Number of top candidates presented to the user\\
+    $\sigma$ & Bandwidth parameter of radial basis functions\\
+    $\tau$ & Threshold for plausibility warnings\\
+  \end{longtable}
+\end{flushleft}

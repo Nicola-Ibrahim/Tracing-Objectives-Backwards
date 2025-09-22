@@ -1,0 +1,208 @@
+%-------------------------------------------------------------------------------
+% Methodology
+%-------------------------------------------------------------------------------
+
+\chapter{Methodology}\label{chap:method}
+
+This chapter presents the methodology developed to answer the research
+questions posed in Chapter~\ref{chap:problem}.  The approach is modular
+and consists of an offline training phase and an online exploration
+phase.  During the offline phase we generate a Pareto approximation
+through a standard MOO algorithm, train surrogate forward and inverse
+models and validate their performance.  In the online phase a user
+interacts with the inverse model to specify desired objectives and
+retrieve candidate decisions, which are then ranked using forward
+predictions and plausibility scores.
+
+\section{Offline Phase: Data Generation and Model Training}
+
+\subsection{Generation of Pareto Samples}
+
+The first step is to obtain a representative set of Pareto‑optimal or
+near‑optimal solutions.  Any suitable multi‑objective optimisation
+algorithm can be employed; in our experiments we use the Non‑dominated
+Sorting Genetic Algorithm II (NSGA‑II) and the Multi‑Objective
+Evolutionary Algorithm based on Decomposition (MOEA/D) as baselines.  The
+resulting archive \(\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^N\)
+contains decision vectors \(\vect{x}_i\in\calX\) and their objective
+values \(\vect{y}_i=\vect{f}(\vect{x}_i)\).  To ensure diversity and
+coverage of the Pareto front the optimisation is run with standard
+population sizes and termination criteria, and the union of final
+non‑dominated solutions over multiple runs is stored.
+
+\subsection{Data Preprocessing}
+
+Prior to model training we normalise the objective vectors to lie in
+\([0,1]^m\) using min–max scaling.  This step ensures that objectives
+with different units or ranges contribute equally to the inverse model.
+Similarly, decision variables are scaled to \([0,1]^n\) to avoid biasing
+the regressors.  Outliers are removed using interquartile range
+thresholding.  The processed dataset is then randomly split into
+training, validation and test sets.
+
+\subsection{Inverse Model Training}
+
+We consider several modelling strategies for the inverse mapping
+\(\hat{g}\colon\calY\to\calX\):
+
+\paragraph{Gaussian Process Regression (GPR).}  GPR models the inverse
+map as a collection of independent Gaussian processes, one for each
+decision variable.  Given training pairs \((\vect{y}_i,x_{i,j})\), the
+process defines a mean function and covariance kernel over the objective
+space.  Hyperparameters of the kernel (e.g. length scales and noise
+variance) are optimised by maximising the marginal likelihood.  The
+advantage of GPR is its ability to quantify prediction uncertainty and to
+capture both smooth trends and local irregularities~\cite{Farias2024}.
+
+\paragraph{Radial Basis Function Networks (RBF).}  An RBF network
+comprises a hidden layer of basis functions \(\phi_k(\vect{y})=\exp(-\|\vect{y}-\vect{c}_k\|^2/(2\sigma_k^2))\) and a linear output layer.
+Centres \(\vect{c}_k\) and bandwidths \(\sigma_k\) are chosen by k‑means
+clustering and heuristics; weights are solved by linear least squares.
+RBFs are universal approximators and perform well with moderate amounts
+of data.
+
+\paragraph{Random Forest Regression (RF).}  RF ensembles multiple decision
+trees grown on bootstrap samples of the training data.  Each tree
+predicts a decision variable as a function of the objective vector.  The
+final prediction is the average over trees.  Random forests are robust to
+noise and can handle high‑dimensional inputs.  They have been shown to
+improve diversity and convergence in inverse evolutionary algorithms~\cite{Gholamnezhad2022}.
+
+\paragraph{Feed‑Forward Neural Networks (FFNN).}  A multi‑layer perceptron
+with fully connected layers and ReLU activations can approximate complex
+nonlinear mappings.  We select the network architecture using
+hyperparameter search and train using Adam optimisation with early
+stopping.  Data augmentation and regularisation (dropout and weight
+decay) improve generalisation.
+
+\paragraph{Transfer Learning and Multi‑Source Data.}  When the available
+dataset is small, transfer learning can leverage data from related tasks.
+Tan et~al. propose learning across common objective spaces to mitigate
+data scarcity and demonstrate that combining multiple Pareto fronts can
+  improve inverse model generalisation~\cite{Tan2023}.  We adopt
+this idea by pooling Pareto samples from benchmark problems with similar
+objective definitions during training.
+
+\subsection{Model Selection and Validation}
+
+For each modelling strategy we perform hyperparameter tuning via
+k‑fold cross‑validation on the training set.  The loss function combines
+the mean squared error between predicted and true decision variables and a
+penalty on predicted values outside the feasible range.  Models are
+compared using performance metrics such as root mean squared error
+(RMSE), coefficient of determination \(R^2\) and the generational
+distance between the reconstructed Pareto front and the true front.  We
+select the model with the best validation performance and retain it for
+the online phase.
+
+\subsection{Forward Surrogate Model}
+
+In addition to the inverse model we train a surrogate forward model
+\(\hat{f}\colon\calX\to\calY\) on the same data.  This model is used
+during the online phase to rapidly evaluate candidate decisions without
+incurring the cost of running the underlying simulation or experiment.  A
+Gaussian process is employed due to its good performance on small data;
+alternatively, a neural network or polynomial regression can be used.
+
+\section{Online Phase: Interactive Exploration}
+
+During the online phase the trained inverse and forward models are used
+to support interactive design exploration.  The process comprises the
+following steps:
+
+\paragraph{Target specification.}  The user specifies a desired objective
+vector \(\vect{y}^\star\) either numerically or by selecting a point in a
+visualisation of the objective space.  Input widgets allow users to
+adjust individual objectives and observe how the target moves relative
+to the sampled Pareto front.
+
+\paragraph{Plausibility check.}  The system computes the distance
+\(d(\vect{y}^\star, \mathcal{D})\) to the nearest sample in the objective
+space and derives a plausibility score.  If the score is below a
+user‑defined threshold, a warning is displayed indicating that the
+desired trade‑off may not be achievable.
+
+\paragraph{Inverse prediction.}  The inverse model \(\hat{g}\) is queried
+with \(\vect{y}^\star\) to produce a set of candidate decisions
+\(\{\hat{\vect{x}}^{(k)}\}_{k=1}^K\).  For probabilistic models such as
+GPR we draw multiple samples from the posterior distribution; for
+deterministic models such as RBFs and FFNNs we sample by adding small
+Gaussian noise to the input.
+
+\paragraph{Forward evaluation.}  Each candidate is evaluated using the
+forward surrogate \(\hat{f}\) to compute the predicted objective vector
+\(\hat{\vect{y}}^{(k)}=\hat{f}(\hat{\vect{x}}^{(k)})\).  The forward
+error \(e_f^{(k)}=\|\hat{\vect{y}}^{(k)}-\vect{y}^\star\|\) and distance
+to the sampled Pareto front are computed.
+
+\paragraph{Ranking and selection.}  Candidates are ranked according to a
+multi‑criteria score combining forward error, diversity and plausibility.
+The top‑\(M\) candidates are presented to the user along with their
+predicted objective values and a visual indication of their proximity to
+the Pareto front.
+
+\paragraph{User feedback.}  The user can select a candidate and, if
+desired, refine the target or adjust weights in the ranking.  Selected
+candidates can be saved for further simulation or fabrication.  User
+interactions can be logged to adapt the inverse model over time.
+
+\section{Algorithmic Summary}
+
+Algorithm~\ref{alg:offline} summarises the offline training procedure and
+Algorithm~\ref{alg:online} details the online exploration loop.  The
+pseudocode abstracts away implementation details to highlight the main
+steps.
+
+\begin{algorithm}[t]
+  \caption{Offline Training of Inverse and Forward Models}
+  \label{alg:offline}
+  \begin{algorithmic}[1]
+    \Require multi‑objective function \(\vect{f}\), decision space \(\calX\)
+    \Ensure trained inverse model \(\hat{g}\) and forward surrogate \(\hat{f}\)
+    \State \textbf{Generate Pareto samples} \(\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}\)
+       by running a MOO algorithm (e.g. NSGA‑II)
+    \State \textbf{Normalise} decision and objective vectors
+    \State \textbf{Split} \(\mathcal{D}\) into training/validation/test sets
+    \State \textbf{Select model type} (GP, RBF, RF, FFNN)
+    \State \textbf{Tune hyperparameters} via cross‑validation
+    \State \textbf{Train inverse model} \(\hat{g}\) on training set
+    \State \textbf{Train forward model} \(\hat{f}\) on training set
+    \State \textbf{Validate} on test set; select best model
+    \State \Return \(\hat{g},\hat{f}\)
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[t]
+  \caption{Online Inverse Decision Exploration}
+  \label{alg:online}
+  \begin{algorithmic}[1]
+    \Require trained models \(\hat{g},\hat{f}\), dataset \(\mathcal{D}\)
+    \Repeat
+      \State \textbf{Get target} objectives \(\vect{y}^\star\) from user
+      \State \textbf{Compute plausibility score} using distance to \(\mathcal{D}\)
+      \If{score $<\tau$}
+        \State display warning and optionally project \(\vect{y}^\star\) onto front
+      \EndIf
+      \State \textbf{Generate candidates} \(\{\hat{\vect{x}}^{(k)}\}\) via \(\hat{g}\)
+      \For{each candidate \(k\)}
+        \State evaluate \(\hat{\vect{y}}^{(k)}=\hat{f}(\hat{\vect{x}}^{(k)})\)
+        \State compute forward error and distance metrics
+      \EndFor
+      \State \textbf{Rank} candidates by error, diversity and plausibility
+      \State \textbf{Display} top candidates and solicit user feedback
+    \Until{user terminates}
+  \end{algorithmic}
+\end{algorithm}
+
+\section{Implementation Considerations}
+
+Our implementation is written in Python and relies on the \texttt{scikit‑learn}
+library for regression models and \texttt{pymoo} for multi‑objective
+optimisation.  The training pipeline is modular so that additional
+inverse models can be plugged in with minimal code changes.  Data
+preprocessing, model training and cross‑validation are orchestrated via
+\texttt{scikit‑learn}'s pipelines.  Hyperparameters are tuned using
+\texttt{RandomizedSearchCV}.  The user interface is implemented in
+\texttt{Dash} and provides sliders and plots for setting targets and
+visualising candidates.  Parallelisation is exploited to evaluate
+multiple candidates concurrently.
