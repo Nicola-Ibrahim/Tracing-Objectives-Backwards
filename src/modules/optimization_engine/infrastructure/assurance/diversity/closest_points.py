@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from ....domain.assurance.feasibility.interfaces.diversity import DiversityStrategy
+from ....domain.assurance.interfaces.diversity import DiversityStrategy
 
 
 class ClosestPointsDiversityStrategy(DiversityStrategy):

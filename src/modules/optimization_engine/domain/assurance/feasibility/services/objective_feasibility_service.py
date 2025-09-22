@@ -4,11 +4,11 @@ from typing import Dict, Type
 
 import numpy as np
 
+from ...interfaces import DiversityStrategy, FeasibilityScoringStrategy
 from ...shared.errors import ObjectiveOutOfBoundsError
 from ...shared.ndarray_utils import clip01
 from ...shared.reasons import FeasibilityFailureReason
 from ..aggregates import FeasibilityAssessment
-from ...interfaces import DiversityStrategy, FeasibilityScoringStrategy
 from ..policies.validators import (
     BaseFeasibilityValidator,
     HistoricalRangeValidator,
@@ -124,6 +124,8 @@ class ObjectiveFeasibilityService:
         diversity_method: str = "euclidean",
         random_seed: int | None = None,
     ) -> FeasibilityAssessment:
+        """Validate the target objective vector's feasibility."""
+
         assessment = self.assess(
             pareto_front=pareto_front,
             tolerance=tolerance,

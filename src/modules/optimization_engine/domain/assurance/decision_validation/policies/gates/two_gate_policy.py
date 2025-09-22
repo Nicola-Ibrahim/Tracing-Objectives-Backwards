@@ -10,6 +10,7 @@ from ...value_objects.gate_result import GateResult
 
 
 def _md2(x: np.ndarray, mu: np.ndarray, prec: np.ndarray) -> float:
+    """Compute Mahalanobis distance squared for a single sample."""
     x = np.atleast_2d(x)
     d = x - mu
     return float(np.einsum("ni,ij,nj->n", d, prec, d)[0])
@@ -17,18 +18,19 @@ def _md2(x: np.ndarray, mu: np.ndarray, prec: np.ndarray) -> float:
 
 def evaluate_two_gate_policy(
     *,
-    x_norm: np.ndarray,
-    y_star_norm: np.ndarray,
-    y_hat_norm: np.ndarray,
+    y_norm: np.ndarray,
+    x_target_norm: np.ndarray,
+    x_hat_norm: np.ndarray,
     ood: OODCalibration,
     conf: ConformalCalibration,
     tol: Tolerance,
 ) -> GeneratedDecisionValidationReport:
+    """Apply OOD and tolerance gates to produce a validation report."""
     metrics: dict[str, float | bool] = {}
     explanations: dict[str, str] = {}
     gate_results: list[GateResult] = []
 
-    md2 = _md2(x_norm, ood.mu, ood.prec)
+    md2 = _md2(y_norm, ood.mu, ood.prec)
     inlier = md2 <= ood.threshold_md2
     metrics.update(
         {
@@ -43,9 +45,9 @@ def evaluate_two_gate_policy(
             passed=bool(inlier),
             metrics={"md2": md2, "threshold": ood.threshold_md2},
             explanation=(
-                "Pass: decision within supported region."
+                "Pass: y within supported region."
                 if inlier
-                else "ABSTAIN: decision is outside the supported region."
+                else "ABSTAIN: y is outside the supported region."
             ),
         )
     )
@@ -61,7 +63,7 @@ def evaluate_two_gate_policy(
 
     explanations["gate1"] = gate_results[-1].explanation
 
-    diff = np.abs(y_hat_norm - y_star_norm)
+    diff = np.abs(x_hat_norm - x_target_norm)
     dist_l2 = float(np.linalg.norm(diff))
     q = conf.radius_q
 
@@ -85,9 +87,9 @@ def evaluate_two_gate_policy(
             passed=bool(covered),
             metrics={"radius_q": q, "dist_to_target_l2": dist_l2},
             explanation=(
-                "Pass: predictive set contained within tolerance."
+                "Pass: predicted x within tolerance."
                 if covered
-                else "ABSTAIN: uncertainty exceeds tolerance."
+                else "ABSTAIN: x uncertainty exceeds tolerance."
             ),
         )
     )
