@@ -243,17 +243,35 @@ class MDNEstimatorParams(EstimatorParams):
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
-        5, gt=0, description="The number of Gaussian mixture components for the MDN."
+        10, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
-    # epochs: int = Field(
-    #     500, gt=0, description="Number of epochs for training the CVAE."
-    # )
-
     learning_rate: float = Field(
-        1e-3, gt=0, description="Learning rate for the Adam optimizer."
+        1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
-
-    # batch_size: int = Field(64, gt=2, description="Batch size")
+    epochs: int = Field(80, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
+    hidden_layers: list[int] = Field(
+        [256, 256, 128],
+        description="List defining the number of units in each hidden layer of the MDN.",
+    )
+    gmm_boost: bool = Field(
+        False, description="Whether to apply GMM boosting to the MDN."
+    )
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation split fraction used during training.",
+    )
+    weight_decay: float = Field(
+        1e-3, ge=0.0, description="L2 weight decay applied during optimization."
+    )
+    clip_grad_norm: float | None = Field(
+        None,
+        ge=0.0,
+        description="Optional gradient norm clipping threshold.",
+    )
+    seed: int = Field(42, description="Random seed for reproducible MDN training.")
 
     class Config:
         extra = "forbid"
@@ -273,12 +291,29 @@ class CVAEEstimatorParams(EstimatorParams):
     latent_dim: int = Field(
         8, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
-    # epochsmake
     learning_rate: float = Field(
         1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
-
-    # batch_size: int = Field(64, gt=2, description="Batch size")
+    beta: float = Field(0.1, ge=0.0, description="Final KL divergence weight.")
+    kl_warmup: int = Field(
+        100,
+        ge=0,
+        description="Number of epochs used to warm-up the KL weight from 0 to beta.",
+    )
+    free_nats: float = Field(
+        0.0,
+        ge=0.0,
+        description="Free nats threshold applied to KL divergence per dimension.",
+    )
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation split fraction used during training.",
+    )
+    random_state: int = Field(42, description="Random seed for data splitting.")
 
     class Config:
         extra = "forbid"
@@ -298,12 +333,30 @@ class CVAEMDNEstimatorParams(EstimatorParams):
     latent_dim: int = Field(
         8, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
-    # epochsmake
     learning_rate: float = Field(
         1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
-
-    # batch_size: int = Field(64, gt=2, description="Batch size")
+    n_components: int = Field(5, gt=0, description="Number of MDN components")
+    beta: float = Field(0.1, ge=0.0, description="Final KL divergence weight.")
+    kl_warmup: int = Field(
+        100,
+        ge=0,
+        description="Number of epochs used to warm-up the KL weight from 0 to beta.",
+    )
+    free_nats: float = Field(
+        0.0,
+        ge=0.0,
+        description="Free nats threshold applied to KL divergence per dimension.",
+    )
+    epochs: int = Field(200, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation split fraction used during training.",
+    )
+    random_state: int = Field(42, description="Random seed for data splitting.")
 
     class Config:
         extra = "forbid"

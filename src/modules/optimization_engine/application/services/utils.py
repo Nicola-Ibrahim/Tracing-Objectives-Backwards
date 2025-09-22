@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
@@ -8,7 +9,6 @@ from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
 from ...domain.modeling.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from .data_preparer import DataPreparer
 
 
 def split_and_normalize(
@@ -26,8 +26,8 @@ def split_and_normalize(
     2) Applies the normalizers (fit_transform on train, transform on test).
     Returns: X_train, X_test, y_train, y_test (normalized).
     """
-    X_train_raw, X_test_raw, y_train_raw, y_test_raw = DataPreparer.single_split(
-        X=X, y=y, test_size=test_size, random_state=random_state
+    X_train_raw, X_test_raw, y_train_raw, y_test_raw = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
     )
 
     X_train = X_normalizer.fit_transform(X_train_raw)

@@ -1,3 +1,5 @@
+import numpy as np
+
 from ...application.modeling.generate_decision.generate_decision_command import (
     GenerateDecisionCommand,
 )
@@ -7,6 +9,9 @@ from ...application.modeling.generate_decision.generate_decision_handler import 
 from ...domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
 )
+from ...domain.assurance.decision_validation import DecisionValidationService
+from ...domain.assurance.feasibility import ObjectiveFeasibilityService
+from ...domain.assurance.feasibility.value_objects import Tolerance
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.datasets.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
@@ -18,6 +23,9 @@ from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.assurance import (
     create_default_scoring_strategy,
     create_default_diversity_registry,
+    create_forward_model,
+    create_ood_calibrator,
+    create_conformal_calibrator,
 )
 
 
@@ -30,27 +38,53 @@ def main():
     # Specify the target objective point (f1, f2, ...).
     target_objective_point = [411, 1242]
 
-    # Build forward model via EstimatorFactory (configurable)
-    forward_model = EstimatorFactory().create_forward(
-        {"type": "coco_biobj", "function_indices": 5}
+    # Create the command object using the hardcoded values
+    command = GenerateDecisionCommand(
+        estimator_type=EstimatorTypeEnum.KRIGING_ND,
+        target_objective=target_objective_point,
+        distance_tolerance=0.02,
+        num_suggestions=5,
+        validation_enabled=True,
     )
 
-    # Initialize the handler with the repositories and forward model
+    # Instantiate domain services
+    feasibility_service = ObjectiveFeasibilityService(
+        scorer=create_default_scoring_strategy(),
+        diversity_registry=create_default_diversity_registry(),
+    )
+
+    decision_validation_service: DecisionValidationService | None = None
+    if command.validation_enabled:
+        forward_model = EstimatorFactory().create_forward(
+            {"type": "coco_biobj", "function_indices": 5}
+        )
+        tolerance = Tolerance(
+            eps_l2=0.03,
+            eps_per_obj=None,
+        )
+        forward_adapter = create_forward_model([forward_model])
+        conformal_calibrator = (
+            create_conformal_calibrator(confidence=0.90)
+            if forward_adapter is not None
+            else None
+        )
+        decision_validation_service = DecisionValidationService(
+            tolerance=tolerance,
+            ood_calibrator=create_ood_calibrator(
+                percentile=97.5,
+                cov_reg=1e-6,
+            ),
+            conformal_calibrator=conformal_calibrator,
+            forward_model=forward_adapter,
+        )
+
+    # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(
         model_repository=FileSystemModelArtifactRepository(),
         processed_data_repository=FileSystemProcessedDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        forward_model=forward_model,
-        scoring_factory=create_default_scoring_strategy,
-        diversity_registry_factory=create_default_diversity_registry,
-    )
-
-    # Create the command object using the hardcoded values
-    command = GenerateDecisionCommand(
-        estimator_type=EstimatorTypeEnum.KRIGING_ND.value,
-        target_objective=target_objective_point,
-        distance_tolerance=0.02,
-        num_suggestions=5,
+        feasibility_service=feasibility_service,
+        decision_validation_service=decision_validation_service,
     )
 
     handler.execute(command)

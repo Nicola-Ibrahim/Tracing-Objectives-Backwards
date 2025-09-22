@@ -1,129 +1,281 @@
+from dataclasses import dataclass
+from typing import Sequence
+
 import numpy as np
 
-from ....domain.assurance.services.feasibility.exceptions import (
-    ObjectiveOutOfBoundsError,
+from ....domain.assurance import ObjectiveOutOfBoundsError
+from ....domain.assurance.decision_validation import DecisionValidationService
+from ....domain.assurance.decision_validation.entities.generated_decision_validation_report import (
+    Verdict,
 )
-from ....domain.assurance.services.feasibility.scorers import KDEScoreStrategy
+from ....domain.assurance.feasibility import ObjectiveFeasibilityService
+from ....domain.assurance.feasibility.value_objects import ObjectiveVector, ParetoFront
 from ....domain.common.interfaces.base_logger import BaseLogger
+from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
-from ....domain.modeling.interfaces.base_repository import (
-    BaseModelArtifactRepository,
-)
-from ...services.objective_feasibility_checker import (
-    ObjectiveFeasibilityChecker,
-)
+from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from .generate_decision_command import GenerateDecisionCommand
 
 
+@dataclass
+class GeneratedY:
+    """Normalized and denormalized forms of a generated y suggestion."""
+
+    normalized: np.ndarray
+    denormalized: np.ndarray
+
+
+DEFAULT_DIVERSITY_METHOD = "euclidean"
+
+
 class GenerateDecisionCommandHandler:
+    """Generate y for a requested x target and apply assurance checks."""
+
     def __init__(
         self,
         model_repository: BaseModelArtifactRepository,
         processed_data_repository: BaseDatasetRepository,
         logger: BaseLogger,
-        forward_model: BaseEstimator,
+        *,
+        feasibility_service: ObjectiveFeasibilityService,
+        decision_validation_service: DecisionValidationService | None = None,
     ):
+        """Wire infrastructure dependencies and optional assurance services."""
         self._model_repository = model_repository
-        self._processed_repo = processed_data_repository
+        self._processed_data_repo = processed_data_repository
         self._logger = logger
-        self._forward_model = forward_model
+        self._feasibility_service = feasibility_service
+        self._dv_service = decision_validation_service
+        self._dv_calibrated = False
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
-        # Load estimator (latest version by type)
-        artifact = self._model_repository.get_latest_version(
-            estimator_type=command.estimator_type
+        """Generate y for the requested estimator and x target, then validate."""
+        estimator = self._load_estimator(command.estimator_type)
+        processed: ProcessedDataset = self._processed_data_repo.load("dataset")
+        x_normalizer = processed.X_normalizer
+        y_normalizer = processed.y_normalizer
+        x_train = processed.X_train
+        y_train = processed.y_train
+        if x_train is None or y_train is None:
+            raise AttributeError(
+                "Processed dataset must provide X_train and y_train for assurance calibration"
+            )
+        pareto_y = processed.pareto_set
+        pareto_front = processed.pareto_front
+
+        target_x = self._build_x_vector(command.target_objective, x_normalizer)
+        diversity_method = getattr(
+            command, "diversity_method", DEFAULT_DIVERSITY_METHOD
         )
-        estimator = artifact.estimator
 
-        # Load normalizers and Pareto data from processed dataset
-        processed = self._processed_repo.load("dataset")
-        decisions_normalizer = processed.X_normalizer
-        objectives_normalizer = processed.y_normalizer
-        pareto_set = getattr(processed, "pareto_set", None)
-        pareto_front = getattr(processed, "pareto_front", None)
+        suggestion_noise_scale = getattr(command, "suggestion_noise_scale", 0.05)
 
-        # Normalize target objective
-        target_objective = np.array(command.target_objective)
-        if target_objective.ndim == 1:
-            target_objective = target_objective.reshape(1, -1)
-        target_objective_norm = objectives_normalizer.transform(target_objective)
+        self._validate_feasibility(
+            pareto_front=pareto_front,
+            x_normalizer=x_normalizer,
+            target_x=target_x,
+            distance_tolerance=command.distance_tolerance,
+            num_suggestions=command.num_suggestions,
+            diversity_method=diversity_method,
+            suggestion_noise_scale=suggestion_noise_scale,
+        )
+
+        generated_y = self._generate_y(
+            estimator=estimator,
+            target_x_norm=target_x.normalized,
+            y_normalizer=y_normalizer,
+        )
+
+        self._log_generation_metrics(
+            y_raw=generated_y.denormalized,
+            target_x_raw=target_x.raw,
+            pareto_y=pareto_y,
+        )
+
+        if self._dv_service is not None and command.validation_enabled:
+            self._run_decision_validation(
+                y_norm=generated_y.normalized,
+                x_target_norm=target_x.normalized,
+                x_normalizer=x_normalizer,
+                y_normalizer=y_normalizer,
+                x_train=x_train,
+                y_train=y_train,
+            )
+
+        return generated_y.denormalized
+
+    def _load_estimator(self, estimator_type: EstimatorTypeEnum) -> BaseEstimator:
+        """Return the most recent estimator artifact matching the type."""
+        artifact = self._model_repository.get_latest_version(
+            estimator_type=estimator_type.value
+        )
+        return artifact.estimator
+
+    def _build_x_vector(self, target_x: Sequence[float], normalizer) -> ObjectiveVector:
+        """Create an objective vector wrapper for raw and normalized x."""
+        target_array = np.asarray(target_x, dtype=float)
+        target_array = np.atleast_2d(target_array)
+        target_norm = normalizer.transform(target_array)
+        return ObjectiveVector(raw=target_array, normalized=target_norm)
+
+    def _validate_feasibility(
+        self,
+        *,
+        pareto_front: np.ndarray | None,
+        x_normalizer,
+        target_x: ObjectiveVector,
+        distance_tolerance: float,
+        num_suggestions: int,
+        diversity_method: str,
+        suggestion_noise_scale: float,
+    ) -> None:
+        """Check that target x fits within the support of the Pareto front."""
+        if pareto_front is None:
+            return
+
+        pareto_front_norm = x_normalizer.transform(pareto_front)
+        service = self._feasibility_service
+
+        pareto_vo = ParetoFront(
+            raw=pareto_front,
+            normalized=pareto_front_norm,
+        )
 
         try:
-            # Feasibility check (if pareto_front available)
-            if pareto_front is not None:
-                pareto_front_norm = objectives_normalizer.transform(pareto_front)
-                ObjectiveFeasibilityChecker(
-                    pareto_front=pareto_front,
-                    pareto_front_normalized=pareto_front_norm,
-                    tolerance=command.distance_tolerance,
-                    scorer=KDEScoreStrategy(),
-                ).validate(
-                    target=target_objective,
-                    target_normalized=target_objective_norm,
-                    num_suggestions=command.num_suggestions,
-                )
-
-            # Predict decision in normalized space and inverse-transform
-            decision_pred_norm = estimator.predict(target_objective_norm)
-            decision_pred = decisions_normalizer.inverse_transform(decision_pred_norm)[
-                0
-            ]
-
-            # Evaluate achieved objective using injected forward estimator (forward mapper)
-            achieved_objective = self._forward_model.predict(
-                decision_pred.reshape(1, -1)
-            )[0]
-
-            # Compute concise metrics
-            target_obj_1d = (
-                target_objective[0] if target_objective.ndim == 2 else target_objective
+            service.validate(
+                pareto_front=pareto_vo,
+                tolerance=distance_tolerance,
+                target=target_x,
+                num_suggestions=num_suggestions,
+                suggestion_noise_scale=suggestion_noise_scale,
+                diversity_method=diversity_method,
             )
-            abs_diff = np.abs(achieved_objective - target_obj_1d)
-            euclidean_distance = float(
-                np.linalg.norm(achieved_objective - target_obj_1d)
-            )
-            # Optional: distance to nearest Pareto decision (if available)
-            decision_to_pareto_min_distance = None
-            if pareto_set is not None:
-                try:
-                    dists = np.linalg.norm(pareto_set - decision_pred, axis=1)
-                    decision_to_pareto_min_distance = float(np.min(dists))
-                except Exception:
-                    decision_to_pareto_min_distance = None
+        except ObjectiveOutOfBoundsError as error:
+            self._handle_feasibility_error(error, x_normalizer)
 
-            # Single concise result log
-            metrics: dict[str, float] = {
-                "objective_l2_distance": euclidean_distance,
-                "objective_abs_error_mean": float(np.mean(abs_diff)),
-                "objective_abs_error_max": float(np.max(abs_diff)),
+    def _handle_feasibility_error(
+        self, error: ObjectiveOutOfBoundsError, x_normalizer
+    ) -> None:
+        """Report infeasible x diagnostics and re-raise the originating error."""
+        self._logger.log_error(
+            f"Feasibility failed: {error.reason.value} | {error.message}"
+        )
+        if error.suggestions is None:
+            raise error
+
+        suggestions = np.atleast_2d(np.asarray(error.suggestions))
+        if suggestions.size == 0:
+            raise error
+
+        try:
+            denorm_suggestions = x_normalizer.inverse_transform(suggestions)
+        except Exception:
+            raise error
+
+        suggestions_str = "; ".join(str(value.tolist()) for value in denorm_suggestions)
+        self._logger.log_error(f"Suggestions (original scale): {suggestions_str}")
+        raise error
+
+    def _generate_y(
+        self,
+        *,
+        estimator: BaseEstimator,
+        target_x_norm: np.ndarray,
+        y_normalizer,
+    ) -> GeneratedY:
+        """Generate y from the estimator and denormalize to the original scale."""
+        y_norm = np.atleast_2d(estimator.predict(target_x_norm))
+        y_raw = y_normalizer.inverse_transform(y_norm)[0]
+        return GeneratedY(normalized=y_norm, denormalized=y_raw)
+
+    def _log_generation_metrics(
+        self,
+        *,
+        y_raw: np.ndarray,
+        target_x_raw: np.ndarray,
+        pareto_y: np.ndarray | None,
+    ) -> None:
+        """Log metrics describing y proximity to stored Pareto data."""
+        metrics: dict[str, float] = {}
+
+        # try:
+        #     distances = np.linalg.norm(pareto_y - y_raw, axis=1)
+        # except Exception:
+        #     distances = None
+        # if distances is not None:
+        #     metrics["y_to_pareto_min_distance"] = float(np.min(distances))
+
+        # if metrics:
+        #     self._logger.log_metrics(metrics)
+
+        self._logger.log_info(f"y: {y_raw.tolist()}")
+
+    def _run_decision_validation(
+        self,
+        *,
+        y_norm: np.ndarray,
+        x_target_norm: np.ndarray,
+        x_normalizer,
+        y_normalizer,
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+    ) -> None:
+        """Execute decision validation service if configured."""
+        if self._dv_service is None:
+            return
+
+        self._ensure_decision_validation_calibrated(
+            x_normalizer=x_normalizer,
+            y_normalizer=y_normalizer,
+            x_train=x_train,
+            y_train=y_train,
+        )
+
+        case = self._dv_service.validate(
+            y_norm=np.asarray(y_norm[0]),
+            x_target_norm=np.asarray(x_target_norm[0]),
+        )
+
+        report = case.report
+        if self._logger:
+            summary = {
+                "assurance_verdict_accept": 1.0
+                if report.verdict == Verdict.ACCEPT
+                else 0.0,
+                "assurance_gate1_md2": report.metrics.get("gate1_md2"),
+                "assurance_gate1_thr": report.metrics.get("gate1_md2_threshold"),
+                "assurance_gate2_q": report.metrics.get("gate2_conformal_radius_q"),
+                "assurance_gate2_dist": report.metrics.get("gate2_dist_to_target_l2"),
             }
-            if decision_to_pareto_min_distance is not None:
-                metrics["decision_to_pareto_min_distance"] = (
-                    decision_to_pareto_min_distance
-                )
-            self._logger.log_metrics(metrics)
+            self._logger.log_metrics(summary)
             self._logger.log_info(
-                f"Decision: {decision_pred.tolist()}, AchievedObjective: {achieved_objective.tolist()}"
+                f"[assurance] Verdict={report.verdict.value} | Reasons={report.explanations}"
             )
 
-            return decision_pred
+    def _ensure_decision_validation_calibrated(
+        self,
+        *,
+        x_normalizer,
+        y_normalizer,
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+    ) -> None:
+        """Calibrate the validation service using supplied training data."""
+        if self._dv_service is None or self._dv_calibrated:
+            return
 
-        except ObjectiveOutOfBoundsError as e:
-            self._logger.log_error(
-                f"Feasibility failed: {e.reason.value} | {e.message}"
-            )
-            # If suggestions available, log minimally in original scale
-            try:
-                suggestions = (
-                    np.asarray(e.suggestions) if e.suggestions is not None else None
-                )
-                if suggestions is not None and suggestions.size > 0:
-                    suggestions = objectives_normalizer.inverse_transform(suggestions)
-                    self._logger.log_error(
-                        "Suggestions (original scale): "
-                        + "; ".join(str(s.tolist()) for s in suggestions)
-                    )
-            except Exception:
-                pass
-            raise
+        y_norm = y_normalizer.transform(y_train)
+        x_norm = x_normalizer.transform(x_train)
+
+        self._dv_service.calibrate(y_norm, x_norm)
+        self._dv_calibrated = True
+
+        if self._logger:
+            ood = self._dv_service.ood_calibration
+            conf = self._dv_service.conformal_calibration
+            message = f"[assurance] Calibrated OOD thr={ood.threshold_md2:.3f}"
+            if conf is not None:
+                message += f", Conformal q={conf.radius_q:.4f}"
+            self._logger.log_info(message)
