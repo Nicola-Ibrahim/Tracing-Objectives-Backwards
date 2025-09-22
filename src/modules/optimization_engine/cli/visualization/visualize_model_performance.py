@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import click
 
 from ...application.visualization.visualize_model_performance.visualize_model_performance_command import (

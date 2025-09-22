@@ -171,7 +171,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
 
         if not found_model_versions:
             raise FileNotFoundError(
-                f"No model versions found for type: '{ estimator_type}'"
+                f"No model versions found for type: '{estimator_type}'"
             )
 
         # The list is already sorted by 'trained_at' in descending order, so the first element is the latest.

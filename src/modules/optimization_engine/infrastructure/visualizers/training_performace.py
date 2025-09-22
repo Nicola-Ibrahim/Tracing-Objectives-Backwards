@@ -291,7 +291,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseVisualizer):
                     x=objectives_val[:, i],
                     y=errors,
                     mode="markers",
-                    name=f"Error vs. Obj Dim {i+1}",
+                    name=f"Error vs. Obj Dim {i + 1}",
                     marker=dict(
                         color=px.colors.qualitative.Plotly[i],
                         size=8,
@@ -341,7 +341,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseVisualizer):
             current_row = 5 + i // 2
             col = (i % 2) + 1
             fig.update_xaxes(
-                title_text=f"Objective Dimension {i+1}", row=current_row, col=col
+                title_text=f"Objective Dimension {i + 1}", row=current_row, col=col
             )
             fig.update_yaxes(
                 title_text="Error Magnitude (MSE)",
@@ -349,7 +349,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseVisualizer):
                 col=col,
             )
 
-        y_domains = [fig.layout[f"yaxis{2*i+1}"].domain for i in range(num_rows)]
+        y_domains = [fig.layout[f"yaxis{2 * i + 1}"].domain for i in range(num_rows)]
         y_offset = 0.03
         y_positions = [dom[0] - y_offset for dom in y_domains]
 
@@ -473,7 +473,7 @@ class PlotlyTrainingPerformanceVisualizer(BaseVisualizer):
 
             annotations.append(
                 go.layout.Annotation(
-                    text=f"Plots the error magnitude against objective dimension {i+1}.<br>"
+                    text=f"Plots the error magnitude against objective dimension {i + 1}.<br>"
                     "A consistent scatter indicates uniform model performance.",
                     xref="paper",
                     yref="paper",

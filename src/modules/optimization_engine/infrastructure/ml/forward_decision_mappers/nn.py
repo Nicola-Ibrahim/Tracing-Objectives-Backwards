@@ -190,7 +190,7 @@ class NNForwardDecisionMapper(BaseForwardDecisionMapper):
                 epochs // 10 if epochs >= 10 else 1
             ) == 0 or epoch == epochs - 1:
                 avg_loss = total_loss / len(dataloader)
-                print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
+                print(f"Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}")
 
         self.model.eval()  # Set model to evaluation mode after training
         print("Training complete.")
