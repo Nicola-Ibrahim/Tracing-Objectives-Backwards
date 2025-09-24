@@ -10,6 +10,3 @@ class GateResult(BaseModel):
     passed: bool
     metrics: dict[str, float | bool] = Field(default_factory=dict)
     explanation: str
-
-
-__all__ = ["GateResult"]

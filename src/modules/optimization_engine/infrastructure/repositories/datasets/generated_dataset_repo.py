@@ -1,9 +1,8 @@
 from pathlib import Path
 
-import numpy as np
-
 from ....domain.datasets.entities.generated_dataset import GeneratedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ....domain.datasets.value_objects.pareto import Pareto
 from ...processing.files.pickle import PickleFileHandler
 
 
@@ -33,26 +32,15 @@ class FileSystemGeneratedDatasetRepository(BaseDatasetRepository):
         """
         load_path = self.base_path / filename
         loaded_data = self._file_handler.load(load_path)
-
-        # Handle potential None values and coercion from loaded data
-        pareto_set = loaded_data.get("pareto_set")
-        pareto_front = loaded_data.get("pareto_front")
-        historical_solutions = loaded_data.get("historical_solutions")
-        historical_objectives = loaded_data.get("historical_objectives")
-        name = loaded_data.get("name")
-        metadata_raw = loaded_data.get("metadata")
-
-        # Coerce loaded data into expected types
-        name = str(name) if name is not None else ""
-        metadata = (
-            dict(metadata_raw) if isinstance(metadata_raw, (dict, np.ndarray)) else {}
+        # Backwards compatibility with legacy schema
+        pareto = Pareto(
+            set=loaded_data.get("pareto").get("set"),
+            front=loaded_data.get("pareto").get("front"),
         )
 
         return GeneratedDataset.create(
-            name=name,
-            pareto_set=pareto_set,
-            pareto_front=pareto_front,
-            historical_solutions=historical_solutions,
-            historical_objectives=historical_objectives,
-            metadata=metadata,
+            name=loaded_data.get("name", ""),
+            X=loaded_data.get("X"),
+            y=loaded_data.get("y"),
+            pareto=pareto,
         )

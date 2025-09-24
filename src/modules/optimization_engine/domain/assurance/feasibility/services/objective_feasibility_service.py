@@ -1,14 +1,12 @@
-"""Domain service orchestrating feasibility validation for objectives."""
-
 from typing import Dict, Type
 
 import numpy as np
 
-from ...interfaces import DiversityStrategy, FeasibilityScoringStrategy
-from ...shared.errors import ObjectiveOutOfBoundsError
 from ...shared.ndarray_utils import clip01
 from ...shared.reasons import FeasibilityFailureReason
 from ..aggregates import FeasibilityAssessment
+from ..errors import ObjectiveOutOfBoundsError
+from ..interfaces import BaseDiversityStrategy, BaseFeasibilityScoringStrategy
 from ..policies.validators import (
     BaseFeasibilityValidator,
     HistoricalRangeValidator,
@@ -24,8 +22,8 @@ class ObjectiveFeasibilityService:
     def __init__(
         self,
         *,
-        scorer: FeasibilityScoringStrategy,
-        diversity_registry: Dict[str, Type[DiversityStrategy]],
+        scorer: BaseFeasibilityScoringStrategy,
+        diversity_registry: Dict[str, Type[BaseDiversityStrategy]],
     ) -> None:
         if not diversity_registry:
             raise ValueError("diversity_registry must include at least one strategy.")
@@ -187,6 +185,3 @@ class ObjectiveFeasibilityService:
             -perturbation_range, perturbation_range, size=selected.shape
         )
         return clip01(selected + noise)
-
-
-__all__ = ["ObjectiveFeasibilityService"]

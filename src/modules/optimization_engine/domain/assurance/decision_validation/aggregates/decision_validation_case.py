@@ -4,9 +4,8 @@ from pydantic import BaseModel, ConfigDict
 
 from ..entities.generated_decision_validation_report import (
     GeneratedDecisionValidationReport,
-    Verdict,
 )
-from ..value_objects.validation_outcome import ValidationOutcome
+from ..value_objects.validation_outcome import ValidationOutcome, Verdict
 
 
 class DecisionValidationCase(BaseModel):

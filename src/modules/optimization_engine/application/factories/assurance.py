@@ -5,7 +5,12 @@ from ...domain.assurance.decision_validation.interfaces import (
     ForwardModel,
     OODCalibrator,
 )
-from ...domain.assurance.interfaces import DiversityStrategy, FeasibilityScoringStrategy
+from ...domain.assurance.feasibility.interfaces.diversity import (
+    BaseDiversityStrategy,
+)
+from ...domain.assurance.feasibility.interfaces.scoring import (
+    BaseFeasibilityScoringStrategy,
+)
 from ...domain.modeling.interfaces.base_estimator import BaseEstimator
 from ...infrastructure.assurance.decision_validation.calibration import (
     MahalanobisCalibrator,
@@ -27,13 +32,15 @@ from ...infrastructure.assurance.scoring import (
 )
 
 
-def create_default_scoring_strategy() -> FeasibilityScoringStrategy:
+def create_default_scoring_strategy() -> BaseFeasibilityScoringStrategy:
     """Return the primary feasibility scoring strategy instance."""
 
     return KDEScoreStrategy()
 
 
-def create_scoring_registry() -> Dict[str, Callable[[], FeasibilityScoringStrategy]]:
+def create_scoring_registry() -> (
+    Dict[str, Callable[[], BaseFeasibilityScoringStrategy]]
+):
     """Return available scoring strategies keyed by configuration name."""
 
     return {
@@ -44,7 +51,7 @@ def create_scoring_registry() -> Dict[str, Callable[[], FeasibilityScoringStrate
     }
 
 
-def create_default_diversity_registry() -> Dict[str, Type[DiversityStrategy]]:
+def create_default_diversity_registry() -> Dict[str, Type[BaseDiversityStrategy]]:
     """Return the default registry of diversity strategies."""
 
     return {

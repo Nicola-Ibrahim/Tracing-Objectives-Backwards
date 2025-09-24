@@ -1,7 +1,5 @@
 """Decision validation service orchestrating policies via injected ports."""
 
-from __future__ import annotations
-
 from typing import Optional
 
 import numpy as np
@@ -17,11 +15,8 @@ from ..interfaces import (
     OODCalibrator,
 )
 from ..policies import evaluate_two_gate_policy
-from ..value_objects import (
-    ConformalCalibration,
-    OODCalibration,
-    ValidationOutcome,
-)
+from ..value_objects.calibration import ConformalCalibration, OODCalibration
+from ..value_objects.validation_outcome import ValidationOutcome
 
 
 class DecisionValidationService:
@@ -48,9 +43,7 @@ class DecisionValidationService:
         self._ood: Optional[OODCalibration] = None
         self._conformal: Optional[ConformalCalibration] = None
 
-    def calibrate(
-        self, y_cal_norm: np.ndarray, x_cal_norm: np.ndarray
-    ) -> None:
+    def calibrate(self, y_cal_norm: np.ndarray, x_cal_norm: np.ndarray) -> None:
         """Calibrate detectors using normalized decision and objective data."""
 
         self._ood = self._ood_calibrator.fit(y_cal_norm)
@@ -68,7 +61,9 @@ class DecisionValidationService:
     def ood_calibration(self) -> OODCalibration:
         """Return the fitted OOD calibration; requires prior calibration."""
         if self._ood is None:
-            raise RuntimeError("DecisionValidationService must be calibrated before use.")
+            raise RuntimeError(
+                "DecisionValidationService must be calibrated before use."
+            )
         return self._ood
 
     @property
@@ -84,7 +79,9 @@ class DecisionValidationService:
     ) -> DecisionValidationCase:
         """Evaluate y against two assurance gates and return the decision case."""
         if self._ood is None:
-            raise RuntimeError("DecisionValidationService must be calibrated before validation.")
+            raise RuntimeError(
+                "DecisionValidationService must be calibrated before validation."
+            )
 
         prediction = self.predict_x(y_norm)
         if prediction is not None:

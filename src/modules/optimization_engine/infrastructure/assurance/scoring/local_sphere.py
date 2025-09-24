@@ -2,10 +2,12 @@
 
 import numpy as np
 
-from ....domain.assurance.interfaces.scoring import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    BaseFeasibilityScoringStrategy,
+)
 
 
-class LocalSphereScoreStrategy(FeasibilityScoringStrategy):
+class LocalSphereScoreStrategy(BaseFeasibilityScoringStrategy):
     def __init__(self, radius: float = 0.1):
         if radius <= 0:
             raise ValueError("radius must be positive")

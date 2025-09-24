@@ -15,13 +15,13 @@ from ...infrastructure.repositories.datasets.processed_dataset_repo import (
 )
 
 # Repositories
-raw_repo = FileSystemGeneratedDatasetRepository()
-processed_repo = FileSystemProcessedDatasetRepository()
+generated_dataset_repo = FileSystemGeneratedDatasetRepository()
+processed_dataset_repo = FileSystemProcessedDatasetRepository()
 
 # Handler (DI)
 handler = ProcessDatasetCommandHandler(
-    raw_repo=raw_repo,
-    processed_repo=processed_repo,
+    generated_dataset_repo=generated_dataset_repo,
+    processed_dataset_repo=processed_dataset_repo,
     normalizer_factory=NormalizerFactory(),
     logger=CMDLogger(),
 )

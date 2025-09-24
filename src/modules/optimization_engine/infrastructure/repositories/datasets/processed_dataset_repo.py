@@ -1,10 +1,10 @@
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .....shared.config import ROOT_PATH
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ....domain.datasets.value_objects.pareto import Pareto
 from ...processing.files.json import JsonFileHandler
 from ...processing.files.pickle import PickleFileHandler
 
@@ -58,17 +58,14 @@ class FileSystemProcessedDatasetRepository(BaseDatasetRepository):
 
         # 3) Save lightweight metadata
         metadata: dict[str, Any] = {
-            "name": data.name,
-            "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
             "shapes": {
                 "X_train": list(data.X_train.shape),
                 "y_train": list(data.y_train.shape),
                 "X_test": list(data.X_test.shape),
                 "y_test": list(data.y_test.shape),
-                "pareto_set": list(data.pareto_set.shape),
-                "pareto_front": list(data.pareto_front.shape),
+                "pareto_set": list(data.pareto.set.shape),
+                "pareto_front": list(data.pareto.front.shape),
             },
-            "has_normalizers": True,
         }
         self._json.save(metadata, meta_json)
 
@@ -98,16 +95,19 @@ class FileSystemProcessedDatasetRepository(BaseDatasetRepository):
 
             name = payload.get("name") or self.base_path.name
 
+            pareto = Pareto(
+                set=payload.get("pareto").get("set"),
+                front=payload.get("pareto").get("front"),
+            )
             return ProcessedDataset.create(
                 name=name,
-                X_train=payload["X_train"],
-                y_train=payload["y_train"],
+                X_train=payload.get("X_train"),
+                y_train=payload.get("y_train"),
                 X_test=payload["X_test"],
                 y_test=payload["y_test"],
                 X_normalizer=X_normalizer,
                 y_normalizer=y_normalizer,
-                pareto_set=payload.get("pareto_set"),
-                pareto_front=payload.get("pareto_front"),
+                pareto=pareto,
                 metadata=payload.get("metadata"),
             )
 
@@ -134,16 +134,19 @@ class FileSystemProcessedDatasetRepository(BaseDatasetRepository):
                         f"normalizer files found for stem '{legacy_file.stem}'."
                     )
 
+            pareto = Pareto(
+                set=payload.get("pareto_set"),
+                front=payload.get("pareto_front"),
+            )
             return ProcessedDataset.create(
                 name=name,
-                X_train=payload["X_train"],
+                X_train=payload.get("X_train"),
                 y_train=payload["y_train"],
                 X_test=payload["X_test"],
                 y_test=payload["y_test"],
                 X_normalizer=X_norm,
                 y_normalizer=y_norm,
-                pareto_set=payload.get("pareto_set"),
-                pareto_front=payload.get("pareto_front"),
+                pareto=pareto,
                 metadata=payload.get("metadata"),
             )
 

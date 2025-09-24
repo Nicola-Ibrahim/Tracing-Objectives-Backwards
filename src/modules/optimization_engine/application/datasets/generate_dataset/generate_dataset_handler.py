@@ -3,6 +3,9 @@ from pathlib import Path
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.generated_dataset import GeneratedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ....domain.datasets.value_objects.pareto import (
+    Pareto,
+)
 from ...factories.algorithm import AlgorithmFactory
 from ...factories.optimizer import OptimizerFactory
 from ...factories.problem import ProblemFactory
@@ -65,30 +68,30 @@ class GenerateDatasetCommandHandler:
         )
 
         # Execute the optimization process
-        result = optimizer.run()
+        run_data = optimizer.run()
 
         self._logger.log_info("Optimization run completed.")
+
         self._logger.log_info(
-            f"Found {len(result.pareto_set) if result.pareto_set is not None else 0} Pareto-optimal solutions."
+            f"Found {run_data.pareto_set.shape[0]} Pareto-optimal solutions."
         )
         self._logger.log_info(
-            f"Historical Pareto set contains {len(result.historical_solutions) if result.historical_solutions is not None else 0} solutions."
+            f"Historical Pareto set contains {run_data.historical_solutions.shape[0]} solutions."
+        )
+
+        pareto = Pareto(
+            set=run_data.pareto_set,
+            front=run_data.pareto_front,
         )
 
         # Build the GeneratedDataset from the optimization results and original configurations
-        data = GeneratedDataset(
+        generated_dataset = GeneratedDataset(
             name="dataset",
-            pareto_set=result.pareto_set,
-            pareto_front=result.pareto_front,
-            historical_solutions=result.historical_solutions,
-            historical_objectives=result.historical_objectives,
-            metadata={
-                "algorithm": algorithm_config,
-                "optimizer": optimizer_config,
-                "problem": problem_config,
-            },
+            X=run_data.historical_solutions,
+            y=run_data.historical_objectives,
+            pareto=pareto,
         )
 
         # Save the results using the data model repository and return the saved path
-        saved_path = self._data_model_repository.save(data=data)
+        saved_path = self._data_model_repository.save(data=generated_dataset)
         self._logger.log_info(f"Pareto data saved to: {saved_path}")

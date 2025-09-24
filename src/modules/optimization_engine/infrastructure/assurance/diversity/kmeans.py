@@ -5,10 +5,10 @@ import warnings
 import numpy as np
 from sklearn.cluster import KMeans
 
-from ....domain.assurance.interfaces.diversity import DiversityStrategy
+from ....domain.assurance.feasibility.interfaces.diversity import BaseDiversityStrategy
 
 
-class KMeansDiversityStrategy(DiversityStrategy):
+class KMeansDiversityStrategy(BaseDiversityStrategy):
     def select_diverse_points(
         self,
         *,

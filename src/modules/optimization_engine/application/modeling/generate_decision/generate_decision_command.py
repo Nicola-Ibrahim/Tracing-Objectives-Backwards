@@ -17,3 +17,4 @@ class GenerateDecisionCommand(BaseModel):
     diversity_method: str = "euclidean"
     suggestion_noise_scale: float = 0.05
     validation_enabled: bool = True
+    feasibility_enabled: bool = True

@@ -36,10 +36,10 @@ class VisualizeDatasetCommandHandler:
             "y_train": processed.y_train,
             "X_test": processed.X_test,
             "y_test": processed.y_test,
-            "pareto_set": processed.pareto_set,
-            "pareto_front": processed.pareto_front,
-            "historical_solutions": raw.historical_solutions,
-            "historical_objectives": raw.historical_objectives,
+            "pareto_set": processed.pareto.set,
+            "pareto_front": processed.pareto.front,
+            "historical_solutions": raw.X,
+            "historical_objectives": raw.y,
         }
 
         # 7) Plot

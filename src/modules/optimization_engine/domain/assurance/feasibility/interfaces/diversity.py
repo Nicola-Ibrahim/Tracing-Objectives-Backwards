@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
-class DiversityStrategy(ABC):
+class BaseDiversityStrategy(ABC):
     def __init__(self, random_seed: int | None = None) -> None:
         self._random_seed = random_seed
 
@@ -19,4 +19,4 @@ class DiversityStrategy(ABC):
     ) -> np.ndarray: ...
 
 
-__all__ = ["DiversityStrategy"]
+__all__ = ["BaseDiversityStrategy"]

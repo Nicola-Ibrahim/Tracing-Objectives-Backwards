@@ -1,13 +1,18 @@
 import numpy as np
 
+from ...application.factories.assurance import (
+    create_conformal_calibrator,
+    create_default_diversity_registry,
+    create_default_scoring_strategy,
+    create_forward_model,
+    create_ood_calibrator,
+)
+from ...application.factories.estimator import EstimatorFactory
 from ...application.modeling.generate_decision.generate_decision_command import (
     GenerateDecisionCommand,
 )
 from ...application.modeling.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
-)
-from ...domain.modeling.enums.estimator_type import (
-    EstimatorTypeEnum,
 )
 from ...domain.assurance.decision_validation import DecisionValidationService
 from ...domain.assurance.feasibility import ObjectiveFeasibilityService
@@ -19,14 +24,6 @@ from ...infrastructure.repositories.datasets.processed_dataset_repo import (
 from ...infrastructure.repositories.modeling.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...application.factories.estimator import EstimatorFactory
-from ...application.factories.assurance import (
-    create_default_scoring_strategy,
-    create_default_diversity_registry,
-    create_forward_model,
-    create_ood_calibrator,
-    create_conformal_calibrator,
-)
 
 
 def main():
@@ -35,16 +32,14 @@ def main():
     Modify the variables below to change the inputs.
     """
 
-    # Specify the target objective point (f1, f2, ...).
-    target_objective_point = [411, 1242]
-
     # Create the command object using the hardcoded values
     command = GenerateDecisionCommand(
-        estimator_type=EstimatorTypeEnum.KRIGING_ND,
-        target_objective=target_objective_point,
+        estimator_type="mdn",
+        target_objective=[411, 1500],
         distance_tolerance=0.02,
         num_suggestions=5,
-        validation_enabled=True,
+        validation_enabled=False,
+        feasibility_enabled=False,
     )
 
     # Instantiate domain services

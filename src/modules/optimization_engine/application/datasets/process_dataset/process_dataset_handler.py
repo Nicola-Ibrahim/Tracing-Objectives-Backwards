@@ -16,22 +16,24 @@ class ProcessDatasetCommandHandler:
 
     def __init__(
         self,
-        raw_repo: BaseDatasetRepository,
-        processed_repo: BaseDatasetRepository,
+        generated_dataset_repo: BaseDatasetRepository,
+        processed_dataset_repo: BaseDatasetRepository,
         normalizer_factory: NormalizerFactory,
         logger: BaseLogger,
     ) -> None:
-        self._raw_repo = raw_repo
-        self._processed_repo = processed_repo
+        self._generated_dataset_repo = generated_dataset_repo
+        self._processed_dataset_repo = processed_dataset_repo
         self._normalizer_factory = normalizer_factory
         self._logger = logger
 
     def execute(self, command: ProcessDatasetCommand) -> None:
         # 1) Load raw bundle
-        raw = self._raw_repo.load(filename=command.source_filename)
+        generated_dataset = self._generated_dataset_repo.load(
+            filename=command.source_filename
+        )
 
         self._logger.log_info(
-            f"[postprocess] data: X{raw.historical_objectives.shape}, y{raw.historical_solutions.shape}"
+            f"[postprocess] data: X{generated_dataset.X.shape}, y{generated_dataset.y.shape}"
         )
 
         # 2) Build normalizers (one per space)
@@ -42,11 +44,14 @@ class ProcessDatasetCommandHandler:
             command.normalizer_config.model_dump()
         )
 
+        # NOTE: the pareto front and set is not normalized here, but could be if needed
+        # TODO: add option to normalize pareto front too
+
         # 3) Split + normalize (returns normalized arrays + the fitted normalizers)
         X_train, X_test, y_train, y_test, X_normalizer_fitted, y_normalizer_fitted = (
             split_and_normalize(
-                X=raw.historical_objectives,
-                y=raw.historical_solutions,
+                X=generated_dataset.y,
+                y=generated_dataset.X,
                 X_normalizer=X_normalizer,
                 y_normalizer=y_normalizer,
                 test_size=command.test_size,
@@ -55,7 +60,7 @@ class ProcessDatasetCommandHandler:
         )
 
         # 4) Bundle output
-        prcessed_dataset = ProcessedDataset.create(
+        processed_dataset = ProcessedDataset.create(
             name="processed_dataset",
             X_train=X_train,
             y_train=y_train,
@@ -63,8 +68,7 @@ class ProcessDatasetCommandHandler:
             y_test=y_test,
             X_normalizer=X_normalizer_fitted,
             y_normalizer=y_normalizer_fitted,
-            pareto_set=raw.pareto_set,
-            pareto_front=raw.pareto_front,
+            pareto=generated_dataset.pareto,
             metadata={
                 "source": command.source_filename,
                 "test_size": command.test_size,
@@ -74,7 +78,7 @@ class ProcessDatasetCommandHandler:
         )
 
         # 5) Save to processed repository
-        self._processed_repo.save(prcessed_dataset)
+        self._processed_dataset_repo.save(processed_dataset)
 
         self._logger.log_info(
             f"[postprocess] saved processed dataset to '{command.dest_filename}.pkl'"

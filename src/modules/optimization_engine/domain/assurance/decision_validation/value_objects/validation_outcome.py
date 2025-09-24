@@ -1,7 +1,13 @@
+from enum import StrEnum
+
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..entities.generated_decision_validation_report import Verdict
 from .gate_result import GateResult
+
+
+class Verdict(StrEnum):
+    ACCEPT = "ACCEPT"
+    ABSTAIN = "ABSTAIN"
 
 
 class ValidationOutcome(BaseModel):
@@ -9,6 +15,3 @@ class ValidationOutcome(BaseModel):
 
     verdict: Verdict
     gate_results: tuple[GateResult, ...] = Field(default_factory=tuple)
-
-
-__all__ = ["ValidationOutcome"]

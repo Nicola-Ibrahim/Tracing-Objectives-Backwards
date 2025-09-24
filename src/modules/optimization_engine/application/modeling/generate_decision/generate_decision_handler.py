@@ -3,12 +3,11 @@ from typing import Sequence
 
 import numpy as np
 
-from ....domain.assurance import ObjectiveOutOfBoundsError
 from ....domain.assurance.decision_validation import DecisionValidationService
-from ....domain.assurance.decision_validation.entities.generated_decision_validation_report import (
-    Verdict,
+from ....domain.assurance.feasibility import (
+    ObjectiveFeasibilityService,
 )
-from ....domain.assurance.feasibility import ObjectiveFeasibilityService
+from ....domain.assurance.feasibility.errors import ObjectiveOutOfBoundsError
 from ....domain.assurance.feasibility.value_objects import ObjectiveVector, ParetoFront
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
@@ -38,9 +37,8 @@ class GenerateDecisionCommandHandler:
         model_repository: BaseModelArtifactRepository,
         processed_data_repository: BaseDatasetRepository,
         logger: BaseLogger,
-        *,
         feasibility_service: ObjectiveFeasibilityService,
-        decision_validation_service: DecisionValidationService | None = None,
+        decision_validation_service: DecisionValidationService,
     ):
         """Wire infrastructure dependencies and optional assurance services."""
         self._model_repository = model_repository
@@ -72,15 +70,16 @@ class GenerateDecisionCommandHandler:
 
         suggestion_noise_scale = getattr(command, "suggestion_noise_scale", 0.05)
 
-        self._validate_feasibility(
-            pareto_front=pareto_front,
-            x_normalizer=x_normalizer,
-            target_x=target_x,
-            distance_tolerance=command.distance_tolerance,
-            num_suggestions=command.num_suggestions,
-            diversity_method=diversity_method,
-            suggestion_noise_scale=suggestion_noise_scale,
-        )
+        if command.feasibility_enabled:
+            self._validate_feasibility(
+                pareto_front=pareto_front,
+                x_normalizer=x_normalizer,
+                target_x=target_x,
+                distance_tolerance=command.distance_tolerance,
+                num_suggestions=command.num_suggestions,
+                diversity_method=diversity_method,
+                suggestion_noise_scale=suggestion_noise_scale,
+            )
 
         generated_y = self._generate_y(
             estimator=estimator,
@@ -94,7 +93,7 @@ class GenerateDecisionCommandHandler:
             pareto_y=pareto_y,
         )
 
-        if self._dv_service is not None and command.validation_enabled:
+        if command.validation_enabled:
             self._run_decision_validation(
                 y_norm=generated_y.normalized,
                 x_target_norm=target_x.normalized,
@@ -187,7 +186,9 @@ class GenerateDecisionCommandHandler:
     ) -> GeneratedY:
         """Generate y from the estimator and denormalize to the original scale."""
         y_norm = np.atleast_2d(estimator.predict(target_x_norm))
+        self._logger.log_info(f"Generated normalized y: {y_norm.tolist()}")
         y_raw = y_normalizer.inverse_transform(y_norm)[0]
+        self._logger.log_info(f"Generated denormalized y: {y_raw.tolist()}")
         return GeneratedY(normalized=y_norm, denormalized=y_raw)
 
     def _log_generation_metrics(

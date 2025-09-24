@@ -6,7 +6,9 @@ from .....domain.assurance.decision_validation.interfaces import (
     ConformalCalibrator,
     ForwardModel,
 )
-from .....domain.assurance.decision_validation.value_objects import ConformalCalibration
+from .....domain.assurance.decision_validation.value_objects.calibration import (
+    ConformalCalibration,
+)
 
 
 class SplitConformalL2Calibrator(ConformalCalibrator):

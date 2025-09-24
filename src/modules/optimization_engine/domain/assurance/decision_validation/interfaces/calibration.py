@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..value_objects import ConformalCalibration, OODCalibration
+from ..value_objects.calibration import ConformalCalibration, OODCalibration
 
 if TYPE_CHECKING:  # pragma: no cover
     from .forward_model import ForwardModel

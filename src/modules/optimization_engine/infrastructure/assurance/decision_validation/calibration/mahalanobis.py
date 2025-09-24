@@ -3,7 +3,9 @@
 import numpy as np
 
 from .....domain.assurance.decision_validation.interfaces import OODCalibrator
-from .....domain.assurance.decision_validation.value_objects import OODCalibration
+from .....domain.assurance.decision_validation.value_objects.calibration import (
+    OODCalibration,
+)
 
 
 class MahalanobisCalibrator(OODCalibrator):

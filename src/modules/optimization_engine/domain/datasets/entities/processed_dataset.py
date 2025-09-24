@@ -1,7 +1,12 @@
 from typing import Any, Self
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from ....domain.datasets.value_objects.pareto import Pareto
+from ....domain.modeling.interfaces.base_normalizer import (
+    BaseNormalizer,
+)
 
 
 class ProcessedDataset(BaseModel):
@@ -12,24 +17,21 @@ class ProcessedDataset(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    name: str
+    name: str = Field(..., description="Unique name/ID of the dataset")
 
     # normalized splits
-    X_train: np.typing.NDArray
-    y_train: np.typing.NDArray
-    X_test: np.typing.NDArray
-    y_test: np.typing.NDArray
+    X_train: np.typing.NDArray = Field(..., description="Training input features")
+    y_train: np.typing.NDArray = Field(..., description="Training target values")
+    X_test: np.typing.NDArray = Field(..., description="Test input features")
+    y_test: np.typing.NDArray = Field(..., description="Test target values")
 
     # fitted normalizers (sklearn-like wrappers)
-    X_normalizer: Any
-    y_normalizer: Any
+    X_normalizer: BaseNormalizer = Field(..., description="Fitted normalizer for X")
+    y_normalizer: BaseNormalizer = Field(..., description="Fitted normalizer for y")
 
-    # optional original (raw) arrays
-    pareto_set: np.typing.NDArray | None = None
-    pareto_front: np.typing.NDArray | None = None
+    pareto: Pareto = None
 
-    # a little metadata (optional)
-    metadata: dict = {}
+    metadata: dict = Field(default_factory=dict, description="Optional metadata")
 
     @classmethod
     def create(
@@ -42,8 +44,7 @@ class ProcessedDataset(BaseModel):
         y_test: np.ndarray,
         X_normalizer: Any,
         y_normalizer: Any,
-        pareto_set: np.ndarray = None,
-        pareto_front: np.ndarray = None,
+        pareto: Pareto = None,
         metadata: dict = None,
     ) -> Self:
         """Coerce arrays and build the entity."""
@@ -56,7 +57,6 @@ class ProcessedDataset(BaseModel):
             y_test=y_test,
             X_normalizer=X_normalizer,
             y_normalizer=y_normalizer,
-            pareto_set=pareto_set,
-            pareto_front=pareto_front,
+            pareto=pareto,
             metadata=metadata,
         )
