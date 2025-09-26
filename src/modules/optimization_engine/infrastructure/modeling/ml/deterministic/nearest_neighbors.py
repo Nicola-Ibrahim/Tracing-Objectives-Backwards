@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import NearestNDInterpolator
 
-from ....domain.modeling.interfaces.base_estimator import (
+from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 

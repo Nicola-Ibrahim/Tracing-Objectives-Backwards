@@ -15,11 +15,11 @@ from ...application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.modeling.repositories.model_artifact_repo import (
+    FileSystemModelArtifactRepository,
+)
 from ...infrastructure.repositories.datasets.generated_dataset_repo import (
     FileSystemGeneratedDatasetRepository,
-)
-from ...infrastructure.repositories.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
 )
 from .common import (
     DEFAULT_VALIDATION_METRICS,

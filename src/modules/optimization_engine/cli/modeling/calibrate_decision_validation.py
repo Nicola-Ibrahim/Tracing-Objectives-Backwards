@@ -12,12 +12,12 @@ from ...application.factories.assurance import (
     create_ood_calibrator,
 )
 from ...application.factories.estimator import EstimatorFactory
+from ...infrastructure.datasets.repositories.processed_dataset_repo import (
+    FileSystemProcessedDatasetRepository,
+)
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.assurance import (
     FileSystemDecisionValidationCalibrationRepository,
-)
-from ...infrastructure.repositories.datasets.processed_dataset_repo import (
-    FileSystemProcessedDatasetRepository,
 )
 
 

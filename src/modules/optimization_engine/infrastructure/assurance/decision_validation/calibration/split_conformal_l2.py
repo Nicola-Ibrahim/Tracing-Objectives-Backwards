@@ -1,10 +1,10 @@
 import numpy as np
 
+from ......domain.modeling.interfaces.base_estimator import BaseEstimator
 from .....domain.assurance.decision_validation.interfaces import (
     ConformalCalibrator,
     ConformalTransformResult,
 )
-from .....domain.modeling.interfaces.base_estimator import BaseEstimator
 
 
 class SplitConformalL2Calibrator(ConformalCalibrator):

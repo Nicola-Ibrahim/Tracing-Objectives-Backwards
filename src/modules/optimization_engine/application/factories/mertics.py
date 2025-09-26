@@ -1,7 +1,7 @@
 from ...domain.modeling.interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ...infrastructure.metrics import (
+from ...infrastructure.modeling.metrics import (
     MeanAbsoluteErrorValidationMetric,
     MeanSquaredErrorValidationMetric,
     NegativeLogLikelihoodMetric,

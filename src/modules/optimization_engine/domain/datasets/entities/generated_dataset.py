@@ -1,10 +1,14 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Self
 
 import numpy as np
 from pydantic import BaseModel, Field
 
 from ..value_objects.pareto import Pareto
+
+
+def _iso_timestamp() -> str:
+    return datetime.now(tz=UTC).isoformat()
 
 
 class GeneratedDataset(BaseModel):
@@ -20,7 +24,7 @@ class GeneratedDataset(BaseModel):
     )
 
     created_at: str = Field(
-        lambda: datetime.now,
+        default_factory=_iso_timestamp,
         description="ISO 8601 timestamp of dataset creation.",
     )
 

@@ -15,10 +15,10 @@ from ...application.datasets.generate_dataset.generate_dataset_handler import (
 from ...application.factories.algorithm import AlgorithmFactory
 from ...application.factories.optimizer import OptimizerFactory
 from ...application.factories.problem import ProblemFactory
-from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.datasets.generated_dataset_repo import (
+from ...infrastructure.datasets.repositories.generated_dataset_repo import (
     FileSystemGeneratedDatasetRepository,
 )
+from ...infrastructure.loggers.cmd_logger import CMDLogger
 
 
 @click.command()

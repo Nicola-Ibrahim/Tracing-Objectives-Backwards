@@ -17,11 +17,11 @@ from ...application.modeling.train_model.train_model_command import (
 from ...application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.datasets.processed_dataset_repo import (
+from ...infrastructure.datasets.repositories.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.repositories.repositories.model_artifact_repo import (
+from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 

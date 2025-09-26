@@ -6,8 +6,8 @@ from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
-from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ....domain.modeling.interfaces.base_estimator import (
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from .....domain.modeling.interfaces.base_estimator import (
     ProbabilisticEstimator,
     TrainingHistory,
 )

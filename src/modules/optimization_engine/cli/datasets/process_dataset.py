@@ -6,27 +6,21 @@ from ...application.datasets.process_dataset.process_dataset_handler import (
 )
 from ...application.dtos import NormalizerConfig
 from ...application.factories.normalizer import NormalizerFactory
-from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.repositories.datasets.generated_dataset_repo import (
+from ...infrastructure.datasets.repositories.generated_dataset_repo import (
     FileSystemGeneratedDatasetRepository,
 )
-from ...infrastructure.repositories.datasets.processed_dataset_repo import (
+from ...infrastructure.datasets.repositories.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
+from ...infrastructure.loggers.cmd_logger import CMDLogger
 
-# Repositories
-generated_dataset_repo = FileSystemGeneratedDatasetRepository()
-processed_dataset_repo = FileSystemProcessedDatasetRepository()
-
-# Handler (DI)
 handler = ProcessDatasetCommandHandler(
-    generated_dataset_repo=generated_dataset_repo,
-    processed_dataset_repo=processed_dataset_repo,
+    generated_dataset_repo=FileSystemGeneratedDatasetRepository(),
+    processed_dataset_repo=FileSystemProcessedDatasetRepository(),
     normalizer_factory=NormalizerFactory(),
     logger=CMDLogger(),
 )
 
-# Command
 cmd = ProcessDatasetCommand(
     source_filename="dataset",
     dest_filename="processed_v1",

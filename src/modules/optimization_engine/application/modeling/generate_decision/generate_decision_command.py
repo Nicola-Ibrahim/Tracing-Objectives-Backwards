@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 
 class GenerateDecisionCommand(BaseModel):

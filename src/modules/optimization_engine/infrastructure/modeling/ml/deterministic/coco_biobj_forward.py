@@ -1,7 +1,6 @@
 import numpy as np
 
-from ....domain.modeling.interfaces.base_estimator import DeterministicEstimator
-from ...generation.problems.biobj import get_coco_problem
+from .....domain.modeling.interfaces.base_estimator import DeterministicEstimator
 
 
 class COCOEstimator(DeterministicEstimator):

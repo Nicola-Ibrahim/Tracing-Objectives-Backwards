@@ -22,8 +22,8 @@ from torch.distributions import (
 from torch.utils.data import DataLoader, TensorDataset
 from umap import UMAP
 
-from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ....domain.modeling.interfaces.base_estimator import (
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from .....domain.modeling.interfaces.base_estimator import (
     ProbabilisticEstimator,
 )
 

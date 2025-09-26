@@ -2,7 +2,7 @@ import numpy as np
 import pykrige.ok as krige
 from numpy.typing import NDArray
 
-from ....domain.modeling.interfaces.base_estimator import (
+from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 

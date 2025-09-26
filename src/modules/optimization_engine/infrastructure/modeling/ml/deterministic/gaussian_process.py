@@ -8,7 +8,7 @@ from sklearn.gaussian_process.kernels import (
     Matern,
 )
 
-from ....domain.modeling.interfaces.base_estimator import (
+from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 

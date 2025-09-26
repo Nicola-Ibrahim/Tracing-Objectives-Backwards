@@ -14,9 +14,6 @@ from ...infrastructure.assurance.decision_validation.calibration import (
     MahalanobisCalibrator,
     SplitConformalL2Calibrator,
 )
-from ...infrastructure.assurance.decision_validation.forward_models import (
-    ForwardEnsembleAdapter,
-)
 from ...infrastructure.assurance.diversity import (
     ClosestPointsDiversityStrategy,
     KMeansDiversityStrategy,

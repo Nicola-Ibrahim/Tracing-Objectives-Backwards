@@ -2,8 +2,8 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RBFInterpolator
 
-from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ....domain.modeling.interfaces.base_estimator import (
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 

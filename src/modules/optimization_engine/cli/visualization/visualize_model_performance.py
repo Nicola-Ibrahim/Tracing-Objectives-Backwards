@@ -7,13 +7,15 @@ from ...application.visualization.visualize_model_performance.visualize_model_pe
     VisualizeModelPerformanceCommandHandler,
 )
 from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ...infrastructure.repositories.datasets.processed_dataset_repo import (
+from ...infrastructure.datasets.repositories.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.repositories.repositories.model_artifact_repo import (
+from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...infrastructure.modeling.visualizers.performance import ModelPerformanceVisualizer
+from ...infrastructure.modeling.visualizers.performance import (
+    ModelPerformanceVisualizer,
+)
 
 
 def _build_handler() -> VisualizeModelPerformanceCommandHandler:

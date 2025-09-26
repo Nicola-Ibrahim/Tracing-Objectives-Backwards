@@ -6,7 +6,7 @@ from ...domain.modeling.enums.estimator_type import (
 from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
-from ...infrastructure.ml.deterministic import (
+from ...infrastructure.modeling.ml.deterministic import (
     CloughTocherEstimator,
     GaussianProcessEstimator,
     KrigingEstimator,
@@ -17,12 +17,12 @@ from ...infrastructure.ml.deterministic import (
     SplineEstimator,
     SVREstimator,
 )
-from ...infrastructure.ml.probabilistic import (
+from ...infrastructure.modeling.ml.deterministic.coco_biobj_forward import COCOEstimator
+from ...infrastructure.modeling.ml.probabilistic import (
     CVAEEstimator,
     CVAEMDNEstimator,
     MDNEstimator,
 )
-from ...infrastructure.ml.deterministic.coco_biobj_forward import COCOEstimator
 
 
 class EstimatorFactory:

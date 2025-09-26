@@ -3,6 +3,8 @@ from typing import Sequence
 
 import numpy as np
 
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from .....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.assurance.decision_validation import DecisionValidationService
 from ....domain.assurance.feasibility import (
     ObjectiveFeasibilityService,
@@ -12,8 +14,6 @@ from ....domain.assurance.feasibility.value_objects import ObjectiveVector, Pare
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
-from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from .generate_decision_command import GenerateDecisionCommand
 
