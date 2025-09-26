@@ -1,13 +1,13 @@
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..enums.verdict import Verdict
 from ..value_objects.gate_result import GateResult
 
 
 class GeneratedDecisionValidationReport(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    metrics: dict[str, Any] = Field(default_factory=dict)
+    verdict: Verdict
+    metrics: dict[str, float | bool] = Field(default_factory=dict)
     explanations: dict[str, str] = Field(default_factory=dict)
-    gate_results: tuple[GateResult, ...] = ()
+    gate_results: tuple[GateResult, ...] = Field(default_factory=tuple)

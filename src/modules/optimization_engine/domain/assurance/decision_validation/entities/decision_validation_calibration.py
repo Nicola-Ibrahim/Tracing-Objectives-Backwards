@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
-from ..interfaces import ConformalCalibrator, OODCalibrator
+from ..interfaces import BaseConformalCalibrator, BaseOODCalibrator
 
 
 class DecisionValidationCalibration(BaseModel):
@@ -18,11 +18,11 @@ class DecisionValidationCalibration(BaseModel):
         ...,
         description="Logical scope (e.g., estimator type) this calibration applies to.",
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    ood_calibrator: OODCalibrator = Field(
+    created_at: datetime = Field(default_factory=datetime.now)
+    ood_calibrator: BaseOODCalibrator = Field(
         ..., description="Fitted out-of-distribution calibrator instance."
     )
-    conformal_calibrator: ConformalCalibrator = Field(
+    conformal_calibrator: BaseConformalCalibrator = Field(
         ..., description="Fitted conformal calibrator instance."
     )
 
@@ -50,8 +50,8 @@ class DecisionValidationCalibration(BaseModel):
         id: str,
         scope: str,
         created_at: datetime,
-        ood_calibrator: OODCalibrator,
-        conformal_calibrator: ConformalCalibrator,
+        ood_calibrator: BaseOODCalibrator,
+        conformal_calibrator: BaseConformalCalibrator,
         version: int | None = None,
     ) -> Self:
         return cls(
