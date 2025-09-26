@@ -6,6 +6,16 @@ import numpy as np
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.assurance.decision_validation import DecisionValidationService
+from ....domain.assurance.decision_validation.interfaces import (
+    DecisionValidationCalibrationRepository,
+)
+from ....domain.assurance.decision_validation.interfaces.base_conformal_calibrator import (
+    BaseConformalCalibrator,
+)
+from ....domain.assurance.decision_validation.interfaces.base_ood_calibrator import (
+    BaseOODCalibrator,
+)
+from ....domain.assurance.decision_validation.enums.verdict import Verdict
 from ....domain.assurance.feasibility import (
     ObjectiveFeasibilityService,
 )
@@ -39,6 +49,7 @@ class GenerateDecisionCommandHandler:
         logger: BaseLogger,
         feasibility_service: ObjectiveFeasibilityService,
         decision_validation_service: DecisionValidationService,
+        calibration_repository: DecisionValidationCalibrationRepository,
     ):
         """Wire infrastructure dependencies and optional assurance services."""
         self._model_repository = model_repository
@@ -46,7 +57,10 @@ class GenerateDecisionCommandHandler:
         self._logger = logger
         self._feasibility_service = feasibility_service
         self._dv_service = decision_validation_service
-        self._dv_scope: str | None = None
+        self._dv_calibration_repository = calibration_repository
+        self._dv_calibrators: dict[
+            str, tuple[BaseOODCalibrator, BaseConformalCalibrator]
+        ] = {}
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         """Generate y for the requested estimator and x target, then validate."""
@@ -218,19 +232,20 @@ class GenerateDecisionCommandHandler:
         if self._dv_service is None:
             return
 
-        self._ensure_decision_validation_loaded(scope=scope)
-
-        case = self._dv_service.validate(
-            candidate=np.asarray(y_norm[0]),
-            target=np.asarray(x_target_norm[0]),
+        ood_calibrator, conformal_calibrator = self._get_decision_validation_calibrators(
+            scope
         )
 
-        report = case.report
+        report = self._dv_service.validate(
+            candidate=np.asarray(y_norm[0]),
+            target=np.asarray(x_target_norm[0]),
+            ood_calibrator=ood_calibrator,
+            conformal_calibrator=conformal_calibrator,
+        )
+        passed = report.verdict is Verdict.ACCEPT
         if self._logger:
             summary = {
-                "assurance_verdict_accept": 1.0
-                if report.verdict == Verdict.ACCEPT
-                else 0.0,
+                "assurance_verdict_accept": 1.0 if passed else 0.0,
                 "assurance_gate1_md2": report.metrics.get("gate1_md2"),
                 "assurance_gate1_thr": report.metrics.get("gate1_md2_threshold"),
                 "assurance_gate2_q": report.metrics.get("gate2_conformal_radius_q"),
@@ -241,22 +256,46 @@ class GenerateDecisionCommandHandler:
                 f"[assurance] Verdict={report.verdict.value} | Reasons={report.explanations}"
             )
 
-    def _ensure_decision_validation_loaded(self, scope: str) -> None:
-        if self._dv_service is None:
-            return
-        if self._dv_scope == scope and self._dv_service.has_calibration():
-            return
+    def _get_decision_validation_calibrators(
+        self, scope: str
+    ) -> tuple[BaseOODCalibrator, BaseConformalCalibrator]:
+        calibrators = self._dv_calibrators.get(scope)
+        if calibrators is not None:
+            return calibrators
 
-        self._dv_service.load_calibration(scope=scope)
-        self._dv_scope = scope
-
-        if self._logger:
-            ood = self._dv_service.calibration_threshold
-            conf = self._dv_service.calibration_radius
-            message_parts: list[str] = []
-            message_parts.append(
-                f"OOD thr={ood:.3f}" if ood is not None else "OOD thr=<missing>"
+        if self._dv_calibration_repository is None:
+            raise RuntimeError(
+                "Decision validation calibration repository is not configured."
             )
-            if conf is not None:
-                message_parts.append(f"Conformal q={conf:.4f}")
-            self._logger.log_info("[assurance] Loaded " + ", ".join(message_parts))
+
+        calibration = self._dv_calibration_repository.load_latest(scope=scope)
+        calibrators = (calibration.ood_calibrator, calibration.conformal_calibrator)
+        self._dv_calibrators[scope] = calibrators
+
+        self._log_loaded_calibration(scope, calibrators)
+        return calibrators
+
+    def _log_loaded_calibration(
+        self,
+        scope: str,
+        calibrators: tuple[BaseOODCalibrator, BaseConformalCalibrator],
+    ) -> None:
+        if not self._logger:
+            return
+
+        ood_calibrator, conformal_calibrator = calibrators
+        message_parts: list[str] = [f"scope={scope}"]
+
+        try:
+            threshold = float(ood_calibrator.threshold)
+            message_parts.append(f"OOD thr={threshold:.3f}")
+        except Exception:
+            message_parts.append("OOD thr=<unavailable>")
+
+        try:
+            radius = float(conformal_calibrator.radius)
+            message_parts.append(f"Conformal q={radius:.4f}")
+        except Exception:
+            message_parts.append("Conformal q=<unavailable>")
+
+        self._logger.log_info("[assurance] Loaded " + ", ".join(message_parts))

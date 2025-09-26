@@ -1,25 +1,22 @@
-from ...application.factories.assurance import (
-    create_default_diversity_registry,
-    create_default_scoring_strategy,
-)
 from ...application.modeling.generate_decision.generate_decision_command import (
     GenerateDecisionCommand,
 )
 from ...application.modeling.generate_decision.generate_decision_handler import (
     GenerateDecisionCommandHandler,
 )
-from ...domain.assurance.decision_validation import DecisionValidationService
+from ...domain.assurance.decision_validation.services.decision_validation_service import (
+    DecisionValidationService,
+)
 from ...domain.assurance.feasibility import ObjectiveFeasibilityService
-from ...domain.assurance.feasibility.value_objects import Tolerance
+from ...infrastructure.assurance.repositories.calibration_repository import (
+    FileSystemDecisionValidationCalibrationRepository,
+)
 from ...infrastructure.datasets.repositories.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
-)
-from ...infrastructure.repositories.assurance import (
-    FileSystemDecisionValidationCalibrationRepository,
 )
 
 
@@ -45,13 +42,10 @@ def main():
         diversity_registry=create_default_diversity_registry(),
     )
 
-    tolerance = Tolerance(
+    calibration_repository = FileSystemDecisionValidationCalibrationRepository()
+    decision_validation_service = DecisionValidationService(
         eps_l2=0.03,
         eps_per_obj=None,
-    )
-    decision_validation_service = DecisionValidationService(
-        tolerance=tolerance,
-        calibration_repository=FileSystemDecisionValidationCalibrationRepository(),
     )
 
     # Initialize the handler with pre-built services
@@ -61,6 +55,7 @@ def main():
         logger=CMDLogger(name="InterpolationCMDLogger"),
         feasibility_service=feasibility_service,
         decision_validation_service=decision_validation_service,
+        calibration_repository=calibration_repository,
     )
 
     handler.execute(command)

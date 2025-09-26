@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from ...dtos import EstimatorParams
 
 
-class OODCalibratorParams(BaseModel):
+class BaseOODCalibratorParams(BaseModel):
     percentile: float = Field(
         default=97.5,
         description="Percentile used when fitting the OOD calibrator threshold.",
@@ -14,7 +14,7 @@ class OODCalibratorParams(BaseModel):
     )
 
 
-class ConformalCalibratorParams(BaseModel):
+class BaseConformalCalibratorParams(BaseModel):
     confidence: float = Field(
         default=0.90,
         description="Confidence level for the conformal calibrator.",
@@ -36,11 +36,11 @@ class CalibrateDecisionValidationCommand(BaseModel):
         ...,
         description="Configurations for the estimator used in the forward models.",
     )
-    ood_calibrator_params: OODCalibratorParams = Field(
-        default_factory=OODCalibratorParams,
+    ood_calibrator_params: BaseOODCalibratorParams = Field(
+        default_factory=BaseOODCalibratorParams,
         description="Parameters for the out-of-distribution (OOD) calibrator.",
     )
-    conformal_calibrator_params: ConformalCalibratorParams = Field(
-        default_factory=ConformalCalibratorParams,
+    conformal_calibrator_params: BaseConformalCalibratorParams = Field(
+        default_factory=BaseConformalCalibratorParams,
         description="Parameters for the conformal calibrator.",
     )

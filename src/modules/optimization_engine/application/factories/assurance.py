@@ -1,8 +1,8 @@
 from typing import Callable, Dict, Sequence, Type
 
 from ...domain.assurance.decision_validation.interfaces import (
-    ConformalCalibrator,
-    OODCalibrator,
+    BaseConformalCalibrator,
+    BaseOODCalibrator,
 )
 from ...domain.assurance.feasibility.interfaces.diversity import (
     BaseDiversityStrategy,
@@ -95,19 +95,19 @@ class DiversityStrategyFactory:
         return strategy_class(**params)
 
 
-class OODCalibratorFactory:
+class BaseOODCalibratorFactory:
     _registry = {
         "mahalanobis": MahalanobisCalibrator,
     }
 
-    def create(self, **params) -> OODCalibrator:
+    def create(self, **params) -> BaseOODCalibrator:
         """Create an OOD calibrator based on the specified method and parameters.
 
         Args:
             method (str): The calibration method to use.
             **params: Additional parameters required for the calibrator.
         Returns:
-            OODCalibrator: An instance of the specified OOD calibrator.
+            BaseOODCalibrator: An instance of the specified OOD calibrator.
         Raises:
             ValueError: If the specified method is not recognized.
         """
@@ -117,19 +117,19 @@ class OODCalibratorFactory:
         return calibrator_class(**params)
 
 
-class ConformalCalibratorFactory:
+class BaseConformalCalibratorFactory:
     _registry = {
         "split_conformal_l2": SplitConformalL2Calibrator,
     }
 
-    def create(self, **params) -> ConformalCalibrator:
+    def create(self, **params) -> BaseConformalCalibrator:
         """Create a conformal calibrator based on the specified method and parameters.
 
         Args:
             method (str): The calibration method to use.
             **params: Additional parameters required for the calibrator.
         Returns:
-            ConformalCalibrator: An instance of the specified conformal calibrator.
+            BaseConformalCalibrator: An instance of the specified conformal calibrator.
         Raises:
             ValueError: If the specified method is not recognized.
         """

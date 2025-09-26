@@ -7,8 +7,8 @@ from ....domain.assurance.decision_validation.interfaces import (
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ...factories.assurance import (
-    ConformalCalibratorFactory,
-    OODCalibratorFactory,
+    BaseConformalCalibratorFactory,
+    BaseOODCalibratorFactory,
 )
 from ...factories.estimator import EstimatorFactory
 from .calibrate_decision_validation_command import CalibrateDecisionValidationCommand
@@ -23,8 +23,8 @@ class CalibrateDecisionValidationCommandHandler:
         processed_data_repository: BaseDatasetRepository,
         calibration_repository: DecisionValidationCalibrationRepository,
         estimator_factory: EstimatorFactory,
-        ood_calibrator_factory: OODCalibratorFactory,
-        conformal_calibrator_factory: ConformalCalibratorFactory,
+        ood_calibrator_factory: BaseOODCalibratorFactory,
+        conformal_calibrator_factory: BaseConformalCalibratorFactory,
         logger: BaseLogger,
     ) -> None:
         """Initialize the command handler.
@@ -34,8 +34,8 @@ class CalibrateDecisionValidationCommandHandler:
             calibration_repository (DecisionValidationCalibrationRepository): Repository for calibration artifacts.
             estimator_factory (Callable[[dict[str, object]], BaseEstimator]): Factory for creating forward models.
             forward_adapter_factory (Callable[[Sequence[BaseEstimator]], BaseEstimator]): Factory for creating forward adapters.
-            ood_calibrator_factory (Callable[[float, float], OODCalibrator]): Factory for creating OOD calibrators.
-            conformal_calibrator_factory (Callable[[float], ConformalCalibrator]): Factory for creating conformal calibrators.
+            ood_calibrator_factory (Callable[[float, float], BaseOODCalibrator]): Factory for creating OOD calibrators.
+            conformal_calibrator_factory (Callable[[float], BaseConformalCalibrator]): Factory for creating conformal calibrators.
             logger (BaseLogger | None, optional): Logger for tracking progress and issues. Defaults to None.
         """
         self._processed_data_repository = processed_data_repository
@@ -57,8 +57,10 @@ class CalibrateDecisionValidationCommandHandler:
         )
         ood_calibrator.fit(dataset.y_train)
 
-        conformal_calibrator = self._conformal_calibrator_factory.create(
-            command.conformal_calibrator_params.model_dump(), estimator=estimator
+        conformal_calibrator: BaseBaseConformalCalibrator = (
+            self._conformal_calibrator_factory.create(
+                command.conformal_calibrator_params.model_dump(), estimator=estimator
+            )
         )
         conformal_calibrator.fit(dataset.y_train, dataset.X_train)
 
