@@ -1,3 +1,3 @@
-from .two_gate_policy import evaluate_two_gate_policy
+"""Retained for backward compatibility; gate policies now live in services."""
 
-__all__ = ["evaluate_two_gate_policy"]
+__all__: list[str] = []

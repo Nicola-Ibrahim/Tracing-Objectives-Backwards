@@ -18,7 +18,7 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.datasets.generated_dataset_repo import (
     FileSystemGeneratedDatasetRepository,
 )
-from ...infrastructure.repositories.modeling.model_artifact_repo import (
+from ...infrastructure.repositories.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 from .common import (

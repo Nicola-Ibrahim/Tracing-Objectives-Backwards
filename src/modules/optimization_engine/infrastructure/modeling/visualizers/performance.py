@@ -6,12 +6,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
 
-from ...domain.modeling.interfaces.base_estimator import (
+from ....domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
     DeterministicEstimator,
     ProbabilisticEstimator,
 )
-from ...domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 
 try:
     from umap import UMAP
@@ -1066,7 +1066,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
     ) -> np.ndarray:
         """Return mean prediction in normalized space, shape (n, y_dim)."""
         if isinstance(estimator, ProbabilisticEstimator):
-            return estimator.predict_mean(X, n_samples=max(2, n_samples))
+            return estimator.predict(X)
 
         if isinstance(estimator, DeterministicEstimator):
             return estimator.predict(X)

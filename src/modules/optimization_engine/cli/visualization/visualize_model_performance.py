@@ -10,10 +10,10 @@ from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...infrastructure.repositories.datasets.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.repositories.modeling.model_artifact_repo import (
+from ...infrastructure.repositories.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...infrastructure.visualizers.performance import ModelPerformanceVisualizer
+from ...infrastructure.modeling.visualizers.performance import ModelPerformanceVisualizer
 
 
 def _build_handler() -> VisualizeModelPerformanceCommandHandler:

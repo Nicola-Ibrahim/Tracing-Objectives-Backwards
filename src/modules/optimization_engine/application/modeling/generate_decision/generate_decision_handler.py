@@ -46,7 +46,7 @@ class GenerateDecisionCommandHandler:
         self._logger = logger
         self._feasibility_service = feasibility_service
         self._dv_service = decision_validation_service
-        self._dv_calibrated = False
+        self._dv_scope: str | None = None
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         """Generate y for the requested estimator and x target, then validate."""
@@ -54,14 +54,12 @@ class GenerateDecisionCommandHandler:
         processed: ProcessedDataset = self._processed_data_repo.load("dataset")
         x_normalizer = processed.X_normalizer
         y_normalizer = processed.y_normalizer
-        x_train = processed.X_train
-        y_train = processed.y_train
-        if x_train is None or y_train is None:
+        if processed.X_train is None or processed.y_train is None:
             raise AttributeError(
                 "Processed dataset must provide X_train and y_train for assurance calibration"
             )
-        pareto_y = processed.pareto_set
-        pareto_front = processed.pareto_front
+        pareto_y = processed.pareto.set
+        pareto_front = processed.pareto.front
 
         target_x = self._build_x_vector(command.target_objective, x_normalizer)
         diversity_method = getattr(
@@ -97,10 +95,7 @@ class GenerateDecisionCommandHandler:
             self._run_decision_validation(
                 y_norm=generated_y.normalized,
                 x_target_norm=target_x.normalized,
-                x_normalizer=x_normalizer,
-                y_normalizer=y_normalizer,
-                x_train=x_train,
-                y_train=y_train,
+                scope=command.estimator_type.value,
             )
 
         return generated_y.denormalized
@@ -115,8 +110,9 @@ class GenerateDecisionCommandHandler:
     def _build_x_vector(self, target_x: Sequence[float], normalizer) -> ObjectiveVector:
         """Create an objective vector wrapper for raw and normalized x."""
         target_array = np.asarray(target_x, dtype=float)
-        target_array = np.atleast_2d(target_array)
+        self._logger.log_info(f"Target x (raw): {target_array}")
         target_norm = normalizer.transform(target_array)
+        self._logger.log_info(f"Target x (normalized): {target_norm}")
         return ObjectiveVector(raw=target_array, normalized=target_norm)
 
     def _validate_feasibility(
@@ -186,9 +182,9 @@ class GenerateDecisionCommandHandler:
     ) -> GeneratedY:
         """Generate y from the estimator and denormalize to the original scale."""
         y_norm = np.atleast_2d(estimator.predict(target_x_norm))
-        self._logger.log_info(f"Generated normalized y: {y_norm.tolist()}")
+        self._logger.log_info(f"Generated y (normalized): {y_norm[0]}")
         y_raw = y_normalizer.inverse_transform(y_norm)[0]
-        self._logger.log_info(f"Generated denormalized y: {y_raw.tolist()}")
+        self._logger.log_info(f"Generated y (raw): {y_raw}")
         return GeneratedY(normalized=y_norm, denormalized=y_raw)
 
     def _log_generation_metrics(
@@ -211,32 +207,22 @@ class GenerateDecisionCommandHandler:
         # if metrics:
         #     self._logger.log_metrics(metrics)
 
-        self._logger.log_info(f"y: {y_raw.tolist()}")
-
     def _run_decision_validation(
         self,
         *,
         y_norm: np.ndarray,
         x_target_norm: np.ndarray,
-        x_normalizer,
-        y_normalizer,
-        x_train: np.ndarray,
-        y_train: np.ndarray,
+        scope: str,
     ) -> None:
         """Execute decision validation service if configured."""
         if self._dv_service is None:
             return
 
-        self._ensure_decision_validation_calibrated(
-            x_normalizer=x_normalizer,
-            y_normalizer=y_normalizer,
-            x_train=x_train,
-            y_train=y_train,
-        )
+        self._ensure_decision_validation_loaded(scope=scope)
 
         case = self._dv_service.validate(
-            y_norm=np.asarray(y_norm[0]),
-            x_target_norm=np.asarray(x_target_norm[0]),
+            candidate=np.asarray(y_norm[0]),
+            target=np.asarray(x_target_norm[0]),
         )
 
         report = case.report
@@ -255,28 +241,22 @@ class GenerateDecisionCommandHandler:
                 f"[assurance] Verdict={report.verdict.value} | Reasons={report.explanations}"
             )
 
-    def _ensure_decision_validation_calibrated(
-        self,
-        *,
-        x_normalizer,
-        y_normalizer,
-        x_train: np.ndarray,
-        y_train: np.ndarray,
-    ) -> None:
-        """Calibrate the validation service using supplied training data."""
-        if self._dv_service is None or self._dv_calibrated:
+    def _ensure_decision_validation_loaded(self, scope: str) -> None:
+        if self._dv_service is None:
+            return
+        if self._dv_scope == scope and self._dv_service.has_calibration():
             return
 
-        y_norm = y_normalizer.transform(y_train)
-        x_norm = x_normalizer.transform(x_train)
-
-        self._dv_service.calibrate(y_norm, x_norm)
-        self._dv_calibrated = True
+        self._dv_service.load_calibration(scope=scope)
+        self._dv_scope = scope
 
         if self._logger:
-            ood = self._dv_service.ood_calibration
-            conf = self._dv_service.conformal_calibration
-            message = f"[assurance] Calibrated OOD thr={ood.threshold_md2:.3f}"
+            ood = self._dv_service.calibration_threshold
+            conf = self._dv_service.calibration_radius
+            message_parts: list[str] = []
+            message_parts.append(
+                f"OOD thr={ood:.3f}" if ood is not None else "OOD thr=<missing>"
+            )
             if conf is not None:
-                message += f", Conformal q={conf.radius_q:.4f}"
-            self._logger.log_info(message)
+                message_parts.append(f"Conformal q={conf:.4f}")
+            self._logger.log_info("[assurance] Loaded " + ", ".join(message_parts))

@@ -21,7 +21,7 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.repositories.datasets.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.repositories.modeling.model_artifact_repo import (
+from ...infrastructure.repositories.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 

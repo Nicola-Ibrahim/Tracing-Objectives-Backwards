@@ -634,9 +634,31 @@ class MDNEstimator(ProbabilisticEstimator):
         self._ensure_fitted()
         X_t = self._prepare_inputs(X)
         with torch.no_grad():
-            pi, mu, sigma = self._model(X_t)
-            k_star = torch.argmax(pi, dim=1)  # (n,)
+            pi, mu, sigma = self._model(X_t)  # (n,K,out)
+            score = torch.log(pi) - torch.log(sigma).sum(dim=-1)  # (n,K)
+            k_star = torch.argmax(score, dim=1)
             out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]
+        return out.cpu().numpy().astype(np.float64, copy=False)
+
+    def predict_topk(self, X: np.ndarray, K: int = 3, by: str = "score") -> np.ndarray:
+        """
+        Return top-K component means per input, shape (n, K, out_dim).
+        by: "pi" or "score" (log pi - sum log sigma)
+        """
+        self._ensure_fitted()
+        X_t = self._prepare_inputs(X)
+        with torch.no_grad():
+            pi, mu, sigma = self._model(X_t)  # (n,K,out)
+            if by == "pi":
+                key = pi
+            else:
+                key = torch.log(pi) - torch.log(sigma).sum(dim=-1)  # (n,K)
+            topk = torch.topk(key, k=min(K, pi.shape[1]), dim=1).indices  # (n,K)
+            n = X_t.size(0)
+            out = []
+            for i in range(n):
+                out.append(mu[i, topk[i], :])
+            out = torch.stack(out, dim=0)  # (n,K,out_dim)
         return out.cpu().numpy().astype(np.float64, copy=False)
 
     def get_mixture_parameters(

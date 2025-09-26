@@ -1,5 +1,5 @@
 from ...domain.datasets.interfaces.base_optimizer import BaseOptimizer
-from ...infrastructure.generation.optimizers.minimizer import Minimizer, MinimizerConfig
+from ...infrastructure.datasets.optimizers.minimizer import Minimizer, MinimizerConfig
 
 
 class OptimizerFactory:

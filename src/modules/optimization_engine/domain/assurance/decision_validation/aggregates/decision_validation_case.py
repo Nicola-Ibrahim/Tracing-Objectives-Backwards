@@ -1,5 +1,3 @@
-"""Aggregate root capturing a decision validation execution."""
-
 from pydantic import BaseModel, ConfigDict
 
 from ..entities.generated_decision_validation_report import (
@@ -17,6 +15,3 @@ class DecisionValidationCase(BaseModel):
     @property
     def verdict(self) -> Verdict:
         return self.report.verdict
-
-
-__all__ = ["DecisionValidationCase"]

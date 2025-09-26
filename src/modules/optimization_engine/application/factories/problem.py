@@ -1,5 +1,5 @@
 from ...domain.datasets.interfaces.base_problem import BaseProblem
-from ...infrastructure.generation.problems.biobj import (
+from ...infrastructure.datasets.problems.biobj import (
     BiObjProblemConfig,
     COCOBiObjectiveProblem,
 )

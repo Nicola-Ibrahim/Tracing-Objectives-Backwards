@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.stats import gaussian_kde
 
-from ...domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 
 
 class PlotlyDatasetVisualizer(BaseVisualizer):

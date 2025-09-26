@@ -1,0 +1,77 @@
+from ....domain.assurance.decision_validation.entities import (
+    DecisionValidationCalibration,
+)
+from ....domain.assurance.decision_validation.interfaces import (
+    DecisionValidationCalibrationRepository,
+)
+from ....domain.common.interfaces.base_logger import BaseLogger
+from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ...factories.assurance import (
+    ConformalCalibratorFactory,
+    OODCalibratorFactory,
+)
+from ...factories.estimator import EstimatorFactory
+from .calibrate_decision_validation_command import CalibrateDecisionValidationCommand
+
+
+class CalibrateDecisionValidationCommandHandler:
+    """Fit OOD and conformal calibrators and persist them for later validation."""
+
+    def __init__(
+        self,
+        *,
+        processed_data_repository: BaseDatasetRepository,
+        calibration_repository: DecisionValidationCalibrationRepository,
+        estimator_factory: EstimatorFactory,
+        ood_calibrator_factory: OODCalibratorFactory,
+        conformal_calibrator_factory: ConformalCalibratorFactory,
+        logger: BaseLogger,
+    ) -> None:
+        """Initialize the command handler.
+
+        Args:
+            processed_data_repository (BaseDatasetRepository): Repository for processed datasets.
+            calibration_repository (DecisionValidationCalibrationRepository): Repository for calibration artifacts.
+            estimator_factory (Callable[[dict[str, object]], BaseEstimator]): Factory for creating forward models.
+            forward_adapter_factory (Callable[[Sequence[BaseEstimator]], BaseEstimator]): Factory for creating forward adapters.
+            ood_calibrator_factory (Callable[[float, float], OODCalibrator]): Factory for creating OOD calibrators.
+            conformal_calibrator_factory (Callable[[float], ConformalCalibrator]): Factory for creating conformal calibrators.
+            logger (BaseLogger | None, optional): Logger for tracking progress and issues. Defaults to None.
+        """
+        self._processed_data_repository = processed_data_repository
+        self._calibration_repository = calibration_repository
+        self._estimator_factory = estimator_factory
+        self._ood_calibrator_factory = ood_calibrator_factory
+        self._conformal_calibrator_factory = conformal_calibrator_factory
+        self._logger = logger
+
+    def execute(self, command: CalibrateDecisionValidationCommand) -> None:
+        dataset = self._processed_data_repository.load(command.dataset_name)
+
+        estimator = self._estimator_factory.create(
+            command.estimator_params.model_dump()
+        )
+
+        ood_calibrator = self._ood_calibrator_factory.create(
+            command.ood_calibrator_params.model_dump()
+        )
+        ood_calibrator.fit(dataset.y_train)
+
+        conformal_calibrator = self._conformal_calibrator_factory.create(
+            command.conformal_calibrator_params.model_dump(), estimator=estimator
+        )
+        conformal_calibrator.fit(dataset.y_train, dataset.X_train)
+
+        calibration = DecisionValidationCalibration(
+            scope=command.scope,
+            ood_calibrator=ood_calibrator,
+            conformal_calibrator=conformal_calibrator,
+        )
+        self._calibration_repository.save(calibration)
+
+        self._logger.log_info(
+            "[assurance] Stored calibration "
+            f"scope={calibration.scope} "
+            f"radius={calibration.conformal_radius:.4f} "
+            f"threshold={calibration.ood_threshold:.4f}"
+        )

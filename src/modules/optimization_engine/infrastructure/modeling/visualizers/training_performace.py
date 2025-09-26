@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from numpy.typing import NDArray
 from plotly.subplots import make_subplots
 
-from ...domain.visualization.interfaces.base_visualizer import (
+from ....domain.visualization.interfaces.base_visualizer import (
     BaseVisualizer,
 )
 
