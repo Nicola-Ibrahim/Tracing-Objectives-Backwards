@@ -13,6 +13,17 @@ class EstimatorParams(BaseModel):
     pass
 
 
+class COCOEstimatorParams(EstimatorParams):
+    type: EstimatorTypeEnum = Field(
+        EstimatorTypeEnum.COCO.value,
+        description="Type of the COCO interpolation method.",
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
+
+
 class CloughTocherEstimatorParams(EstimatorParams):
     type: EstimatorTypeEnum = Field(
         EstimatorTypeEnum.CLOUGH_TOCHER_ND.value,

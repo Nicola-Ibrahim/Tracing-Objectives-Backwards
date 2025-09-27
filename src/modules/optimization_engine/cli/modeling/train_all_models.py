@@ -21,7 +21,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 from ...infrastructure.repositories.datasets.generated_dataset_repo import (
     FileSystemGeneratedDatasetRepository,
 )
-from .common import (
+from ..common import (
     DEFAULT_VALIDATION_METRICS,
     make_validation_metric_configs,
 )

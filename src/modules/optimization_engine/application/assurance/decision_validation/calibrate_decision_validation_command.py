@@ -3,18 +3,18 @@ from pydantic import BaseModel, Field
 from ...dtos import EstimatorParams
 
 
-class BaseOODCalibratorParams(BaseModel):
-    percentile: float = Field(
-        default=97.5,
-        description="Percentile used when fitting the OOD calibrator threshold.",
-    )
-    cov_reg: float = Field(
-        default=1e-6,
-        description="Covariance regularisation term for the OOD calibrator.",
+class OODCalibratorParams(BaseModel):
+    method: str = Field(
+        default="mahalanobis",
+        description="Method used for the OOD calibrator. Supported: 'mahalanobis', 'knn'.",
     )
 
 
-class BaseConformalCalibratorParams(BaseModel):
+class ConformalCalibratorParams(BaseModel):
+    method: str = Field(
+        default="split_conformal_l2",
+        description="Method used for the conformal calibrator. Supported: 'split_conformal_l2'.",
+    )
     confidence: float = Field(
         default=0.90,
         description="Confidence level for the conformal calibrator.",
@@ -24,9 +24,6 @@ class BaseConformalCalibratorParams(BaseModel):
 class CalibrateDecisionValidationCommand(BaseModel):
     """Parameters required to fit and persist validation calibrators."""
 
-    scope: str = Field(
-        ..., description="Logical scope (e.g., estimator type) the calibration targets."
-    )
     dataset_name: str = Field(
         default="dataset",
         description="Identifier of the processed dataset to use for calibration.",
@@ -36,11 +33,11 @@ class CalibrateDecisionValidationCommand(BaseModel):
         ...,
         description="Configurations for the estimator used in the forward models.",
     )
-    ood_calibrator_params: BaseOODCalibratorParams = Field(
-        default_factory=BaseOODCalibratorParams,
+    ood_calibrator_params: OODCalibratorParams = Field(
+        default_factory=OODCalibratorParams,
         description="Parameters for the out-of-distribution (OOD) calibrator.",
     )
-    conformal_calibrator_params: BaseConformalCalibratorParams = Field(
-        default_factory=BaseConformalCalibratorParams,
+    conformal_calibrator_params: ConformalCalibratorParams = Field(
+        default_factory=ConformalCalibratorParams,
         description="Parameters for the conformal calibrator.",
     )

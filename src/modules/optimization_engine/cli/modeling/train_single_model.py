@@ -4,7 +4,7 @@ from typing import Sequence
 import click
 
 from ...application.modeling.train_model.train_model_command import TrainModelCommand
-from .common import (
+from ..common import (
     DEFAULT_VALIDATION_METRICS,
     ESTIMATOR_REGISTRY,
     build_processed_training_handler,

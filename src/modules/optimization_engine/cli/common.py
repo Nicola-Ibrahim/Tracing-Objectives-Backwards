@@ -1,6 +1,7 @@
 from typing import Iterable, Mapping, Type
 
-from ...application.dtos import (
+from ..application.dtos import (
+    COCOEstimatorParams,
     CVAEEstimatorParams,
     CVAEMDNEstimatorParams,
     EstimatorParams,
@@ -9,19 +10,19 @@ from ...application.dtos import (
     NeuralNetworkEstimatorParams,
     RBFEstimatorParams,
 )
-from ...application.factories.estimator import EstimatorFactory
-from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_model.train_model_command import (
+from ..application.factories.estimator import EstimatorFactory
+from ..application.factories.mertics import MetricFactory
+from ..application.modeling.train_model.train_model_command import (
     ValidationMetricConfig,
 )
-from ...application.modeling.train_model.train_model_handler import (
+from ..application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
-from ...infrastructure.datasets.repositories.processed_dataset_repo import (
+from ..infrastructure.datasets.repositories.processed_dataset_repo import (
     FileSystemProcessedDatasetRepository,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ...infrastructure.modeling.repositories.model_artifact_repo import (
+from ..infrastructure.loggers.cmd_logger import CMDLogger
+from ..infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 
@@ -34,6 +35,7 @@ ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
     "mdn": MDNEstimatorParams,
     "neural_network": NeuralNetworkEstimatorParams,
     "rbf": RBFEstimatorParams,
+    "coco": COCOEstimatorParams,
 }
 
 

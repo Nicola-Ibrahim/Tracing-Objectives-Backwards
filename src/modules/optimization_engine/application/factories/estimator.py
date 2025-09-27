@@ -45,6 +45,7 @@ class EstimatorFactory:
         EstimatorTypeEnum.CVAE.value: CVAEEstimator,
         EstimatorTypeEnum.MDN.value: MDNEstimator,
         EstimatorTypeEnum.CVAE_MDN.value: CVAEMDNEstimator,
+        EstimatorTypeEnum.COCO.value: COCOEstimator,
     }
 
     def create(self, params: dict[str, Any]) -> BaseEstimator:

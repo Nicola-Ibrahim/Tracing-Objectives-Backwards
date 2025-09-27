@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Type
 
 import numpy as np
 
@@ -13,7 +13,9 @@ from ..policies.validators import (
     ParetoProximityValidator,
     ValidationResult,
 )
-from ..value_objects import ObjectiveVector, ParetoFront, Score, Suggestions
+from ..value_objects.pareto_front import ParetoFront
+from ..value_objects.score import Score
+from ..value_objects.suggestions import Suggestions
 
 
 class ObjectiveFeasibilityService:
@@ -23,12 +25,12 @@ class ObjectiveFeasibilityService:
         self,
         *,
         scorer: BaseFeasibilityScoringStrategy,
-        diversity_registry: Dict[str, Type[BaseDiversityStrategy]],
+        diversity_registry: list[BaseDiversityStrategy],
     ) -> None:
         if not diversity_registry:
             raise ValueError("diversity_registry must include at least one strategy.")
         self._scorer = scorer
-        self._diversity_registry = dict(diversity_registry)
+        self._diversity_registry = diversity_registry
 
     # ------------------------------------------------------------------
     # public API
@@ -38,7 +40,8 @@ class ObjectiveFeasibilityService:
         *,
         pareto_front: ParetoFront,
         tolerance: float,
-        target: ObjectiveVector,
+        target_raw: np.ndarray,
+        target_normalized: np.ndarray,
         num_suggestions: int = 3,
         suggestion_noise_scale: float = 0.05,
         diversity_method: str = "euclidean",
@@ -48,12 +51,12 @@ class ObjectiveFeasibilityService:
 
         validators: list[BaseFeasibilityValidator] = [
             HistoricalRangeValidator(
-                target=target.raw,
+                target=target_raw,
                 historical_min=min_raw,
                 historical_max=max_raw,
             ),
             ParetoProximityValidator(
-                target_normalized=target.normalized,
+                target_normalized=target_normalized,
                 scorer=self._scorer,
                 tolerance=tolerance,
                 pareto_front_normalized=pareto_front.normalized,
@@ -76,14 +79,14 @@ class ObjectiveFeasibilityService:
                 else None
             )
             return FeasibilityAssessment(
-                target=target,
+                target=target_raw,
                 is_feasible=True,
                 score=score_vo,
             )
 
         suggestions_array = self._generate_suggestions(
             pareto_front=pareto_front,
-            target_normalized=target.normalized,
+            target_normalized=target_normalized,
             num_suggestions=num_suggestions,
             suggestion_noise_scale=suggestion_noise_scale,
             diversity_method=diversity_method,
@@ -100,7 +103,7 @@ class ObjectiveFeasibilityService:
         )
 
         return FeasibilityAssessment(
-            target=target,
+            target=target_raw,
             is_feasible=False,
             score=score_vo,
             reason=failing_result.reason
@@ -116,7 +119,8 @@ class ObjectiveFeasibilityService:
         *,
         pareto_front: ParetoFront,
         tolerance: float,
-        target: ObjectiveVector,
+        target_raw: np.ndarray,
+        target_normalized: np.ndarray,
         num_suggestions: int = 3,
         suggestion_noise_scale: float = 0.05,
         diversity_method: str = "euclidean",
@@ -127,7 +131,8 @@ class ObjectiveFeasibilityService:
         assessment = self.assess(
             pareto_front=pareto_front,
             tolerance=tolerance,
-            target=target,
+            target_raw=target_raw,
+            target_normalized=target_normalized,
             num_suggestions=num_suggestions,
             suggestion_noise_scale=suggestion_noise_scale,
             diversity_method=diversity_method,

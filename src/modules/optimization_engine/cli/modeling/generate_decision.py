@@ -7,7 +7,6 @@ from ...application.modeling.generate_decision.generate_decision_handler import 
 from ...domain.assurance.decision_validation.services.decision_validation_service import (
     DecisionValidationService,
 )
-from ...domain.assurance.feasibility import ObjectiveFeasibilityService
 from ...infrastructure.assurance.repositories.calibration_repository import (
     FileSystemDecisionValidationCalibrationRepository,
 )
@@ -36,25 +35,13 @@ def main():
         feasibility_enabled=False,
     )
 
-    # Instantiate domain services
-    feasibility_service = ObjectiveFeasibilityService(
-        scorer=create_default_scoring_strategy(),
-        diversity_registry=create_default_diversity_registry(),
-    )
-
     calibration_repository = FileSystemDecisionValidationCalibrationRepository()
-    decision_validation_service = DecisionValidationService(
-        eps_l2=0.03,
-        eps_per_obj=None,
-    )
 
     # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(
         model_repository=FileSystemModelArtifactRepository(),
         processed_data_repository=FileSystemProcessedDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        feasibility_service=feasibility_service,
-        decision_validation_service=decision_validation_service,
         calibration_repository=calibration_repository,
     )
 

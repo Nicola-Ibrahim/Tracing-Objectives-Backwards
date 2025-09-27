@@ -77,12 +77,12 @@ class DiversityStrategyFactory:
         "closest_points": ClosestPointsDiversityStrategy,
     }
 
-    def create(self, method: str, **params) -> BaseDiversityStrategy:
+    def create(self, method: str, **config) -> BaseDiversityStrategy:
         """Create a diversity strategy based on the specified method and parameters.
 
         Args:
             method (str): The diversity method to use.
-            **params: Additional parameters required for the strategy.
+            **config: Additional parameters required for the strategy.
         Returns:
             BaseDiversityStrategy: An instance of the specified diversity strategy.
         Raises:
@@ -92,53 +92,76 @@ class DiversityStrategyFactory:
         strategy_class = self._registry.get(method)
         if not strategy_class:
             raise ValueError(f"Unknown diversity strategy method: {method}")
-        return strategy_class(**params)
+        return strategy_class(**config)
+
+    def create_bunch(
+        self, methods: Sequence[str]
+    ) -> BaseDiversityStrategy | list[BaseDiversityStrategy]:
+        """Create a diversity strategy based on the specified method and parameters.
+        Args:
+            methods (Sequence[str]): The diversity methods to use.
+        Returns:
+            BaseDiversityStrategy: An instance of the specified diversity strategy.
+        Raises:
+            ValueError: If the specified method is not recognized.
+        """
+
+        if methods == ["default"]:
+            methods = ["kmeans", "max_min_distance", "closest_points"]
+
+        strategies = []
+        for method in methods:
+            strategy_class = self._registry.get(method)
+            if not strategy_class:
+                raise ValueError(f"Unknown diversity strategy method: {method}")
+            strategies.append(strategy_class())
+        return KMeansDiversityStrategy(n_clusters=len(strategies))
 
 
-class BaseOODCalibratorFactory:
+class OODCalibratorFactory:
     _registry = {
         "mahalanobis": MahalanobisCalibrator,
     }
 
-    def create(self, **params) -> BaseOODCalibrator:
+    def create(self, config) -> BaseOODCalibrator:
         """Create an OOD calibrator based on the specified method and parameters.
 
         Args:
             method (str): The calibration method to use.
-            **params: Additional parameters required for the calibrator.
+            **config: Additional parameters required for the calibrator.
         Returns:
             BaseOODCalibrator: An instance of the specified OOD calibrator.
         Raises:
             ValueError: If the specified method is not recognized.
         """
-        calibrator_class = self._registry.get(params.pop("method", None))
+        calibrator_class = self._registry.get(config.pop("method", None))
         if not calibrator_class:
-            raise ValueError(f"Unknown OOD calibrator method: {params.get('method')}")
-        return calibrator_class(**params)
+            raise ValueError(f"Unknown OOD calibrator method: {config.get('method')}")
+        return calibrator_class(**config)
 
 
-class BaseConformalCalibratorFactory:
+class ConformalCalibratorFactory:
     _registry = {
         "split_conformal_l2": SplitConformalL2Calibrator,
     }
 
-    def create(self, **params) -> BaseConformalCalibrator:
+    def create(self, config, **kwargs) -> BaseConformalCalibrator:
         """Create a conformal calibrator based on the specified method and parameters.
 
         Args:
             method (str): The calibration method to use.
-            **params: Additional parameters required for the calibrator.
+            **config: Additional parameters required for the calibrator.
         Returns:
             BaseConformalCalibrator: An instance of the specified conformal calibrator.
         Raises:
             ValueError: If the specified method is not recognized.
         """
-        calibrator_class = self._registry.get(params.pop("method", None))
+        calibrator_class = self._registry.get(config.pop("method", None))
 
-        estimator = EstimatorFactory().create(params.pop("estimator", None))
+        estimator = kwargs.get("estimator")
 
         if not calibrator_class:
             raise ValueError(
-                f"Unknown conformal calibrator method: {params.get('method')}"
+                f"Unknown conformal calibrator method: {config.get('method')}"
             )
-        return calibrator_class(estimator=estimator, **params)
+        return calibrator_class(estimator=estimator, **config)

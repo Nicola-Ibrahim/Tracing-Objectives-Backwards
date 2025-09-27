@@ -12,9 +12,9 @@ from ...application.datasets.generate_dataset.generate_dataset_command import (
 from ...application.datasets.generate_dataset.generate_dataset_handler import (
     GenerateDatasetCommandHandler,
 )
-from ...application.factories.algorithm import AlgorithmFactory
-from ...application.factories.optimizer import OptimizerFactory
-from ...application.factories.problem import ProblemFactory
+from ...application.datasets.factories.algorithm import AlgorithmFactory
+from ...application.datasets.factories.optimizer import OptimizerFactory
+from ...application.datasets.factories.problem import ProblemFactory
 from ...infrastructure.datasets.repositories.generated_dataset_repo import (
     FileSystemGeneratedDatasetRepository,
 )

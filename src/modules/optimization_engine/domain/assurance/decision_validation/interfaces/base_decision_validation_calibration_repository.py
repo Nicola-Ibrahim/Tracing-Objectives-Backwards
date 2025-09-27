@@ -1,21 +1,12 @@
 from abc import ABC, abstractmethod
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..entities import DecisionValidationCalibration
+from typing import Any
 
 
-class DecisionValidationCalibrationRepository(ABC):
+class BaseDecisionValidationCalibrationRepository(ABC):
     """Abstract repository for persisting decision-validation calibrations."""
 
     @abstractmethod
-    def save(self, calibration: 'DecisionValidationCalibration') -> None: ...
+    def save(self, calibration: Any) -> None: ...
 
     @abstractmethod
-    def load_latest(self, scope: str) -> 'DecisionValidationCalibration': ...
-
-    @abstractmethod
-    def load(
-        self, scope: str, calibration_id: str
-    ) -> 'DecisionValidationCalibration': ...
+    def load(self) -> Any: ...

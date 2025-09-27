@@ -19,7 +19,7 @@ class DecisionValidationService:
         self,
         *,
         eps_l2: float | None = None,
-        eps_per_obj: Sequence[float] | np.ndarray | None = None,
+        eps_per_obj: Sequence[float] | None = None,
         ood_calibrator: BaseOODCalibrator,
         conformal_calibrator: BaseConformalCalibrator,
     ) -> None:
@@ -38,12 +38,14 @@ class DecisionValidationService:
     def validate(
         self,
         *,
-        candidate: NDArray[np.float64] | None = None,
-        target: NDArray[np.float64] | None = None,
+        y_candidate: NDArray[np.float64] | None = None,
+        X_target: NDArray[np.float64] | None = None,
         **aliases: NDArray[np.float64],
     ) -> GeneratedDecisionValidationReport:
         """Evaluate both assurance gates for a candidate decision."""
-        candidate_arr, target_arr = self._resolve_aliases(candidate, target, aliases)
+        candidate_arr, target_arr = self._resolve_aliases(
+            y_candidate, X_target, aliases
+        )
 
         candidate_vec = self._as_vector(candidate_arr, "candidate")
         target_vec = self._as_vector(target_arr, "target")
@@ -61,10 +63,9 @@ class DecisionValidationService:
         gate_results = (gate1, gate2)
 
         metrics: dict[str, float | bool] = {}
-        explanations: dict[str, str] = {}
         for gate in gate_results:
-            metrics.update(gate.metrics)
-            explanations[gate.name] = gate.explanation
+            for key, value in gate.metrics.items():
+                metrics[f"{gate.name}_{key}"] = value
 
         verdict = (
             Verdict.ACCEPT
@@ -75,7 +76,6 @@ class DecisionValidationService:
         return GeneratedDecisionValidationReport(
             verdict=verdict,
             metrics=metrics,
-            explanations=explanations,
             gate_results=gate_results,
         )
 
@@ -123,11 +123,11 @@ class DecisionValidationService:
 
     @staticmethod
     def _coerce_eps_per_obj(
-        value: Sequence[float] | np.ndarray | None,
+        values: Sequence[float] | None,
     ) -> NDArray[np.float64] | None:
-        if value is None:
+        if values is None:
             return None
-        arr = np.asarray(value, dtype=float)
+        arr = np.asarray(values, dtype=float)
         if np.any(arr < 0):
             raise ValueError("eps_per_obj entries must be non-negative.")
         return arr

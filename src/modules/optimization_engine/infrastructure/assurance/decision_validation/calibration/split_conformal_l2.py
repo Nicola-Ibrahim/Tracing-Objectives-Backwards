@@ -14,7 +14,7 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
     Split conformal calibration for L2 error of a forward mapper f_hat: y -> x.
 
     API:
-      - fit(Y_cal_norm, X_cal_norm)
+      - fit(X, y)
           Fits the attached estimator on (Y -> X) and learns radius_q from
           calibration residuals ||f_hat(y_i) - x_i||_2.
       - evaluate(candidate, target, eps_l2, eps_per_obj)
@@ -32,27 +32,30 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         self._dy: int | None = None
 
     # ----------------------------- fitting ----------------------------- #
-    def _fit_calibrator(
+    def fit(
         self,
-        Y_cal_norm: NDArray[np.float64],  # decisions y (n, d_y)
-        X_cal_norm: NDArray[np.float64],  # targets  x (n, d_x)
+        X: NDArray[np.float64],  # decisions (n, d_x)
+        y: NDArray[np.float64],  # targets   (n, d_y)
     ) -> None:
-        """Compute the split-conformal L2 radius after estimator fitting."""
-        Y_cal = np.asarray(Y_cal_norm, dtype=float)
-        X_cal = np.asarray(X_cal_norm, dtype=float)
+        """Fit the estimator and compute the split-conformal L2 radius."""
+        decisions = np.asarray(X, dtype=float)
+        targets = np.asarray(y, dtype=float)
 
-        if Y_cal.ndim != 2 or X_cal.ndim != 2:
-            raise ValueError("Y_cal_norm and X_cal_norm must be 2-D (n, d)")
-        if Y_cal.shape[0] != X_cal.shape[0]:
-            raise ValueError("Y_cal_norm and X_cal_norm must have the same n")
-        self._dy, self._dx = Y_cal.shape[1], X_cal.shape[1]
+        if decisions.ndim != 2 or targets.ndim != 2:
+            raise ValueError("X and y must be 2-D (n, d)")
+        if decisions.shape[0] != targets.shape[0]:
+            raise ValueError("X and y must have the same n")
 
-        X_hat = self.estimator.predict(Y_cal)  # (n, d_x)
-        if X_hat.shape != X_cal.shape:
+        self.estimator.fit(decisions, targets)
+
+        self._dy, self._dx = decisions.shape[1], targets.shape[1]
+
+        predicted_targets = self.estimator.predict(decisions)  # (n, d_y)
+        if predicted_targets.shape != targets.shape:
             raise ValueError(
-                f"Estimator.predict returned shape {X_hat.shape}, expected {X_cal.shape}"
+                f"Estimator.predict returned shape {predicted_targets.shape}, expected {targets.shape}"
             )
-        resid = np.linalg.norm(X_cal - X_hat, axis=1)  # (n,)
+        resid = np.linalg.norm(targets - predicted_targets, axis=1)  # (n,)
 
         self._n_cal = int(resid.shape[0])
 
@@ -64,30 +67,18 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         self._radius = float(np.quantile(resid, tau, method="higher"))
 
     # ---------------------------- inference ---------------------------- #
-    def transform(
+    def _prepare_evaluation(
         self,
-        y_norm: NDArray[np.float64],
-        x_target_norm: NDArray[np.float64],
+        *,
+        candidate: NDArray[np.float64],
+        target: NDArray[np.float64],
     ) -> dict[str, NDArray[np.float64] | float]:
-        """
-        Compute prediction and conformal-aware distance summary.
-
-        Args:
-          y_norm        : (d_y,) or (n, d_y)   proposed decision(s)
-          x_target_norm : (d_x,) or (n, d_x)   target objective(s) to hit
-
-        Returns:
-          {
-            "x_hat"    : (n, d_x) predicted objectives,
-            "d_l2"     : float, L2 distance summary (max over batch),
-            "d_l2_all" : (n,) per-sample distances (for diagnostics),
-          }
-        """
+        """Return prediction diagnostics used by the evaluation step."""
         if self._radius is None:
-            raise RuntimeError("Calibrator must be fitted before transform().")
+            raise RuntimeError("Calibrator must be fitted before evaluation.")
 
-        y = np.asarray(y_norm, dtype=float)
-        x_t = np.asarray(x_target_norm, dtype=float)
+        y = np.asarray(candidate, dtype=float)
+        x_t = np.asarray(target, dtype=float)
 
         # ensure 2D
         if y.ndim == 1:
@@ -125,11 +116,11 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         *,
         candidate: NDArray[np.float64],
         target: NDArray[np.float64],
-        eps_l2: float | None,
-        eps_per_obj: NDArray[np.float64] | Sequence[float] | None,
+        eps_l2: float,
+        eps_per_obj: NDArray[np.float64] | Sequence[float],
     ) -> tuple[bool, dict[str, float | bool], str]:
         """Evaluate the tolerance gate for a candidate decision."""
-        transformed = self.transform(candidate, target)
+        transformed = self._prepare_evaluation(candidate=candidate, target=target)
         x_hat = transformed["x_hat"]
         x_hat_vec = self._as_vector(x_hat)
         target_vec = self._as_vector(np.asarray(target, dtype=float))
@@ -141,9 +132,9 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         covered = self._check_coverage(diff, dist_l2, q, eps_l2, eps_per_obj)
 
         metrics: dict[str, float | bool] = {
-            "gate2_conformal_radius_q": q,
-            "gate2_dist_to_target_l2": dist_l2,
-            "gate2_covered": covered,
+            "conformal_radius_q": q,
+            "dist_to_target_l2": dist_l2,
+            "covered": covered,
         }
         explanation = (
             "Pass: predicted X stays within tolerance after accounting for model error."

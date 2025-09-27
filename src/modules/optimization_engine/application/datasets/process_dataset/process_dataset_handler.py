@@ -1,5 +1,3 @@
-import numpy as np
-
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository

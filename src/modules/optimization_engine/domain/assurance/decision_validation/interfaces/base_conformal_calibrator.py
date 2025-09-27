@@ -1,3 +1,4 @@
+import inspect
 from abc import ABC, abstractmethod
 from typing import Any, Sequence
 
@@ -19,33 +20,35 @@ class BaseConformalCalibrator(ABC):
         """Return the estimator trained alongside the calibrator."""
         return self._estimator
 
+    @property
+    def estimator_type(self) -> str:
+        """Return the type identifier for the attached estimator."""
+        return self._estimator.type
+
+    def describe(self) -> dict[str, Any]:
+        """Return a JSON-serialisable description of the calibrator."""
+
+        return {
+            "type": self.__class__.__name__,
+            "module": self.__class__.__module__,
+            "init_params": self._collect_init_params(),
+        }
+
+    @abstractmethod
     def fit(
         self,
-        Y_cal_norm: np.ndarray,
-        X_cal_norm: np.ndarray,
+        X: np.ndarray,
+        y: np.ndarray,
     ) -> None:
-        """
-        Fit the attached estimator and calibrator-specific components on normalized data.
-
-        Subclasses should implement ``_fit_calibrator`` to compute additional
-        calibration statistics (e.g., conformal radii) using the provided arrays.
-        """
-
-        Y_cal = np.asarray(Y_cal_norm, dtype=float)
-        X_cal = np.asarray(X_cal_norm, dtype=float)
-        self._estimator.fit(Y_cal, X_cal)
-        self._fit_calibrator(Y_cal, X_cal)
+        """Fit the attached estimator and any calibrator-specific components."""
 
     @abstractmethod
-    def _fit_calibrator(
+    def _prepare_evaluation(
         self,
-        Y_cal_norm: np.ndarray,
-        X_cal_norm: np.ndarray,
-    ) -> None:
-        """Subclass-specific calibration logic executed after estimator fitting."""
-
-    @abstractmethod
-    def transform(self, sample: np.ndarray) -> Any: ...
+        *,
+        candidate: np.ndarray,
+        target: np.ndarray,
+    ) -> Any: ...
 
     @abstractmethod
     def evaluate(
@@ -60,3 +63,49 @@ class BaseConformalCalibrator(ABC):
     @property
     @abstractmethod
     def radius(self) -> float: ...
+
+    # ------------------------------------------------------------------
+    # Introspection helpers
+    # ------------------------------------------------------------------
+
+    def _collect_init_params(self) -> dict[str, Any]:
+        params: dict[str, Any] = {}
+        signature = inspect.signature(self.__class__.__init__)
+        for name, parameter in signature.parameters.items():
+            if name == "self":
+                continue
+            value = self._resolve_attribute(name, parameter)
+            if value is not None:
+                params[name] = self._simplify_value(value)
+        return params
+
+    def _resolve_attribute(self, name: str, parameter: inspect.Parameter) -> Any | None:
+        if hasattr(self, name):
+            return getattr(self, name)
+        private_name = f"_{name}"
+        if hasattr(self, private_name):
+            return getattr(self, private_name)
+        if parameter.default is not inspect._empty:
+            return parameter.default
+        return None
+
+    def _simplify_value(self, value: Any) -> Any:
+        import numpy as _np
+
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        if isinstance(value, _np.generic):
+            return value.item()
+        if isinstance(value, BaseEstimator):
+            return {
+                "type": value.__class__.__name__,
+                "module": value.__class__.__module__,
+                "parameters": value.to_dict(),
+            }
+        if isinstance(value, (list, tuple)):
+            return [self._simplify_value(v) for v in value]
+        if isinstance(value, dict):
+            return {str(k): self._simplify_value(v) for k, v in value.items()}
+        if isinstance(value, _np.ndarray):
+            return value.tolist()
+        return str(value)

@@ -22,10 +22,10 @@ class MahalanobisCalibrator(BaseOODCalibrator):
         self._dim: int | None = None
         self._chol: tuple[NDArray[np.float64], bool] | None = None  # (L, lower)
 
-    def fit(self, X_cal_norm: np.ndarray) -> None:
-        X = np.asarray(X_cal_norm, dtype=np.float64)
+    def fit(self, X: np.ndarray) -> None:
+        X = np.asarray(X, dtype=np.float64)
         if X.ndim != 2:
-            raise ValueError("X_cal_norm must be 2-D (n, d)")
+            raise ValueError("X must be 2-D (n, d)")
         n, d = X.shape
         self._dim = d
 
@@ -61,10 +61,12 @@ class MahalanobisCalibrator(BaseOODCalibrator):
         self._threshold = thr
         self._chol = chol  # None if we used pinvh
 
-    def transform(self, sample: np.ndarray) -> dict[str, NDArray | float]:
-        """Return md2 for each sample and the scalar threshold."""
+    def _prepare_evaluation(
+        self, sample: np.ndarray
+    ) -> dict[str, float | NDArray[np.float64]]:
+        """Return Mahalanobis diagnostics required by the evaluation step."""
         if any(v is None for v in (self._mu, self._threshold)):
-            raise RuntimeError("Calibrator must be fitted before transform().")
+            raise RuntimeError("Calibrator must be fitted before evaluation.")
         X = np.asarray(sample, dtype=np.float64)
         X = X.reshape(1, -1) if X.ndim == 1 else X
         if self._dim is not None and X.shape[1] != self._dim:
@@ -84,7 +86,7 @@ class MahalanobisCalibrator(BaseOODCalibrator):
 
     def evaluate(self, sample: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
         """Evaluate the OOD gate for the provided sample."""
-        metrics = self.transform(sample)
+        metrics = self._prepare_evaluation(sample)
         try:
             md2_raw = metrics["md2"]
             threshold_md2 = float(metrics["threshold"])
@@ -95,17 +97,17 @@ class MahalanobisCalibrator(BaseOODCalibrator):
 
         md2 = float(np.asarray(md2_raw, dtype=float).max())
         passed = md2 <= threshold_md2
-        gate_metrics: dict[str, float | bool] = {
-            "gate1_md2": md2,
-            "gate1_md2_threshold": threshold_md2,
-            "gate1_inlier": bool(passed),
+        metrics: dict[str, float | bool] = {
+            "md2": md2,
+            "md2_threshold": threshold_md2,
+            "inlier": bool(passed),
         }
         explanation = (
             "Pass: candidate is within the supported decision region."
             if passed
             else "ABSTAIN: candidate is outside the supported decision region."
         )
-        return bool(passed), gate_metrics, explanation
+        return bool(passed), metrics, explanation
 
     # ---- properties ----
     @property

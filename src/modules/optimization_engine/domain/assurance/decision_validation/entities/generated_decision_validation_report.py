@@ -8,6 +8,9 @@ class GeneratedDecisionValidationReport(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     verdict: Verdict
-    metrics: dict[str, float | bool] = Field(default_factory=dict)
-    explanations: dict[str, str] = Field(default_factory=dict)
-    gate_results: tuple[GateResult, ...] = Field(default_factory=tuple)
+    metrics: dict[str, float | bool] = Field(
+        default_factory=dict, description="Aggregated metrics from all gates"
+    )
+    gate_results: tuple[GateResult, ...] = Field(
+        default_factory=tuple, description="Detailed results from each gate"
+    )
