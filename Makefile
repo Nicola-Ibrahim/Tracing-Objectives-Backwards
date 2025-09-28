@@ -106,10 +106,10 @@ model-generate-decision:  # Use a trained model to generate a decision for a tar
 	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
-.PHONY: model-calibrate-validation
-model-calibrate-validation:  # Fit and persist assurance calibrators for decision validation
+.PHONY: assurance-calibrate-validation
+assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation
 	@echo "$(BLUE)Calibrating decision validation gates...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.calibrate_decision_validation
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurance.calibrate_decision_validation
 	@echo "$(GREEN)Decision validation calibration complete.$(RESET)"
 
 .PHONY: model-visualize-performance
