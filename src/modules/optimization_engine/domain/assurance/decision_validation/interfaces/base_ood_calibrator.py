@@ -1,3 +1,5 @@
+# ----------------------------- BaseOODCalibrator -----------------------------
+
 import inspect
 from abc import ABC, abstractmethod
 from typing import Any
@@ -6,35 +8,46 @@ import numpy as np
 
 
 class BaseOODCalibrator(ABC):
-    @abstractmethod
-    def fit(self, X: np.ndarray) -> None: ...
+    """
+    Base contract for OOD calibrators.
+
+    Required subclass API:
+      - fit(X) -> None
+      - evaluate(X) -> (passed, metrics, explanation)
+      - inlier_threshold_sq (float property)
+    """
 
     @abstractmethod
-    def _prepare_evaluation(
-        self, sample: np.ndarray
-    ) -> dict[str, float | bool | np.ndarray]: ...
+    def fit(self, X: np.ndarray) -> None:
+        """
+        Fit the inlier region from calibration data X, shape (n, d).
+        """
 
     @abstractmethod
-    def evaluate(
-        self, sample: np.ndarray
-    ) -> tuple[bool, dict[str, float | bool], str]: ...
-
-    @property
-    @abstractmethod
-    def threshold(self) -> float: ...
+    def evaluate(self, X: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
+        """
+        Decide inlier/outlier for X (or a batch) under the learned inlier criterion.
+        """
 
     def describe(self) -> dict[str, Any]:
         """Return a JSON-serialisable description of the calibrator."""
-
         return {
             "type": self.__class__.__name__,
             "module": self.__class__.__module__,
             "init_params": self._collect_init_params(),
         }
 
-    # ------------------------------------------------------------------
-    # Introspection helpers
-    # ------------------------------------------------------------------
+    # --------------------------- introspection utils -------------------------- #
+    @property
+    def threshold(self) -> float:
+        """Return the learned OOD threshold."""
+        if not hasattr(self, "_threshold") or self._threshold is None:
+            raise ValueError(
+                "Calibrator has not been fitted yet; threshold is undefined."
+            )
+        return self._threshold
+
+    # --------------------------- introspection utils -------------------------- #
 
     def _collect_init_params(self) -> dict[str, Any]:
         params: dict[str, Any] = {}

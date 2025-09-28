@@ -1,6 +1,6 @@
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -8,12 +8,34 @@ from ....modeling.interfaces.base_estimator import BaseEstimator
 
 
 class BaseConformalCalibrator(ABC):
-    """Base contract for conformal calibrators coupled with an estimator."""
+    """
+    Base contract for conformal calibrators coupled with a forward estimator f_hat: y -> X.
 
-    def __init__(self, estimator: BaseEstimator) -> None:
-        if estimator is None:
-            raise ValueError("BaseConformalCalibrator requires an estimator instance.")
+    Required subclass API:
+      - fit(y_cal, X_cal) -> None
+      - evaluate(y=..., X_target=..., acceptance_threshold=...) -> (passed, metrics, explanation)
+      - calibration_margin (float property)
+    """
+
+    def __init__(self, *, estimator: BaseEstimator, confidence: float = 0.90) -> None:
+        """
+        Args:
+            estimator: forward mapper f_hat with .fit(y, X) and .predict(y) -> X.
+            confidence: desired coverage level in (0,1); e.g., 0.90 ≈ 90th pct.
+
+        Raises:
+            ValueError: if confidence not in (0,1).
+        """
+        if not (0.0 < confidence < 1.0):
+            raise ValueError("confidence must lie in (0,1)")
+        self._confidence = float(confidence)
+        self._n_cal: int = 0
+        self._x_dim: int | None = None  # dim of X
+        self._y_dim: int | None = None  # dim of y
+
         self._estimator = estimator
+        self._radius_q: float = None  # learned cushion (quantile radius)
+        self._threshold: float = None  # learned OOD threshold
 
     @property
     def estimator(self) -> BaseEstimator:
@@ -25,48 +47,49 @@ class BaseConformalCalibrator(ABC):
         """Return the type identifier for the attached estimator."""
         return self._estimator.type
 
+    @property
+    def radius(self) -> float:
+        """Return the learned conformal radius (safety cushion)."""
+        if not hasattr(self, "_radius_q") or self._radius_q is None:
+            raise ValueError("Calibrator has not been fitted yet; radius is undefined.")
+        return self._radius_q
+
     def describe(self) -> dict[str, Any]:
         """Return a JSON-serialisable description of the calibrator."""
-
         return {
             "type": self.__class__.__name__,
             "module": self.__class__.__module__,
             "init_params": self._collect_init_params(),
         }
 
-    @abstractmethod
-    def fit(
-        self,
-        X: np.ndarray,
-        y: np.ndarray,
-    ) -> None:
-        """Fit the attached estimator and any calibrator-specific components."""
+    # ----------------------------- abstract API ----------------------------- #
 
     @abstractmethod
-    def _prepare_evaluation(
-        self,
-        *,
-        candidate: np.ndarray,
-        target: np.ndarray,
-    ) -> Any: ...
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+        """
+        Fit the attached estimator on (y, X) and learn any conformal statistics.
+        Shapes:
+          - y_cal: (n, d_y)
+          - X_cal: (n, d_x)
+        """
 
     @abstractmethod
     def evaluate(
         self,
         *,
-        candidate: np.ndarray,
-        target: np.ndarray,
-        eps_l2: float | None,
-        eps_per_obj: Sequence[float] | np.ndarray | None,
-    ) -> tuple[bool, dict[str, float | bool], str]: ...
+        y: np.ndarray,
+        X_target: np.ndarray,
+        tolerance: float,
+    ) -> tuple[bool, dict[str, float | bool], str]:
+        """
+        Evaluate a candidate y against X_target using a single global acceptance threshold.
+        Returns:
+          - passed: bool
+          - metrics: dict of floats/bools
+          - explanation: human-friendly string
+        """
 
-    @property
-    @abstractmethod
-    def radius(self) -> float: ...
-
-    # ------------------------------------------------------------------
-    # Introspection helpers
-    # ------------------------------------------------------------------
+    # --------------------------- introspection utils -------------------------- #
 
     def _collect_init_params(self) -> dict[str, Any]:
         params: dict[str, Any] = {}

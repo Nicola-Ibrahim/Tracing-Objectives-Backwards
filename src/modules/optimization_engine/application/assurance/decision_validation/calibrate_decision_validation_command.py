@@ -6,7 +6,18 @@ from ...dtos import EstimatorParams
 class OODCalibratorParams(BaseModel):
     method: str = Field(
         default="mahalanobis",
-        description="Method used for the OOD calibrator. Supported: 'mahalanobis', 'knn'.",
+        description="Method used for the OOD calibrator. Supported: 'mahalanobis'.",
+    )
+    percentile: float = Field(
+        default=97.5,
+        ge=0,
+        le=100,
+        description="Percentile used to set the Mahalanobis inlier threshold.",
+    )
+    cov_reg: float = Field(
+        default=1e-6,
+        ge=0,
+        description="Diagonal covariance regularisation term.",
     )
 
 

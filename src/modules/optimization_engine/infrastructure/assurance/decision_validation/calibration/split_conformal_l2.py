@@ -1,183 +1,187 @@
-from typing import Sequence
-
 import numpy as np
 from numpy.typing import NDArray
 
 from .....domain.assurance.decision_validation.interfaces.base_conformal_calibrator import (
     BaseConformalCalibrator,
 )
-from .....domain.modeling.interfaces.base_estimator import BaseEstimator
 
 
 class SplitConformalL2Calibrator(BaseConformalCalibrator):
     """
-    Split conformal calibration for L2 error of a forward mapper f_hat: y -> x.
+    Split-conformal calibrator for the L2 error of an inverse mapper f_hat: Y -> X.
 
-    API:
-      - fit(X, y)
-          Fits the attached estimator on (Y -> X) and learns radius_q from
-          calibration residuals ||f_hat(y_i) - x_i||_2.
-      - evaluate(candidate, target, eps_l2, eps_per_obj)
-          Returns a gate result using the fitted conformal radius and tolerance band.
+    Assumptions
+    -----------
+    - The attached estimator implements an inverse map: inputs are objectives y (R^{d_y}),
+      outputs are decisions X (R^{d_x}), i.e., f_hat(y) ≈ X.
+    - Calibration data are paired decisions and objectives (X_i, y_i).
+
+    API (agnostic but consistent)
+    -----------------------------
+    fit(X, y):            trains estimator on (y -> X) and learns a global L2 "cushion" radius_q
+    evaluate(y, X_target, tolerance): checks if f_hat(y) is within tolerance of X_target after adding radius_q
+
+    Coverage intuition
+    ------------------
+    radius_q is the (finite-sample corrected) high quantile of past residual norms,
+    giving distribution-free guarantees under exchangeability. See Angelopoulos & Bates (2023),
+    Tibshirani (2024), Romano et al. (2019).  # refs in chat
     """
 
-    def __init__(self, *, estimator: BaseEstimator, confidence: float = 0.90) -> None:
-        super().__init__(estimator=estimator)
+    def __init__(self, estimator, confidence: float = 0.9) -> None:
+        """
+        Args:
+            estimator: inverse mapper expecting .fit(inputs=y, targets=X) and .predict(y)->X_hat
+            confidence: desired marginal coverage level in (0, 1) (e.g., 0.9 or 0.95)
+        """
+        super().__init__(estimator)
         if not (0.0 < confidence < 1.0):
-            raise ValueError("confidence must lie in (0,1)")
-        self._confidence = float(confidence)
-        self._radius: float | None = None
-        self._n_cal: int = 0
-        self._dx: int | None = None
-        self._dy: int | None = None
+            raise ValueError("confidence must be in (0, 1)")
+        self._confidence: float = float(confidence)
+        self._radius_q: float | None = None
+        self._n_cal: int | None = None
+        self._x_dim: int | None = None
+        self._y_dim: int | None = None
 
-    # ----------------------------- fitting ----------------------------- #
+    # ----------------------------- calibration ----------------------------- #
     def fit(
         self,
-        X: NDArray[np.float64],  # decisions (n, d_x)
-        y: NDArray[np.float64],  # targets   (n, d_y)
+        X: NDArray[np.float64],  # (n, d_x) decisions
+        y: NDArray[np.float64],  # (n, d_y) objectives
     ) -> None:
-        """Fit the estimator and compute the split-conformal L2 radius."""
-        decisions = np.asarray(X, dtype=float)
-        targets = np.asarray(y, dtype=float)
+        """
+        Learn f_hat on (y -> X) and compute the split-conformal radius_q from residual L2 norms.
 
-        if decisions.ndim != 2 or targets.ndim != 2:
-            raise ValueError("X and y must be 2-D (n, d)")
-        if decisions.shape[0] != targets.shape[0]:
-            raise ValueError("X and y must have the same n")
+        Steps:
+          1) estimator.fit(y, X)
+          2) residuals r_i = || estimator.predict(y_i) - X_i ||_2
+          3) radius_q = quantile_tau(residuals), tau = ceil((n+1)*confidence)/n (finite-sample)
 
-        self.estimator.fit(decisions, targets)
+        Raises:
+            ValueError: on shape mismatches or unexpected estimator output.
+        """
+        if X.ndim != 2 or y.ndim != 2:
+            raise ValueError("X and y must be 2D arrays (n, d)")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y must have the same number of rows")
 
-        self._dy, self._dx = decisions.shape[1], targets.shape[1]
+        n, d_x = X.shape
+        _, d_y = y.shape
+        self._x_dim, self._y_dim = d_x, d_y
 
-        predicted_targets = self.estimator.predict(decisions)  # (n, d_y)
-        if predicted_targets.shape != targets.shape:
-            raise ValueError(
-                f"Estimator.predict returned shape {predicted_targets.shape}, expected {targets.shape}"
-            )
-        resid = np.linalg.norm(targets - predicted_targets, axis=1)  # (n,)
+        # Train inverse map: inputs=y, targets=X
+        self.estimator.fit(y, X)
 
-        self._n_cal = int(resid.shape[0])
+        X_hat = self.estimator.predict(y)  # (n, d_x)
+        if X_hat.shape != X.shape:
+            raise ValueError(f"predict returned {X_hat.shape}, expected {X.shape}")
 
-        # finite-sample split-CP quantile: tau = ceil((n+1)*conf)/n (in [0,1])
+        residuals = np.linalg.norm(X_hat - X, axis=1)  # (n,)
+        self._n_cal = int(residuals.size)
+
+        # Finite-sample split-conformal quantile for coverage ~= confidence
         tau = float(np.ceil((self._n_cal + 1) * self._confidence) / self._n_cal)
         tau = min(max(tau, 0.0), 1.0)
 
-        # use "higher" so coverage is at least the requested level
-        self._radius = float(np.quantile(resid, tau, method="higher"))
+        # Use "higher" to ensure conservative (>=) coverage
+        self._radius_q = float(np.quantile(residuals, tau, method="higher"))
 
-    # ---------------------------- inference ---------------------------- #
-    def _prepare_evaluation(
-        self,
-        *,
-        candidate: NDArray[np.float64],
-        target: NDArray[np.float64],
-    ) -> dict[str, NDArray[np.float64] | float]:
-        """Return prediction diagnostics used by the evaluation step."""
-        if self._radius is None:
-            raise RuntimeError("Calibrator must be fitted before evaluation.")
-
-        y = np.asarray(candidate, dtype=float)
-        x_t = np.asarray(target, dtype=float)
-
-        # ensure 2D
-        if y.ndim == 1:
-            y = y[None, :]
-        if x_t.ndim == 1:
-            x_t = x_t[None, :]
-
-        # basic shape checks
-        if self._dy is not None and y.shape[1] != self._dy:
-            raise ValueError(f"y_norm has d_y={y.shape[1]}, expected {self._dy}")
-        if self._dx is not None and x_t.shape[1] != self._dx:
-            raise ValueError(
-                f"x_target_norm has d_x={x_t.shape[1]}, expected {self._dx}"
-            )
-        if y.shape[0] != x_t.shape[0]:
-            raise ValueError("Batch sizes differ between y_norm and x_target_norm")
-
-        x_hat = self.estimator.predict(y)  # (n, d_x)
-        if x_hat.shape != x_t.shape:
-            raise ValueError(
-                f"Estimator.predict returned shape {x_hat.shape}, expected {x_t.shape}"
-            )
-
-        d_all = np.linalg.norm(x_hat - x_t, axis=1)  # (n,)
-        d_sum = float(d_all.max())  # conservative summary for batches
-
-        return {
-            "x_hat": x_hat.astype(np.float64, copy=False),
-            "d_l2": d_sum,
-            "d_l2_all": d_all.astype(np.float64, copy=False),
-        }
-
+    # ----------------------------- evaluation ----------------------------- #
     def evaluate(
         self,
         *,
-        candidate: NDArray[np.float64],
-        target: NDArray[np.float64],
-        eps_l2: float,
-        eps_per_obj: NDArray[np.float64] | Sequence[float],
+        y: NDArray[np.float64],  # candidate objectives (n, d_y) or (d_y,)
+        X_target: NDArray[np.float64],  # target decisions   (n, d_x) or (d_x,)
+        tolerance: float,
     ) -> tuple[bool, dict[str, float | bool], str]:
-        """Evaluate the tolerance gate for a candidate decision."""
-        transformed = self._prepare_evaluation(candidate=candidate, target=target)
-        x_hat = transformed["x_hat"]
-        x_hat_vec = self._as_vector(x_hat)
-        target_vec = self._as_vector(np.asarray(target, dtype=float))
+        """
+        Check whether f_hat(y) is acceptable for X_target under a global L2 tolerance,
+        after adding the conformal cushion radius_q.
 
-        diff = np.abs(x_hat_vec - target_vec)
-        dist_l2 = float(transformed["d_l2"])
-        q = self.radius
+        Returns:
+            passed: bool
+            metrics: {
+                "conformal_radius_q": float,
+                "dist_to_target_l2":  float (max across batch),
+                "covered":            bool
+            }
+            explanation: string
+        """
+        if tolerance < 0:
+            raise ValueError("tolerance must be non-negative.")
 
-        covered = self._check_coverage(diff, dist_l2, q, eps_l2, eps_per_obj)
+        diag = self._predict_and_distances(X_target=X_target, y=y)
+        X_hat = diag["X_hat"]
+        l2_distance = diag["l2_distance"]
+
+        radius_q = self.radius_q  # learned cushion
+        passed = (l2_distance + radius_q) <= tolerance
 
         metrics: dict[str, float | bool] = {
-            "conformal_radius_q": q,
-            "dist_to_target_l2": dist_l2,
-            "covered": covered,
+            "conformal_radius_q": radius_q,
+            "dist_to_target_l2": l2_distance,
+            "covered": bool(passed),
         }
         explanation = (
-            "Pass: predicted X stays within tolerance after accounting for model error."
-            if covered
-            else "ABSTAIN: predicted X exceeds tolerance after accounting for model error."
+            "PASS: predicted decisions within tolerance after adding conformal cushion."
+            if passed
+            else "ABSTAIN: predicted decisions exceed tolerance after adding conformal cushion."
         )
-        return bool(covered), metrics, explanation
+        return bool(passed), metrics, explanation
 
-    # ----------------------------- accessor ---------------------------- #
+    # ----------------------------- helpers ----------------------------- #
+    def _predict_and_distances(
+        self, *, X_target: NDArray[np.float64], y: NDArray[np.float64]
+    ) -> dict[str, NDArray[np.float64] | float]:
+        """
+        Predict decisions for y, and compute distances to X_target.
+
+        Returns:
+            {
+              "X_hat":       (n, d_x) predicted decisions,
+              "l2_distance": float (max L2 across batch)
+            }
+        """
+        if self._radius_q is None:
+            raise RuntimeError("Calibrator must be fitted before evaluation.")
+
+        # enforce (n, d)
+        if y.ndim == 1:
+            y = y[None, :]
+        if X_target.ndim == 1:
+            X_target = X_target[None, :]
+
+        # shape checks
+        if self._y_dim is not None and y.shape[1] != self._y_dim:
+            raise ValueError(f"y has dim {y.shape[1]}, expected {self._y_dim}")
+        if self._x_dim is not None and X_target.shape[1] != self._x_dim:
+            raise ValueError(
+                f"X_target has dim {X_target.shape[1]}, expected {self._x_dim}"
+            )
+        if y.shape[0] != X_target.shape[0]:
+            raise ValueError("Batch sizes must match between y and X_target")
+
+        X_hat = self.estimator.predict(y)  # (n, d_x)
+        if X_hat.shape != X_target.shape:
+            raise ValueError(
+                f"predict returned {X_hat.shape}, expected {X_target.shape}"
+            )
+
+        l2_all = np.linalg.norm(X_hat - X_target, axis=1)  # (n,)
+        l2_distance = float(l2_all.max())  # conservative batch summary
+
+        return {
+            "X_hat": X_hat.astype(np.float64, copy=False),
+            "l2_distance": l2_distance,
+        }
+
+    # ----------------------------- properties ----------------------------- #
     @property
-    def radius(self) -> float:
-        if self._radius is None:
-            raise RuntimeError("SplitConformalL2Calibrator has not been fitted yet.")
-        return self._radius
+    def radius_q(self) -> float:
+        if self._radius_q is None:
+            raise RuntimeError("Calibrator must be fitted before accessing radius_q.")
+        return float(self._radius_q)
 
-    @staticmethod
-    def _as_vector(array: NDArray[np.float64]) -> NDArray[np.float64]:
-        arr = np.asarray(array, dtype=float)
-        if arr.ndim == 2 and arr.shape[0] == 1:
-            return arr[0]
-        if arr.ndim != 1:
-            raise ValueError("Expected a single-sample vector for evaluation.")
-        return arr
-
-    @staticmethod
-    def _check_coverage(
-        diff: NDArray[np.float64],
-        dist_l2: float,
-        radius_q: float,
-        eps_l2: float | None,
-        eps_per_obj: NDArray[np.float64] | Sequence[float] | None,
-    ) -> bool:
-        if eps_l2 is None and eps_per_obj is None:
-            raise ValueError("Provide eps_l2 or eps_per_obj to evaluate the gate.")
-
-        if eps_l2 is not None:
-            if eps_l2 < 0:
-                raise ValueError("eps_l2 must be non-negative.")
-            return bool((dist_l2 + radius_q) <= float(eps_l2))
-
-        eps_array = np.asarray(eps_per_obj, dtype=float)
-        if np.any(eps_array < 0):
-            raise ValueError("eps_per_obj entries must be non-negative.")
-        if eps_array.shape != diff.shape:
-            raise ValueError("eps_per_obj shape does not match the target dimension.")
-        return bool(np.all(diff + radius_q <= eps_array))
+    @property
+    def confidence(self) -> float:
+        return self._confidence

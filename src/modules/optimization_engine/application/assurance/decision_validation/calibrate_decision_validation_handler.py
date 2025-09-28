@@ -59,12 +59,13 @@ class CalibrateDecisionValidationCommandHandler:
         ood_calibrator = self._ood_calibrator_factory.create(
             command.ood_calibrator_params.model_dump()
         )
-        ood_calibrator.fit(decisions)
 
         conformal_calibrator = self._conformal_calibrator_factory.create(
             command.conformal_calibrator_params.model_dump(), estimator=estimator
         )
-        conformal_calibrator.fit(decisions, objectives)
+
+        ood_calibrator.fit(X=decisions)
+        conformal_calibrator.fit(X=decisions, y=objectives)
 
         calibration = DecisionValidationCalibration(
             ood_calibrator=ood_calibrator,
