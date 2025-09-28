@@ -24,7 +24,13 @@
 
 % If not already loaded by your style file:
 \usepackage{ifthen}
- 
+
+
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc,arrows.meta,positioning,fit,backgrounds,shadows}
+
+
 %-------------------------------------------------------------------------------
 % Style file and packages
 %-------------------------------------------------------------------------------
@@ -81,11 +87,11 @@
     \input{style/titlepage}
     \input{style/declaration}
     \ifthenelse{\boolean{WorkIsConfidential}}{\input{style/confidentiality}}{}
-    \input{chapters/abstract}
+    \input{chapters/01_abstract}
     \tableofcontents
 
     \mainmatter
-    \input{chapters/introduction}
+    \input{chapters/02_introduction}
     \input{chapters/motivation_background}
     \input{chapters/related_work}
     \input{chapters/problem_statement}

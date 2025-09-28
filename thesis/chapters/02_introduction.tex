@@ -6,41 +6,90 @@
 
 Real-world decision making involves navigating a web of trade-offs. In many
 signal-processing and systems contexts—filter design, beamforming, detection,
-compression, sensing—practitioners must balance several objectives that often
-conflict. This is the remit of multi-objective optimisation (MOO), where
+compression, and sensing—practitioners must balance several objectives that
+often conflict. This is the remit of multi-objective optimisation (MOO), where
 multiple goals are considered simultaneously rather than collapsed into a
 single metric~\cite{Tan2023}. Unlike single-objective optimisation, MOO
 typically yields a \emph{set of trade-off designs} in both decision and
 objective spaces, from which a decision maker must choose according to
-preferences and constraints.
+preferences and constraints. For a broad overview of MOO concepts and
+state-of-the-art algorithmic families, see Deb’s classic introduction and
+more recent tutorials. 
 
-The prevailing workflow in MOO is \emph{forward} mapping: given a decision
-vector $\vect{x}\in\calX$ of design variables, one evaluates the objective
-functions $\vect{f}(\vect{x})$ and uses evolutionary or surrogate-assisted
-algorithms to explore attainable trade-offs~\cite{Liu2024}. This mirrors how
-simulation models are defined: software implements a complex physics-based or
-data-driven map from inputs to outputs. When a designer wishes to understand
-how a variable affects performance, they perturb $\vect{x}$ and observe the
-change in $\vect{y}$. However, a complementary question frequently arises in
-practice: given a desired pattern of objective values $\vect{y}^{\star}$—for
-example, a particular combination of resolution and denoising strength in a
-medical image—what decision vector $\vect{x}^{\star}$ will realise it? This
-\emph{inverse} mapping from objectives to decisions is often ill-posed:
-multiple decisions may yield similar outcomes, and some targets may be
-unattainable. Common workarounds such as scalarisation or trial-and-error can
-be computationally expensive and provide limited insight into the inverse
-relationship.
+A natural way to analyse such problems is through the \emph{forward} process:
+a model maps hidden or controllable parameters $\vect{x}$ (decisions) to
+measurable or evaluable quantities $\vect{y}$ (objectives), reflecting how
+simulation tools are usually specified. In many applications the forward map
+is well understood, but the complementary \emph{inverse} task—inferring
+$\vect{x}$ from a desired pattern of objective values $\vect{y}^\star$—is
+substantially harder. Information is typically lost in the forward direction,
+so the inverse problem can violate one or more of Hadamard’s criteria
+(existence, uniqueness, stability), i.e., it is \emph{ill-posed}; different
+decisions may yield indistinguishable outcomes, and small perturbations in
+data can lead to large changes in inferred parameters. Regularisation and
+statistical formulations are therefore required to make inference meaningful
+and robust~\cite{KabanikhinSurvey,BenningBurger2018,Stuart2010}. 
 
-This thesis addresses the inverse decision-mapping problem in multi-objective
-settings. The key idea is to learn a data-driven mapping
+From a design perspective, the limitations of purely forward workflows are
+well known. When engineers wish to realise a particular objective pattern
+(e.g., a specified error–rate profile, resolution–noise compromise, or
+spectral mask), they must repeatedly perturb $\vect{x}$ and re-evaluate the
+forward model, or they resort to scalarisation tricks that can be sensitive to
+weights and may miss diverse solutions. Such procedures are compute-intensive
+and offer limited insight into the \emph{structure} of the inverse map,
+especially when many distinct decisions produce similar outcomes. In practice,
+useful inverse exploration should: (i) acknowledge that solutions may be
+non-unique and sometimes unattainable; (ii) expose families of viable designs
+rather than a single point; and (iii) integrate smoothly with forward
+evaluation when refinement is needed.
+
+\begin{figure}[t]
+  \centering
+  \input{figures/inverse_mapper_figure}
+  \caption{Forward vs.\ inverse viewpoint. Forward mapping evaluates how decisions $\vect{x}$ produce outcomes $\vect{y}$; the inverse task seeks decisions that realise a desired outcome pattern.}
+  \label{fig:forward-inverse}
+  \label{fig:forward-inverse}
+\end{figure}
+
+This thesis addresses the inverse decision–mapping problem in multi-objective
+settings. The central idea is to learn a data-driven mapping
 $\hat{g}\colon \calY \to \calX$ from representative examples of decisions and
-their corresponding outcomes. At query time, a user specifies
-$\vect{y}^{\star}$; the model proposes candidate $\vect{x}$ values intended to
-realise $\vect{y}^{\star}$, which are then refined through a forward
-evaluation step. By shifting computation into model construction, the approach
-enables responsive, interactive exploration of complex design spaces.
+their corresponding outcomes. At query time, a user specifies a desired
+objective pattern $\vect{y}^{\star}$; the model proposes candidate $\vect{x}$
+values intended to realise $\vect{y}^{\star}$, which can then be verified or
+fine-tuned through a forward evaluation step. By shifting effort into model
+construction, the workflow enables responsive, interactive exploration of
+complex design spaces while remaining agnostic to the source of examples
+(e.g., historical runs, prior designs, or samples obtained by exploratory
+optimisation).
 
-In addressing these challenges, we consider both deterministic and probabilistic modelling strategies. Deterministic models aim to produce a single representative decision for a given target and are typically stabilised through regularisation to handle ill-posedness. Probabilistic models instead represent uncertainty explicitly by learning distributions over decisions (or functions), yielding predictive variability that can better capture multi-valued relationships. Taken together, these perspectives provide complementary tools for inverse exploration: deterministic methods emphasise parsimony and speed, while probabilistic methods quantify uncertainty and support diversity in candidate solutions. 
+In addressing these challenges, we consider both deterministic and
+probabilistic modelling strategies as complementary tools for inverse
+exploration. Deterministic models aim to produce a single representative
+decision for a given target, often aided by regularisation to counteract
+ill-posedness and to encourage stable, interpretable mappings. They are
+appealing when fast, repeatable proposals are required. Probabilistic models,
+in contrast, represent uncertainty explicitly by learning distributions over
+decisions (or functions). This yields predictive variability that can capture
+multi-valued relationships between decisions and objectives, quantify
+ambiguity due to noise or limited data, and support diversity in candidate
+solutions. In the broader literature, probabilistic formulations (e.g., Bayesian perspectives on inverse problems) provide a principled language for reasoning about non-uniqueness and data
+uncertainty, while modern regularisation connects statistical and variational
+viewpoints~\cite{Stuart2010,BenningBurger2018}. 
+
+
+Inverse questions arise naturally across signal-processing tasks. In filter
+design, engineers may target a specific passband/stopband pattern subject to
+resource limits and then seek parameterisations that realise it. In adaptive
+beamforming, one might prescribe mainlobe width and sidelobe levels compatible
+with interference constraints and search for array weights that achieve these
+objectives. In compression, a target operating point in the rate–distortion
+plane motivates encoders and transforms that satisfy both fidelity and bitrate
+budget. In detection and estimation, practitioners often work backward from
+desired receiver operating characteristics to decision rules and system
+settings. These scenarios share the same core difficulty: the forward map is
+easier to evaluate, whereas the inverse map can be ambiguous or unstable, so
+algorithms that \emph{learn to invert} from data are attractive.
 
 
 \section{Contributions}
@@ -48,7 +97,7 @@ In addressing these challenges, we consider both deterministic and probabilistic
 The contributions of this thesis are as follows:
 
 \begin{itemize}
-  \item \textbf{Problem formulation.} We formally define the inverse decision
+  \item \textbf{Problem formulation.} We formally define the decision
   mapping problem in the context of MOO and highlight its ill‑posed
   nature.  Building on recent work in Pareto estimation and inverse
   machine learning~\cite{Tan2023}, we specify conditions under

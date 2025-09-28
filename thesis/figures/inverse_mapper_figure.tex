@@ -1,0 +1,40 @@
+\begin{tikzpicture}[
+  font=\sffamily,
+  pane/.style={
+    draw, rounded corners=6pt, line width=0.8pt,
+    fill=#1!8, inner sep=8pt, minimum width=6.8cm, minimum height=4.0cm
+  },
+  pane/.default=gray,
+  title/.style={font=\small\itshape, text opacity=0.85},
+  % tall, vertical-looking boxes
+  vbox/.style={
+    draw, rounded corners=5pt, line width=0.9pt, align=center,
+    fill=white, minimum width=1.6cm, minimum height=2.6cm
+  },
+  arr/.style={-Latex, very thick},
+  node distance=8mm
+]
+  % anchors
+  \coordinate (C) at (0,0);
+  \coordinate (L) at ($(C)+(-4.2,0)$);
+  \coordinate (R) at ($(C)+( 4.2,0)$);
+
+  % ---------- Left: Forward x -> y (horizontal arrow, vertical boxes) ----------
+  \node[pane=blue, anchor=center] (PL) at (L) {};
+  \node[title, anchor=west] at ($(PL.north west)+(6pt,-6pt)$)
+       {Forward (evaluation): $\vect{x}\!\to\!\vect{y}$};
+
+  \node[vbox] (xL) at ($(PL.center)+(-1.4cm,-0.2cm)$) {$\vect{x}$};
+  \node[vbox] (yL) at ($(PL.center)+( 1.4cm,-0.2cm)$) {$\vect{y}$};
+  \draw[arr, blue!70!black] (xL) -- (yL);
+
+  % ---------- Right: Inverse y* -> x (horizontal arrow, vertical boxes) ----------
+  \node[pane=purple, anchor=center] (PR) at (R) {};
+  \node[title, anchor=west] at ($(PR.north west)+(6pt,-6pt)$)
+       {Inverse (design): $\vect{y}\!\to\!\vect{x}$};
+
+  \node[vbox] (yR) at ($(PR.center)+(-1.4cm,-0.2cm)$) {$\vect{y}^{\star}$};
+  \node[vbox] (xR) at ($(PR.center)+( 1.4cm,-0.2cm)$) {$\vect{x}$};
+  \draw[arr, purple!70!black] (yR) -- (xR);
+
+\end{tikzpicture}
