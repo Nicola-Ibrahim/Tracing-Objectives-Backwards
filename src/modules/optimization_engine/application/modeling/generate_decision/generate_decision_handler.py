@@ -1,10 +1,11 @@
 import numpy as np
 
-from ....domain.assurance.decision_validation.enums.verdict import Verdict
 from ....domain.assurance.decision_validation.interfaces import (
     BaseDecisionValidationCalibrationRepository,
 )
-from ....domain.assurance.decision_validation.services import DecisionValidationService
+from ....domain.assurance.decision_validation.services.decision_validation_service import (
+    DecisionValidationService,
+)
 from ....domain.assurance.feasibility.errors import ObjectiveOutOfBoundsError
 from ....domain.assurance.feasibility.services.objective_feasibility_service import (
     ObjectiveFeasibilityService,
@@ -41,8 +42,7 @@ class GenerateDecisionCommandHandler:
         )
         dv_calibration = calibration_repository.load()
         self._decision_validation_service = DecisionValidationService(
-            eps_l2=0.03,
-            eps_per_obj=[0.02, 0.02],
+            tolerance=0.03,
             ood_calibrator=dv_calibration.ood_calibrator,
             conformal_calibrator=dv_calibration.conformal_calibrator,
         )
@@ -60,11 +60,11 @@ class GenerateDecisionCommandHandler:
         pareto_set = processed.pareto.set
         pareto_front = processed.pareto.front
 
-        target_X, target_X_norm = self._build_target_X(
+        target_objective_X, target_objective_X_norm = self._build_target_X(
             command.target_objective, objectives_normalizer
         )
-        self._logger.log_info(f"Target x (raw): {target_X}")
-        self._logger.log_info(f"Target x (normalized): {target_X_norm}")
+        self._logger.log_info(f"Target x (raw): {target_objective_X}")
+        self._logger.log_info(f"Target x (normalized): {target_objective_X_norm}")
 
         # NOTE: Comment out feasibility for now as it is not yet used in practice
         # if command.feasibility_enabled:
@@ -78,22 +78,22 @@ class GenerateDecisionCommandHandler:
         #         suggestion_noise_scale=command.suggestion_noise_scale,
         #     )
 
-        generated_y, generated_y_norm = self._inference_service.infer(
+        generated_decision_y, generated_decision_y_norm = self._inference_service.infer(
             estimator=estimator,
-            X_norm=target_X_norm,
+            X_norm=target_objective_X_norm,
             normalizer=decision_normalizer,
         )
 
-        self._logger.log_info(f"Generated y (raw): {generated_y}")
-        self._logger.log_info(f"Generated y (normalized): {generated_y_norm}")
+        self._logger.log_info(f"Generated y (raw): {generated_decision_y}")
+        self._logger.log_info(f"Generated y (normalized): {generated_decision_y_norm}")
 
         if command.validation_enabled:
             self._run_decision_validation(
-                y_norm=generated_y_norm,
-                x_target_norm=target_X_norm,
+                X=generated_decision_y_norm,
+                y_target=target_objective_X_norm,
             )
 
-        return generated_y
+        return generated_decision_y
 
     def _load_estimator(self, estimator_type: EstimatorTypeEnum) -> BaseEstimator:
         """Return the most recent estimator artifact matching the type."""
@@ -102,11 +102,13 @@ class GenerateDecisionCommandHandler:
         )
         return artifact.estimator
 
-    def _build_target_X(self, target_X: np.ndarray, normalizer):
+    def _build_target_X(self, target_objective_X: np.ndarray, normalizer):
         """Return target objective in raw and normalized space."""
-        target_X = np.asarray(target_X, dtype=float)
-        target_X_norm = normalizer.transform(np.atleast_2d(target_X))[0]
-        return target_X, target_X_norm
+        target_objective_X = np.asarray(target_objective_X, dtype=float)
+        target_objective_X_norm = normalizer.transform(
+            np.atleast_2d(target_objective_X)
+        )[0]
+        return target_objective_X, target_objective_X_norm
 
     def _validate_feasibility(
         self,
@@ -166,18 +168,11 @@ class GenerateDecisionCommandHandler:
         self._logger.log_error(f"Suggestions (original scale): {suggestions_str}")
         raise error
 
-    def _run_decision_validation(
-        self,
-        *,
-        y_norm: np.ndarray,
-        x_target_norm: np.ndarray,
-    ) -> None:
+    def _run_decision_validation(self, X: np.ndarray, y_target: np.ndarray) -> None:
         """Execute decision validation service if configured."""
 
-        report = self._decision_validation_service.validate(
-            y_candidate=np.asarray(y_norm, dtype=float),  # shape (n_decisions,)
-            X_target=np.asarray(x_target_norm, dtype=float),  # shape (n_objectives,)
-        )
+        report = self._decision_validation_service.validate(X=X, y_target=y_target)
+
         if self._logger:
             summary = {
                 "passed": report.verdict.value,

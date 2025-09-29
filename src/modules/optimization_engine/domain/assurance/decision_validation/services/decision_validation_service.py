@@ -15,7 +15,6 @@ class DecisionValidationService:
 
     def __init__(
         self,
-        *,
         tolerance: float,
         ood_calibrator: BaseOODCalibrator,
         conformal_calibrator: BaseConformalCalibrator,
@@ -25,7 +24,7 @@ class DecisionValidationService:
                 "Provide tolerance or eps_per_obj for decision validation."
             )
 
-        self._tolerance = self._coerce_tolerance(tolerance)
+        self._tolerance = tolerance
         self._ood_calibrator = ood_calibrator
         self._conformal_calibrator = conformal_calibrator
 
@@ -34,23 +33,16 @@ class DecisionValidationService:
     # ------------------------------------------------------------------
 
     def validate(
-        self,
-        *,
-        y: NDArray[np.float64] | None = None,
-        X_target: NDArray[np.float64] | None = None,
-        **aliases: NDArray[np.float64],
+        self, X: NDArray[np.float64], y_target: NDArray[np.float64]
     ) -> GeneratedDecisionValidationReport:
-        """Evaluate both assurance gates for a y decision."""
-        y_arr, X_target_arr = self._resolve_aliases(y, X_target, aliases)
+        """Evaluate both assurance gates for a X decision."""
 
-        y = self._as_vector(y_arr, "y")
-        X_target = self._as_vector(X_target_arr, "X_target")
+        X = self._as_vector(X, "X")
+        y_target = self._as_vector(y_target, "y_target")
 
-        raw_ood_result = self._ood_calibrator.evaluate(y)
+        raw_ood_result = self._ood_calibrator.evaluate(X)
         raw_conformal_result = self._conformal_calibrator.evaluate(
-            y=y,
-            X_target=X_target,
-            tolerance=self._tolerance,
+            X=X, y_target=y_target, tolerance=self._tolerance
         )
 
         gate1 = self._raw_to_gate_result("gate1", raw_ood_result)
@@ -77,25 +69,6 @@ class DecisionValidationService:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _resolve_aliases(
-        y: NDArray[np.float64] | None,
-        X_target: NDArray[np.float64] | None,
-        aliases: dict[str, NDArray[np.float64]],
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        if y is None:
-            y = aliases.pop("y_norm", None)
-        if X_target is None:
-            X_target = aliases.pop("X_target_norm", None)
-        if aliases:
-            unexpected = ", ".join(sorted(aliases))
-            raise TypeError(f"Unexpected keyword(s) for validate(): {unexpected}")
-        if y is None or X_target is None:
-            raise TypeError(
-                "validate() requires both 'y' and 'X_target' arrays (or their aliases)."
-            )
-        return y, X_target
 
     @staticmethod
     def _as_vector(array: NDArray[np.float64], label: str) -> NDArray[np.float64]:

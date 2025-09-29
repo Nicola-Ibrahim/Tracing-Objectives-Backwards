@@ -17,7 +17,7 @@ class BaseConformalCalibrator(ABC):
       - calibration_margin (float property)
     """
 
-    def __init__(self, *, estimator: BaseEstimator, confidence: float = 0.90) -> None:
+    def __init__(self, estimator: BaseEstimator, confidence: float = 0.90) -> None:
         """
         Args:
             estimator: forward mapper f_hat with .fit(y, X) and .predict(y) -> X.
@@ -75,11 +75,7 @@ class BaseConformalCalibrator(ABC):
 
     @abstractmethod
     def evaluate(
-        self,
-        *,
-        y: np.ndarray,
-        X_target: np.ndarray,
-        tolerance: float,
+        self, X: np.ndarray, y_target: np.ndarray, tolerance: float
     ) -> tuple[bool, dict[str, float | bool], str]:
         """
         Evaluate a candidate y against X_target using a single global acceptance threshold.

@@ -8,7 +8,7 @@ from .....domain.assurance.decision_validation.interfaces.base_conformal_calibra
 
 class SplitConformalL2Calibrator(BaseConformalCalibrator):
     """
-    Split-conformal calibrator for the L2 error of an inverse mapper f_hat: Y -> X.
+    Split-conformal calibrator for the L2 error of a *forward* mapper f_hat: X -> y.
 
     Assumptions
     -----------
@@ -29,12 +29,7 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
     """
 
     def __init__(self, estimator, confidence: float = 0.9) -> None:
-        """
-        Args:
-            estimator: inverse mapper expecting .fit(inputs=y, targets=X) and .predict(y)->X_hat
-            confidence: desired marginal coverage level in (0, 1) (e.g., 0.9 or 0.95)
-        """
-        super().__init__(estimator)
+        super().__init__(estimator=estimator, confidence=confidence)
         if not (0.0 < confidence < 1.0):
             raise ValueError("confidence must be in (0, 1)")
         self._confidence: float = float(confidence)
@@ -44,21 +39,14 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         self._y_dim: int | None = None
 
     # ----------------------------- calibration ----------------------------- #
-    def fit(
-        self,
-        X: NDArray[np.float64],  # (n, d_x) decisions
-        y: NDArray[np.float64],  # (n, d_y) objectives
-    ) -> None:
+    def fit(self, X: NDArray, y: NDArray) -> None:
         """
-        Learn f_hat on (y -> X) and compute the split-conformal radius_q from residual L2 norms.
+        Learn f_hat on (X -> y) and compute the split-conformal radius_q from L2 residuals.
 
         Steps:
-          1) estimator.fit(y, X)
-          2) residuals r_i = || estimator.predict(y_i) - X_i ||_2
-          3) radius_q = quantile_tau(residuals), tau = ceil((n+1)*confidence)/n (finite-sample)
-
-        Raises:
-            ValueError: on shape mismatches or unexpected estimator output.
+          1) estimator.fit(X, y)
+          2) residuals r_i = || estimator.predict(X_i) - y_i ||_2
+          3) radius_q = quantile_tau(residuals), tau = ceil((n+1)*confidence)/n
         """
         if X.ndim != 2 or y.ndim != 2:
             raise ValueError("X and y must be 2D arrays (n, d)")
@@ -69,33 +57,30 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         _, d_y = y.shape
         self._x_dim, self._y_dim = d_x, d_y
 
-        # Train inverse map: inputs=y, targets=X
-        self.estimator.fit(y, X)
+        # Train forward map: inputs=X, targets=y
+        self.estimator.fit(X, y)
 
-        X_hat = self.estimator.predict(y)  # (n, d_x)
-        if X_hat.shape != X.shape:
-            raise ValueError(f"predict returned {X_hat.shape}, expected {X.shape}")
+        y_hat = self.estimator.predict(X)  # (n, d_y)
+        if y_hat.shape != y.shape:
+            raise ValueError(f"predict returned {y_hat.shape}, expected {y.shape}")
 
-        residuals = np.linalg.norm(X_hat - X, axis=1)  # (n,)
+        residuals = np.linalg.norm(y_hat - y, axis=1)  # (n,)
         self._n_cal = int(residuals.size)
 
-        # Finite-sample split-conformal quantile for coverage ~= confidence
+        # Finite-sample split-conformal quantile (conservative rounding). :contentReference[oaicite:2]{index=2}
         tau = float(np.ceil((self._n_cal + 1) * self._confidence) / self._n_cal)
         tau = min(max(tau, 0.0), 1.0)
-
-        # Use "higher" to ensure conservative (>=) coverage
         self._radius_q = float(np.quantile(residuals, tau, method="higher"))
 
     # ----------------------------- evaluation ----------------------------- #
     def evaluate(
         self,
-        *,
-        y: NDArray[np.float64],  # candidate objectives (n, d_y) or (d_y,)
-        X_target: NDArray[np.float64],  # target decisions   (n, d_x) or (d_x,)
+        X: NDArray[np.float64],
+        y_target: NDArray[np.float64],
         tolerance: float,
     ) -> tuple[bool, dict[str, float | bool], str]:
         """
-        Check whether f_hat(y) is acceptable for X_target under a global L2 tolerance,
+        Check whether f_hat(X) is acceptable for y_target under a global L2 tolerance,
         after adding the conformal cushion radius_q.
 
         Returns:
@@ -110,11 +95,11 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
         if tolerance < 0:
             raise ValueError("tolerance must be non-negative.")
 
-        diag = self._predict_and_distances(X_target=X_target, y=y)
-        X_hat = diag["X_hat"]
+        diag = self._predict_and_distances(X=X, y_target=y_target)
+        y_hat = diag["y_hat"]
         l2_distance = diag["l2_distance"]
 
-        radius_q = self.radius_q  # learned cushion
+        radius_q = self.radius_q
         passed = (l2_distance + radius_q) <= tolerance
 
         metrics: dict[str, float | bool] = {
@@ -123,22 +108,22 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
             "covered": bool(passed),
         }
         explanation = (
-            "PASS: predicted decisions within tolerance after adding conformal cushion."
+            "PASS: predicted outcomes within tolerance after adding conformal cushion."
             if passed
-            else "ABSTAIN: predicted decisions exceed tolerance after adding conformal cushion."
+            else "ABSTAIN: predicted outcomes exceed tolerance after adding conformal cushion."
         )
         return bool(passed), metrics, explanation
 
     # ----------------------------- helpers ----------------------------- #
     def _predict_and_distances(
-        self, *, X_target: NDArray[np.float64], y: NDArray[np.float64]
+        self, *, X: NDArray[np.float64], y_target: NDArray[np.float64]
     ) -> dict[str, NDArray[np.float64] | float]:
         """
-        Predict decisions for y, and compute distances to X_target.
+        Predict outcomes for X, and compute distances to y_target.
 
         Returns:
             {
-              "X_hat":       (n, d_x) predicted decisions,
+              "y_hat":       (n, d_y) predicted outcomes,
               "l2_distance": float (max L2 across batch)
             }
         """
@@ -146,32 +131,32 @@ class SplitConformalL2Calibrator(BaseConformalCalibrator):
             raise RuntimeError("Calibrator must be fitted before evaluation.")
 
         # enforce (n, d)
-        if y.ndim == 1:
-            y = y[None, :]
-        if X_target.ndim == 1:
-            X_target = X_target[None, :]
+        if X.ndim == 1:
+            X = X[None, :]
+        if y_target.ndim == 1:
+            y_target = y_target[None, :]
 
         # shape checks
-        if self._y_dim is not None and y.shape[1] != self._y_dim:
-            raise ValueError(f"y has dim {y.shape[1]}, expected {self._y_dim}")
-        if self._x_dim is not None and X_target.shape[1] != self._x_dim:
+        if self._x_dim is not None and X.shape[1] != self._x_dim:
+            raise ValueError(f"X has dim {X.shape[1]}, expected {self._x_dim}")
+        if self._y_dim is not None and y_target.shape[1] != self._y_dim:
             raise ValueError(
-                f"X_target has dim {X_target.shape[1]}, expected {self._x_dim}"
+                f"y_target has dim {y_target.shape[1]}, expected {self._y_dim}"
             )
-        if y.shape[0] != X_target.shape[0]:
-            raise ValueError("Batch sizes must match between y and X_target")
+        if X.shape[0] != y_target.shape[0]:
+            raise ValueError("Batch sizes must match between X and y_target")
 
-        X_hat = self.estimator.predict(y)  # (n, d_x)
-        if X_hat.shape != X_target.shape:
+        y_hat = self.estimator.predict(X)  # (n, d_y)
+        if y_hat.shape != y_target.shape:
             raise ValueError(
-                f"predict returned {X_hat.shape}, expected {X_target.shape}"
+                f"predict returned {y_hat.shape}, expected {y_target.shape}"
             )
 
-        l2_all = np.linalg.norm(X_hat - X_target, axis=1)  # (n,)
+        l2_all = np.linalg.norm(y_hat - y_target, axis=1)  # (n,)
         l2_distance = float(l2_all.max())  # conservative batch summary
 
         return {
-            "X_hat": X_hat.astype(np.float64, copy=False),
+            "y_hat": y_hat.astype(np.float64, copy=False),
             "l2_distance": l2_distance,
         }
 
