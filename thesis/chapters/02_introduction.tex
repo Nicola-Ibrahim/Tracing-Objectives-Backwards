@@ -97,62 +97,76 @@ algorithms that \emph{learn to invert} from data are attractive.
 The contributions of this thesis are as follows:
 
 \begin{itemize}
-  \item \textbf{Problem formulation.} We formally define the decision
-  mapping problem in the context of MOO and highlight its ill‑posed
-  nature.  Building on recent work in Pareto estimation and inverse
-  machine learning~\cite{Tan2023}, we specify conditions under
-  which a target objective vector is admissible and propose criteria for
-  assessing the quality of inverse solutions.
+  \item \textbf{Problem formulation.} We formalise inverse decision mapping in multi-objective
+  settings, treating the inverse as an ill-posed inference task in the sense of Hadamard
+  (non-uniqueness, instability, possible non-existence). This framing clarifies when targets
+  may be unattainable or ambiguous and motivates regularisation/statistical treatments for
+  meaningful reconstruction of decisions from desired outcomes. \cite{KabanikhinSurvey}
 
-  \item \textbf{Comprehensive background.} A detailed survey of
-  multi‑objective optimisation methods, performance indicators and
-  surrogate‑assisted algorithms is presented.  We review evolutionary
-  algorithms, decomposition techniques and quality indicators such as
-  generational distance and hypervolume~\cite{Blank2020}.  We
-  further survey inverse modelling approaches, including radial basis
-  function networks, Gaussian processes and transfer learning methods
-  that map objective vectors back to decision space~\cite{Liu2024}.
+  \item \textbf{Comprehensive background.} We survey core concepts in multi-objective
+  optimisation (problem structures, algorithmic families, and performance assessment)
+  and review inverse-problem perspectives that inform stable learning of inverse maps.
+  The survey integrates established MOO tutorials and modern views on regularisation and
+  Bayesian inference for inverse problems. \cite{BenningBurger2018,Stuart2010}
 
-  \item \textbf{Modular framework.} We design a modular methodology with
-  offline and online phases.  In the offline phase an existing MOO
-  algorithm approximates the Pareto front, and a surrogate inverse model is
-  trained.  In the online phase the user queries the model with a target
-  objective vector, a plausibility check determines proximity to the Pareto
-  region and candidate decisions are produced and validated.  The framework
-  accommodates different surrogate models and incorporates ranking metrics
-  to guide the user.
+  \item \textbf{General modelling approach.} We propose a data-driven approach to inverse
+  exploration that learns a mapping $\hat{g}\colon\mathcal{Y}\!\to\!\mathcal{X}$ from representative
+  examples (e.g., prior designs, historical runs, or exploratory evaluations). At query time,
+  the method returns candidate decisions aligned with a user-specified objective pattern,
+  with optional forward evaluation for verification/refinement. The approach is agnostic to
+  how examples are obtained and does not rely on a specific optimisation paradigm.
 
-  \item \textbf{Implementation and prototype.} A reproducible software
-  prototype is implemented, including routines for data generation, normal-
-  isation, model training, hyperparameter optimisation, interactive
-  visualisation and ranking.  The code is modular, making it easy to plug
-  in alternative surrogate models or optimisation backends.
+  \item \textbf{Deterministic and probabilistic models.} We develop and compare deterministic
+  and probabilistic strategies for inverse exploration. Deterministic models emphasise
+  parsimony and speed, using regularisation to counteract ill-posedness; probabilistic models
+  represent distributions over decisions to expose uncertainty and multi-valued relationships.
+  We highlight when each perspective is advantageous and how they can be combined in practice.
 
-  \item \textbf{Empirical evaluation.} Extensive experiments on synthetic
-  benchmark functions and a real‑world case study demonstrate that the
-  learned inverse models yield decision vectors close to the true Pareto
-  set.  We compare Gaussian processes, radial basis functions and
-  neural networks under varying training set sizes and analyse trade‑offs
-  between accuracy and computation time.  Results indicate that the
-  proposed framework significantly reduces the number of forward evaluations
-  required to identify satisfactory solutions.
-
+  \item \textbf{Empirical evaluation.} Experiments on synthetic benchmarks and a real-world
+  case study show that learned inverse mappings can recover decision candidates that match
+  desired objective patterns while substantially reducing the number of forward evaluations
+  compared with repeated forward search. We analyse accuracy–effort trade-offs and compare
+  models across training-set sizes.
 \end{itemize}
 
 \section{Structure of the Thesis}
 
-The remainder of this thesis is organised as follows.  Chapter~\ref{chap:motivation}
-provides background on multi‑objective optimisation, introduces definitions of
-dominance and Pareto optimality, reviews key algorithms and metrics, and
-motivates the need for inverse mapping.  Chapter~\ref{chap:related}
-surveys related work on inverse modelling, surrogate‑assisted optimisation,
-transfer learning and interactive decision support.  Chapter~\ref{chap:problem}
-formalises the inverse decision mapping problem, introduces feasibility and
-quality criteria and poses research questions.  Chapter~\ref{chap:method}
-describes the proposed methodology in detail, including data generation,
-surrogate training and online exploration.  Chapter~\ref{chap:implementation}
-presents implementation details and algorithmic components.  Chapter~\ref{chap:experiments}
-contains experimental results on synthetic and real problems.  Chapter
-\ref{chap:discussion} discusses the insights gained from the experiments and
-outlines limitations.  Finally, Chapter~\ref{chap:conclusion} concludes the
-thesis and proposes future directions.
+The remainder of this thesis is organised as follows.
+
+Chapter~\ref{chap:motivation} provides background on multi-objective
+optimisation and inverse problems: it introduces core MOO concepts and
+performance assessment at a high level, reviews Hadamard’s well-posedness
+criteria and why inverse mappings are often ill-posed, and motivates a
+data-driven inverse viewpoint for design.
+
+Chapter~\ref{chap:related} surveys related work on learning inverse mappings
+from examples, including modelling strategies,
+surrogate-assisted and model-based approaches, and interactive decision support
+systems. Emphasis is placed on methods that are agnostic to data sources and
+optimisation paradigms.
+
+Chapter~\ref{chap:problem} formalises the inverse decision-mapping problem,
+clarifies assumptions (identifiability, stability), and states the research
+questions and evaluation criteria used throughout the thesis.
+
+Chapter~\ref{chap:method} presents the proposed approach for inverse
+exploration. We describe how representative \((\vect{x},\vect{y})\) examples
+can be collected from historical runs, simulations, or exploratory evaluations;
+how a mapping \(\hat{g}\colon \mathcal{Y}\!\to\!\mathcal{X}\) is learned; and how
+query-time proposals are generated and optionally verified by forward
+evaluation—without committing to a specific optimisation family.
+
+Chapter~\ref{chap:implementation} outlines practical aspects of the reference
+implementation used for experiments (data handling, model training/selection,
+querying, and visual diagnostics), with an emphasis on modular components.
+
+Chapter~\ref{chap:experiments} reports results on synthetic benchmarks and a
+real-world case study, comparing deterministic and probabilistic inverse
+models, analysing accuracy–effort trade-offs, and quantifying reductions in
+forward evaluations relative to repeated forward search.
+
+Chapter~\ref{chap:discussion} synthesises the empirical findings, discusses
+limitations and threats to validity, and reflects on when each modelling
+perspective is advantageous. Finally, Chapter~\ref{chap:conclusion} concludes
+and outlines avenues for future work.
+
