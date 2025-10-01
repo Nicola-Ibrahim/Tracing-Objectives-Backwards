@@ -76,17 +76,6 @@ class NearestNeighborEstimatorParams(EstimatorParams):
         extra = "forbid"
 
 
-class LinearEstimatorParams(EstimatorParams):
-    type: EstimatorTypeEnum = Field(
-        EstimatorTypeEnum.LINEAR_ND.value,
-        description="Type of the linear interpolation method.",
-    )
-
-    class Config:
-        extra = "forbid"
-        use_enum_values = True
-
-
 class RBFEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for an
@@ -216,33 +205,6 @@ class KrigingEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class SVREstimatorParams(EstimatorParams):
-    """Pydantic model for SVR mapper parameters."""
-
-    type: EstimatorTypeEnum = Field(
-        EstimatorTypeEnum.SVR_ND.value,
-        description="Type of the SVR interpolation method.",
-    )
-
-    kernel: Literal["linear", "poly", "rbf", "sigmoid"] = Field(
-        "rbf", description="Specifies the kernel type to be used in the algorithm."
-    )
-    C: float = Field(
-        1.0,
-        gt=0.0,
-        description="Regularization parameter. The strength of the regularization is inversely proportional to C.",
-    )
-    epsilon: float = Field(
-        0.1,
-        ge=0.0,
-        description="Epsilon in the epsilon-SVR model. Specifies the epsilon-tube within which no penalty is associated with errors.",
-    )
-
-    class Config:
-        extra = "forbid"  # Forbid extra fields not defined
-        use_enum_values = True
-
-
 class MDNEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for an
@@ -254,15 +216,15 @@ class MDNEstimatorParams(EstimatorParams):
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
-        10, gt=0, description="The number of Gaussian mixture components for the MDN."
+        8, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
     learning_rate: float = Field(
         1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
-    epochs: int = Field(80, gt=0, description="Number of training epochs.")
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     hidden_layers: list[int] = Field(
-        [256, 256, 128],
+        [256, 256, 256],
         description="List defining the number of units in each hidden layer of the MDN.",
     )
     gmm_boost: bool = Field(
@@ -359,7 +321,7 @@ class CVAEMDNEstimatorParams(EstimatorParams):
         ge=0.0,
         description="Free nats threshold applied to KL divergence per dimension.",
     )
-    epochs: int = Field(200, gt=0, description="Number of training epochs.")
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     val_size: float = Field(
         0.2,

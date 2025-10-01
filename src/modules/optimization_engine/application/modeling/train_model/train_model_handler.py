@@ -57,12 +57,12 @@ class TrainModelCommandHandler:
             filename="dataset"
         )
 
-        X_train = processed_dataset.X_train
-        y_train = processed_dataset.y_train
-        X_test = processed_dataset.X_test
-        y_test = processed_dataset.y_test
-        X_normalizer = processed_dataset.X_normalizer
-        y_normalizer = processed_dataset.y_normalizer
+        objectives_X_train = processed_dataset.X_train
+        objectives_y_train = processed_dataset.y_train
+        decisions_X_test = processed_dataset.X_test
+        decisions_y_test = processed_dataset.y_test
+        objectives_X_normalizer = processed_dataset.X_normalizer
+        decisionsy_y_normalizer = processed_dataset.y_normalizer
 
         # Unpack command attributes once at the highest level
         estimator_params = command.estimator_params.model_dump()
@@ -89,15 +89,15 @@ class TrainModelCommandHandler:
             self._logger.log_info("Starting hyperparameter tuning workflow.")
             fitted_estimator, loss_history, metrics = CrossValidationTrainer().search(
                 estimator=estimator,
-                X_train=X_train,
-                y_train=y_train,
-                X_test=X_test,
-                y_test=y_test,
+                X_train=objectives_X_train,
+                y_train=objectives_y_train,
+                X_test=decisions_X_test,
+                y_test=decisions_y_test,
                 param_name=tune_param_name,
                 param_range=tune_param_range,
                 validation_metrics=validation_metrics,
-                X_normalizer=X_normalizer,
-                y_normalizer=y_normalizer,
+                X_normalizer=objectives_X_normalizer,
+                y_normalizer=decisionsy_y_normalizer,
                 parameters=parameters,
                 random_state=random_state,
                 cv=cv_splits,
@@ -108,10 +108,10 @@ class TrainModelCommandHandler:
             self._logger.log_info("Starting cross-validation workflow.")
             fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
                 estimator=estimator,
-                X_train=X_train,
-                y_train=y_train,
-                X_test=X_test,
-                y_test=y_test,
+                X_train=objectives_X_train,
+                y_train=objectives_y_train,
+                X_test=decisions_X_test,
+                y_test=decisions_y_test,
                 validation_metrics=validation_metrics,
                 epochs=epochs,
                 n_splits=cv_splits,
@@ -125,8 +125,8 @@ class TrainModelCommandHandler:
                 fitted_estimator, loss_history, metrics = (
                     ProbabilisticModelTrainer().train(
                         estimator=estimator,
-                        X_train=X_train,
-                        y_train=y_train,
+                        X_train=objectives_X_train,
+                        y_train=objectives_y_train,
                     )
                 )
 
@@ -134,10 +134,10 @@ class TrainModelCommandHandler:
                 fitted_estimator, loss_history, metrics = (
                     DeterministicModelTrainer().train(
                         estimator=estimator,
-                        X_train=X_train,
-                        y_train=y_train,
-                        X_test=X_test,
-                        y_test=y_test,
+                        X_train=objectives_X_train,
+                        y_train=objectives_y_train,
+                        X_test=decisions_X_test,
+                        y_test=decisions_y_test,
                         learning_curve_steps=learning_curve_steps,
                         validation_metrics=validation_metrics,
                         random_state=random_state,

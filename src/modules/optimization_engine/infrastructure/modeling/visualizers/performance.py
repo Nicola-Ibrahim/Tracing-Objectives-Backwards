@@ -1066,7 +1066,7 @@ class ModelPerformanceVisualizer(BaseVisualizer):
     ) -> np.ndarray:
         """Return mean prediction in normalized space, shape (n, y_dim)."""
         if isinstance(estimator, ProbabilisticEstimator):
-            return estimator.predict(X)
+            return estimator.predict_mean(X)
 
         if isinstance(estimator, DeterministicEstimator):
             return estimator.predict(X)
