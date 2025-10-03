@@ -117,9 +117,9 @@ methodology developed in the following chapters. \cite{BenningBurger2018,Stuart2
 
 
 
-\section{Modelling Background: Deterministic and Probabilistic Views}\label{sec:modelling_background}
+\section{Modeling Background}\label{sec:modelling_background}
 
-This thesis uses data-driven models to address inverse exploration in multi-objective settings. We therefore outline two complementary and widely used modelling perspectives: a \emph{deterministic} view that learns a single mapping and a \emph{probabilistic} view that models full conditional distributions. Both are standard in machine learning and statistical learning, and both can be framed within risk minimisation and decision-theoretic principles~\cite{Bishop2006PRML,Murphy2022PML1,HTF2009}.
+The data-driven models address inverse exploration in multi-objective settings. We therefore outline two complementary and widely used modelling perspectives: a \emph{deterministic} view that learns a single mapping and a \emph{probabilistic} view that models full conditional distributions. Both are standard in machine learning and statistical learning, and both can be framed within risk minimisation and decision-theoretic principles.
 
 \subsection{Learning as Risk Minimisation}
 
@@ -132,7 +132,7 @@ Let $\mathcal{D}=\{(\vect{y}_i,\vect{x}_i)\}_{i=1}^{N}$ denote examples of outco
   \right],
   \label{eq:true_risk}
 \end{equation}
-with a task-appropriate loss $\ell(\cdot,\cdot)$ (e.g., squared error for regression‐type inverse mappings or constraint-aware penalties when feasibility must be respected)~\cite{HTF2009,Bishop2006PRML}.
+with a task-appropriate loss $\ell(\cdot,\cdot)$ (e.g., squared error for regression‐type inverse mappings or constraint-aware penalties when feasibility must be respected)~\cite{Hastie2009ESL,Bishop2006PRML}.
 
 In practice, $\mathcal{R}(g)$ is approximated by the \emph{empirical risk} over $\mathcal{D}$, augmented by a regulariser to promote stability and encode prior structure:
 \begin{equation}
@@ -144,7 +144,7 @@ In practice, $\mathcal{R}(g)$ is approximated by the \emph{empirical risk} over 
   \lambda\,\underbrace{\Omega(g)}_{\text{regularisation}}.
   \label{eq:erm}
 \end{equation}
-Here $\mathcal{G}$ is a hypothesis space (e.g., linear models, kernels, neural networks), $\Omega$ encodes smoothness, sparsity, or complexity control, and $\lambda\!\ge\!0$ balances data fit and model complexity~\cite{HTF2009,Bishop2006PRML}. Regularisation curbs overfitting and mitigates instability typical of ill-posed inverse problems.
+Here $\mathcal{G}$ is a hypothesis space (e.g., linear models, kernels, neural networks), $\Omega$ encodes smoothness, sparsity, or complexity control, and $\lambda\!\ge\!0$ balances data fit and model complexity~\cite{Hastie2009ESL,Bishop2006PRML}. Regularisation curbs overfitting and mitigates instability typical of ill-posed inverse problems.
 
 \paragraph{Connection to the forward model.}
 When prior knowledge about the forward map $\vect{f}$ is available, one can incorporate it via a data-fit term that aligns $g(\vect{y})$ with decisions whose forward evaluation is consistent with $\vect{y}$. A generic formulation is
@@ -164,118 +164,134 @@ When prior knowledge about the forward map $\vect{f}$ is available, one can inco
 \end{equation}
 where $\mathcal{L}$ penalises discrepancy in outcome space. This blends purely data-driven inverse learning with physics‐ or simulation-aware consistency~\cite{Bishop2006PRML,Murphy2022PML1}.
 
-\subsection{Deterministic Modelling}
 
-In the deterministic view, the model produces a single representative decision for a given target outcome. Typical training follows~\eqref{eq:erm} with task loss $\ell$ and regulariser $\Omega$. Two practical considerations are central:
+\paragraph{Representation, inductive bias, and constraints.}
+Our objective is to learn an inverse mapping $g:\mathcal{Y}\!\to\!\mathcal{X}$ that proposes
+decisions aligned with a target outcome pattern. The central design choices are \emph{representation}
+(the hypothesis class $\mathcal{G}$), \emph{inductive bias} (regularisation and architectural
+constraints that stabilise ill-posed inverses), and \emph{feasibility handling} (how domain
+constraints are respected). These choices determine not only data fit but also robustness,
+generalisation beyond the training outcomes, and the diversity/credibility of proposed
+decisions~\cite{Bishop2006PRML,Hastie2009ESL,Murphy2022PML1}. In all cases, learning can be
+framed as principled risk minimisation or (for probabilistic models) likelihood-based estimation,
+with evaluation grounded in predictive performance and, when distributions are produced,
+proper scoring rules and decision-theoretic criteria.
 
-\begin{itemize}
-  \item \textbf{Stability via regularisation.} Ill-posedness (non-uniqueness and sensitivity) is addressed by penalising undesirable solutions or by constraining $g$’s complexity (e.g., weight decay, norm penalties, early stopping). This is the standard way to ensure continuity of the inverse map estimate with respect to data~\cite{HTF2009,Bishop2006PRML}.
-  \item \textbf{Model selection and generalisation.} Hyperparameters (e.g., $\lambda$) are tuned by validation or cross-validation to balance bias–variance and improve out-of-sample performance, an essential requirement when inverse queries $\vect{y}^\star$ differ from the training outcomes~\cite{HTF2009}.
-\end{itemize}
+\subsection{Deterministic Modelling}\label{sec:deterministic_modelling}
+In the deterministic view, the inverse model returns a \emph{single} representative decision
+for each target outcome. Learning $g:\mathcal{Y}\!\to\!\mathcal{X}$ is posed as regularised
+empirical risk minimisation
+\begin{equation}
+  \widehat{g}
+  \;\in\;
+  \arg\min_{g\in\mathcal{G}}
+  \frac{1}{N}\sum_{i=1}^{N}\ell\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
+  \;+\; \lambda\,\Omega(g),
+  \label{eq:erm_det}
+\end{equation}
+where $\ell$ is a task loss (e.g., $\ell(\hat{\vect{x}},\vect{x})=\|\hat{\vect{x}}-\vect{x}\|_2^2$)
+and $\Omega(g)$ encodes inductive bias (e.g., weight decay, Lipschitz/Jacobian penalties, or
+early stopping) to curb overfitting and to stabilise the estimate in the presence of
+non-uniqueness and noisy data. Hyperparameters (including $\lambda$) are tuned by validation
+or cross-validation to balance bias–variance and ensure generalisation to unseen queries
+$\vect{y}^\star$.
 
-Deterministic models are attractive when fast, repeatable proposals are required and when a single decision per target is operationally useful (e.g., as a starting point for domain-expert refinement). They align with Eq.~\eqref{eq:tikhonov} in the Background, interpreted here with $g$ in place of a direct $\vect{x}$ optimisation.
+
+\begin{figure}[H]
+  \centering
+  \begin{adjustbox}{max width=\linewidth}
+    \include{figures/deterministic_modeling}
+  \caption{Deterministic modelling pipeline with regularised ERM and feasibility handling.}
+  \label{fig:deterministic-model}
+  \end{adjustbox}
+  
+\end{figure}
+
+
+When decisions must satisfy feasibility constraints $g_j(\vect{x})\!\le\!0$ and $h_k(\vect{x})\!=\!0$
+(cf.\ Eq.~\eqref{eq:mop}), training can promote feasibility either by projection onto a feasible set
+$\Pi_{\calX}$ or via soft penalties:
+\begin{equation}
+  \widehat{g}
+  \;\in\;
+  \arg\min_{g}
+  \frac{1}{N}\sum_{i=1}^{N}
+  \Big[
+     \ell\!\big(\Pi_{\calX}(g(\vect{y}_i)),\,\vect{x}_i\big)
+     \;+\;
+     \beta\!\sum_{j}\![\,g_j(g(\vect{y}_i))\,]_+^{\!2}
+     \;+\;
+     \beta'\!\sum_{k}\! h_k(g(\vect{y}_i))^{2}
+  \Big]
+  \;+\; \lambda\,\Omega(g),
+  \label{eq:constraints_det}
+\end{equation}
+with $[t]_+=\max\{t,0\}$. Such Tikhonov-style penalties stabilise ill-posed inverses by discouraging
+implausible or infeasible proposals while keeping the output single-valued.
+
+Deterministic outputs are well-suited for fast, repeatable proposals—e.g., as starting points for
+expert refinement or subsequent verification—yet they \emph{collapse} potentially multi-valued inverse
+relations to one point and do not natively quantify uncertainty or capture diversity in candidate
+decisions. This motivates the complementary probabilistic treatment presented next.
+
+
 
 \subsection{Probabilistic Modelling}
 
-The probabilistic view represents \emph{distributions} over decisions conditional on outcomes, thereby quantifying uncertainty and naturally handling multi-valued inverse relationships~\cite{Murphy2022PML1,GelmanBDA3}. A conditional model $p_\theta(\vect{x}\mid\vect{y})$ is fit by maximising the (regularised) conditional log-likelihood:
+The probabilistic view represents \emph{distributions} over outputs conditional on inputs, thereby quantifying uncertainty and naturally handling multi-valued input--output relationships~\cite{Murphy2022PML1,Gelman2013BDA3}. A conditional model $p_\theta(\vect{y}\mid\vect{x})$ is fit by maximising the (regularised) conditional log-likelihood:
 \begin{equation}
   \widehat{\theta}
   \;\in\;
   \arg\max_{\theta}
   \bigg[
-  \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{x}_i \mid \vect{y}_i\big)
+  \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{y}_i \mid \vect{x}_i\big)
   \;-\; \gamma\,\mathcal{R}(\theta)
   \bigg],
   \label{eq:mle}
 \end{equation}
-where $\mathcal{R}(\theta)$ controls complexity. Given a new target $\vect{y}^{\star}$, one may form \emph{predictive summaries}:
+where $\mathcal{R}(\theta)$ controls complexity. Given a new input $\vect{x}^{\star}$, one may form \emph{predictive summaries}:
 \begin{align}
   \text{(point)}\quad
-  \widehat{\vect{x}}_{\text{MAP}}(\vect{y}^{\star}) 
-  &= \arg\max_{\vect{x}}\, p_{\widehat{\theta}}(\vect{x}\mid \vect{y}^{\star}),
-  \label{eq:map_point}\\
+  \widehat{\vect{y}}_{\text{MAP}}(\vect{x}^{\star}) 
+  &= \arg\max_{\vect{y}}\, p_{\widehat{\theta}}(\vect{y}\mid \vect{x}^{\star}),
+  \label{eq:map_point}\\[2pt]
   \text{(predictive)}\quad
-  p(\vect{x}\mid \vect{y}^{\star},\mathcal{D})
-  &= \int p_{\theta}(\vect{x}\mid \vect{y}^{\star})\,
+  p(\vect{y}\mid \vect{x}^{\star},\mathcal{D})
+  &= \int p_{\theta}(\vect{y}\mid \vect{x}^{\star})\,
      p(\theta\mid\mathcal{D})\,\mathrm{d}\theta
-     \;\approx\; p_{\widehat{\theta}}(\vect{x}\mid \vect{y}^{\star}),
+     \;\approx\; p_{\widehat{\theta}}(\vect{y}\mid \vect{x}^{\star}),
   \label{eq:predictive}
 \end{align}
-where the Bayesian predictive integrates parameter uncertainty whereas the plug-in predictive uses $\widehat{\theta}$~\cite{Gelman2013BDA3,Murphy2022PML1}. Such distributions support sampling diverse candidate decisions, credible regions in decision space, and uncertainty-aware ranking.
+where the Bayesian predictive integrates parameter uncertainty whereas the plug-in predictive uses $\widehat{\theta}$~\cite{Gelman2013BDA3,Murphy2022PML1}. Such distributions support sampling diverse candidate outputs, credible regions in output space, and uncertainty-aware ranking.
+
+\begin{figure}[tbp]
+  \centering
+  \begin{adjustbox}{max width=\linewidth}
+    \include{figures/probabilistic_modeling}
+  \end{adjustbox}
+  \caption{Probabilistic modelling via conditional density $p_\theta(\vect{y}\mid\vect{x})$, sampling, and decision rule.}
+  \label{fig:probabilistic-model}
+\end{figure}
 
 \paragraph{Aleatoric vs.\ epistemic uncertainty.}
-Probabilistic models also distinguish data (aleatoric) uncertainty from model (epistemic) uncertainty; the former reflects intrinsic variability/noise in $\vect{y}\mid\vect{x}$, while the latter arises from limited data or model misspecification. This distinction is key when communicating confidence in inverse recommendations~\cite{Murphy2022PML1,Bishop2006PRML}.
+Probabilistic models distinguish data (aleatoric) uncertainty from model (epistemic) uncertainty; the former reflects intrinsic variability/noise in $\vect{y}\mid\vect{x}$, while the latter arises from limited data or model misspecification. This distinction is key when communicating confidence in recommendations~\cite{Murphy2022PML1,Bishop2006PRML}.
 
 \subsection{Decision-Theoretic Perspective}
 
-Whether one uses a deterministic point estimate or a full predictive distribution, choosing a \emph{reported} decision $\tilde{\vect{x}}$ for a target $\vect{y}^{\star}$ is a decision problem. Under a utility (negative loss) $u(\tilde{\vect{x}},\vect{x})$, the Bayes decision rule selects
+Whether one uses a deterministic point estimate or a full predictive distribution, choosing a \emph{reported} output $\tilde{\vect{y}}$ for an input $\vect{x}^{\star}$ is a decision problem. Under a utility (negative loss) $u(\tilde{\vect{y}},\vect{y})$, the Bayes decision rule selects
 \begin{equation}
-  \tilde{\vect{x}}^{\star}
+  \tilde{\vect{y}}^{\star}
   \;\in\;
-  \arg\max_{\tilde{\vect{x}}\in\calX}
-  \mathbb{E}_{\vect{x}\sim p(\vect{x}\mid \vect{y}^{\star},\mathcal{D})}
-  \big[u(\tilde{\vect{x}},\vect{x})\big],
+  \arg\max_{\tilde{\vect{y}}\in\calY}
+  \mathbb{E}_{\vect{y}\sim p(\vect{y}\mid \vect{x}^{\star},\mathcal{D})}
+  \big[u(\tilde{\vect{y}},\vect{y})\big],
   \label{eq:bayes_decision}
 \end{equation}
-or, equivalently, minimises expected loss. For quadratic loss, the posterior mean is optimal; for absolute deviation, the posterior median is optimal; for zero-one loss, a MAP decision is natural~\cite{Gelman2013BDA3,Murphy2022PML1}. This connects predictive distributions (probabilistic view) and point-valued recommendations (deterministic outputs) through a common principle.
+or, equivalently, minimises expected loss. For quadratic loss, the posterior \emph{mean} is optimal; for absolute deviation, the posterior \emph{median} is optimal; for zero–one loss, a \emph{MAP} decision is natural~\cite{Gelman2013BDA3,Murphy2022PML1}. This connects predictive distributions (probabilistic view) and point-valued recommendations (deterministic outputs) through a common principle.
+
+In summary, deterministic models (Eq.~\ref{eq:erm_det}) provide \emph{fast, regularised} proposals that are easy to deploy and refine with forward evaluation, while probabilistic models (Eqs.~\ref{eq:mle}–\ref{eq:predictive}) provide \emph{uncertainty-aware} recommendations and support sampling of multiple plausible outputs when the mapping is multi-valued. Both viewpoints will be used to evaluate inverse exploration in multi-objective settings, guided by the principles above and without committing to a specific algorithmic family~\cite{Bishop2006PRML,Murphy2022PML1,Hastie2009ESL,Gelman2013BDA3}.
 
 
-In summary, deterministic models (Eq.~\ref{eq:erm}) provide \emph{fast, regularised} proposals $g(\vect{y}^{\star})$ that are easy to deploy and refine with forward evaluation, while probabilistic models (Eqs.~\ref{eq:mle}–\ref{eq:predictive}) provide \emph{uncertainty-aware} recommendations and support sampling of multiple plausible decisions when the inverse is multi-valued. Both viewpoints will be used to evaluate inverse exploration in multi-objective settings, guided by the principles above and without committing to a specific algorithmic family~\cite{Bishop2006PRML,Murphy2022PML1,Hastie2009ESL,Gelman2013BDA3}.
-
-
-\section{Evolutionary Algorithms and Surrogate Models}
-
-\subsection{Evolutionary Multi‑Objective Algorithms}
-
-Evolutionary algorithms (EAs) have become the method of choice for solving
- multi‑objective problems~\cite{Liu2024}.  EAs maintain a
-population of candidate solutions, apply genetic operators such as mutation
-and crossover and use selection mechanisms to evolve the population towards
-the Pareto front.  Well‑known algorithms include the Non‑dominated Sorting
-Genetic Algorithm II (NSGA‑II), Strength Pareto Evolutionary Algorithm 2
-(SPEA2), the Multi‑Objective Particle Swarm Optimiser (MOPSO) and
-decomposition‑based methods such as MOEA/D.  Key features of successful
-MOEAs are (i) diversity preservation strategies that encourage sampling
-across the front (e.g. crowding distance in NSGA‑II), and (ii) elitism to
-retain the best non‑dominated solutions between generations.
-
-Decomposition approaches transform the MOP into a set of single‑objective
-sub‑problems using weighted sums, Tchebycheff functions or penalty‑based
-methods.  The resulting scalar problems are solved simultaneously and
-information is exchanged among them.  This yields evenly distributed
-solutions but depends on choosing suitable weight vectors.  Indicator‑based
-algorithms such as IBEA use quality indicators (e.g. hypervolume) directly
-as fitness measures.  Recent research explores adaptive reference
-vector schemes and probabilistic modelling to guide the search, as well as
-hybrid algorithms that combine gradient information with evolutionary
-exploration.
-
-Despite their success, evolutionary algorithms often require tens of
- thousands of function evaluations to obtain a good approximation of the
- Pareto front~\cite{Liu2024}.  When each evaluation involves a
-computationally expensive simulation, surrogate models become attractive.
-
-\subsection{Surrogate‑Assisted Optimisation}
-
-Surrogate models, also known as metamodels or response surfaces, emulate
-expensive objective functions to accelerate optimisation.  They are built
-from a set of evaluated samples and provide cheap predictions with
-associated uncertainty estimates.  Common surrogates include Gaussian
-process regression (GPR), radial basis function (RBF) networks,
-support‑vector machines and multi‑layer perceptrons (MLPs).  In
-multi‑objective settings, surrogates can approximate the mapping
-\(\vect{f}\colon \calX\to\calY\), guiding the search without evaluating
-the true objective functions at every iteration.
-
-Surrogate‑assisted multi‑objective evolutionary algorithms (SA‑MOEAs)
-alternate between training the surrogate, performing cheap optimisation on
-the model, and periodically verifying candidate solutions with the true
-objectives.  Diaz‑Manriquez et~al. provide a comprehensive review of
-surrogate‑assisted MOEAs, highlighting design choices such as sampling
- strategies, model management and infill criteria~\cite{Blank2020}.
-Advanced techniques include adaptive ensembles of multiple surrogates,
-transfer learning across related tasks and active learning to focus
-sampling in uncertain regions.
 
 \subsection{Inverse Models and Pareto Estimation}
 

@@ -1,0 +1,83 @@
+\begin{tikzpicture}
+  % ===== Local colors & styles (only for this picture) =====
+  \definecolor{detBlueA}{RGB}{33,111,219}
+  \definecolor{softGrayA}{RGB}{246,248,250}
+
+  % --- All styles are defined BEFORE any draws ---
+  \tikzset{
+    >={Latex[length=2.4mm]},       
+    font=\sffamily,
+
+    % Panel style (auto-sized via fit below)
+    panelA/.style={
+      draw, rounded corners=8pt, line width=0.8pt, fill=detBlueA!6
+    },
+
+    % Wrapped node styles
+    boxA/.style={
+      draw, rounded corners=6pt, line width=0.8pt, fill=white,
+      inner sep=7pt, minimum height=10mm,
+      align=center, text width=35mm
+    },
+    smallA/.style={boxA, text width=22mm},
+    wideA/.style={boxA, text width=35mm},
+
+    noteA/.style={
+      align=left, font=\scriptsize, inner sep=1pt, text opacity=0.85,
+      text width=12.2cm
+    },
+    circA/.style={
+      circle, draw, fill=white, line width=0.8pt, minimum size=8mm,
+      align=center, text width=8mm
+    },
+
+    % Flow arrows (define BEFORE first use)
+    flowA/.style={-Latex, line width=0.9pt},
+
+    softlabelA/.style={
+      fill=softGrayA, text=black, rounded corners=3pt,
+      inner sep=1.2pt, font=\scriptsize, align=center, text width=22mm
+    }
+  }
+
+  %------------------------------------------------------------------
+  % CONTENT: bounded so the panel can fit everything
+  %------------------------------------------------------------------
+  \begin{scope}[local bounding box=contentA]
+    % ===== Nodes =====
+    \node[smallA] (ystar) at (-5.6,0.9) {$\mathbf{y}^{\star}$\\{\scriptsize target}};
+    \node[wideA, right=14mm of ystar] (g) {$\hat{g}\!:\;\mathcal{Y}\!\to\!\mathcal{X}$\\{\scriptsize regularised ERM}};
+    \node[smallA, right=16mm of g] (xhat) {$\hat{\mathbf{x}}$\\{\scriptsize candidate}};
+    \node[wideA, right=16mm of xhat] (fwd) {Forward model $f$ / $\,\hat f$\\{\scriptsize verification}};
+    \node[smallA, right=16mm of fwd] (yhat) {$\hat{\mathbf{y}}$\\{\scriptsize predicted}};
+
+    % Feasibility block (wrapped)
+    \node[boxA, text width=39mm, below=9mm of xhat] (feas)
+      {Feasibility\\{\scriptsize project/penalise}\\[1pt]
+       $g_j(\hat{\mathbf{x}})\!\le\!0,\;h_k(\hat{\mathbf{x}})\!=\!0$};
+
+    % ===== Flows =====
+    \draw[flowA] (ystar) -- node[above,sloped,softlabelA]{query} (g);
+    \draw[flowA] (g) -- node[above,softlabelA]{single output} (xhat);
+    \draw[flowA] (xhat) -- (fwd);
+    \draw[flowA] (fwd) -- node[above,softlabelA]{$e_f=\|\hat{\mathbf{y}}-\mathbf{y}^{\star}\|$} (yhat);
+
+    % Feasibility loop
+    \draw[flowA] (xhat.south) -- ++(0,-4mm) -| (feas.north);
+    \draw[flowA] (feas.east) -| ++(15mm,0) |- (xhat.east);
+  \end{scope}
+
+  %------------------------------------------------------------------
+  % AUTO-SIZED PANEL behind everything
+  %------------------------------------------------------------------
+  \begin{scope}[on background layer]
+    \node[panelA, fit=(contentA), inner sep=12pt] (P) {};
+  \end{scope}
+
+  % Tight bounding box = exactly the panel rectangle
+  \path[use as bounding box] (P.south west) rectangle (P.north east);
+
+  % Title anchored to the fitted panel
+  \node[anchor=north west, font=\bfseries\large]
+       at ([xshift=6pt,yshift=-6pt]P.north west) {Deterministic Modelling};
+\end{tikzpicture}

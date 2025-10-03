@@ -30,6 +30,62 @@ IGD of the candidate sets.  For qualitative analysis we record the
 diversity among candidates and the rate at which plausibility warnings
 are triggered.
 
+
+
+\section{Evolutionary Algorithms and Surrogate Models}
+
+\subsection{Evolutionary Multi‑Objective Algorithms}
+
+Evolutionary algorithms (EAs) have become the method of choice for solving
+ multi‑objective problems~\cite{Liu2024}.  EAs maintain a
+population of candidate solutions, apply genetic operators such as mutation
+and crossover and use selection mechanisms to evolve the population towards
+the Pareto front.  Well‑known algorithms include the Non‑dominated Sorting
+Genetic Algorithm II (NSGA‑II), Strength Pareto Evolutionary Algorithm 2
+(SPEA2), the Multi‑Objective Particle Swarm Optimiser (MOPSO) and
+decomposition‑based methods such as MOEA/D.  Key features of successful
+MOEAs are (i) diversity preservation strategies that encourage sampling
+across the front (e.g. crowding distance in NSGA‑II), and (ii) elitism to
+retain the best non‑dominated solutions between generations.
+
+Decomposition approaches transform the MOP into a set of single‑objective
+sub‑problems using weighted sums, Tchebycheff functions or penalty‑based
+methods.  The resulting scalar problems are solved simultaneously and
+information is exchanged among them.  This yields evenly distributed
+solutions but depends on choosing suitable weight vectors.  Indicator‑based
+algorithms such as IBEA use quality indicators (e.g. hypervolume) directly
+as fitness measures.  Recent research explores adaptive reference
+vector schemes and probabilistic modelling to guide the search, as well as
+hybrid algorithms that combine gradient information with evolutionary
+exploration.
+
+Despite their success, evolutionary algorithms often require tens of
+ thousands of function evaluations to obtain a good approximation of the
+ Pareto front~\cite{Liu2024}.  When each evaluation involves a
+computationally expensive simulation, surrogate models become attractive.
+
+\subsection{Surrogate‑Assisted Optimisation}
+
+Surrogate models, also known as metamodels or response surfaces, emulate
+expensive objective functions to accelerate optimisation.  They are built
+from a set of evaluated samples and provide cheap predictions with
+associated uncertainty estimates.  Common surrogates include Gaussian
+process regression (GPR), radial basis function (RBF) networks,
+support‑vector machines and multi‑layer perceptrons (MLPs).  In
+multi‑objective settings, surrogates can approximate the mapping
+\(\vect{f}\colon \calX\to\calY\), guiding the search without evaluating
+the true objective functions at every iteration.
+
+Surrogate‑assisted multi‑objective evolutionary algorithms (SA‑MOEAs)
+alternate between training the surrogate, performing cheap optimisation on
+the model, and periodically verifying candidate solutions with the true
+objectives.  Diaz‑Manriquez et~al. provide a comprehensive review of
+surrogate‑assisted MOEAs, highlighting design choices such as sampling
+ strategies, model management and infill criteria~\cite{Blank2020}.
+Advanced techniques include adaptive ensembles of multiple surrogates,
+transfer learning across related tasks and active learning to focus
+sampling in uncertain regions.
+
 \section{Synthetic Benchmarks}
 
 \subsection{ZDT Problems}
