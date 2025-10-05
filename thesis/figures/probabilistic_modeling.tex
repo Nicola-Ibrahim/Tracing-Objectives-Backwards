@@ -1,77 +1,72 @@
-\begin{tikzpicture}
-  % ===== Local colors & styles (only for this picture) =====
-  \definecolor{probGreenB}{RGB}{30,145,85}
-  \definecolor{softGrayB}{RGB}{246,248,250}
+\def\laneSep{20mm} % vertical gap between training and inference lanes
+
+\begin{tikzpicture}[node distance=12mm and 14mm]
+  \definecolor{panelGreen}{RGB}{30,145,85}
+  \definecolor{softGray}{RGB}{246,248,250}
+
   \tikzset{
-    >={Latex[length=2.4mm]},
+    >={Latex[length=2.6mm]},
     font=\sffamily,
-    % Panel style (no fixed size; the fit node will size it)
-    panelB/.style={
-      draw, rounded corners=8pt, line width=0.8pt, fill=probGreenB!6
-    },
-    % Wrapped node styles
-    boxB/.style={
-      draw, rounded corners=6pt, line width=0.8pt, fill=white,
-      inner sep=7pt, minimum height=10mm,
-      align=center, text width=35mm
-    },
-    smallB/.style={boxB, text width=22mm},
-    wideB/.style={boxB, text width=35mm},
-    noteB/.style={
-      align=left,font=\scriptsize,inner sep=1pt,text opacity=0.85,
-      text width=12.2cm
-    },
-    circB/.style={circle, draw, fill=white, line width=0.8pt, minimum size=8mm,
-                  align=center, text width=8mm},
-    flowB/.style={-Latex, line width=0.9pt},
-    softlabelB/.style={fill=softGrayB, text=black, rounded corners=3pt,
-                       inner sep=1.2pt, font=\scriptsize, align=center, text width=28mm}
+    panel/.style={draw, rounded corners=8pt, line width=0.8pt, fill=panelGreen!6},
+    box/.style={draw, rounded corners=6pt, line width=0.8pt, fill=white,
+                align=center, inner sep=7pt, minimum height=10mm, text width=34mm},
+    small/.style={box, text width=24mm},
+    flow/.style={-Latex, line width=0.9pt},
+    circ/.style={circle, draw, fill=white, line width=0.8pt, align=center, minimum size=8mm},
+    chip/.style={fill=softGray, rounded corners=3pt, inner sep=1.2pt,
+                 font=\scriptsize, align=center}
   }
 
-  %------------------------------------------------------------------
-  % Put ALL content inside a scope to capture its bounding box.
-  %------------------------------------------------------------------
+  % ===================== CONTENT =====================
   \begin{scope}[local bounding box=content]
-    % ===== Input & conditional model =====
-    \node[smallB] (xstar) at (-6.0,1.1) {$\mathbf{x}^{\star}$\\{\scriptsize input}};
-    \node[wideB, right=15mm of xstar] (pyx) {$p_\theta(\mathbf{y}\mid \mathbf{x})$\\{\scriptsize conditional model}};
 
-    % ===== Samples from p(y|x) =====
-    \node[circB, right=15mm of pyx, yshift=8mm, minimum size=7.5mm] (y1) {$\mathbf{y}_1$};
-    \node[circB, right=15mm of pyx, minimum size=7.5mm] (y2) {$\mathbf{y}_2$};
-    \node[circB, right=15mm of pyx, yshift=-8mm, minimum size=7.5mm] (y3) {$\mathbf{y}_3$};
+    % -------- TRAINING --------
+    \node[small]                         (xtr)   at (-6,1.4) {$\mathbf{X}$\\{\scriptsize features}};
+    \node[box,   right=of xtr]           (pyx)   {$p_\theta(\mathbf{y}\mid \mathbf{X})$\\{\scriptsize conditional model}};
+    \node[box,   right=of pyx]           (nll)   {Objective\\{\scriptsize minimize NLL}\\[-2pt]{\scriptsize $-\!\sum\log p_\theta(\mathbf{y}\mid\mathbf{X})$}};
+    \node[small, below=12mm of nll]      (ytr)   {$\mathbf{y}$\\{\scriptsize targets}};
 
-    % ===== Decision rule and final prediction =====
-    \node[wideB, right=16mm of y2] (select) {Decision rule\\{\scriptsize MAP / posterior mean / quantile}};
-    \node[smallB, right=16mm of select] (yhat) {$\hat{\mathbf{y}}$\\{\scriptsize prediction}};
+    \draw[flow] (xtr) -- node[above, chip]{condition on $\mathbf{X}$} (pyx);
+    \draw[flow] (pyx) -- (nll);
+    \draw[flow] (ytr) -- node[right, chip]{supervision} (nll.south);
+    \draw[flow] (nll.south) |- ++(-32mm,-8mm) -| node[pos=0.25, below, chip]{update $\theta$} (pyx.south);
 
-    % ===== Ground-truth label (optional visual link) =====
-    \node[smallB, below=11mm of select, text width=28mm] (ytrue) {$\mathbf{y}^{\star}$\\{\scriptsize ground truth}};
-    \node[boxB, right=10mm of ytrue, text width=38mm] (loss) {Loss / metric\\{\scriptsize $\ell(\hat{\mathbf{y}},\mathbf{y}^{\star})$}};
+    \node[anchor=west, font=\bfseries] at ([yshift=2mm]xtr.north west) {Training (MLE/MAP)};
 
-    % ===== Arrows =====
-    \draw[flowB] (xstar) -- node[above,softlabelB]{condition on $\mathbf{x}^{\star}$} (pyx);
-    \foreach \y in {y1,y2,y3}{
-      \draw[flowB] (pyx.east) -- ++(6mm,0) |- (\y.west);
-      \draw[flowB] (\y.east) -- (select.west);
+    % Fit node to capture true bounds of the training lane
+    \node[inner sep=0, fit=(xtr)(pyx)(nll)(ytr), name=trainLane] {};
+
+    % Reference y-position for the inference lane: \laneSep below training lane
+    \coordinate (laneY) at ([yshift=-\laneSep]trainLane.south);
+
+    % -------- INFERENCE --------
+    % Place first inference node aligned in x with xtr, at y = laneY
+    \node[small] at ($(xtr|-laneY)$)    (xnew)  {$\mathbf{X}^{\!*}$\\{\scriptsize new features}};
+    \node[box,   right=of xnew]         (pyx2)  {$p_{\hat\theta}(\mathbf{y}\mid \mathbf{X}^{\!*})$\\{\scriptsize trained model}};
+    \node[circ,  right=14mm of pyx2, yshift=8mm, minimum size=7.5mm] (s1) {$\mathbf{y}_1$};
+    \node[circ,  right=14mm of pyx2,               minimum size=7.5mm] (s2) {$\mathbf{y}_2$};
+    \node[circ,  right=14mm of pyx2, yshift=-8mm,  minimum size=7.5mm] (s3) {$\mathbf{y}_3$};
+    \node[box,   right=16mm of s2, text width=40mm] (dec)
+          {Decision rule\\{\scriptsize MAP / posterior mean / quantile}};
+    \node[small, right=of dec]          (yhat)  {$\hat{\mathbf{y}}$\\{\scriptsize prediction}};
+
+    \draw[flow] (xnew) -- (pyx2);
+    \foreach \s in {s1,s2,s3}{
+      \draw[flow] (pyx2.east) -- ++(6mm,0) |- (\s.west);
+      \draw[flow] (\s.east) -- (dec.west);
     }
-    \draw[flowB] (select) -- (yhat);
+    \draw[flow] (dec) -- (yhat);
 
-    % dashed links to show supervised signal
-    \draw[dashed, line width=0.6pt] (ytrue) -- (loss);
-    \draw[dashed, line width=0.6pt] (yhat) |- (loss);
+    \node[anchor=west, font=\bfseries] at ([yshift=9mm]xnew.north west) {Inference};
   \end{scope}
 
-  %------------------------------------------------------------------
-  % Background panel that FITS the content (includes arrows/edges).
-  % Use backgrounds+fit to put the panel behind the content.
-  %------------------------------------------------------------------
+  % ===================== PANEL, SEPARATOR & TITLE =====================
   \begin{scope}[on background layer]
-    % add some padding around content with inner sep
-    \node[panelB, fit=(content), inner sep=12pt] (Q) {};
+    \node[panel, fit=(content), inner sep=12pt] (P) {};
   \end{scope}
 
-  % Panel title placed relative to the fitted panel
+  \path[use as bounding box] (P.south west) rectangle (P.north east);
+  
   \node[anchor=north west, font=\bfseries\large]
-       at ([xshift=6pt,yshift=-6pt]Q.north west) {Probabilistic Modelling (supervised)};
+        at ([xshift=6pt,yshift=-6pt]P.north west) {Probabilistic Supervised Modelling};
 \end{tikzpicture}
