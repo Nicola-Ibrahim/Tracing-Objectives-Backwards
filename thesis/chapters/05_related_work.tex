@@ -110,7 +110,7 @@ conditional average of the response variables.  As Bishop notes in his
 pioneering report on mixture density networks (MDNs), such conditional
 averages are of limited use for multi‑valued inverse problems because
 averaging multiple valid targets yields a solution that is itself
-invalid【616414878159156†L169-L232】.  MDNs overcome this
+invalid.  MDNs overcome this
 limitation by coupling a neural network with a mixture model that predicts
 a full conditional probability density rather than a single point estimate,
 capturing multimodal relationships inherent to inverse mappings.
@@ -123,7 +123,7 @@ show that naively training an inverse network suffers from data
 inconsistency because the mapping from objectives to decisions is
 non‑unique; their tandem network learns to predict a design and then
 validate it with a pre‑trained forward model, enabling efficient inverse
-design despite non‑uniqueness【34486591917118†L8-L16】【34486591917118†L26-L37】【34486591917118†L69-L92】.  This approach demonstrates how
+design despite non‑uniqueness.  This approach demonstrates how
 integrating forward and inverse models can stabilise training and yield
 accurate predictions.
 
@@ -133,7 +133,7 @@ high‑entropy refractory alloys.  They highlight that generative models can
 learn complex structure–property relationships and generate novel candidates
 on demand; once trained, a generative model maps random noise to the latent
 space of valid materials and can thus synthesise new alloys with
-targeted properties【492130352176691†L214-L223】【492130352176691†L265-L276】.  Such methods
+targeted properties.  Such methods
 provide a powerful tool for inverse design because they approximate the
 inverse of the structure–property map and offer controllable sampling via
 latent variables.
@@ -145,9 +145,9 @@ de novo molecular design.  Their model conditions a graph‑based VAE on two
 physical properties (logP and molar refractivity) and demonstrates that
 multi‑objective conditioning significantly increases the fraction of
 generated molecules that satisfy both targets compared with an
-unconditioned VAE【917105453207985†L10-L38】.  Generative models of this form
+unconditioned VAE.  Generative models of this form
 have been extended to engineering domains such as electric machine design
-and van der Waals materials, underscoring the versatility of conditional
+and van der Waals materials, underscoring the versatility of conditional
 autoencoders for inverse problems.
 
 Although generative models remain computationally intensive to train and

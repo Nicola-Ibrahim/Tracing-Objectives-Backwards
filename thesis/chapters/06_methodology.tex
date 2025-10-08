@@ -14,6 +14,74 @@ interacts with the inverse model to specify desired objectives and
 retrieve candidate decisions, which are then ranked using forward
 predictions and plausibility scores.
 
+
+% In Chapter: Methodology
+\section{Inverse-Model Training and Evaluation}\label{sec:method_training_eval}
+
+\subsection{Deterministic inverse training}
+We learn $g_{\theta}:\mathcal{Y}\to\mathcal{X}$ via regularized inverse ERM:
+\begin{equation}
+  \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}\ell_{\mathcal{X}}\!\Bigl(g_{\theta}(\mathbf{y}_i),\mathbf{x}_i\Bigr)+\lambda\,\Omega(\theta),
+  \tag{\ref{eq:erm_inverse}}
+\end{equation}
+with constraint-aware variant
+\begin{equation}
+  \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}
+  \Bigl[
+    \ell_{\mathcal{X}}\!\bigl(\Pi_{\mathcal{X}}\{g_{\theta}(\mathbf{y}_i)\},\mathbf{x}_i\bigr)
+    +\beta\!\sum_j[g_j(g_{\theta}(\mathbf{y}_i))]_+^2+\beta'\!\sum_k h_k(g_{\theta}(\mathbf{y}_i))^2
+  \Bigr]+\lambda\,\Omega(\theta).
+  \tag{\ref{eq:erm_constraints}}
+\end{equation}
+
+\subsection{Probabilistic inverse training}
+We learn $p_{\theta}(\mathbf{x}\mid\mathbf{y})$ by conditional log-likelihood:
+\begin{equation}
+  \widehat{\theta}\in\arg\max_{\theta}\Bigl\{\sum_{i=1}^{N}\log p_{\theta}(\mathbf{x}_i\mid\mathbf{y}_i)-\gamma\,\mathcal{R}(\theta)\Bigr\}.
+  \tag{\ref{eq:cll_inverse}}
+\end{equation}
+Decisions for a query $\mathbf{y}^{\ast}$ use MAP or predictive summaries:
+\begin{align}
+  \widehat{\mathbf{x}}_{\mathrm{MAP}}(\mathbf{y}^{\ast})&=\arg\max_{\mathbf{x}}\,p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast}),
+  \tag{\ref{eq:map_inverse}}\\
+  p(\mathbf{x}\mid\mathbf{y}^{\ast},\mathcal{D})&\approx p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast}).
+  \tag{\ref{eq:pred_inverse}}
+\end{align}
+
+\subsection{Evaluation metrics}
+\paragraph{Outcome-space error.}
+\begin{equation}
+  \mathcal{E}_{\mathcal{Y}}=d\!\bigl(\,\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\bigr),
+  \qquad d\in\{ \|\cdot\|_2,\ \text{Mahalanobis}\}.
+  \tag{\ref{eq:target_error}}
+\end{equation}
+
+\paragraph{Feasibility and diversity.}
+\begin{equation}
+  \mathrm{Feas}=\frac{1}{M}\sum_{m}\mathbb{I}[g_j(\widehat{\mathbf{x}}^{(m)})\le 0,\ h_k(\widehat{\mathbf{x}}^{(m)})=0],\qquad
+  \mathrm{Div}=\frac{2}{R(R-1)}\sum_{r<s}\|\widehat{\mathbf{x}}^{(r)}-\widehat{\mathbf{x}}^{(s)}\|_2.
+  \tag{\ref{eq:feas_rate}}\tag{\ref{eq:diversity}}
+\end{equation}
+
+\subsection{Calibration procedures}
+\paragraph{SplitConformalL2Calibrator.}
+Define residuals $r_i=\|\mathbf{f}(g_{\widehat{\theta}}(\mathbf{y}_i))-\mathbf{y}_i\|_2$ on a calibration split and form
+\[
+  \mathcal{C}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \|\mathbf{y}-\mathbf{y}^{\ast}\|_2\le q_{1-\alpha}\},
+  \tag{\ref{eq:split_conformal_l2}}
+\]
+where $q_{1-\alpha}$ is the $(1-\alpha)$ empirical quantile of $\{r_i\}$.
+
+\paragraph{MahalanobisCalibrator.}
+With covariance $\mathbf{\Sigma}$ from calibration data and $\Delta(\mathbf{y},\mathbf{y}^{\ast})=\sqrt{(\mathbf{y}-\mathbf{y}^{\ast})^{\top}\mathbf{\Sigma}^{-1}(\mathbf{y}-\mathbf{y}^{\ast})}$,
+\[
+  \mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \Delta(\mathbf{y},\mathbf{y}^{\ast})\le q^{\mathrm{Mah}}_{1-\alpha}\}.
+  \tag{\ref{eq:mahalanobis_conformal}}
+\]
+We test if $\mathbf{f}(\widehat{\mathbf{x}})\in\mathcal{C}_{\alpha}(\mathbf{y}^{\ast})$ or $\mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})$.
+
+
+
 \section{Offline Phase: Data Generation and Model Training}
 
 \subsection{Generation of Pareto Samples}
