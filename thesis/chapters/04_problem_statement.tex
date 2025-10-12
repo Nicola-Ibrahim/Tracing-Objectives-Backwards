@@ -4,41 +4,46 @@
 
 \chapter{Problem Statement}\label{chap:problem}
 
-This chapter formalises the inverse decision–mapping problem addressed in this thesis.
-We define the task and notation, characterise target admissibility, and specify the
-form of the outputs produced by an inverse model.
+This chapter formalises the inverse decision–mapping problem tackled in this thesis.
+We introduce notation, define target admissibility, and specify the outputs returned
+by an inverse model.
 
 \section{Problem Setup and Notation}\label{sec:setup}
 
-\textbf{Decision space and constraints.} Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the
-feasible decision space; a decision vector is $\mathbf{x}\in\mathcal{X}$. Feasibility is
-governed by inequality constraints $g_j(\mathbf{x})\le 0$ ($j=1,\ldots,J$) and equality
-constraints $h_k(\mathbf{x})=0$ ($k=1,\ldots,K$).
+\textbf{Decision space and constraints.}
+Let $\mathcal{X}\subset\mathbb{R}^{n}$ be the feasible decision space, with decision vectors
+$\mathbf{x}\in\mathcal{X}$. Feasibility is encoded by inequality constraints
+$g_j(\mathbf{x})\le 0$ ($j=1,\ldots,J$) and equality constraints
+$h_k(\mathbf{x})=0$ ($k=1,\ldots,K$).
 
-\textbf{Outcome space.} Let $\mathcal{Y}\subset\mathbb{R}^{m}$ denote the outcome (objective)
-space. The forward map (simulation or measurement) is $\mathbf{f}:\mathcal{X}\to\mathcal{Y}$,
-so that $\mathbf{y}=\mathbf{f}(\mathbf{x})$.
+\textbf{Outcome space and forward map.}
+Let $\mathcal{Y}\subset\mathbb{R}^{m}$ denote the outcome (objective) space.
+A simulator or measurement process $\mathbf{f}:\mathcal{X}\to\mathcal{Y}$ produces outcomes
+$\mathbf{y}=\mathbf{f}(\mathbf{x})$.
 
-\textbf{Data.} We assume access to a dataset
+\textbf{Data.}
+We assume access to a dataset
 \[
-  \mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}_{i=1}^{N},\quad \mathbf{x}_i\in\mathcal{X},\ \mathbf{y}_i=\mathbf{f}(\mathbf{x}_i),
+  \mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}_{i=1}^{N},\qquad
+  \mathbf{x}_i\in\mathcal{X},\ \ \mathbf{y}_i=\mathbf{f}(\mathbf{x}_i),
 \]
-obtained from historical runs, simulation sweeps, or exploratory optimisation (not
-restricted to Pareto points).
+sourced from historical runs, simulation sweeps, or exploratory optimisation
+(not restricted to Pareto points).
 
-\textbf{Inverse query.} Given a target outcome $\mathbf{y}^{\ast}\in\mathcal{Y}$, the goal is
-to infer one or more candidate decisions in $\mathcal{X}$ that (approximately) realise
-$\mathbf{y}^{\ast}$ under $\mathbf{f}$.
+\textbf{Inverse query.}
+Given a target outcome $\mathbf{y}^{\ast}\in\mathcal{Y}$, the goal is to infer one or more
+candidate decisions in $\mathcal{X}$ that (approximately) realise $\mathbf{y}^{\ast}$ under $\mathbf{f}$.
 
 \paragraph{Ill-posedness.}
-Inverse mapping is generally \emph{ill-posed} in the sense of Hadamard: an exact preimage
-may not exist (existence), may not be unique (uniqueness), or may be unstable to small
+Inverse mapping is typically \emph{ill-posed} in the sense of Hadamard: a preimage may
+fail to exist (existence), need not be unique (uniqueness), and may be unstable to small
 perturbations (stability). Robust formulations therefore rely on regularisation and/or a
 probabilistic treatment (details in Chapter~\ref{chap:methodology}).
 
 \section{Reachability and Admissibility}\label{sec:admissibility}
 
-\textbf{Reachable outcomes.} The set of attainable outcomes is
+\textbf{Reachable outcomes.}
+The set of attainable outcomes is
 \begin{equation}
   \mathcal{Y}_{\mathrm{reach}}
   \;=\;
@@ -46,44 +51,60 @@ probabilistic treatment (details in Chapter~\ref{chap:methodology}).
   \label{eq:reachableY}
 \end{equation}
 
-\textbf{Inverse solution sets.} For a target $\mathbf{y}^{\ast}$, the exact preimage set is
+\textbf{Inverse solution sets.}
+For a target $\mathbf{y}^{\ast}$, the exact preimage set is
 \begin{equation}
   \mathcal{X}^{\ast}(\mathbf{y}^{\ast})
   \;=\;
-  \bigl\{\ \mathbf{x}\in\mathcal{X}\ :\ \mathbf{f}(\mathbf{x})=\mathbf{y}^{\ast},\ g_j(\mathbf{x})\le 0,\ h_k(\mathbf{x})=0\ \bigr\};
+  \bigl\{\ \mathbf{x}\in\mathcal{X}\ :\ \mathbf{f}(\mathbf{x})=\mathbf{y}^{\ast},\ g_j(\mathbf{x})\le 0,\ h_k(\mathbf{x})=0\ \bigr\},
   \label{eq:inverseSet}
 \end{equation}
-the \emph{approximate} preimage set under tolerance $\tau>0$ and distance
-$d:\mathcal{Y}\times\mathcal{Y}\to\mathbb{R}_{\ge0}$ is
+and, for tolerance $\tau>0$ and distance $d:\mathcal{Y}\times\mathcal{Y}\to\mathbb{R}_{\ge0}$,
+the \emph{approximate} preimage set is
 \begin{equation}
   \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})
   \;=\;
-  \bigl\{\ \mathbf{x}\in\mathcal{X}\ :\ d\bigl(\mathbf{f}(\mathbf{x}),\mathbf{y}^{\ast}\bigr)\le\tau,\ g_j(\mathbf{x})\le 0,\ h_k(\mathbf{x})=0\ \bigr\}.
+  \bigl\{\ \mathbf{x}\in\mathcal{X}\ :\ d\!\bigl(\mathbf{f}(\mathbf{x}),\mathbf{y}^{\ast}\bigr)\le\tau,\ g_j(\mathbf{x})\le 0,\ h_k(\mathbf{x})=0\ \bigr\}.
   \label{eq:approxInverse}
 \end{equation}
 
-\textbf{Admissibility classes.} For a given $\tau$,
+\textbf{Admissibility classes.}
+For a given $\tau$, we classify targets as
 \begin{align}
-  &\text{Admissible} &&\Longleftrightarrow\quad \mathcal{X}^{\ast}(\mathbf{y}^{\ast})\neq\varnothing
-      \quad \text{or}\quad \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})\neq\varnothing, \label{eq:adm1}\\
-  &\text{Weakly admissible} &&\Longleftrightarrow\quad \mathcal{X}^{\ast}(\mathbf{y}^{\ast})=\varnothing
-      \ \text{and}\ \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})\neq\varnothing, \label{eq:adm2}\\
-  &\text{Inadmissible} &&\Longleftrightarrow\quad \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})=\varnothing. \label{eq:adm3}
+  &\text{Admissible} &&\Longleftrightarrow\quad
+  \mathcal{X}^{\ast}(\mathbf{y}^{\ast})\neq\varnothing
+  \ \ \text{or}\ \
+  \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})\neq\varnothing, \label{eq:adm1}\\
+  &\text{Weakly admissible} &&\Longleftrightarrow\quad
+  \mathcal{X}^{\ast}(\mathbf{y}^{\ast})=\varnothing\ \ \text{and}\ \
+  \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})\neq\varnothing, \label{eq:adm2}\\
+  &\text{Inadmissible} &&\Longleftrightarrow\quad
+  \mathcal{X}^{\ast}_{\tau}(\mathbf{y}^{\ast})=\varnothing. \label{eq:adm3}
 \end{align}
+Thus admissibility is target- and tolerance-dependent, with $d$ encoding what it means
+for an outcome to be “close enough” for the application at hand.
 
 \section{Output Forms of the Inverse Model}\label{sec:outputs}
 
-We consider two complementary output types:
+We consider two complementary output types for a query $\mathbf{y}^{\ast}$:
 \begin{itemize}
-  \item \textbf{Deterministic (single decision):} return one representative decision $\widehat{\mathbf{x}}\in\mathcal{X}$ per query $\mathbf{y}^{\ast}$.
-  \item \textbf{Probabilistic (distribution over decisions):} return a conditional distribution over decisions, enabling uncertainty quantification and multiple plausible candidates.
+  \item \textbf{Deterministic (single decision):} return one representative decision
+  $\widehat{\mathbf{x}}\in\mathcal{X}$.
+  \item \textbf{Probabilistic (distribution over decisions):} return a conditional distribution
+  over $\mathcal{X}$, enabling uncertainty quantification and sampling of multiple plausible
+  candidates.
 \end{itemize}
-Training objectives, constraint handling, and inference details are given in Chapter~\ref{chap:06_methodology}.
+Training objectives, constraint handling, and inference details are provided in
+Chapter~\ref{chap:06_methodology}.
 
 \section{Research Questions}\label{sec:RQs}
-We investigate:
+
+We investigate the following guiding questions:
 \begin{enumerate}
-  \item Inverse querying: How can a user request a new target outcome $\mathbf{y}^{\ast}$, not present among observed outcomes, and obtain inferred candidate decisions $\mathbf{x}$ from available data?
-  \item Validation of generated decisions: How can the quality of generated decisions—relative to a specified target outcome—be established using feedback or forward evaluations?
-  \item Modelling strategies: Which types of modelling strategies are most effective for learning the inverse relationship from outcome space to decision space?
+  \item \textbf{Inverse querying.} How can a user specify a new target $\mathbf{y}^{\ast}$, not present
+  among observed outcomes, and obtain inferred candidate decisions $\mathbf{x}$ from available data?
+  \item \textbf{Validation of generated decisions.} How should the quality of generated decisions—relative
+  to a specified target—be established using forward evaluations or feedback?
+  \item \textbf{Modelling strategies.} Which modelling strategies are most effective for learning the
+  inverse relationship from outcome space to decision space?
 \end{enumerate}
