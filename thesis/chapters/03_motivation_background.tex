@@ -176,30 +176,29 @@ Inverse exploration relies on models as its inner loop: given candidate decision
 
 \subsection{Learning as Risk Minimization}
 
-Let $\mathcal{D}=\{(\vect{y}_i,\vect{x}_i)\}_{i=1}^{N}$ denote observed outcome–decision pairs. In inverse exploration we seek a function $g:\mathcal{Y}\!\to\!\mathcal{X}$ that proposes decisions $g(\vect{y})$ aligned with a target outcome pattern. This can be framed by the (unknown) expected risk
+Inverse design answers the query “which decision $\vect{x}$ is likely to realise the target outcome $\vect{y}^{\star}$?” We model an inverse map $g:\mathcal{Y}\!\to\!\mathcal{X}$ using data $\mathcal{D}=\{(\vect{y}_i,\vect{x}_i)\}_{i=1}^N$ and select $g$ by minimising expected loss in decision space,
 \begin{equation}
   \mathcal{R}(g)
   \;=\;
   \mathbb{E}_{(\vect{y},\vect{x})}\!\left[\,
     \ell\!\big(g(\vect{y}),\,\vect{x}\big)
   \right],
-  \label{eq:true_risk}
+  \label{eq:true_risk_new}
 \end{equation}
-where $\ell(\cdot,\cdot)$ is task-appropriate (e.g., squared error for regression-style inverse mappings, or constraint-aware penalties when feasibility must be respected)~\cite{Hastie2009ESL,Bishop2006PRML}.
-
-As $\mathcal{R}(g)$ is not observable, we minimise a regularised empirical surrogate:
+where $\ell:\mathcal{X}\times\mathcal{X}\to\mathbb{R}_{\ge 0}$ measures how well the proposal $g(\vect{y})$ agrees with a known design $\vect{x}$ (e.g., an $\ell_2$ loss for continuous designs, or a structured loss if $\vect{x}$ includes categorical/process choices). Because $\mathcal{R}(g)$ depends on the unknown data-generating distribution, we use regularised empirical risk minimisation,
 \begin{equation}
   \widehat{g}
   \;\in\;
   \arg\min_{g\in\mathcal{G}}
-  \underbrace{\frac{1}{N}\sum_{i=1}^{N}\ell\!\left(g(\vect{y}_i),\,\vect{x}_i\right)}_{\text{empirical risk}}
+  \frac{1}{N}\sum_{i=1}^{N}\ell\!\left(g(\vect{y}_i),\,\vect{x}_i\right)
   \;+\;
-  \lambda\,\underbrace{\Omega(g)}_{\text{regularisation}}\,,
-  \label{eq:erm}
+  \lambda\,\Omega(g),
+  \qquad \lambda\!\ge\!0,
+  \label{eq:erm_new}
 \end{equation}
-with hypothesis class $\mathcal{G}$ (e.g., linear models, kernels, neural networks), regulariser $\Omega$ (e.g., smoothness, sparsity, complexity control), and trade-off $\lambda\!\ge\!0$~\cite{Hastie2009ESL,Bishop2006PRML}. Regularisation improves generalisation and stabilises inherently ill-posed inverses.
+with hypothesis class $\mathcal{G}$ (e.g., linear/kernels/NNs) and regulariser $\Omega$ (e.g., weight decay, sparsity, Lipschitz/Jacobian control) to improve generalisation and stabilise the inverse in the presence of non-uniqueness and noise.
 
-\emph{Forward-consistency when a forward model is available.} If prior knowledge of a forward map $\vect{f}$ exists, we can couple inverse and forward information so that $g(\vect{y})$ proposes decisions whose forward evaluation is consistent with $\vect{y}$:
+A central challenge is that inverse maps are typically one-to-many: many $\vect{x}$ can induce the same $\vect{y}$. Purely supervising $g$ to reproduce a particular $\vect{x}_i$ for $\vect{y}_i$ can therefore penalise equally valid alternatives. When a forward model $\vect{f}:\mathcal{X}\!\to\!\mathcal{Y}$ is available (a simulator or a pretrained differentiable surrogate), we mitigate non-uniqueness by adding a forward-consistency term that rewards \emph{any} design whose forward response matches the target. A convenient hybrid objective is
 \begin{equation}
   \widehat{g}
   \;\in\;
@@ -211,60 +210,77 @@ with hypothesis class $\mathcal{G}$ (e.g., linear models, kernels, neural networ
     (1-\alpha)\,\mathcal{L}\!\left(\vect{f}\!\big(g(\vect{y}_i)\big),\,\vect{y}_i\right)
   \Big]
   \;+\; \lambda\,\Omega(g),
-  \quad \alpha\in[0,1],
-  \label{eq:hybrid}
+  \qquad \alpha\in[0,1],
+  \label{eq:tandem_new}
 \end{equation}
-where $\mathcal{L}$ penalises discrepancy in outcome space. This blends purely data-driven inverse learning with physics-/simulation-aware consistency~\cite{Bishop2006PRML,Murphy2022PML1}.
+where $\mathcal{L}:\mathcal{Y}\times\mathcal{Y}\to\mathbb{R}_{\ge 0}$ measures outcome mismatch (e.g., $\ell_2$ or a covariance-aware distance). Setting $\alpha\!\approx\!0$ yields a \emph{tandem/forward-validated} regime that trains $g$ through the forward model and accepts any valid preimage; choosing $\alpha\!>\!0$ additionally anchors $g$ near specific designs $\vect{x}_i$ (useful when particular recipes are preferred). If $\vect{f}$ is non-differentiable or expensive, one first trains a differentiable surrogate $\widehat{\vect{f}}$ and keeps it fixed while optimising $g$, replacing $\vect{f}$ by $\widehat{\vect{f}}$ in \eqref{eq:tandem_new}. For multi-objective outcomes with heterogeneous scales, $\mathcal{L}$ should be computed with normalisation or a metric that reflects task priorities to avoid dominance by any single objective.
 
-\textbf{Representation, inductive bias, and constraints.}
-Our goal is to learn $g:\mathcal{Y}\!\to\!\mathcal{X}$ that proposes feasible, credible decisions for target outcomes. Three design axes govern performance: (i) \emph{representation} (the hypothesis class $\mathcal{G}$), (ii) \emph{inductive bias} (regularisation and architectural choices that stabilise ill-posed inverses), and (iii) \emph{feasibility handling} (how domain constraints are enforced). These choices control not only in-sample fit but also robustness, out-of-support behaviour, and the diversity/credibility of proposed decisions~\cite{Bishop2006PRML,Hastie2009ESL,Murphy2022PML1}. Deterministic and probabilistic formulations both fit naturally within a risk-minimisation or likelihood-based view, with evaluation by predictive performance and, when distributions are produced, proper scoring rules and decision-theoretic criteria.
+\medskip
+\emph{Illustrative use case (nanophotonic reflectance matching).}
+Suppose $\vect{y}\in\mathbb{R}^{L}$ is a reflectance spectrum sampled at $L$ wavelengths and $\vect{x}\in\mathbb{R}^{n}$ are geometric/process parameters of a metasurface unit cell. We collect $\mathcal{D}=\{(\vect{y}_i,\vect{x}_i)\}$ via simulation. To learn $g(\vect{y})$, we take $\ell(\hat{\vect{x}},\vect{x})=\|\hat{\vect{x}}-\vect{x}\|_2^2$ and define $\mathcal{L}$ as the mean-squared spectrum error,
+\[
+  \mathcal{L}\!\left(\vect{f}(\hat{\vect{x}}),\,\vect{y}\right)
+  \;=\;
+  \frac{1}{L}\sum_{\ell=1}^{L}\big(f_\ell(\hat{\vect{x}})-y_\ell\big)^2,
+\]
+optionally after whitening or per-wavelength scaling if noise/importance varies across the band. We first train a forward surrogate $\widehat{\vect{f}}$ on $(\vect{x}_i,\vect{y}_i)$, freeze it, and then optimise $g$ with \eqref{eq:tandem_new} using $\widehat{\vect{f}}$ in place of $\vect{f}$. At inference, given a new target $\vect{y}^{\star}$, we compute $\hat{\vect{x}}=g(\vect{y}^{\star})$ as a fast, feasible proposal. If desired, we refine $\hat{\vect{x}}$ by a short local optimisation
+\[
+  \hat{\vect{x}}^{\,\text{ref}} \in \arg\min_{\vect{x}\in\mathcal{X}}
+  \mathcal{L}\!\left(\widehat{\vect{f}}(\vect{x}),\,\vect{y}^{\star}\right)
+  \quad \text{initialised at } \hat{\vect{x}},
+\]
+and verify it with the high-fidelity simulator. This workflow preserves speed (single forward pass through $g$), handles non-uniqueness (outcome-space fidelity), and retains control via regularisation and constraints in $\mathcal{X}$.
 
 \subsection{Deterministic Modelling}\label{sec:deterministic_modelling}
-In the deterministic view, the inverse model returns a \emph{single} representative decision for each target outcome. Learning $g:\mathcal{Y}\!\to\!\mathcal{X}$ is posed as regularised ERM:
+
+In the deterministic setting, the inverse model $g:\mathcal{Y}\!\to\!\mathcal{X}$ returns a single design $\hat{\vect{x}}=g(\vect{y}^{\star})$ for any target $\vect{y}^{\star}$. Training uses data $\mathcal{D}=\{(\vect{y}_i,\vect{x}_i)\}_{i=1}^{N}$ and a regularised objective to promote stability and generalisation. A basic formulation treats inverse learning as empirical risk minimisation in decision space,
 \begin{equation}
   \widehat{g}
   \;\in\;
   \arg\min_{g\in\mathcal{G}}
-  \frac{1}{N}\sum_{i=1}^{N}\ell\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
+  \frac{1}{N}\sum_{i=1}^{N}\ell_{\mathcal{X}}\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
   \;+\; \lambda\,\Omega(g),
-  \label{eq:erm_det}
+  \label{eq:det_inv}
 \end{equation}
-with task loss (e.g., $\ell(\hat{\vect{x}},\vect{x})=\|\hat{\vect{x}}-\vect{x}\|_2^2$) and inductive bias via $\Omega(g)$ (e.g., weight decay, Lipschitz/Jacobian penalties, early stopping) to curb overfitting and to stabilise estimates under non-uniqueness and noisy data. Hyperparameters, including $\lambda$, are tuned by validation or cross-validation to balance bias–variance and ensure generalisation to unseen queries $\vect{y}^\star$.
+where $\ell_{\mathcal{X}}$ penalises deviation from reference designs (e.g., $\|\hat{\vect{x}}-\vect{x}\|_2^2$ for continuous variables), $\Omega$ encodes inductive bias (e.g., weight decay, Jacobian control, early stopping), and $\lambda\!\ge\!0$ trades fit for complexity. This objective is effective when the mapping from $\vect{y}$ to a preferred $\vect{x}$ is essentially single-valued or when reproducing known recipes is desirable.
 
-\begin{figure}[tbp]
-  \centering
-  \begin{adjustbox}{max width=\linewidth}
-    \input{figures/deterministic_modeling}
-  \end{adjustbox}
-  \caption{Deterministic modelling pipeline with regularised ERM and feasibility handling.}
-  \label{fig:deterministic-model}
-\end{figure}
-
-When decisions must satisfy feasibility constraints $g_j(\vect{x})\!\le\!0$ and $h_k(\vect{x})\!=\!0$
-(cf.\ Eq.~\eqref{eq:mop}), training can promote feasibility either by projection onto a feasible set
-$\Pi_{\calX}$ or via soft penalties:
+Inverse problems are often one-to-many, however, so it is natural to measure success in outcome space using a forward model $\vect{f}:\mathcal{X}\!\to\!\mathcal{Y}$ (a simulator or a frozen surrogate). A forward-validated or “tandem” objective trains $g$ so that its proposals \emph{produce} the targets:
 \begin{equation}
   \widehat{g}
   \;\in\;
-  \arg\min_{g}
+  \arg\min_{g\in\mathcal{G}}
+  \frac{1}{N}\sum_{i=1}^{N}
+  \ell_{\mathcal{Y}}\!\big(\,\vect{f}(g(\vect{y}_i))\,,\,\vect{y}_i\big)
+  \;+\; \lambda\,\Omega(g),
+  \label{eq:det_tandem}
+\end{equation}
+with $\ell_{\mathcal{Y}}$ an application-appropriate discrepancy in $\mathcal{Y}$ (e.g., scaled $\ell_2$, Mahalanobis, or a task metric). This objective naturally accommodates non-uniqueness by accepting any design whose forward response matches the target.
+
+When one wishes to retain some preference for observed designs while enforcing outcome fidelity, a simple interpolation combines the two losses:
+\begin{equation}
+  \widehat{g}
+  \;\in\;
+  \arg\min_{g\in\mathcal{G}}
   \frac{1}{N}\sum_{i=1}^{N}
   \Big[
-     \ell\!\big(\Pi_{\calX}(g(\vect{y}_i)),\,\vect{x}_i\big)
-     \;+\;
-     \beta\!\sum_{j}\![\,g_j(g(\vect{y}_i))\,]_+^{\!2}
-     \;+\;
-     \beta'\!\sum_{k}\! h_k(g(\vect{y}_i))^{2}
+    \alpha\,\ell_{\mathcal{X}}\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
+    \;+\;
+    (1-\alpha)\,\ell_{\mathcal{Y}}\!\big(\vect{f}(g(\vect{y}_i)),\,\vect{y}_i\big)
   \Big]
   \;+\; \lambda\,\Omega(g),
-  \label{eq:constraints_det}
+  \qquad \alpha\in[0,1].
+  \label{eq:det_hybrid}
 \end{equation}
-with $[t]_+=\max\{t,0\}$. Such Tikhonov-style penalties discourage implausible or infeasible proposals while keeping the output single-valued.
+Small $\alpha$ emphasises “any valid preimage” (useful under strong non-uniqueness); larger $\alpha$ softly anchors solutions near known designs (useful for manufacturability or established process windows). Hyperparameters (architecture, $\lambda$, and, if used, $\alpha$) are selected on validation data. At inference, a single forward pass yields $\hat{\vect{x}}=g(\vect{y}^{\star})$, which can be verified by evaluating $\vect{f}(\hat{\vect{x}})$ against $\vect{y}^{\star}$.
 
-Deterministic outputs are well-suited for fast, repeatable proposals—e.g., as starting points for expert refinement or forward verification—yet they \emph{collapse} potentially multi-valued inverse relations to one point and do not natively quantify uncertainty or capture diversity. This motivates the complementary probabilistic view.
+Deterministic training yields fast, reproducible proposals but collapses potentially multi-valued inverse relations to a point and does not natively quantify uncertainty or support diversity of candidates. In the broader framework of this thesis, these objectives are complemented by probabilistic models that learn conditional distributions (e.g., $p(\vect{x}\mid\vect{y})$ or $p(\vect{y}\mid\vect{x})$), enabling uncertainty estimates, calibrated scoring, and sampling-based exploration when multiple designs can realise the same target.
+
 
 \subsection{Probabilistic Modelling}
 
-The probabilistic view represents \emph{distributions} conditional on inputs, thereby quantifying uncertainty and naturally handling multi-valued relationships~\cite{Murphy2022PML1,Gelman2013BDA3}. A conditional model $p_\theta(\vect{y}\mid\vect{x})$ can be fit by maximising regularised conditional log-likelihood:
+The probabilistic view treats predictions as \emph{distributions} rather than single points, which makes uncertainty explicit and accommodates one-to-many inverse relationships. Inverse design can model either the forward conditional $p_\theta(\vect{y}\mid\vect{x})$ (often paired with a decision rule over $\vect{x}$) or the inverse conditional $p_\theta(\vect{x}\mid\vect{y})$ (directly proposing distributions over designs for a target). In both cases, parameters $\theta$ are learned by likelihood-based training with appropriate regularisation.
+
+A forward conditional is fit by maximising the regularised conditional log-likelihood
 \begin{equation}
   \widehat{\theta}
   \;\in\;
@@ -273,31 +289,48 @@ The probabilistic view represents \emph{distributions} conditional on inputs, th
   \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{y}_i \mid \vect{x}_i\big)
   \;-\; \gamma\,\mathcal{R}(\theta)
   \bigg],
-  \label{eq:mle}
+  \label{eq:prob_forward}
 \end{equation}
-where $\mathcal{R}(\theta)$ controls complexity. Given a new input $\vect{x}^{\star}$, predictive summaries include
-\begin{align}
-  \text{(point)}\quad
-  \widehat{\vect{y}}_{\text{MAP}}(\vect{x}^{\star}) 
-  &= \arg\max_{\vect{y}}\, p_{\widehat{\theta}}(\vect{y}\mid \vect{x}^{\star}),
-  \label{eq:map_point}\\[2pt]
-  \text{(predictive)}\quad
-  p(\vect{y}\mid \vect{x}^{\star},\mathcal{D})
-  &= \int p_{\theta}(\vect{y}\mid \vect{x}^{\star})\,
-     p(\theta\mid\mathcal{D})\,\mathrm{d}\theta
-     \;\approx\; p_{\widehat{\theta}}(\vect{y}\mid \vect{x}^{\star}),
-  \label{eq:predictive}
-\end{align}
-where the Bayesian predictive integrates parameter uncertainty whereas the plug-in predictive uses $\widehat{\theta}$~\cite{Gelman2013BDA3,Murphy2022PML1}. In inverse design one may also model $p(\vect{x}\mid\vect{y})$ directly (e.g., conditional generative models), or combine a learned $p(\vect{y}\mid\vect{x})$ with decision rules to propose $\vect{x}$ that are likely to realise $\vect{y}^{\star}$.
+after which inverse recommendations are obtained by searching or scoring designs against the predictive distribution (e.g., selecting $\tilde{\vect{x}}$ that maximises the probability of meeting a tolerance around a target $\vect{y}^{\star}$). An inverse conditional is fit analogously as
+\begin{equation}
+  \widehat{\theta}
+  \;\in\;
+  \arg\max_{\theta}
+  \bigg[
+  \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{x}_i \mid \vect{y}_i\big)
+  \;-\; \gamma\,\mathcal{R}(\theta)
+  \bigg],
+  \label{eq:prob_inverse}
+\end{equation}
+and directly yields a distribution over feasible candidates for any query $\vect{y}^{\star}$.
 
-\begin{figure}[tbp]
-  \centering
-  \begin{adjustbox}{max width=\linewidth}
-    \input{figures/probabilistic_modeling}
-  \end{adjustbox}
-  \caption{Probabilistic modelling via conditional density $p_\theta(\vect{y}\mid\vect{x})$, sampling, and decision rule.}
-  \label{fig:probabilistic-model}
-\end{figure}
+Parametric density families include mixture models (e.g., mixture density networks that pair a neural network with a conditional Gaussian mixture), which offer closed-form likelihoods and capture multimodality in $p(\vect{x}\mid\vect{y})$. Latent-variable generative models (e.g., conditional variational autoencoders) express the conditional via an integral over a low-dimensional latent $\vect{z}$,
+\begin{equation}
+  p_\theta(\vect{x}\mid \vect{y})
+  \;=\;
+  \int p_\theta(\vect{x}\mid \vect{z},\vect{y})\,p_\theta(\vect{z}\mid \vect{y})\,\mathrm{d}\vect{z},
+  \label{eq:cvae_factorisation}
+\end{equation}
+and are trained by maximising an evidence lower bound (ELBO) with an inference network $q_\phi(\vect{z}\mid \vect{x},\vect{y})$. Flow-based models use invertible transformations conditioned on $\vect{y}$ to obtain exact $\log$-likelihoods and flexible densities; diffusion-style models provide another route to sample diverse designs from a learned conditional score or noise process. These families trade off tractability (closed-form likelihoods) and flexibility (expressiveness of the conditional), and each can be regularised to encode smoothness or architectural priors.
+
+Uncertainty is a first-class output under the probabilistic view. Aleatoric (data) uncertainty reflects intrinsic variability/noise in outcomes for a fixed design and is captured directly by the conditional variance. Epistemic (model) uncertainty reflects limited data or model misspecification; practical estimators include Bayesian neural networks and deep ensembles that approximate posterior predictive variability. For calibrated evaluation, strictly proper scoring rules such as negative log-likelihood (NLL) and the continuous ranked probability score (CRPS) simultaneously reward sharpness and calibration of predictive distributions.
+
+Turning distributions into decisions can be done by sampling and ranking or by a Bayes decision rule. Given a target $\vect{y}^{\star}$ and an inverse conditional $p(\vect{x}\mid\vect{y}^{\star})$, draw candidates $\{\vect{x}^{(r)}\}_{r=1}^{R}$, evaluate their forward responses $\vect{f}(\vect{x}^{(r)})$, and select those with highest success probability within a task-specific tolerance, e.g.,
+\[
+\widehat{\vect{x}}
+\in
+\arg\max_{r\in\{1,\dots,R\}}
+\Pr\!\Big[\,d\!\big(\vect{f}(\vect{x}^{(r)}),\vect{y}^{\star}\big)\le\epsilon\ \Big|\ \mathcal{D}\Big].
+\]
+Alternatively, define a utility $u(\tilde{\vect{x}},\vect{y};\,\vect{y}^{\star})$ that rewards target attainment (and optionally penalises constraint violation) and choose
+\[
+\tilde{\vect{x}}^{\star}
+\in
+\arg\max_{\tilde{\vect{x}}\in\mathcal{X}}
+\mathbb{E}_{\vect{y}\sim p(\vect{y}\mid \tilde{\vect{x}},\mathcal{D})}\!\big[\,u(\tilde{\vect{x}},\vect{y};\,\vect{y}^{\star})\,\big],
+\]
+which connects probabilistic predictions to task-aligned, point-valued recommendations. In practice, the same pipeline supports diversity-aware design: draw multiple high-probability candidates, report their predictive success rates, and surface epistemic uncertainty to guide follow-up experiments or simulations where the model is least certain.
+
 
 \paragraph{Aleatoric vs.\ epistemic uncertainty.}
 Probabilistic models distinguish data (aleatoric) uncertainty from model (epistemic) uncertainty: the former reflects intrinsic variability/noise in $\vect{y}\mid\vect{x}$, the latter arises from limited data or misspecification. This distinction matters when ranking candidates and communicating confidence~\cite{Murphy2022PML1,Bishop2006PRML}.
@@ -318,35 +351,7 @@ which minimises expected loss in the equivalent formulation. Canonical choices i
 \medskip
 Importantly, Eq.~\eqref{eq:bayes_decision_inverse} is \emph{model-agnostic}: one may plug in a forward predictive $p(\vect{y}\mid\vect{x})$ (paired with a search over $\vect{x}$) or a direct inverse density $p(\vect{x}\mid\vect{y})$ (paired with sampling/selection at $\vect{y}^\star$). Either way, the decision layer ensures that reported designs optimise a task-aligned utility rather than a surrogate training loss.
 
-\subsection{Deterministic vs.\ probabilistic objectives}
 
-\textbf{Deterministic (point) objectives.}
-Deterministic models learn a single-valued inverse $g:\calY\!\to\!\calX$ by regularised ERM,
-\begin{equation}
-  \widehat{g}
-  \;\in\;
-  \arg\min_{g\in\calG}
-  \frac{1}{N}\sum_{i=1}^{N}\ell\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
-  \;+\; \lambda\,\Omega(g),
-  \label{eq:erm_det_again}
-\end{equation}
-with $\Omega$ injecting inductive bias (smoothness, sparsity, Lipschitz/Jacobian control, early stopping). Deterministic training is attractive for speed, stability, and easy feasibility handling (e.g., projections or soft penalties), but collapses multi-valued inverse relations to a point and does not natively quantify uncertainty~\cite{Bishop2006PRML,Hastie2009ESL}.
-
-\textbf{Probabilistic (distributional) objectives.}
-There are two common routes:
-(i) \emph{inverse density} learning, which directly fits $p_\theta(\vect{x}\mid\vect{y})$ by maximising conditional log-likelihood (a strictly proper scoring rule),
-\begin{equation}
-  \widehat{\theta}
-  \;\in\;
-  \arg\max_{\theta}\;
-  \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{x}_i\mid \vect{y}_i\big)
-  \;-\;\gamma\,\mathcal{R}(\theta),
-  \label{eq:cond_nll}
-\end{equation}
-or (ii) \emph{forward density} learning, which fits $p_\theta(\vect{y}\mid\vect{x})$ via \eqref{eq:mle} and then applies the decision rule \eqref{eq:bayes_decision_inverse} to choose $\tilde{\vect{x}}$ that is likely to realise $\vect{y}^\star$. Route (ii) is convenient when forward simulators or validated surrogates already exist; route (i) enables direct sampling of diverse candidates at $\vect{y}^\star$. In both cases, likelihood-based training yields calibrated uncertainty when paired with proper scoring rules and well-specified families~\cite{Murphy2022PML1,Gelman2013BDA3,Gneiting2007JASA}.
-
-\textbf{Bridging the two.}
-Hybrid objectives combine inverse consistency with forward consistency, e.g., \eqref{eq:hybrid}, or train a probabilistic model and output a deterministic recommendation via the Bayes rule (plug-in decision on the predictive). This separation—\emph{train for distributional fidelity, decide for task utility}—keeps learning and decision-making aligned yet modular~\cite{Bishop2006PRML,Murphy2022PML1}.
 
 \subsection{Inverse-centric evaluation metrics}
 
