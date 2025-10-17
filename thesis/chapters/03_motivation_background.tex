@@ -335,80 +335,28 @@ which connects probabilistic predictions to task-aligned, point-valued recommend
 \paragraph{Aleatoric vs.\ epistemic uncertainty.}
 Probabilistic models distinguish data (aleatoric) uncertainty from model (epistemic) uncertainty: the former reflects intrinsic variability/noise in $\vect{y}\mid\vect{x}$, the latter arises from limited data or misspecification. This distinction matters when ranking candidates and communicating confidence~\cite{Murphy2022PML1,Bishop2006PRML}.
 
-\subsection{Decision-Theoretic Perspective}
-
-For inverse exploration the object we report is a \emph{decision} $\tilde{\vect{x}}\in\calX$ for a given target outcome $\vect{y}^\star$. The decision quality is determined by the (uncertain) outcome that $\tilde{\vect{x}}$ will induce via the forward map $\vect{f}$. Under a task utility $u(\tilde{\vect{x}},\vect{y};\,\vect{y}^\star)$—often chosen as a negative discrepancy between $\vect{f}(\tilde{\vect{x}})$ and $\vect{y}^{\star}$ subject to feasibility—the Bayes rule selects
-\begin{equation}
-  \tilde{\vect{x}}^{\star}
-  \;\in\;
-  \arg\max_{\tilde{\vect{x}}\in\calX}
-  \mathbb{E}_{\vect{y}\sim p(\vect{y}\mid \tilde{\vect{x}},\mathcal{D})}
-  \big[\,u(\tilde{\vect{x}},\vect{y};\,\vect{y}^{\star})\,\big],
-  \label{eq:bayes_decision_inverse}
-\end{equation}
-which minimises expected loss in the equivalent formulation. Canonical choices illustrate the link to summaries of the predictive distribution: with quadratic loss on $d(\vect{f}(\tilde{\vect{x}}),\vect{y}^\star)$, the \emph{mean} predictive outcome is optimal; with absolute deviation, the \emph{median} is optimal; with a tolerance region $\{\vect{y}\!:\, d(\vect{y},\vect{y}^\star)\le\epsilon\}$, decisions can be ranked by success probability $\Pr\!\big[d(\vect{y},\vect{y}^\star)\le\epsilon\,|\,\tilde{\vect{x}}\big]$. This connects probabilistic predictors to point recommendations and makes uncertainty operational in the inverse task~\cite{Gelman2013BDA3,Murphy2022PML1}.
-
-\medskip
-Importantly, Eq.~\eqref{eq:bayes_decision_inverse} is \emph{model-agnostic}: one may plug in a forward predictive $p(\vect{y}\mid\vect{x})$ (paired with a search over $\vect{x}$) or a direct inverse density $p(\vect{x}\mid\vect{y})$ (paired with sampling/selection at $\vect{y}^\star$). Either way, the decision layer ensures that reported designs optimise a task-aligned utility rather than a surrogate training loss.
-
-
-
 \subsection{Inverse-centric evaluation metrics}
 
-Evaluation should reflect the inverse goal—“propose decisions that realise $\vect{y}^{\star}$ while respecting constraints”—and should match the model type (point vs.\ distribution). We therefore report complementary, task-aligned criteria:
+Evaluation reflects the inverse goal: \emph{propose decisions that realise a desired outcome $\vect{y}^{\star}$}. In this thesis, each method returns a single decision per target (e.g., any probabilistic output is collapsed to a point estimate such as a mean, median, or MAP), and we therefore assess the quality of that proposed decision, irrespective of how it was generated.
 
-\paragraph{Target attainment in outcome space.}
-For a proposed decision $\widehat{\vect{x}}$, measure discrepancy in $\calY$:
+We first quantify how close a proposed decision $\widehat{\vect{x}}$ comes to the target by measuring a discrepancy in the outcome space with a task-appropriate distance $d$:
 \begin{equation}
   \mathcal{E}_{\mathcal{Y}}(\widehat{\vect{x}},\vect{y}^{\star})
   \;=\;
   d\!\left(\,\vect{f}(\widehat{\vect{x}})\,,\,\vect{y}^{\star}\right),
   \label{eq:target_error_clean}
 \end{equation}
-with a task distance $d$ (e.g., $\ell_2$, Mahalanobis, or application-specific metrics). Report also a tolerance-based success rate
+where $\vect{f}$ denotes the forward map from decision to outcome. The choice of $d$ should match the semantics and scales of the outcomes. In many settings, the Euclidean distance (the $\ell_2$ norm) is a natural default, especially after standardising outcome dimensions; see, for example, \cite{BoydVandenberghe2004}. When correlations between outcome components matter, the Mahalanobis distance provides a principled alternative by incorporating the outcome covariance; see the original development in \cite{Mahalanobis1936} and a modern tutorial in \cite{DeMaesschalck2000}. In application-driven contexts, $d$ may be defined by an accepted domain metric; in all cases, the definition of $d$ and any normalisation or weighting should be stated to support interpretability and reproducibility.
+
+To complement the continuous error, we also report a tolerance-based success measure. For each target, we record a binary success indicator that answers the question “did the single proposed decision meet the specification?”:
 \begin{equation}
-  \mathrm{Succ}_\epsilon
+  \mathrm{succ}^{(m)}_\epsilon
   \;=\;
-  \frac{1}{M}\sum_{m=1}^{M}
   \mathbb{I}\!\left[\,d\!\left(\vect{f}\!\big(\widehat{\vect{x}}^{(m)}\big),\,\vect{y}^{\star (m)}\right)\le \epsilon\,\right],
-  \label{eq:succ_eps}
-\end{equation}
-and, when an oracle or best-known candidate set $\calC$ is available, an \emph{outcome regret}
-\begin{equation}
-  \mathrm{Regret}
-  \;=\;
-  \frac{1}{M}\sum_{m=1}^{M}\Big(
-  d\!\left(\vect{f}(\widehat{\vect{x}}^{(m)}),\,\vect{y}^{\star(m)}\right)
-  - \min_{\vect{x}\in\calC} d\!\left(\vect{f}(\vect{x}),\,\vect{y}^{\star(m)}\right)
-  \Big).
-  \label{eq:regret}
-\end{equation}
-When full simulators are costly, use a validated surrogate $d_{\text{surf}}$ with explicit caveats.
-
-\paragraph{Feasibility and constraint violation.}
-Report both the feasible rate and the average violation magnitude:
-\begin{equation}
-  \mathrm{Feas}=\frac{1}{M}\sum_{m}\mathbb{I}\!\big[g_j(\widehat{\vect{x}}^{(m)})\!\le\!0,\ \forall j\ \wedge\ h_k(\widehat{\vect{x}}^{(m)})\!=\!0,\ \forall k\big],
-  \qquad
-  \mathrm{Viol}=\frac{1}{M}\sum_{m}\Big(\sum_j[\,g_j(\widehat{\vect{x}}^{(m)})\,]_+ + \sum_k |h_k(\widehat{\vect{x}}^{(m)})|\Big).
-  \label{eq:feas_viol}
+  \label{eq:succ_eps_single}
 \end{equation}
 
-\paragraph{Decision-space diversity (when multiple proposals are returned).}
-For $\{\widehat{\vect{x}}^{(m,r)}\}_{r=1}^{R}$ per target, quantify spread, e.g., by average pairwise distance
-\begin{equation}
-  \mathrm{Div}^{(m)}
-  \;=\;
-  \frac{2}{R(R-1)}\sum_{r<s}\big\|\widehat{\vect{x}}^{(m,r)}-\widehat{\vect{x}}^{(m,s)}\big\|_2,
-  \label{eq:diversity_clean}
-\end{equation}
-or a problem-specific dispersion index. Diversity should be reported \emph{alongside} target attainment to avoid trading quality for spread.
+The tolerance $\epsilon$ should reflect domain limits (e.g., engineering tolerances or user-acceptable error). When such limits differ by component, it is helpful to define $d$ using per-component scaling or to report $\mathrm{Succ}_\epsilon$ at several tolerances (e.g., tight and relaxed bands) for a more complete picture. Alongside aggregate success, summary statistics of $\mathcal{E}_{\mathcal{Y}}$ across targets (e.g., median and interquartile range) convey both typical performance and variability.
 
-\paragraph{Uncertainty quality (probabilistic models).}
-Use proper scoring rules on held-out $(\vect{y}_i,\vect{x}_i)$ pairs, such as negative log-likelihood for $p(\vect{x}\mid\vect{y})$ or $p(\vect{y}\mid\vect{x})$, and CRPS for continuous targets; these jointly reward calibration and sharpness~\cite{Gneiting2007JASA}. When ranking decisions via success probabilities, reliability diagrams or PIT diagnostics complement scalar scores.
 
-\paragraph{Efficiency.}
-Report simulator/forward calls and wall-clock per query $\vect{y}^{\star}$, enabling fair comparisons across models, datasets, and hardware.
-
-\medskip
-Together, these criteria separate \emph{training} (deterministic vs.\ probabilistic objectives) from \emph{reporting} (decision-theoretic selection under uncertainty), and evaluate models on what matters for inverse design: achieving $\vect{y}^\star$, respecting constraints, being honest about uncertainty, and doing so efficiently.
+In sum, $\mathcal{E}_{\mathcal{Y}}$ captures \emph{how close} we get to the target, while $\mathrm{Succ}_\epsilon$ captures \emph{whether} we satisfy a practically meaningful tolerance. Together they provide a concise, implementation-agnostic summary of decision quality that is easy to interpret and straightforward to reproduce.
