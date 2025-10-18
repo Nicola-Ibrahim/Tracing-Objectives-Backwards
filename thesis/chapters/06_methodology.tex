@@ -4,18 +4,14 @@
 
 \chapter{Methodology}\label{chap:method}
 
-This chapter presents the methodology developed to answer the research
-questions posed in Chapter~\ref{chap:problem}.  The approach is modular
-and consists of an offline training phase and an online exploration
-phase.  During the offline phase we generate a Pareto approximation
-through a standard MOO algorithm, train surrogate forward and inverse
-models and validate their performance.  In the online phase a user
-interacts with the inverse model to specify desired objectives and
-retrieve candidate decisions, which are then ranked using forward
-predictions and plausibility scores.
+
+We adopt an offline inverse-mapping approach. From representative pairs $(\vect{x}, \vect{y})$, we learn a model that, given a user target $\vect{y}^{\star}$, proposes a single decision $\widehat{\vect{x}}$ intended to realise that target. The method is modular and agnostic to the eventual dataset shape: a training stage builds the inverse model from archives, simulation sweeps, or curated examples, and a lightweight online stage answers new queries. When models produce distributions, we collapse them to a point decision (e.g., mean or median) to keep outputs consistent.
+
+At a high level, the pipeline comprises: (i) assembling and normalising training examples to place outcomes on comparable scales; (ii) fitting an inverse model—deterministic or probabilistic with point selection—that maps targets to decisions; (iii) encouraging forward consistency during training so that $\vect{f}(\widehat{\vect{x}})$ tracks $\vect{y}$; and (iv) at query time, translating $\vect{y}^{\star}$ into $\widehat{\vect{x}}$ and optionally checking it with a forward predictor or simulator for verification or refinement. Design choices (model class, consistency terms, constraint handling, and ranking rules) are selected for clarity, reproducibility, and ease of use in interactive settings.
+
+We learn an inverse map from representative $(\vect{x},\vect{y})$ pairs and use it to translate a user-specified target $\vect{y}^{\star}$ into feasible, target-consistent decision candidates, with optional forward checks for verification or refinement. Within this scope, we compare deterministic and probabilistic inverse models, explain how training data are assembled and normalised, and motivate design choices—model class, forward-consistency training, constraint handling, calibration, and interactive ranking—that matter in practice.
 
 
-% In Chapter: Methodology
 \section{Inverse-Model Training and Evaluation}\label{sec:method_training_eval}
 
 \subsection{Deterministic inverse training}
