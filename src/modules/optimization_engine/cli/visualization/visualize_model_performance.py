@@ -14,7 +14,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 from ...infrastructure.modeling.visualizers.performance import (
-    ModelPerformanceVisualizer,
+    ModelPerformance2DVisualizer,
 )
 
 
@@ -22,7 +22,7 @@ def _build_handler() -> VisualizeModelPerformanceCommandHandler:
     return VisualizeModelPerformanceCommandHandler(
         model_artificat_repo=FileSystemModelArtifactRepository(),
         processed_dataset_repo=FileSystemProcessedDatasetRepository(),
-        visualizer=ModelPerformanceVisualizer(),
+        visualizer=ModelPerformance2DVisualizer(),
     )
 
 
