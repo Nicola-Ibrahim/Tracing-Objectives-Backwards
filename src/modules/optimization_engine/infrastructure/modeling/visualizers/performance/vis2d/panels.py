@@ -1,6 +1,8 @@
 import numpy as np
 import plotly.graph_objects as go
 
+from ..common.prediction import point_predict
+
 
 def add_surfaces_2d(
     fig: go.Figure,
@@ -21,38 +23,28 @@ def add_surfaces_2d(
     GX1, GX2 = np.meshgrid(gx1, gx2, indexing="xy")
     X_grid = np.stack([GX1.ravel(), GX2.ravel()], axis=1)
 
-    # predict Y on the X-grid (model maps x -> y). Returns (n, 2) for y1,y2
-    Yg = estimator.predict(X_grid)
+    # --- use point_predict for consistent semantics (MAP -> mean -> predict) ---
+    Yg = point_predict(estimator, X_grid)  # returns (n, 2)
     z_y1 = Yg[:, 0].reshape(grid_res, grid_res)
     z_y2 = Yg[:, 1].reshape(grid_res, grid_res)
 
     # -------- row1: surfaces + TRAIN/TEST point clouds (x on axes; y as height) -----
     fig.add_trace(
         go.Surface(
-            x=GX1,
-            y=GX2,
-            z=z_y1,
-            opacity=0.45,
-            showscale=False,
-            name="Decision y1(x)",
+            x=GX1, y=GX2, z=z_y1, opacity=0.45, showscale=False, name="Decision y1(x)"
         ),
         row=row,
         col=1,
     )
     fig.add_trace(
         go.Surface(
-            x=GX1,
-            y=GX2,
-            z=z_y2,
-            opacity=0.45,
-            showscale=False,
-            name="Decision y2(x)",
+            x=GX1, y=GX2, z=z_y2, opacity=0.45, showscale=False, name="Decision y2(x)"
         ),
         row=row,
         col=2,
     )
 
-    # TRAIN points: (x1,x2) on plane; z = y1 / y2
+    # TRAIN points
     fig.add_trace(
         go.Scatter3d(
             x=X_train[:, 0],
@@ -114,11 +106,11 @@ def add_surfaces_2d(
         v = v[np.isfinite(v)]
         return (float(v.min()), float(v.max())) if v.size else (0.0, 1.0)
 
-    # common XY ranges taken from X (domain); include the grid and any test Xs
+    # common XY ranges (include grid + any test Xs)
     x_rng = _minmax(X_train[:, 0], (X_test[:, 0] if X_test is not None else None), GX1)
     y_rng = _minmax(X_train[:, 1], (X_test[:, 1] if X_test is not None else None), GX2)
 
-    # Z ranges from Y (targets) + predicted surfaces
+    # Z ranges from Y + predicted surfaces
     z1_min, z1_max = _minmax(
         y_train[:, 0], (y_test[:, 0] if y_test is not None else None), z_y1
     )
@@ -136,7 +128,7 @@ def add_surfaces_2d(
     y_rng = _pad(*y_rng)
     z_rng = _pad(*z_rng)
 
-    # build identical tick locations so both scenes show the same ticks
+    # consistent ticks
     def _ticks(rng, n=5):
         return list(np.round(np.linspace(rng[0], rng[1], n), 5))
 
@@ -159,7 +151,7 @@ def add_surfaces_2d(
             tickmode="array",
             tickvals=_ticks(z_rng),
         ),
-        aspectmode="cube",  # equal scale, no distortion
+        aspectmode="cube",  # equal scaling on x/y/z
     )
     scene2_axes = dict(
         xaxis=dict(
@@ -183,6 +175,8 @@ def add_surfaces_2d(
         aspectmode="cube",
     )
 
-    # Apply identical axes to both scenes in row 1
-    fig.update_scenes(row=row, col=1, **scene1_axes)
+    # Apply identical axes to both scenes (recommended approach: update_scenes)
+    fig.update_scenes(
+        row=row, col=1, **scene1_axes
+    )  # control 3D scene ranges/ticks/aspect here, not per-trace. :contentReference[oaicite:2]{index=2}
     fig.update_scenes(row=row, col=2, **scene2_axes)
