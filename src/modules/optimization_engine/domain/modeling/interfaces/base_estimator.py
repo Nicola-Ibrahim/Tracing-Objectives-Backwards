@@ -2,7 +2,7 @@ import enum
 import inspect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Literal, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -164,20 +164,23 @@ class DeterministicEstimator(BaseEstimator):
     A deterministic inverse decision mapper that uses a fixed mapping strategy.
     """
 
-    @abstractmethod
-    def predict(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
+    def predict(self, X, mode: Literal["standard"] = "standard"):
         """
-        Predicts corresponding 'dependent' values for given feature points.
+        Make predictions for the input data.
 
         Args:
-            X (NDArray[np.float64]): The feature points for which to predict targets.
+            X (NDArray[np.float64]): Input data points.
+            mode (Literal): Prediction mode. Currently only 'standard' is supported.
         Returns:
-            NDArray[np.float64]: Predicted target values.
+            NDArray[np.float64]: Predicted outputs.
         """
-        raise NotImplementedError("Predict method not implemented")
+        if mode == "standard":
+            return self.infer(X)
+
+    @abstractmethod
+    def infer(self, X: npt.NDArray[np.float64], **kwargs) -> npt.NDArray[np.float64]:
+        """Deterministic inference for each input."""
+        raise NotImplementedError("Infer method not implemented")
 
 
 @dataclass
@@ -231,6 +234,33 @@ class ProbabilisticEstimator(BaseEstimator):
     def get_loss_history(self) -> dict[str, list]:
         return self._training_history.as_dict()
 
+    def predict(
+        self,
+        X: npt.NDArray[np.float64],
+        mode: Literal["mean", "median", "map", "standard"] = "standard",
+    ) -> npt.NDArray[np.float64]:
+        """
+        Make predictions for the input data.
+
+        Args:
+            X (NDArray[np.float64]): Input data points.
+            mode (Literal): Prediction mode. One of 'mean', 'median', 'map', or 'standard'.
+        Returns:
+            NDArray[np.float64]: Predicted outputs.
+        """
+
+        if mode == "mean":
+            return self.infer_mean(X)
+        
+        elif mode == "median":
+            return self.infer_median(X)
+
+        elif mode == "map":
+            return self.infer_map(X)
+
+        elif mode == "standard":
+            return self.sample(X)
+
     @abstractmethod
     def sample(
         self,
@@ -242,19 +272,7 @@ class ProbabilisticEstimator(BaseEstimator):
         """Draw samples from the predictive distribution p(y|X)."""
 
     @abstractmethod
-    def predict(
-        self,
-        X: npt.NDArray[np.float64],
-        *,
-        seed: int | None = None,
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Return a single draw or summary prediction for each input."""
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def predict_mean(
+    def infer_mean(
         self,
         X: npt.NDArray[np.float64],
         n_samples: int = 256,
@@ -266,7 +284,7 @@ class ProbabilisticEstimator(BaseEstimator):
         raise NotImplementedError
 
     @abstractmethod
-    def predict_median(
+    def infer_median(
         self,
         X: npt.NDArray[np.float64],
         n_samples: int = 501,
@@ -278,7 +296,7 @@ class ProbabilisticEstimator(BaseEstimator):
         raise NotImplementedError
 
     @abstractmethod
-    def predict_map(
+    def infer_map(
         self,
         X: npt.NDArray[np.float64],
         **kwargs,

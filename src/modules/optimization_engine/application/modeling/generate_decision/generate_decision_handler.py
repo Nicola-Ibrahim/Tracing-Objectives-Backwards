@@ -15,9 +15,11 @@ from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ....domain.modeling.interfaces.base_estimator import BaseEstimator
+from ....domain.modeling.interfaces.base_estimator import (
+    BaseEstimator,
+    ProbabilisticEstimator,
+)
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....domain.modeling.services import EstimatorInferenceService
 from ...factories.assurance import DiversityStrategyFactory, ScoreStrategyFactory
 from .generate_decision_command import GenerateDecisionCommand
 
@@ -47,7 +49,6 @@ class GenerateDecisionCommandHandler:
             conformal_calibrator=dv_calibration.conformal_calibrator,
         )
         self._calibration_repository = calibration_repository
-        self._inference_service = EstimatorInferenceService()
 
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         """Generate y for the requested estimator and x target, then validate."""
@@ -78,7 +79,7 @@ class GenerateDecisionCommandHandler:
         #         suggestion_noise_scale=command.suggestion_noise_scale,
         #     )
 
-        generated_decision_y, generated_decision_y_norm = self._inference_service.infer(
+        generated_decision_y, generated_decision_y_norm = self.infer(
             estimator=estimator,
             X_norm=target_objective_X_norm,
             normalizer=decision_normalizer,
@@ -144,6 +145,33 @@ class GenerateDecisionCommandHandler:
             )
         except ObjectiveOutOfBoundsError as error:
             self._handle_feasibility_error(error, objectives_normalizer)
+
+    def infer(
+        self,
+        *,
+        estimator: BaseEstimator,
+        X_norm: np.ndarray,
+        normalizer,
+        n_samples: int | None = 256,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return denormalized and normalized outputs for the provided inputs."""
+
+        X_input = np.atleast_2d(np.asarray(X_norm, dtype=float))
+
+        if isinstance(estimator, ProbabilisticEstimator):
+            sample_count = int(n_samples) if n_samples is not None else 256
+            y_norm = estimator.predict_mean(X_input, n_samples=sample_count)
+        else:
+            y_norm = estimator.predict(X_input)
+
+        y_norm = np.atleast_2d(np.asarray(y_norm, dtype=float))
+        if y_norm.shape[0] != X_input.shape[0]:
+            raise ValueError(
+                "Estimator returned mismatched batch size during inference."
+            )
+
+        y_raw = normalizer.inverse_transform(y_norm)[0]
+        return y_raw, y_norm[0]
 
     def _handle_feasibility_error(
         self, error: ObjectiveOutOfBoundsError, objectives_normalizer

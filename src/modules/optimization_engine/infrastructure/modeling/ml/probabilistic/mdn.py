@@ -244,7 +244,7 @@ class MDNEstimator(ProbabilisticEstimator):
     Public API:
       - predict(X, ...) -> one stochastic draw per x: (n, out_dim)
       - sample(X, n_samples, ...) -> many draws: (n, n_samples, out_dim)
-      - predict_mean / predict_median / predict_map
+      - infer_mean / infer_median / infer_map
       - get_mixture_parameters(X) -> (pi, mu, sigma) as numpy arrays
     """
 
@@ -454,51 +454,27 @@ class MDNEstimator(ProbabilisticEstimator):
 
     # ----------------------- Inference API -----------------------
 
-    def predict(
-        self,
-        X: npt.NDArray[np.float64],
-        seed: int | None = None,
-        *,
-        temperature: float = 1.0,
-        max_outputs_per_chunk: int = 20_000,
-    ) -> npt.NDArray[np.float64]:
-        """
-        One **stochastic** draw per input from p(x|y).
-
-        Determinism:
-        - Stochastic. Use `seed` for reproducibility.
-        - `temperature` rescales component scales (σ), not means.
-
-        Shapes:
-        - X: (n, in_dim)
-        - return: (n, out_dim)
-        """
-        s = self.sample(
-            X,
-            n_samples=1,
-            seed=seed,
-            temperature=temperature,
-            max_outputs_per_chunk=max_outputs_per_chunk,
-        )
-        return s.astype(np.float64, copy=False)
-
     def sample(
         self,
         X: npt.NDArray[np.float64],
         n_samples: int = 1,
-        seed: int | None = None,
-        *,
-        temperature: float = 1.0,
+        seed: int = 42,
+        temperature: float = 0.5,  # component spread temperature
+        tau_pi: float = 0.5,  # mixture-weight (softmax) temperature
         max_outputs_per_chunk: int = 20_000,
     ) -> npt.NDArray[np.float64]:
         """
         Draw `n_samples` IID samples per input from p(x|y).
 
+        Tempering:
+        - `temperature` affects component dispersions as per family:
+            Normal/LogNormal: std <- sqrt(T) * std; Laplace: scale <- T * scale.
+        - `tau_pi` affects mixture selection via softmax temperature (higher => softer).
+
         Shapes:
-        - X: (n, in_dim)
-        - return:
-            (n, out_dim)              if n_samples == 1
-            (n, n_samples, out_dim)   if n_samples  > 1
+        X: (n, in_dim)
+        return: (n, out_dim)              if n_samples == 1
+                (n, n_samples, out_dim)   if n_samples  > 1
         """
         self._ensure_fitted()
         if n_samples < 1:
@@ -516,23 +492,29 @@ class MDNEstimator(ProbabilisticEstimator):
 
         total_outputs = n * max(1, n_samples)
 
+        def _sample_from(pi, mu, sigma, n_s):
+            # apply temperatures
+            if tau_pi != 1.0:
+                pi = self._temper_pi(pi, tau_pi)
+            if temperature != 1.0:
+                sigma = self._apply_temperature(sigma, temperature)
+
+            dist = self._model._get_distribution(
+                pi, mu, sigma, self._distribution_family
+            )
+            if n_s == 1:
+                y = dist.sample()  # (n, out)
+                return y
+            else:
+                y = dist.sample((n_s,))  # (n_s, n, out)
+                return y.permute(1, 0, 2)  # (n, n_s, out)
+
         # Fast path
         if total_outputs <= max_outputs_per_chunk:
             with torch.no_grad():
                 pi, mu, sigma = self._model(X_tensor)
-                if temperature != 1.0:
-                    sigma = self._apply_temperature(sigma, temperature)
-                dist = self._model._get_distribution(
-                    pi, mu, sigma, self._distribution_family
-                )
-                if n_samples == 1:
-                    y = dist.sample()  # (n, out)
-                    return y.cpu().numpy().astype(np.float64, copy=False)
-                else:
-                    y = dist.sample((n_samples,))  # (n_s, n, out)
-                    return (
-                        y.permute(1, 0, 2).cpu().numpy().astype(np.float64, copy=False)
-                    )
+                out = _sample_from(pi, mu, sigma, n_samples)
+            return out.cpu().numpy().astype(np.float64, copy=False)
 
         # Chunked path
         results = []
@@ -542,30 +524,15 @@ class MDNEstimator(ProbabilisticEstimator):
             X_chunk = X_tensor[start:end]
             with torch.no_grad():
                 pi_c, mu_c, sigma_c = self._model(X_chunk)
-                if temperature != 1.0:
-                    sigma_c = self._apply_temperature(sigma_c, temperature)
-                dist_c = self._model._get_distribution(
-                    pi_c, mu_c, sigma_c, self._distribution_family
-                )
-                if n_samples == 1:
-                    s_chunk = dist_c.sample()  # (chunk, out)
-                    results.append(s_chunk.cpu())
-                else:
-                    s_chunk = dist_c.sample((n_samples,))  # (n_s, chunk, out)
-                    s_chunk = s_chunk.permute(1, 0, 2).cpu()  # (chunk, n_s, out)
-                    results.append(s_chunk)
+                s_chunk = _sample_from(pi_c, mu_c, sigma_c, n_samples)
+                results.append(s_chunk.cpu())
 
         out = torch.cat(results, dim=0).numpy().astype(np.float64, copy=False)
         return out
 
-    def predict_mean(
+    def infer_mean(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 256,
-        seed: int | None = None,
-        *,
-        temperature: float = 1.0,
-        max_outputs_per_chunk: int = 20_000,
     ) -> npt.NDArray[np.float64]:
         """
         **Monte-Carlo mean** per input: average of `n_samples` draws from p(x|y).
@@ -583,23 +550,15 @@ class MDNEstimator(ProbabilisticEstimator):
         """
         s = self.sample(
             X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            max_outputs_per_chunk=max_outputs_per_chunk,
+            n_samples=256,
         )
         if s.ndim == 2:
             return s.astype(np.float64, copy=False)  # n_samples==1, trivial mean
         return s.mean(axis=1).astype(np.float64, copy=False)
 
-    def predict_median(
+    def infer_median(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 501,
-        seed: int | None = None,
-        *,
-        temperature: float = 1.0,
-        max_outputs_per_chunk: int = 20_000,
     ) -> npt.NDArray[np.float64]:
         """
         **Monte-Carlo median** per input (marginal, per output dimension).
@@ -610,16 +569,13 @@ class MDNEstimator(ProbabilisticEstimator):
         """
         s = self.sample(
             X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            max_outputs_per_chunk=max_outputs_per_chunk,
+            n_samples=256,
         )
         if s.ndim == 2:
             return s.astype(np.float64, copy=False)
         return np.median(s, axis=1).astype(np.float64, copy=False)
 
-    def predict_map(
+    def infer_map(
         self,
         X: npt.NDArray[np.float64],
     ) -> npt.NDArray[np.float64]:
@@ -694,16 +650,42 @@ class MDNEstimator(ProbabilisticEstimator):
 
         return X_t
 
+    # --- add these helpers inside MDNEstimator ---------------------------------
+
+    def _temper_pi(self, pi: torch.Tensor, tau: float) -> torch.Tensor:
+        """
+        Softmax temperature on mixture weights already in probability space.
+        tau > 1.0 => softer (higher entropy); tau < 1.0 => peakier.
+        Implemented as: normalize(pi ** (1/tau)).
+        """
+        if tau == 1.0:
+            return pi
+        inv_tau = 1.0 / float(tau)
+        # clamp to avoid 0**inv_tau -> NaNs and to keep gradients sane
+        q = torch.clamp(pi, min=1e-12).pow(inv_tau)
+        return q / q.sum(dim=-1, keepdim=True)
+
     def _apply_temperature(
         self, sigma: torch.Tensor, temperature: float
     ) -> torch.Tensor:
         """
-        Temperature scaling for component scales (σ is std/scale).
-        temperature > 1.0 increases variance; < 1.0 decreases.
+        Temper component scales according to the distribution family.
+
+        NORMAL    : sigma_T = sqrt(T) * sigma        (variance ∝ T)
+        LAPLACE   : b_T     = T * b                  (scale ∝ T)
+        LOGNORMAL : sigma_T = sqrt(T) * sigma        (std in *log-space*)
+
+        Final clamp protects against extreme values after scaling.
         """
-        if temperature == 1.0:
+        T = float(temperature)
+        if T == 1.0:
             return sigma
-        return sigma * float(temperature)
+        if self._distribution_family == DistributionFamilyEnum.LAPLACE:
+            sigma_T = sigma * T
+        else:
+            # NORMAL and LOGNORMAL temper with sqrt(T) on std
+            sigma_T = sigma * np.sqrt(T)
+        return torch.clamp(sigma_T, min=1e-4)  # be conservative with a small floor
 
 
 # ======================================================================

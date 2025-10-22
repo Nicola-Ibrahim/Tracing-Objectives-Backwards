@@ -359,6 +359,7 @@ class CVAEEstimator(ProbabilisticEstimator):
             )
 
     # ---- latent helper ---- #
+
     def _sample_z_given_X(
         self,
         X_tensor: torch.Tensor,
@@ -366,19 +367,30 @@ class CVAEEstimator(ProbabilisticEstimator):
         temperature: float,
         seed: int,
     ) -> torch.Tensor:
+        """
+        Draw z ~ N(mu_p(X), Sigma_p(X)) with Gaussian tempering:
+        std_T = sqrt(T) * std  (variance scales ∝ T)
+        Returns: (n, n_samples, latent_dim)
+        """
         if n_samples < 1:
             raise ValueError("n_samples must be >= 1")
+
         n = X_tensor.shape[0]
         gen = torch.Generator(device=self.device)
         gen.manual_seed(int(seed))
-        mu_p, logvar_p = self._prior_net(X_tensor)  # (n, latent)
-        std_p = torch.exp(0.5 * logvar_p)
+
+        # conditional prior p(z|X) = N(mu_p, diag(exp(logvar_p)))
+        mu_p, logvar_p = self._prior_net(X_tensor)  # (n, L)
+        std_p = torch.exp(0.5 * logvar_p)  # (n, L)
+
+        # Temper latent *std* by sqrt(T)
+        t_std = std_p * np.sqrt(float(temperature))  # (n, L)
+
+        # Reparameterized samples
         eps = torch.randn(
             (n, n_samples, self._latent_dim), generator=gen, device=self.device
-        )
-        return (
-            mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
-        )  # (n,S,latent)
+        )  # (n, S, L)
+        return mu_p.unsqueeze(1) + t_std.unsqueeze(1) * eps  # (n, S, L)
 
     # ---- public API ---- #
     def sample(
@@ -393,6 +405,15 @@ class CVAEEstimator(ProbabilisticEstimator):
         """
         Draw `n_samples` IID samples per input from p(y|X):
           z ~ p(z|X) (or N(0,I) if use_prior=False), then y ~ N(mu(z,X), diag(exp(logvar))).
+
+        Args:
+            X: (N, Dx) array of inputs.
+            n_samples: number of samples per input.
+            seed: random seed for reproducibility.
+            temperature: scaling factor for latent sampling.
+            use_prior: if True, sample z ~ p(z|X); else z ~ N(0,I).
+            max_outputs_per_chunk: max number of outputs to decode in one chunk
+                (to limit GPU memory usage).
         """
         if self._decoder is None:
             raise RuntimeError("Model not fitted.")
@@ -413,11 +434,12 @@ class CVAEEstimator(ProbabilisticEstimator):
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(int(seed))
 
-        if use_prior:
+        if use_prior:  # Draw samples from p(z|X)
             z = self._sample_z_given_X(
                 X_t, n_samples=S, temperature=temperature, seed=seed
             )  # (n,S,latent)
-        else:
+
+        else:  # Draw samples from N(0,I)
             z = torch.randn((n, S, self._latent_dim), device=self.device) * float(
                 temperature
             )
@@ -447,21 +469,13 @@ class CVAEEstimator(ProbabilisticEstimator):
     def predict(
         self,
         X: np.typing.NDArray[np.float64],
-        n_samples: int = 1,
-        temperature: float = 1.0,
-        seed: int = 43,
-        use_prior: bool = True,
-        *,
-        max_outputs_per_chunk: int = 20_000,
     ) -> np.typing.NDArray[np.float64]:
         """One stochastic draw per input (wrapper over sample)."""
         s = self.sample(
             X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            use_prior=use_prior,
-            max_outputs_per_chunk=max_outputs_per_chunk,
+            n_samples=1,
+            seed=43,
+            temperature=1.0,
         )
         return s.astype(np.float64, copy=False)
 

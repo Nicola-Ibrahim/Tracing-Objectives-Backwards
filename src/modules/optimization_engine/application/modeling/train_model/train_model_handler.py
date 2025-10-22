@@ -9,13 +9,11 @@ from ....domain.modeling.interfaces.base_estimator import (
 from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
+from ....domain.modeling.services.cross_validation import CrossValidationTrainer
+from ....domain.modeling.services.deterministic import DeterministicModelTrainer
+from ....domain.modeling.services.probabilistic import ProbabilisticModelTrainer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from ...services.estimator_trainers import (
-    CrossValidationTrainer,
-    DeterministicModelTrainer,
-    ProbabilisticModelTrainer,
-)
 from .train_model_command import TrainModelCommand
 
 

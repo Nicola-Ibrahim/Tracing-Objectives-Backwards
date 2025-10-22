@@ -1,8 +1,11 @@
+import numpy as np
+from sklearn.model_selection import train_test_split
+
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ....domain.modeling.interfaces.base_normalizer import BaseNormalizer
 from ...factories.normalizer import NormalizerFactory
-from ...services.utils import split_and_normalize
 from .process_dataset_command import ProcessDatasetCommand
 
 
@@ -47,7 +50,7 @@ class ProcessDatasetCommandHandler:
 
         # 3) Split + normalize (returns normalized arrays + the fitted normalizers)
         X_train, X_test, y_train, y_test, X_normalizer_fitted, y_normalizer_fitted = (
-            split_and_normalize(
+            self._split_and_normalize(
                 X=generated_dataset.y,
                 y=generated_dataset.X,
                 X_normalizer=X_normalizer,
@@ -81,3 +84,29 @@ class ProcessDatasetCommandHandler:
         self._logger.log_info(
             f"[postprocess] saved processed dataset to '{command.dest_filename}.pkl'"
         )
+
+    def _split_and_normalize(
+        X: np.ndarray,
+        y: np.ndarray,
+        X_normalizer: BaseNormalizer,
+        y_normalizer: BaseNormalizer,
+        test_size: float,
+        random_state: int,
+    ) -> tuple[
+        np.ndarray, np.ndarray, np.ndarray, np.ndarray, BaseNormalizer, BaseNormalizer
+    ]:
+        """
+        1) Delegates to DataPreparer for a single split (keeps your splitting behavior).
+        2) Applies the normalizers (fit_transform on train, transform on test).
+        Returns: X_train, X_test, y_train, y_test (normalized).
+        """
+        X_train_raw, X_test_raw, y_train_raw, y_test_raw = train_test_split(
+            X, y, test_size=test_size, random_state=random_state
+        )
+
+        X_train = X_normalizer.fit_transform(X_train_raw)
+        X_test = X_normalizer.transform(X_test_raw)
+        y_train = y_normalizer.fit_transform(y_train_raw)
+        y_test = y_normalizer.transform(y_test_raw)
+
+        return X_train, X_test, y_train, y_test, X_normalizer, y_normalizer
