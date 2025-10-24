@@ -6,27 +6,3 @@
 
 This chapter states the inverse decision–mapping problem considered in this thesis and the questions that guide the study. The presentation is self-contained and fixes the notation used throughout.
 
-\section{Problem setup and formal statement}\label{sec:setup}
-
-Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the set of feasible decisions with vectors $\mathbf{x}\in\mathcal{X}$, and let $\mathcal{Y}\subset\mathbb{R}^{m}$ denote the space of observable outcomes. A forward process $\mathbf{f}:\mathcal{X}\to\mathcal{Y}$ maps any decision to its outcome, $\mathbf{y}=\mathbf{f}(\mathbf{x})$. We assume access to a dataset
-\[
-  \mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}_{i=1}^{N},\qquad
-  \mathbf{x}_i\in\mathcal{X},\ \ \mathbf{y}_i=\mathbf{f}(\mathbf{x}_i),
-\]
-assembled from historical runs, simulation sweeps, or exploratory optimisation.
-
-Given a user-specified target outcome $\mathbf{y}^{\ast}\in\mathcal{Y}$, the goal is to infer a decision $\widehat{\mathbf{x}}\in\mathcal{X}$ that realises the target under the forward process:
-\[
-  \mathbf{f}(\widehat{\mathbf{x}})\ \approx\ \mathbf{y}^{\ast}.
-\]
-We focus on single-decision outputs for each query, meaning that for every $\mathbf{y}^{\ast}$ the method returns one representative $\widehat{\mathbf{x}}$. When exact equality is unattainable, the aim is to produce a best-effort decision relative to the task at hand. This formulation accommodates both data-driven and physics-based forward maps and allows for standard extensions such as constraints, regularisation, or prior knowledge within $\mathcal{X}$, without committing to a particular modelling choice here.
-
-\section{Research questions}\label{sec:RQs}
-
-The work is organised around three questions:
-
-\begin{enumerate}
-  \item \textit{Inverse querying.} How can a new target $\mathbf{y}^{\ast}$ be translated into a concrete decision $\widehat{\mathbf{x}}$ using available examples and simulations?
-  \item \textit{Quality of generated decisions.} How should the quality of $\widehat{\mathbf{x}}$ be established with respect to $\mathbf{y}^{\ast}$ using forward evaluations or feedback, in a way that is clear and reproducible?
-  \item \textit{Modelling strategies.} Which strategies most effectively learn the mapping from outcomes to decisions, and under what data and problem conditions do they generalise?
-\end{enumerate}

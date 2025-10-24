@@ -110,27 +110,3 @@ problem:
     values.
 \end{enumerate}
 
-\section{User Interface}
-
-The interactive dashboard is designed to enable intuitive exploration of
-the objective space.  It comprises the following components:
-
-\begin{itemize}
-  \item A scatter plot of the sampled Pareto front in objective space.
-    The user can click on any point to set \(\vect{y}^\star\) or use
-    sliders to adjust objective values.
-  \item A plausibility indicator that displays the distance of
-    \(\vect{y}^\star\) to the nearest sample and highlights whether the
-    target lies inside or outside the feasible region.
-  \item A table of candidate decisions with columns for predicted
-    objective values, forward error, plausibility score and diversity
-    index.  Selecting a row displays the corresponding decision vector and
-    overlays its predicted objectives on the Pareto plot.
-  \item Controls to adjust ranking weights, the number of candidates
-    displayed and the tolerance used for plausibility warnings.
-\end{itemize}
-
-The dashboard allows designers to rapidly iterate on target objectives and
-to compare alternative decisions without rerunning expensive simulations.
-Future extensions could integrate virtual reality or haptic interfaces
-for immersive design exploration.

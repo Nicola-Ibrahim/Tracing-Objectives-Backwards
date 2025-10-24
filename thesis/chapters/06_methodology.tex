@@ -5,76 +5,167 @@
 \chapter{Methodology}\label{chap:method}
 
 
-We adopt an offline inverse-mapping approach. From representative pairs $(\vect{x}, \vect{y})$, we learn a model that, given a user target $\vect{y}^{\star}$, proposes a single decision $\widehat{\vect{x}}$ intended to realise that target. The method is modular and agnostic to the eventual dataset shape: a training stage builds the inverse model from archives, simulation sweeps, or curated examples, and a lightweight online stage answers new queries. When models produce distributions, we collapse them to a point decision (e.g., mean or median) to keep outputs consistent.
-
-At a high level, the pipeline comprises: (i) assembling and normalising training examples to place outcomes on comparable scales; (ii) fitting an inverse model—deterministic or probabilistic with point selection—that maps targets to decisions; (iii) encouraging forward consistency during training so that $\vect{f}(\widehat{\vect{x}})$ tracks $\vect{y}$; and (iv) at query time, translating $\vect{y}^{\star}$ into $\widehat{\vect{x}}$ and optionally checking it with a forward predictor or simulator for verification or refinement. Design choices (model class, consistency terms, constraint handling, and ranking rules) are selected for clarity, reproducibility, and ease of use in interactive settings.
-
-We learn an inverse map from representative $(\vect{x},\vect{y})$ pairs and use it to translate a user-specified target $\vect{y}^{\star}$ into feasible, target-consistent decision candidates, with optional forward checks for verification or refinement. Within this scope, we compare deterministic and probabilistic inverse models, explain how training data are assembled and normalised, and motivate design choices—model class, forward-consistency training, constraint handling, calibration, and interactive ranking—that matter in practice.
+This chapter develops and defends the research design for learning an inverse map that takes a target outcome $\vect{y}^{\star}$ and proposes decision(s) $\widehat{\vect{x}}$ expected to realise it under the forward process $\vect{f}$. The approach is modular and agnostic to the eventual dataset: representative pairs $(\vect{x},\vect{y})$ may come from archives, curated sweeps, or standard benchmarks.
 
 
-\section{Inverse-Model Training and Evaluation}\label{sec:method_training_eval}
+We pursue an inverse–mapping approach: learn a function that takes a target outcome $\vect{y}^{\star}$ and returns a single decision $\widehat{\vect{x}}$ expected to realise it under the forward process $\vect{f}$. The emphasis is on a transparent, reproducible recipe that turns representative examples $(\vect{x},\vect{y})$ into a model usable for real-time inverse queries, without prescribing a specific data shape in advance.
 
-\subsection{Deterministic inverse training}
-We learn $g_{\theta}:\mathcal{Y}\to\mathcal{X}$ via regularized inverse ERM:
-\begin{equation}
-  \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}\ell_{\mathcal{X}}\!\Bigl(g_{\theta}(\mathbf{y}_i),\mathbf{x}_i\Bigr)+\lambda\,\Omega(\theta),
-  \tag{\ref{eq:erm_inverse}}
-\end{equation}
-with constraint-aware variant
-\begin{equation}
-  \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}
-  \Bigl[
-    \ell_{\mathcal{X}}\!\bigl(\Pi_{\mathcal{X}}\{g_{\theta}(\mathbf{y}_i)\},\mathbf{x}_i\bigr)
-    +\beta\!\sum_j[g_j(g_{\theta}(\mathbf{y}_i))]_+^2+\beta'\!\sum_k h_k(g_{\theta}(\mathbf{y}_i))^2
-  \Bigr]+\lambda\,\Omega(\theta).
-  \tag{\ref{eq:erm_constraints}}
-\end{equation}
+Our methodological stance is guided by three principles. First, we treat inverse design as learning an outcome$\rightarrow$decision map that is \emph{explicitly aligned} with the forward behaviour of the system: training encourages forward consistency so that $\vect{f}(\widehat{\vect{x}})$ tracks the target\footnote{Forward-consistency or tandem training helps mitigate non-uniqueness in inverse problems by validating inverse proposals through a forward model.}. Second, we keep outputs uniform across models by reducing any distributional predictions to one representative decision (e.g., mean or median) for evaluation and use. Third, we separate model-specific choices (architectures, priors, loss terms) from evaluation choices (distances and tolerances), so each can be justified on its own merits.
 
-\subsection{Probabilistic inverse training}
-We learn $p_{\theta}(\mathbf{x}\mid\mathbf{y})$ by conditional log-likelihood:
-\begin{equation}
-  \widehat{\theta}\in\arg\max_{\theta}\Bigl\{\sum_{i=1}^{N}\log p_{\theta}(\mathbf{x}_i\mid\mathbf{y}_i)-\gamma\,\mathcal{R}(\theta)\Bigr\}.
-  \tag{\ref{eq:cll_inverse}}
-\end{equation}
-Decisions for a query $\mathbf{y}^{\ast}$ use MAP or predictive summaries:
-\begin{align}
-  \widehat{\mathbf{x}}_{\mathrm{MAP}}(\mathbf{y}^{\ast})&=\arg\max_{\mathbf{x}}\,p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast}),
-  \tag{\ref{eq:map_inverse}}\\
-  p(\mathbf{x}\mid\mathbf{y}^{\ast},\mathcal{D})&\approx p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast}).
-  \tag{\ref{eq:pred_inverse}}
-\end{align}
+Concretely, the chapter develops: (i) the learning objective for the inverse map, including outcome normalisation and a forward-consistency term that couples inverse predictions to $\vect{f}$; (ii) model classes considered (deterministic regressors and probabilistic generators with point selection), together with selection rules that yield a single $\widehat{\vect{x}}$ per query; (iii) mechanisms for handling constraints in $\mathcal{X}$ (e.g., feasibility penalties or projections); (iv) the query-time procedure that turns $\vect{y}^{\star}$ into $\widehat{\vect{x}}$ and optionally performs a lightweight forward check for verification or refinement; and (v) the evaluation protocol that reports outcome-space discrepancy and a tolerance-based success indicator, matching the inverse goal of attaining $\vect{y}^{\star}$ while remaining simple to interpret and reproduce.
 
-\subsection{Evaluation metrics}
-\paragraph{Outcome-space error.}
-\begin{equation}
-  \mathcal{E}_{\mathcal{Y}}=d\!\bigl(\,\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\bigr),
-  \qquad d\in\{ \|\cdot\|_2,\ \text{Mahalanobis}\}.
-  \tag{\ref{eq:target_error}}
-\end{equation}
+The result is a modular, data-shape-agnostic workflow: learn an inverse map from representative pairs, align it with the forward process during training, produce one decision per target at query time, and evaluate performance with task-appropriate outcome distances and tolerances.
 
-\paragraph{Feasibility and diversity.}
-\begin{equation}
-  \mathrm{Feas}=\frac{1}{M}\sum_{m}\mathbb{I}[g_j(\widehat{\mathbf{x}}^{(m)})\le 0,\ h_k(\widehat{\mathbf{x}}^{(m)})=0],\qquad
-  \mathrm{Div}=\frac{2}{R(R-1)}\sum_{r<s}\|\widehat{\mathbf{x}}^{(r)}-\widehat{\mathbf{x}}^{(s)}\|_2.
-  \tag{\ref{eq:feas_rate}}\tag{\ref{eq:diversity}}
-\end{equation}
+\section{Problem setup and formal statement}\label{sec:setup}
 
-\subsection{Calibration procedures}
-\paragraph{SplitConformalL2Calibrator.}
-Define residuals $r_i=\|\mathbf{f}(g_{\widehat{\theta}}(\mathbf{y}_i))-\mathbf{y}_i\|_2$ on a calibration split and form
+Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the set of feasible decisions with vectors $\mathbf{x}\in\mathcal{X}$, and let $\mathcal{Y}\subset\mathbb{R}^{m}$ denote the space of observable outcomes. A forward process $\mathbf{f}:\mathcal{X}\to\mathcal{Y}$ maps any decision to its outcome, $\mathbf{y}=\mathbf{f}(\mathbf{x})$. We assume access to a dataset
 \[
-  \mathcal{C}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \|\mathbf{y}-\mathbf{y}^{\ast}\|_2\le q_{1-\alpha}\},
-  \tag{\ref{eq:split_conformal_l2}}
+  \mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}_{i=1}^{N},\qquad
+  \mathbf{x}_i\in\mathcal{X},\ \ \mathbf{y}_i=\mathbf{f}(\mathbf{x}_i),
 \]
+assembled from historical runs, simulation sweeps, or exploratory optimisation.
+
+Given a user-specified target outcome $\mathbf{y}^{\ast}\in\mathcal{Y}$, the goal is to infer a decision $\widehat{\mathbf{x}}\in\mathcal{X}$ that realises the target under the forward process:
+\[
+  \mathbf{f}(\widehat{\mathbf{x}})\ \approx\ \mathbf{y}^{\ast}.
+\]
+We focus on single-decision outputs for each query, meaning that for every $\mathbf{y}^{\ast}$ the method returns one representative $\widehat{\mathbf{x}}$. When exact equality is unattainable, the aim is to produce a best-effort decision relative to the task at hand. This formulation accommodates both data-driven and physics-based forward maps and allows for standard extensions such as constraints, regularisation, or prior knowledge within $\mathcal{X}$, without committing to a particular modelling choice here.
+
+\section{Research questions}\label{sec:RQs}
+
+The work is organised around three questions:
+
+\begin{enumerate}
+  \item \textit{Inverse querying.} How can a new target $\mathbf{y}^{\ast}$ be translated into a concrete decision $\widehat{\mathbf{x}}$ using available examples and simulations?
+  \item \textit{Quality of generated decisions.} How should the quality of $\widehat{\mathbf{x}}$ be established with respect to $\mathbf{y}^{\ast}$ using forward evaluations or feedback, in a way that is clear and reproducible?
+  \item \textit{Modelling strategies.} Which strategies most effectively learn the mapping from outcomes to decisions, and under what data and problem conditions do they generalise?
+\end{enumerate}
+
+
+
+\section{Research questions and design principles}\label{sec:rq_design}
+We address three questions: (i) how to learn an outcome$\!\to\!$decision map aligned with the forward behaviour of the system; (ii) how to return either one decision or a small set of proposals on demand; and (iii) how to evaluate attainment of $\vect{y}^{\star}$ in outcome space in a simple, reproducible way. The design follows three principles: \emph{forward consistency} (validate inverse predictions through $\vect{f}$), \emph{output uniformity} (define a clear selection policy for single or multiple proposals), and \emph{clean separation} between modelling choices (architectures, priors, loss terms) and evaluation choices (distances and tolerances).
+
+\section{Methodological framework}\label{sec:framework}
+We consider two complementary model families for the inverse relation $\mathcal{Y}\!\to\!\mathcal{X}$.
+\begin{enumerate}
+  \item \emph{Deterministic inverse models} $g_{\theta}:\mathcal{Y}\!\to\!\mathcal{X}$ learned by empirical risk minimisation (ERM) with capacity control and optional constraint handling (projection or penalties).
+  \item \emph{Probabilistic inverse models} $p_{\theta}(\vect{x}\mid\vect{y})$ trained by conditional maximum likelihood in expressive families (e.g., CVAEs or normalising flows), equipped with a \emph{selection policy} that returns either a single decision or a set of $k$ proposals at query time.
+\end{enumerate}
+To reduce the ambiguity of inverse problems (one-to-many mappings), both families may include a \emph{forward-consistency} term that encourages $\vect{f}(g_{\theta}(\vect{y}))\!\approx\!\vect{y}$ during training.
+
+\section{Inverse-model training}\label{sec:training}
+
+\subsection{Deterministic inverse ERM}\label{sec:det_inverse}
+We estimate $g_\theta$ by minimising a supervised loss in decision space with regularisation:
+\begin{equation}
+  \widehat{\theta}\;\in\;\arg\min_{\theta}\;
+  \frac{1}{N}\sum_{i=1}^{N}\ell_{\mathcal{X}}\!\Big(g_{\theta}(\mathbf{y}_i),\,\mathbf{x}_i\Big)
+  \;+\;\lambda\,\Omega(\theta).
+  \label{eq:erm_inverse}
+\end{equation}
+Here $\ell_{\mathcal{X}}$ measures deviation in $\mathcal{X}$ (e.g., scaled $\ell_2^2$), while $\Omega(\theta)$ (e.g., weight decay or sparsity) improves generalisation and numerical stability in ill-posed settings.
+
+\paragraph{Constraint-aware training (projection/penalties).}
+If decisions must satisfy $g_j(\vect{x})\!\le\!0$ and $h_k(\vect{x})\!=\!0$, we use projection when $\mathcal{X}$ is convex and closed, or exterior penalties otherwise:
+\begin{equation}
+  \widehat{\theta}\;\in\;\arg\min_{\theta}\;\frac{1}{N}\sum_{i=1}^{N}\!\Big[
+    \ell_{\mathcal{X}}\!\big(\,\Pi_{\mathcal{X}}\{g_{\theta}(\mathbf{y}_i)\},\,\mathbf{x}_i\big)
+    \;+\;\beta\!\sum_j [\,g_j(g_{\theta}(\mathbf{y}_i))\,]_+^{2}
+    \;+\;\beta'\!\sum_k h_k(g_{\theta}(\mathbf{y}_i))^{2}\Big]
+  \;+\;\lambda\,\Omega(\theta),
+  \label{eq:erm_constraints}
+\end{equation}
+where $[\cdot]_+=\max\{\cdot,0\}$; squared-hinge and quadratic terms are standard, keeping optimisation unconstrained.
+
+\paragraph{Forward-consistency (optional).}
+To bias toward decisions whose forward responses match observed outcomes, we add an outcome-space penalty:
+\begin{equation}
+  \widehat{\theta}\;\in\;\arg\min_{\theta}\;
+  \frac{1}{N}\sum_{i=1}^{N}\!\Big[
+    \ell_{\mathcal{X}}\!\big(g_{\theta}(\mathbf{y}_i),\,\mathbf{x}_i\big)
+    \;+\;\alpha\,d\!\big(\mathbf{f}(g_{\theta}(\mathbf{y}_i)),\,\mathbf{y}_i\big)^{2}
+  \Big]\;+\;\lambda\,\Omega(\theta),
+  \qquad \alpha\!\ge\!0,
+  \label{eq:forward_consistency}
+\end{equation}
+with $d$ an outcome-space distance (defined in \S\ref{sec:evaluation}). This “tandem” idea reduces non-uniqueness by validating inverse predictions through $\vect{f}$.
+
+\subsection{Probabilistic inverse training}\label{sec:prob_inverse}
+
+We model the inverse relation as a conditional distribution $p_{\theta}(\mathbf{x}\mid\mathbf{y})$ and fit it by conditional maximum likelihood:
+\begin{equation}
+  \widehat{\theta}\in\arg\max_{\theta}\;\sum_{i=1}^{N}\log p_{\theta}(\mathbf{x}_i\mid\mathbf{y}_i)\;-\;\gamma\,\mathcal{R}(\theta),
+  \label{eq:cll_inverse}
+\end{equation}
+where $\mathcal{R}(\theta)$ regularises the density model (e.g., VAE/flow terms or weight decay). Expressive conditional families such as CVAEs and normalizing flows are standard choices for multi–modal $p(\mathbf{x}\mid\mathbf{y})$. 
+
+At inference, we expose a \emph{selection policy} $\pi$ that maps the learned conditional to either a single decision or a set of $k$ proposals, depending on user intent:
+\[
+  \widehat{\mathcal{X}}_{\pi}(\mathbf{y}^{\ast};k)\;=\;S_{\pi}\!\left(p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast}),\,k\right).
+\]
+Typical instantiations are:
+(i) \emph{MAP:} $S_{\text{MAP}}(\cdot,1)=\arg\max_{\mathbf{x}}p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast})$;
+(ii) \emph{risk–optimal summaries:} $S_{\text{mean}}(\cdot,1)=\mathbb{E}[\mathbf{x}\mid\mathbf{y}^{\ast}]$ or a coordinate-wise median (squared/absolute–loss Bayes rules); \cite{Bishop2006PRML}
+(iii) \emph{i.i.d.\ sampling:} $S_{\text{sample}}$ draws $k$ independent $\mathbf{x}^{(r)}\!\sim p_{\widehat{\theta}}(\cdot\mid\mathbf{y}^{\ast})$;
+(iv) \emph{diversity–aware sets:} draw $L\!>\!k$ candidates then select a diverse subset, e.g., via a determinantal point process (DPP) kernel on decision space, yielding $\arg\max_{|\mathcal{S}|=k}\det K(\mathcal{S})$. \cite{KuleszaTaskar2012DPP}
+Policies (iii)–(iv) support multi-solution exploration when the inverse is intrinsically one-to-many; (i)–(ii) provide single, reproducible decisions when required.
+
+
+\section{Evaluation plan}\label{sec:evaluation}
+We evaluate the decision quality with outcome-space discrepancy and a specification-level success indicator. Unless otherwise noted, when multiple proposals are returned ($k\!>\!1$) for exploration, we report metrics on the \emph{top-ranked} candidate under the chosen policy to keep comparisons consistent.
+
+\subsection{Outcome-space error}
+\begin{equation}
+  \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+  \;=\;
+  d\!\big(\,\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big),
+  \qquad
+  d\in\{\ \|\cdot\|_2\,,\ \text{Mahalanobis}\ \}.
+  \label{eq:target_error}
+\end{equation}
+Euclidean distance is a natural default after standardising outcome scales; Mahalanobis distance incorporates outcome covariance and is preferable when dimensions have different units or correlations.
+
+\subsection{Tolerance-based success}
+For a binary, specification-level view we report
+\begin{equation}
+  \mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+  \;=\;
+  \mathbb{I}\!\left[\, d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\, \mathbf{y}^{\ast}\big) \le \epsilon \right],
+  \label{eq:succ_eps_single}
+\end{equation}
+with $\epsilon$ set by domain tolerances. Together, $\mathcal{E}_{\mathcal{Y}}$ (closeness) and $\mathrm{Succ}_\epsilon$ (meets spec) offer a concise, reproducible summary.
+
+\section{Calibration procedures}\label{sec:calibration}
+To attach coverage-style guarantees to the forward-validated outcomes, we use split conformal calibration on a held-out calibration set.
+
+\paragraph{SplitConformalL2.}
+Define residuals $r_i=\|\mathbf{f}(g_{\widehat{\theta}}(\mathbf{y}_i))-\mathbf{y}_i\|_2$ on calibration data and form
+\begin{equation}
+  \mathcal{C}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \|\mathbf{y}-\mathbf{y}^{\ast}\|_2\le q_{1-\alpha}\},
+  \label{eq:split_conformal_l2}
+\end{equation}
 where $q_{1-\alpha}$ is the $(1-\alpha)$ empirical quantile of $\{r_i\}$.
 
-\paragraph{MahalanobisCalibrator.}
-With covariance $\mathbf{\Sigma}$ from calibration data and $\Delta(\mathbf{y},\mathbf{y}^{\ast})=\sqrt{(\mathbf{y}-\mathbf{y}^{\ast})^{\top}\mathbf{\Sigma}^{-1}(\mathbf{y}-\mathbf{y}^{\ast})}$,
-\[
+\paragraph{SplitConformal–Mahalanobis.}
+With covariance $\mathbf{\Sigma}$ estimated from calibration outcomes and $\Delta(\mathbf{y},\mathbf{y}^{\ast})=\sqrt{(\mathbf{y}-\mathbf{y}^{\ast})^{\top}\mathbf{\Sigma}^{-1}(\mathbf{y}-\mathbf{y}^{\ast})}$,
+\begin{equation}
   \mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \Delta(\mathbf{y},\mathbf{y}^{\ast})\le q^{\mathrm{Mah}}_{1-\alpha}\}.
-  \tag{\ref{eq:mahalanobis_conformal}}
-\]
-We test if $\mathbf{f}(\widehat{\mathbf{x}})\in\mathcal{C}_{\alpha}(\mathbf{y}^{\ast})$ or $\mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})$.
+  \label{eq:mahalanobis_conformal}
+\end{equation}
+We test whether $\mathbf{f}(\widehat{\mathbf{x}})\in\mathcal{C}_{\alpha}(\mathbf{y}^{\ast})$ or $\mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})$; by construction, these sets deliver finite-sample marginal coverage under exchangeability.
+
+\section{Data sources and ethics}\label{sec:data_ethics}
+We use benchmarked or archival pairs $(\vect{x},\vect{y})$ originating from simulators or standard suites (e.g., COCO/BBOB for black-box optimisation) as well as domain archives when available. For each source, we document provenance, licensing, storage, and disposal. No personally identifiable or sensitive data are involved.
+
+\section{Methods conclusion}\label{sec:methods_conclusion}
+In sum, the methodology learns an outcome$\!\to\!$decision mapping aligned with forward behaviour, supports either a single decision or a small set of proposals at query time, and evaluates attainment of $\vect{y}^{\star}$ with transparent outcome-space criteria. Calibration procedures provide specification-level guarantees for forward-validated outcomes.
+
+
+
+
+
+
 
 
 
@@ -257,16 +348,3 @@ steps.
     \Until{user terminates}
   \end{algorithmic}
 \end{algorithm}
-
-\section{Implementation Considerations}
-
-Our implementation is written in Python and relies on the \texttt{scikit‑learn}
-library for regression models and \texttt{pymoo} for multi‑objective
-optimisation.  The training pipeline is modular so that additional
-inverse models can be plugged in with minimal code changes.  Data
-preprocessing, model training and cross‑validation are orchestrated via
-\texttt{scikit‑learn}'s pipelines.  Hyperparameters are tuned using
-\texttt{RandomizedSearchCV}.  The user interface is implemented in
-\texttt{Dash} and provides sliders and plots for setting targets and
-visualising candidates.  Parallelisation is exploited to evaluate
-multiple candidates concurrently.

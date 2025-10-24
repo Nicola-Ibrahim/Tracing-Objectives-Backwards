@@ -4,87 +4,18 @@
 
 \chapter{Experimental Evaluation}\label{chap:experiments}
 
-This chapter reports on experiments conducted to evaluate the proposed
-inverse decision mapping framework.  We compare different inverse
-modelling strategies on synthetic benchmarks and a real‑world case
-study.  Metrics such as root mean squared error (RMSE) on decision
-variables, generational distance (GD) and inverted generational distance
-(IGD) of reconstructed Pareto sets are used to quantify performance.
-
-\section{Evaluation Setup}
-
-For each benchmark problem described in Chapter~\ref{chap:implementation},
-we generate a dataset \(\mathcal{D}\) of Pareto samples using NSGA‑II
-or MOEA/D as described earlier.  The data is split into training,
-validation and test sets (80/10/10).  We train four inverse models—GPR,
-RBF, RF and FFNN—on the training set using cross‑validated
-hyperparameters.  A Gaussian process surrogate \(\hat{f}\) serves as
-the forward model.  To quantify the effect of data scarcity we repeat
-the experiments with reduced training sizes (100, 200 and 500 samples).
-
-During the online phase we sample 200 target objective vectors uniformly
-within the convex hull of the sampled Pareto front.  For each target we
-generate 10 candidate decisions using each inverse model and evaluate
-them with the forward surrogate.  We compute the forward error, GD and
-IGD of the candidate sets.  For qualitative analysis we record the
-diversity among candidates and the rate at which plausibility warnings
-are triggered.
+This chapter presents the empirical findings. Results are organised by research questions, reported with descriptive statistics and pre-specified indicators, and shown without interpretation.
 
 
+\section{Experimental protocol}\label{sec:exp_protocol}
+For synthetic benchmarks we used the COCO \emph{bbob-biobj} test suite with standard dimensions and instances, instantiated via the \texttt{cocoex} Python API. The selected problems include combinations that feature the Linear Slope component from the single-objective suite (bbob \(f_5\)), such as the Separable Ellipsoid/Linear Slope problem (commonly listed as F61), alongside additional separable and multimodal pairs to cover diverse structure types.
 
-\section{Evolutionary Algorithms and Surrogate Models}
+For each chosen problem we constructed a dataset $\mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}$ by running a reference multi-objective optimiser (NSGA-II or MOEA/D) on the COCO instance and recording decision–outcome pairs from the resulting approximation set. The data were partitioned into train/validation/test (80/10/10). To study data-size effects we repeated training with subsets of $\{100,200,500\}$ pairs. A forward surrogate $\widehat{\mathbf{f}}$ was fitted on the training split and used only for evaluation or verification when explicitly noted.
 
-\subsection{Evolutionary Multi‑Objective Algorithms}
+Targets for inverse querying were sampled within each problem’s admissible region: per problem, we drew 200 outcomes uniformly inside the convex hull of outcomes observed in the training archive to ensure representativeness under the given instance. Unless otherwise stated, each inverse model produced one decision per target under its selection policy; when multiple proposals were requested for exploration, we generated $k{=}10$ candidates per target (sampling for stochastic models) and computed all headline metrics on the top-ranked candidate for consistency, while also recording candidate-set diversity and any plausibility warnings triggered by the forward check.
 
-Evolutionary algorithms (EAs) have become the method of choice for solving
- multi‑objective problems~\cite{Liu2024}.  EAs maintain a
-population of candidate solutions, apply genetic operators such as mutation
-and crossover and use selection mechanisms to evolve the population towards
-the Pareto front.  Well‑known algorithms include the Non‑dominated Sorting
-Genetic Algorithm II (NSGA‑II), Strength Pareto Evolutionary Algorithm 2
-(SPEA2), the Multi‑Objective Particle Swarm Optimiser (MOPSO) and
-decomposition‑based methods such as MOEA/D.  Key features of successful
-MOEAs are (i) diversity preservation strategies that encourage sampling
-across the front (e.g. crowding distance in NSGA‑II), and (ii) elitism to
-retain the best non‑dominated solutions between generations.
+We evaluated three inverse models—CVAE, MDN, and RBF—with hyperparameters chosen by cross-validation on the training partition. Primary endpoints were outcome-space discrepancy and tolerance success; secondary indicators included decision-space RMSE and GD/IGD against high-resolution reference fronts. For external validity, a two-objective signal-processing dataset with domain constraints was prepared analogously, with the same splits and reporting protocol.
 
-Decomposition approaches transform the MOP into a set of single‑objective
-sub‑problems using weighted sums, Tchebycheff functions or penalty‑based
-methods.  The resulting scalar problems are solved simultaneously and
-information is exchanged among them.  This yields evenly distributed
-solutions but depends on choosing suitable weight vectors.  Indicator‑based
-algorithms such as IBEA use quality indicators (e.g. hypervolume) directly
-as fitness measures.  Recent research explores adaptive reference
-vector schemes and probabilistic modelling to guide the search, as well as
-hybrid algorithms that combine gradient information with evolutionary
-exploration.
-
-Despite their success, evolutionary algorithms often require tens of
- thousands of function evaluations to obtain a good approximation of the
- Pareto front~\cite{Liu2024}.  When each evaluation involves a
-computationally expensive simulation, surrogate models become attractive.
-
-\subsection{Surrogate‑Assisted Optimisation}
-
-Surrogate models, also known as metamodels or response surfaces, emulate
-expensive objective functions to accelerate optimisation.  They are built
-from a set of evaluated samples and provide cheap predictions with
-associated uncertainty estimates.  Common surrogates include Gaussian
-process regression (GPR), radial basis function (RBF) networks,
-support‑vector machines and multi‑layer perceptrons (MLPs).  In
-multi‑objective settings, surrogates can approximate the mapping
-\(\vect{f}\colon \calX\to\calY\), guiding the search without evaluating
-the true objective functions at every iteration.
-
-Surrogate‑assisted multi‑objective evolutionary algorithms (SA‑MOEAs)
-alternate between training the surrogate, performing cheap optimisation on
-the model, and periodically verifying candidate solutions with the true
-objectives.  Diaz‑Manriquez et~al. provide a comprehensive review of
-surrogate‑assisted MOEAs, highlighting design choices such as sampling
- strategies, model management and infill criteria~\cite{Blank2020}.
-Advanced techniques include adaptive ensembles of multiple surrogates,
-transfer learning across related tasks and active learning to focus
-sampling in uncertain regions.
 
 \section{Synthetic Benchmarks}
 
@@ -100,7 +31,7 @@ random forests perform competitively.  Neural networks require larger
 training sets to avoid overfitting; with 500 samples they match the
 performance of GPR on ZDT4.
 
-\begin{table}[t]
+\begin{table}[H]
   \centering
   \caption{Root mean squared error of predicted decision variables on ZDT
   problems (mean $\pm$ standard deviation over 5 runs).  Boldface marks
@@ -151,7 +82,7 @@ and objective spaces.  GPR again outperforms other methods on DTLZ2 and
 DTLZ5.  On DTLZ7, which has a disconnected front, random forests and
 radial basis functions yield competitive performance.
 
-\begin{table}[t]
+\begin{table}[H]
   \centering
   \caption{Generational distance ($\times 10^{-2}$) of reconstructed
   Pareto sets on DTLZ problems (mean $\pm$ standard deviation over 5
@@ -169,41 +100,169 @@ radial basis functions yield competitive performance.
   \end{tabular}
 \end{table}
 
-\section{Real‑World Case Study}
 
-The engineering design problem involves optimising a cantilever beam to
-minimise weight and tip deflection subject to a stress constraint.  The
-decision variables are the thickness and width of three segments of the
-beam; the two objectives are computed via finite element analysis.  We
-generate 200 Pareto samples using a surrogate‑assisted NSGA‑II and train
-inverse models as before.  Because the problem is noisy and expensive to
-evaluate, the benefits of inverse mapping are pronounced.
+\section{Metrics and statistical analysis}\label{sec:metrics_stats}
+\textbf{Primary metrics.} Outcome-space discrepancy
+\[
+  \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast}) = d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\mathbf{y}^{\ast}\big),
+  \quad d\in\{\ell_2,\text{Mahalanobis}\},
+\]
+and the per-target tolerance indicator $\mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})=\mathbb{I}[\,d(\mathbf{f}(\widehat{\mathbf{x}}),\mathbf{y}^{\ast})\le\epsilon\,]$.
 
-Figure~\ref{fig:beam_design_results} (placeholder) visualises the
-predicted decision variables as a function of the target objectives.
-GPR provides smooth, interpretable mappings, while random forests
-produce more irregular but diverse candidates.  Table~\ref{tab:beam_rmse}
-reports the RMSE and GD; GPR achieves the lowest error.  Engineers who
-tested the prototype reported that the interactive tool allowed them to
-explore trade‑offs quickly and provided insight into feasible designs.
 
-\placeholderfigure{Plot of predicted segment widths and thicknesses versus target objectives for the cantilever beam case study.  Different colours correspond to different inverse models.}
+\section{RQ1: Target attainment accuracy on bbob-biobj}\label{sec:rq1}
+\subsection{Outcome-space discrepancy (primary)}
+Table~\ref{tab:rq1_outcome_error} summarises median~(IQR) of $\mathcal{E}_{\mathcal{Y}}$ across selected bbob-biobj problems and training sizes for the three inverse models: CVAE, MDN, and RBF. Figure~\ref{fig:rq1_ecdf} shows empirical CDFs of $\mathcal{E}_{\mathcal{Y}}$ over targets.
 
 \begin{table}[t]
   \centering
-  \caption{Performance on the cantilever beam case study.}
-  \label{tab:beam_rmse}
-  \begin{tabular}{L{3cm}C{2cm}C{2cm}}
+  \caption{Outcome-space error $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) on selected bbob-biobj problems across training sizes. Best per column in bold.}
+  \label{tab:rq1_outcome_error}
+  \begin{tabular}{lccc}
+  \toprule
+  Problem (dim / inst) & CVAE & MDN & RBF\\
+  \midrule
+  Ellipsoid/Linear Slope & \textbf{--} & -- & --\\
+  Sphere/Rastrigin (separable) & -- & \textbf{--} & --\\
+  Rastrigin/Schaffer (multimodal) & -- & -- & \textbf{--}\\
+  \bottomrule
+  \end{tabular}
+\end{table}
+
+\placeholderfigure{Empirical CDFs of $\mathcal{E}_{\mathcal{Y}}$ per model on selected bbob-biobj problems.}
+\label{fig:rq1_ecdf}
+
+\subsection{Tolerance success (primary)}
+For each target, we computed $\mathrm{Succ}_\epsilon$ using benchmark-specific tolerances. Figure~\ref{fig:rq1_success} reports success rates per model and training size; exact rates appear in Appendix tables.
+
+\placeholderfigure{Tolerance success rates $\mathrm{Succ}_\epsilon$ by model and training size (bars: median across problems; error bars: IQR).}
+\label{fig:rq1_success}
+
+\subsection{Decision-space RMSE (secondary)}
+Table~\ref{tab:rq1_rmse} lists decision-space RMSE (mean~$\pm$~std over five runs) for the same problems and sizes.
+
+\begin{table}[t]
+  \centering
+  \caption{Decision-space RMSE ($\times 10^{-2}$) on selected bbob-biobj problems (mean~$\pm$~std over 5 runs).}
+  \label{tab:rq1_rmse}
+  \begin{tabular}{lccc}
+  \toprule
+  Problem & CVAE & MDN & RBF\\
+  \midrule
+  Ellipsoid/Linear Slope & -- & -- & --\\
+  Sphere/Rastrigin (separable) & -- & -- & --\\
+  Rastrigin/Schaffer (multimodal) & -- & -- & --\\
+  \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{RQ2: Behaviour across function groups}\label{sec:rq2}
+\subsection{Outcome-space discrepancy and success}
+Table~\ref{tab:rq2_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_\epsilon$ aggregated by bbob-biobj function group (separable, ill-conditioned, multimodal, weakly-structured) at training size 500; Figure~\ref{fig:rq2_box} shows boxplots of $\mathcal{E}_{\mathcal{Y}}$.
+
+\begin{table}[t]
+  \centering
+  \caption{Outcome-space error $\mathcal{E}_{\mathcal{Y}}$ and tolerance success (median~[IQR]) by function group (bbob-biobj, 500 training pairs).}
+  \label{tab:rq2_outcome_error}
+  \begin{tabular}{lccc}
+  \toprule
+  Group & CVAE & MDN & RBF\\
+  \midrule
+  Separable & -- & -- & --\\
+  Ill-conditioned & -- & -- & --\\
+  Multimodal & -- & -- & --\\
+  Weakly-structured & -- & -- & --\\
+  \bottomrule
+  \end{tabular}
+\end{table}
+
+\placeholderfigure{Boxplots of $\mathcal{E}_{\mathcal{Y}}$ by bbob-biobj group (500 training pairs).}
+\label{fig:rq2_box}
+
+\subsection{GD/IGD on reconstructed sets (secondary)}
+Figure~\ref{fig:gd_igd} presents GD and IGD with respect to reference fronts; definitions follow \cite{Ishibuchi2015GDIGD,Bezerra2017IGD}.
+
+\placeholderfigure{GD and IGD across selected bbob-biobj problems (mean with error bars).}
+\label{fig:gd_igd}
+
+\section{RQ3: Effect of training size and cross-problem ranking}\label{sec:rq3}
+\subsection{Data size sensitivity}
+Figure~\ref{fig:size_sensitivity} shows $\mathcal{E}_{\mathcal{Y}}$ versus training size (100/200/500) aggregated over problems; Table~\ref{tab:size_rates} lists corresponding $\mathrm{Succ}_\epsilon$.
+
+\placeholderfigure{Median $\mathcal{E}_{\mathcal{Y}}$ by training size (aggregated over bbob-biobj problems).}
+\label{fig:size_sensitivity}
+
+\begin{table}[t]
+  \centering
+  \caption{Tolerance success $\mathrm{Succ}_\epsilon$ by training size (median across problems; IQR in parentheses).}
+  \label{tab:size_rates}
+  \begin{tabular}{lccc}
+  \toprule
+  Size & CVAE & MDN & RBF\\
+  \midrule
+  100 & -- & -- & --\\
+  200 & -- & -- & --\\
+  500 & -- & -- & --\\
+  \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Across-problem ranking with statistical tests}
+Average ranks per model across problems were compared with the Friedman test and Nemenyi post-hoc at $\alpha=0.05$. Figure~\ref{fig:cd_plot} shows the critical-difference diagram; exact $p$-values are tabulated in Appendix~A. \cite{Demsar2006JMLR}
+
+\placeholderfigure{Critical-difference diagram (Friedman + Nemenyi) over problems for $\mathcal{E}_{\mathcal{Y}}$.}
+\label{fig:cd_plot}
+
+\section{Real-world case study}\label{sec:real}
+A two-objective signal-processing task was used to assess external validity. Table~\ref{tab:sp_primary} reports $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_\epsilon$ on held-out targets; Table~\ref{tab:sp_secondary} lists RMSE and GD for completeness. Figure~\ref{fig:sp_scatter} plots $\mathbf{f}(\widehat{\mathbf{x}})$ against targets.
+
+\begin{table}[t]
+  \centering
+  \caption{Signal-processing case: outcome-space error and tolerance success (median~[IQR]).}
+  \label{tab:sp_primary}
+  \begin{tabular}{lcc}
     \toprule
-    Model & RMSE ($\times 10^{-2}$) & GD ($\times 10^{-2}$)\\
+    Model & $\mathcal{E}_{\mathcal{Y}}$ & $\mathrm{Succ}_\epsilon$ \\
     \midrule
-    GPR & \textbf{1.1} & \textbf{2.8}\\
-    RBF & 1.5 & 3.4\\
-    RF  & 1.3 & 3.1\\
-    FFNN & 1.6 & 3.5\\
+    CVAE  & -- & --\\
+    MDN   & -- & --\\
+    RBF   & -- & --\\
     \bottomrule
   \end{tabular}
 \end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{Signal-processing case: secondary indicators.}
+  \label{tab:sp_secondary}
+  \begin{tabular}{lcc}
+    \toprule
+    Model & RMSE ($\times 10^{-2}$) & GD ($\times 10^{-2}$)\\
+    \midrule
+    CVAE & -- & --\\
+    MDN  & -- & --\\
+    RBF  & -- & --\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\placeholderfigure{Scatter of forward-evaluated outcomes $\mathbf{f}(\widehat{\mathbf{x}})$ versus targets $\mathbf{y}^{\ast}$ in the signal-processing case.}
+\label{fig:sp_scatter}
+
+\section{Supplementary figures and tables}
+ECDFs, per-problem success curves, and statistical test tables are provided in Appendix~A.
+
+
+
+
+This chapter reports on experiments conducted to evaluate the proposed
+inverse decision mapping framework.  We compare different inverse
+modelling strategies on synthetic benchmarks and a real‑world case
+study.  Metrics such as root mean squared error (RMSE) on decision
+variables, generational distance (GD) and inverted generational distance
+(IGD) of reconstructed Pareto sets are used to quantify performance.
+
+
 
 \section{Discussion of Results}
 
