@@ -14,7 +14,7 @@ typically yields a \emph{set of trade-off designs} in both decision and
 objective spaces, from which a decision maker must choose according to
 preferences and constraints. For a broad overview of MOO concepts and
 state-of-the-art algorithmic families, see Deb’s classic introduction and
-more recent tutorials. 
+more recent tutorials.
 
 A natural way to analyse such problems is through the \emph{forward} process:
 a model maps hidden or controllable parameters $\vect{x}$ (decisions) to
@@ -28,7 +28,7 @@ so the inverse problem can violate one or more of Hadamard’s criteria
 decisions may yield indistinguishable outcomes, and small perturbations in
 data can lead to large changes in inferred parameters. Regularisation and
 statistical formulations are therefore required to make inference meaningful
-and robust~\cite{KabanikhinSurvey,BenningBurger2018,Stuart2010}. 
+and robust~\cite{KabanikhinSurvey,BenningBurger2018,Stuart2010}.
 
 From a design perspective, the limitations of purely forward workflows are
 well known. When engineers wish to realise a particular objective pattern
@@ -47,7 +47,6 @@ evaluation when refinement is needed.
   \centering
   \input{figures/inverse_mapper_figure}
   \caption{Forward vs.\ inverse viewpoint. Forward mapping evaluates how decisions $\vect{x}$ produce outcomes $\vect{y}$; the inverse task seeks decisions that realise a desired outcome pattern.}
-  \label{fig:forward-inverse}
   \label{fig:forward-inverse}
 \end{figure}
 
@@ -75,8 +74,7 @@ multi-valued relationships between decisions and objectives, quantify
 ambiguity due to noise or limited data, and support diversity in candidate
 solutions. In the broader literature, probabilistic formulations (e.g., Bayesian perspectives on inverse problems) provide a principled language for reasoning about non-uniqueness and data
 uncertainty, while modern regularisation connects statistical and variational
-viewpoints~\cite{Stuart2010,BenningBurger2018}. 
-
+viewpoints~\cite{Stuart2010,BenningBurger2018}.
 
 Inverse questions arise naturally across signal-processing tasks. In filter
 design, engineers may target a specific passband/stopband pattern subject to
@@ -91,10 +89,39 @@ settings. These scenarios share the same core difficulty: the forward map is
 easier to evaluate, whereas the inverse map can be ambiguous or unstable, so
 algorithms that \emph{learn to invert} from data are attractive.
 
+% ------------------------------------------------------------------
+\section{Problem statement and purpose}
 
+\textbf{Problem.} Given representative examples $\{(\vect{x}_i,\vect{y}_i)\}$ from a multi-objective system with forward map $\vect{f}\!:\calX\!\to\!\calY$, learn a mapping that, for any user-specified target $\vect{y}^\star$, proposes one or more decisions in $\calX$ whose forward evaluations are close to $\vect{y}^\star$ under task-relevant distances. The inverse mapping is generally ill-posed (non-unique and sometimes unattainable).
+
+\textbf{Purpose.} Develop and assess a principled, data-driven approach for inverse decision mapping that is transparent, reproducible, and suitable for interactive use in signal-processing contexts. The goal is to produce target-consistent decisions with minimal extra tuning and clear, application-aligned evaluation.
+
+% ------------------------------------------------------------------
+\section{Research questions}
+
+\begin{enumerate}
+  \item \textit{Inverse querying.} How can a new target $\mathbf{y}^{\ast}$ be translated into a concrete decision $\widehat{\mathbf{x}}$ using available examples and simulations?
+  \item \textit{Quality of generated decisions.} How should the quality of $\widehat{\mathbf{x}}$ be established with respect to $\mathbf{y}^{\ast}$ using forward evaluations or feedback, in a way that is clear and reproducible?
+  \item \textit{Modelling strategies.} Which strategies most effectively learn the mapping from outcomes to decisions, and under what data and problem conditions do they generalise?
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section{Significance}
+
+A robust inverse-mapping capability reduces dependence on repeated forward search and enables real-time, user-driven exploration of multi-objective trade-offs. In signal-processing applications, this can shorten design cycles, improve transparency around feasible targets, and support collaborative decision making where stakeholders negotiate acceptable compromises.
+
+% ------------------------------------------------------------------
+\section{Assumptions, limitations, and delimitations}
+
+We assume access to representative pairs $(\vect{x},\vect{y})$ and that local regularity of $\vect{f}$ allows learning an inverse that generalises within the observed outcome region. We evaluate inverse quality in outcome space (e.g., Euclidean or Mahalanobis distance) and treat feasibility via simple constraint handling where relevant. Limitations include potential distribution shift between training data and user queries, the intrinsic one-to-many nature of inverse solutions, and reliance on a forward check or surrogate for verification in some experiments. We delimit scope to two-objective synthetic benchmarks and a two-objective real case, with methods designed to extend beyond these settings.
+
+% ------------------------------------------------------------------
+\section{Methodological overview}
+
+The study follows a two-stage design. First, assemble and normalise representative $(\vect{x},\vect{y})$ examples; fit inverse models that map $\calY\!\to\!\calX$ and encourage forward-consistency so that $\vect{f}(\hat{g}(\vect{y}))$ tracks $\vect{y}$. Second, at query time, translate $\vect{y}^\star$ into one or more candidate decisions via a selection policy (point estimate or samples), and optionally verify/refine with a forward predictor or simulator. Evaluation reports outcome-space discrepancy and tolerance-based success, with secondary diagnostics as needed.
+
+% ------------------------------------------------------------------
 \section{Contributions}
-
-The contributions of this thesis are as follows:
 
 \begin{itemize}
   \item \textbf{Problem formulation.} We formalise inverse decision mapping in multi-objective
@@ -129,6 +156,7 @@ The contributions of this thesis are as follows:
   models across training-set sizes.
 \end{itemize}
 
+% ------------------------------------------------------------------
 \section{Structure of the Thesis}
 
 The remainder of this thesis is organised as follows.
@@ -169,4 +197,3 @@ Chapter~\ref{chap:discussion} synthesises the empirical findings, discusses
 limitations and threats to validity, and reflects on when each modelling
 perspective is advantageous. Finally, Chapter~\ref{chap:conclusion} concludes
 and outlines avenues for future work.
-

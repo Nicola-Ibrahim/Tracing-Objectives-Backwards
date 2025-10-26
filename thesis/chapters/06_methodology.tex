@@ -31,17 +31,6 @@ Given a user-specified target outcome $\mathbf{y}^{\ast}\in\mathcal{Y}$, the goa
 \]
 We focus on single-decision outputs for each query, meaning that for every $\mathbf{y}^{\ast}$ the method returns one representative $\widehat{\mathbf{x}}$. When exact equality is unattainable, the aim is to produce a best-effort decision relative to the task at hand. This formulation accommodates both data-driven and physics-based forward maps and allows for standard extensions such as constraints, regularisation, or prior knowledge within $\mathcal{X}$, without committing to a particular modelling choice here.
 
-\section{Research questions}\label{sec:RQs}
-
-The work is organised around three questions:
-
-\begin{enumerate}
-  \item \textit{Inverse querying.} How can a new target $\mathbf{y}^{\ast}$ be translated into a concrete decision $\widehat{\mathbf{x}}$ using available examples and simulations?
-  \item \textit{Quality of generated decisions.} How should the quality of $\widehat{\mathbf{x}}$ be established with respect to $\mathbf{y}^{\ast}$ using forward evaluations or feedback, in a way that is clear and reproducible?
-  \item \textit{Modelling strategies.} Which strategies most effectively learn the mapping from outcomes to decisions, and under what data and problem conditions do they generalise?
-\end{enumerate}
-
-
 
 \section{Research questions and design principles}\label{sec:rq_design}
 We address three questions: (i) how to learn an outcome$\!\to\!$decision map aligned with the forward behaviour of the system; (ii) how to return either one decision or a small set of proposals on demand; and (iii) how to evaluate attainment of $\vect{y}^{\star}$ in outcome space in a simple, reproducible way. The design follows three principles: \emph{forward consistency} (validate inverse predictions through $\vect{f}$), \emph{output uniformity} (define a clear selection policy for single or multiple proposals), and \emph{clean separation} between modelling choices (architectures, priors, loss terms) and evaluation choices (distances and tolerances).
