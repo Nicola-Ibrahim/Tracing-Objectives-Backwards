@@ -4,136 +4,40 @@
 
 \chapter{Discussion}\label{chap:discussion}
 
-The experimental results in Chapter~\ref{chap:experiments} provide
-evidence that inverse modelling can effectively map desired objectives to
-plausible decision variables when trained on Pareto samples.  In this
-chapter we reflect on these findings, analyse the strengths and
-limitations of the proposed framework and highlight directions for
-future research.
+This chapter interprets the empirical results, states the overall conclusions, and outlines targeted recommendations for subsequent research and deployment.
 
-\section{Interpretation of Results}
+\section{Interpreting the Findings}
 
-The comparative evaluation demonstrates that Gaussian process regression
-(GPR) consistently yields the most accurate inverse predictions across
-diverse benchmark problems.  This aligns with the observation in
- inverse evolutionary algorithms that GPR captures both global structure
- and local irregularities of the inverse mapping~\cite{Farias2024}.
-GPR’s ability to provide uncertainty estimates is particularly valuable
-in the interactive setting: high predictive variance signals regions of
-the objective space where the model has little support, complementing
-the plausibility check.
+Across the COCO/bbob-biobj benchmarks and the real-world signal-processing case, the central result is that an inverse mapping learned from representative $(\mathbf{x},\mathbf{y})$ pairs can reliably translate a user target $\mathbf{y}^{\ast}$ into a decision $\widehat{\mathbf{x}}$ whose forward evaluation $\mathbf{f}(\widehat{\mathbf{x}})$ closely tracks the target. This statement is supported by the primary indicators—outcome-space error $\mathcal{E}_{\mathcal{Y}}$ and tolerance success $\mathrm{Succ}_{\epsilon}$—reported per problem and per dataset split. The consistency of these indicators across instances suggests that inverse mapping is a viable route to target-conditioned design, provided the training archive is representative of the reachable region.
 
-Random forests (RF) emerge as a strong alternative.  They often produce
-more diverse candidate sets and handle discontinuous or multi‑modal
-inverse mappings better than smooth models.  The trade‑off is that RF
-predictions can exhibit discontinuities and are less interpretable.
-Radial basis functions (RBF) and neural networks (FFNN) underperform
-when training data is limited but become competitive as the dataset
-grows.  RBF networks are sensitive to hyperparameters such as the number
-and placement of centres, while neural networks require careful
-regularisation to avoid overfitting.
+Three patterns recur. First, \emph{problem structure matters}: separable and gently conditioned biobjective problems tend to yield lower $\mathcal{E}_{\mathcal{Y}}$ and higher $\mathrm{Succ}_{\epsilon}$ than highly multimodal combinations, reflecting the increased complexity of the inverse relation. This aligns with established observations in the COCO suite regarding how separability, conditioning, and multimodality shape optimisation difficulty, which in turn affects any learned surrogate built from those samples. :contentReference[oaicite:0]{index=0}
 
-Data availability is a key factor.  As the training set size increases
-from 100 to 500 samples, errors decrease substantially.  This suggests
-that the cost of generating additional Pareto samples via forward
-optimisation is amortised by the benefits of a more accurate inverse
-model.  Transfer learning across tasks with common objectives further
- improves generalisation~\cite{Tan2023}, though caution is needed to
-ensure that tasks are sufficiently related; otherwise negative transfer
-may occur.
+Second, \emph{data sufficiency is consequential}: increasing the number of training pairs reduces median error and narrows the IQR, indicating both improved accuracy and stability. This is consistent with expectations for supervised models whose bias–variance trade-off benefits from broader coverage of the objective space.
 
-\section{Benefits and Applications}
+Third, \emph{metric choice influences interpretation}: when outcomes are measured on heterogeneous scales or exhibit correlation, Mahalanobis distance offers a more faithful notion of “closeness” than raw Euclidean distance, as it accounts for covariance structure estimated on held-out data; this is standard practice in multivariate assessment. :contentReference[oaicite:1]{index=1}
 
-The main advantage of the proposed framework is its separation of
-training and exploration phases.  Computational effort is invested
-offline to build the inverse and forward models; thereafter, users can
-explore the objective space in real time without rerunning expensive
-optimisation.  This capability is particularly beneficial in domains
-where evaluating the forward map involves simulations or experiments
-costing minutes or hours, such as structural design, aerodynamics,
-computational chemistry or medical imaging.  Engineers and designers
-gain greater insight into trade‑offs and can interactively assess how
-changes in objectives affect the feasible design space.
+Finally, the cross-problem ranking with nonparametric tests (Friedman with Nemenyi post-hoc) provides an aggregate view of which modelling choices are consistently strong versus problem-specific, following recommended procedures for multi-dataset comparisons. :contentReference[oaicite:2]{index=2}
 
-The framework also supports educational and collaborative settings.  By
-visualising the Pareto front and candidate decisions, stakeholders with
-different expertise can discuss trade‑offs and converge on acceptable
-solutions.  The plausibility check communicates uncertainty and
-encourages critical thinking about whether a desired outcome is
-realistic given the available data.
+\section{Implications}
+
+Methodologically, the results validate a \emph{target-attainment} evaluation stance for inverse design: reporting $\mathcal{E}_{\mathcal{Y}}$ (how close to the target) together with $\mathrm{Succ}_{\epsilon}$ (meets a meaningful tolerance) yields compact, decision-oriented evidence. Practically, this enables interactive workflows: users nominate $\mathbf{y}^{\ast}$, obtain one or several proposals, and immediately see whether the proposals land within pre-defined tolerances. For benchmarking, coupling inverse metrics with standard COCO post-processing (e.g., reference fronts, archive handling) makes results comparable and reproducible across instances and function groups. :contentReference[oaicite:3]{index=3}
 
 \section{Limitations}
 
-Several limitations warrant discussion.  First, the inverse model is
-only as good as the data it is trained on.  If the Pareto sample is
-sparse or biased towards certain regions of the front, the model may
-fail to capture other regions.  Active learning or adaptive sampling
-could be used to focus optimisation runs on informative regions of the
-objective space.
+Three limitations deserve emphasis. (i) \emph{Archive representativeness}: if training pairs undersample parts of the reachable set, the learned inverse will underperform on targets drawn from those regions. (ii) \emph{Forward-model reliance}: when a surrogate $\widehat{\mathbf{f}}$ is used for verification, evaluation quality is bounded by surrogate fidelity; periodic spot-checks against the true simulator would mitigate compounding errors. (iii) \emph{Metric dependence}: conclusions can shift with the chosen distance and scaling; reporting both Euclidean and covariance-aware distances (and documenting the covariance estimate) reduces ambiguity. :contentReference[oaicite:4]{index=4}
 
-Second, the current implementation treats each decision variable
-independently when training inverse models.  Although multioutput
-regression could capture correlations among decision variables, it may
-increase computational complexity.  Exploring structured output models
-or deep generative approaches (e.g. variational autoencoders) could
-yield more coherent predictions.
+\section{Future Work}
 
-Third, our plausibility check is based on distance measures and model
-uncertainty.  A more principled approach might involve conformal
- prediction or distributionally robust inverse optimisation~\cite{Dong2021},
-which provide statistical guarantees on prediction validity.  Adapting
-such methods to the multi‑objective setting is an interesting avenue.
-
-Fourth, the current user interface is functional but simple.  It could
-be enhanced with richer visualisations, such as 3‑D plots for
-three‑objective problems, interactive trade‑off curves and sensitivity
-analysis.  Integration with computer‑aided design software or immersive
-environments could further improve usability.
-
-Finally, the evaluation in this thesis relies on surrogate forward
-models rather than ground‑truth simulations.  While surrogates provide
-reasonable approximations, there is a risk that errors compound when
-using an inverse model trained on approximate data and a forward model
-for evaluation.  Future work could incorporate a budget of real
-function evaluations to periodically validate predictions and update
-models online.
-
-\section{Future Directions}
-
-The results invite several promising research directions:
+Building on these findings, we outline concrete, study-aligned directions:
 
 \begin{itemize}
-  \item \textbf{Hybrid inverse–forward training.}  Instead of training
-    inverse and forward models separately, joint training could ensure
-    consistency between predictions.  For example, inverse predictions
-    could be fed into the forward model during training to minimise a
-    cyclic reconstruction loss.
-  \item \textbf{Active sampling.}  Incorporating active learning into
-    the MOO phase could generate samples that maximise information gain
-    for the inverse model.  Acquisition functions based on inverse model
-    uncertainty or expected improvement could guide where to sample next.
-  \item \textbf{Generative models.}  Deep generative models such as
-    mixture density networks~\cite{Bishop1994}, tandem architectures for
-    inverse design~\cite{Liu2018}, conditional variational autoencoders
-    (e.g. MGCVAE~\cite{Lee2022MGCVAE}) and semi‑supervised generative models
-    for metamaterials~\cite{Ma2019} could learn a joint distribution over
-    decision and objective variables and allow sampling of diverse feasible
-    solutions conditioned on target objectives.  Generative models have
-    been successfully applied to design nano‑photonic structures and
-    high‑entropy alloys【34486591917118†L8-L16】【492130352176691†L214-L223】 and
-    offer a natural way to handle multimodal inverse mappings and
-    uncertainty.
-  \item \textbf{Human–in‑the‑loop optimisation.}  Integrating user
-    preferences into the inverse mapping process could personalise
-    recommendations.  Preference learning or Bayesian optimisation over
-    subjective utility functions could be combined with the inverse
-    surrogate to suggest designs that align with individual priorities.
-  \item \textbf{Robustness and safety.}  Distributionally robust inverse
-    optimisation frameworks~\cite{Dong2021} could be adapted to
-    account for uncertainty in the objective functions, ensuring that
-    recommended designs perform well even under perturbations or model
-    misspecification.
+  \item \textbf{Coverage-aware reporting.} Augment $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_{\epsilon}$ with conformal prediction sets in outcome space (split-conformal on residuals of $\mathbf{f}(g(\cdot))$), yielding finite-sample coverage guarantees for “achieved outcome within a calibrated ball around $\mathbf{y}^{\ast}$.” This adds a statistically principled reliability layer without re-training the inverse model. :contentReference[oaicite:5]{index=5}
+  \item \textbf{Instance-generalisation on COCO.} Evaluate cross-instance transfer (train on a subset of instances, test on held-out instances) and cross-suite robustness (e.g., varying dimension), leveraging COCO’s standardised instance machinery and post-processing tools for rigorous comparison. :contentReference[oaicite:6]{index=6}
+  \item \textbf{Distance calibration and scaling.} Systematise the choice between Euclidean and Mahalanobis distances via validated scaling protocols (e.g., covariance from a calibration split), and report sensitivity analyses so practitioners can match $d(\cdot,\cdot)$ to domain semantics. :contentReference[oaicite:7]{index=7}
+  \item \textbf{Real-data validation loops.} For the signal-processing case, schedule small, periodic batches of ground-truth forward evaluations to (a) check surrogate drift, and (b) re-calibrate tolerances. This operationalises reliability without altering your core modelling approach.
+  \item \textbf{Benchmarking alignment.} Complement inverse-specific indicators with COCO’s native performance summaries (e.g., archive-based reference sets) when comparing pipelines, improving external validity and reusability of results. :contentReference[oaicite:8]{index=8}
 \end{itemize}
 
-Addressing these directions would further enhance the capability and
-reliability of inverse decision mapping methods.
+\section{Conclusion}
+
+Learning an inverse map from outcomes to decisions is a practical and effective way to support target-driven design. On bbob-biobj functions and a real signal-processing dataset, the approach achieves low outcome-space errors and high tolerance success when trained on representative archives, with clear benefits from sufficient data and carefully chosen outcome metrics. The proposed reporting protocol---pairing $\mathcal{E}_{\mathcal{Y}}$ with $\mathrm{Succ}_{\epsilon}$ and documenting scaling---is simple to reproduce and to interpret. By adding coverage-aware reporting, testing cross-instance generalisation, and tightening metric calibration, future studies can make inverse decision mapping even more dependable and transferable.

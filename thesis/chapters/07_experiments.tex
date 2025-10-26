@@ -4,238 +4,169 @@
 
 \chapter{Experimental Evaluation}\label{chap:experiments}
 
-This chapter presents the empirical findings. Results are organised by research questions, reported with descriptive statistics and pre-specified indicators, and shown without interpretation.
+This chapter presents the empirical findings for two experiments. Results are organised by experiment, reported with descriptive statistics and pre-specified indicators, and shown without interpretation.
 
+\section{Experiment 1: COCO/bbob-biobj benchmarks}\label{sec:exp_coco}
 
-\section{Experimental protocol}\label{sec:exp_protocol}
-For synthetic benchmarks we used the COCO \emph{bbob-biobj} test suite with standard dimensions and instances, instantiated via the \texttt{cocoex} Python API. The selected problems include combinations that feature the Linear Slope component from the single-objective suite (bbob \(f_5\)), such as the Separable Ellipsoid/Linear Slope problem (commonly listed as F61), alongside additional separable and multimodal pairs to cover diverse structure types.
+\subsection*{Problem and data}
+We evaluate inverse mapping on the COCO \emph{bbob-biobj} test suite using the \texttt{cocoex} Python API. We select representative bi-objective problems that include the Linear Slope component from the single-objective suite (bbob $f_5$), such as F61 Ellipsoid/Linear Slope, and additional separable and multimodal combinations (e.g., F62 Rastrigin/B{\"u}che-Rastrigin, F63 Rastrigin/Linear Slope). For each chosen instance, we construct $\mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}$ by running a reference multi-objective optimiser (NSGA-II or MOEA/D) and logging decision–outcome pairs from the approximation set. Data are split into train/validation/test (80/10/10). To quantify data-size effects, we repeat training with $\{100,200,500\}$ training pairs. A forward surrogate $\widehat{\mathbf{f}}$ is trained on the same training split and used only where explicitly stated. Targets for inverse querying are drawn per problem by uniform sampling of 200 points inside the convex hull of training outcomes.
 
-For each chosen problem we constructed a dataset $\mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}$ by running a reference multi-objective optimiser (NSGA-II or MOEA/D) on the COCO instance and recording decision–outcome pairs from the resulting approximation set. The data were partitioned into train/validation/test (80/10/10). To study data-size effects we repeated training with subsets of $\{100,200,500\}$ pairs. A forward surrogate $\widehat{\mathbf{f}}$ was fitted on the training split and used only for evaluation or verification when explicitly noted.
+We compare three inverse models—CVAE, MDN, and RBF—tuned by cross-validation. When a model can propose multiple decisions, we sample $k{=}10$ candidates per target (for CVAE/MDN) and compute headline metrics on the top-ranked candidate for consistency, while also logging candidate-set diversity and plausibility flags from the forward check.
 
-Targets for inverse querying were sampled within each problem’s admissible region: per problem, we drew 200 outcomes uniformly inside the convex hull of outcomes observed in the training archive to ensure representativeness under the given instance. Unless otherwise stated, each inverse model produced one decision per target under its selection policy; when multiple proposals were requested for exploration, we generated $k{=}10$ candidates per target (sampling for stochastic models) and computed all headline metrics on the top-ranked candidate for consistency, while also recording candidate-set diversity and any plausibility warnings triggered by the forward check.
-
-We evaluated three inverse models—CVAE, MDN, and RBF—with hyperparameters chosen by cross-validation on the training partition. Primary endpoints were outcome-space discrepancy and tolerance success; secondary indicators included decision-space RMSE and GD/IGD against high-resolution reference fronts. For external validity, a two-objective signal-processing dataset with domain constraints was prepared analogously, with the same splits and reporting protocol.
-
-
-\section{Synthetic Benchmarks}
-
-\subsection{ZDT Problems}
-
-Table~\ref{tab:zdt_rmse} summarises the RMSE of decision predictions for
-ZDT1–ZDT6 across the four inverse models and three training set sizes.
-Lower values indicate more accurate reconstruction of the decision
-variables.  GPR consistently achieves the lowest RMSE, particularly on
-ZDT1 and ZDT2, which have convex fronts.  The performance gap narrows on
-ZDT3 and ZDT6, where the Pareto front is discontinuous or non‑convex and
-random forests perform competitively.  Neural networks require larger
-training sets to avoid overfitting; with 500 samples they match the
-performance of GPR on ZDT4.
-
-\begin{table}[H]
-  \centering
-  \caption{Root mean squared error of predicted decision variables on ZDT
-  problems (mean $\pm$ standard deviation over 5 runs).  Boldface marks
-  the best result for each problem and training size.}
-  \label{tab:zdt_rmse}
-  \rarray{1.3}
-  \begin{tabular}{L{2.2cm}C{2.5cm}C{2.5cm}C{2.5cm}C{2.5cm}}
-    \toprule
-    Problem & \multicolumn{4}{c}{RMSE (\(\times 10^{-2}\))}\\
-    \cmidrule(lr){2-5}
-    & GPR & RBF & RF & FFNN\\
-    \midrule
-    ZDT1 (100) & \textbf{1.5$\pm$0.3} & 2.1$\pm$0.4 & 2.4$\pm$0.5 & 3.0$\pm$0.6\\
-    ZDT1 (200) & \textbf{1.2$\pm$0.2} & 1.9$\pm$0.3 & 2.0$\pm$0.4 & 2.5$\pm$0.4\\
-    ZDT1 (500) & \textbf{0.9$\pm$0.1} & 1.3$\pm$0.2 & 1.4$\pm$0.3 & 1.1$\pm$0.2\\
-    ZDT2 (100) & \textbf{1.8$\pm$0.4} & 2.2$\pm$0.4 & 2.6$\pm$0.5 & 3.4$\pm$0.7\\
-    ZDT2 (200) & \textbf{1.4$\pm$0.3} & 1.7$\pm$0.3 & 2.0$\pm$0.4 & 2.6$\pm$0.5\\
-    ZDT2 (500) & \textbf{1.0$\pm$0.1} & 1.2$\pm$0.2 & 1.3$\pm$0.2 & 1.0$\pm$0.2\\
-    ZDT3 (100) & 2.5$\pm$0.5 & 2.8$\pm$0.6 & \textbf{2.3$\pm$0.5} & 3.6$\pm$0.8\\
-    ZDT3 (200) & \textbf{2.0$\pm$0.4} & 2.3$\pm$0.4 & 2.2$\pm$0.4 & 2.9$\pm$0.6\\
-    ZDT3 (500) & 1.7$\pm$0.3 & 1.9$\pm$0.3 & \textbf{1.6$\pm$0.3} & 1.8$\pm$0.3\\
-    ZDT4 (100) & 3.0$\pm$0.6 & 2.9$\pm$0.5 & \textbf{2.7$\pm$0.5} & 3.4$\pm$0.7\\
-    ZDT4 (200) & 2.5$\pm$0.5 & 2.4$\pm$0.4 & \textbf{2.2$\pm$0.4} & 2.6$\pm$0.5\\
-    ZDT4 (500) & 1.9$\pm$0.3 & 1.8$\pm$0.3 & 1.7$\pm$0.3 & \textbf{1.6$\pm$0.3}\\
-    ZDT6 (100) & 2.8$\pm$0.5 & 2.9$\pm$0.5 & \textbf{2.6$\pm$0.5} & 3.8$\pm$0.8\\
-    ZDT6 (200) & 2.4$\pm$0.4 & 2.5$\pm$0.4 & \textbf{2.1$\pm$0.4} & 3.1$\pm$0.6\\
-    ZDT6 (500) & 1.8$\pm$0.3 & 1.8$\pm$0.3 & \textbf{1.6$\pm$0.3} & 1.9$\pm$0.3\\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-In terms of GD and IGD, Figure~\ref{fig:zdt_gd_igd} (placeholder)
-illustrates the average distance of the reconstructed Pareto sets from
-the true fronts for ZDT problems.  GPR and RF achieve the lowest GD
-values, indicating good convergence, while RF often yields better IGD
-values due to increased diversity.  Neural networks suffer from higher
-variance, particularly with small training sets.
-
-\placeholderfigure{Comparison of generational distance and inverted generational distance for reconstructed Pareto sets on ZDT problems.  Bars indicate mean and error bars indicate standard deviation.}
-
-\subsection{DTLZ Problems}
-
-Results on three‑objective DTLZ problems are presented in
-Table~\ref{tab:dtlz_gd}.  Here we report the GD of the candidate sets
-relative to a high‑resolution reference front.  All models struggle more
-than on ZDT problems due to the higher dimensionality of both decision
-and objective spaces.  GPR again outperforms other methods on DTLZ2 and
-DTLZ5.  On DTLZ7, which has a disconnected front, random forests and
-radial basis functions yield competitive performance.
-
-\begin{table}[H]
-  \centering
-  \caption{Generational distance ($\times 10^{-2}$) of reconstructed
-  Pareto sets on DTLZ problems (mean $\pm$ standard deviation over 5
-  runs).}
-  \label{tab:dtlz_gd}
-  \rarray{1.3}
-  \begin{tabular}{L{2.2cm}C{2.5cm}C{2.5cm}C{2.5cm}C{2.5cm}}
-    \toprule
-    Problem & GPR & RBF & RF & FFNN\\
-    \midrule
-    DTLZ2 & \textbf{3.2$\pm$0.6} & 4.1$\pm$0.7 & 4.5$\pm$0.8 & 4.8$\pm$0.9\\
-    DTLZ5 & \textbf{2.9$\pm$0.5} & 3.7$\pm$0.6 & 3.5$\pm$0.6 & 3.9$\pm$0.7\\
-    DTLZ7 & 5.1$\pm$0.9 & \textbf{4.8$\pm$0.8} & 5.0$\pm$0.9 & 5.3$\pm$1.0\\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-
-\section{Metrics and statistical analysis}\label{sec:metrics_stats}
-\textbf{Primary metrics.} Outcome-space discrepancy
+\subsection*{Outcome-space discrepancy (primary)}
+\textit{Definition.}
 \[
-  \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast}) = d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\mathbf{y}^{\ast}\big),
-  \quad d\in\{\ell_2,\text{Mahalanobis}\},
+  \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+  \;=\;
+  d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big),
+  \qquad
+  d(\mathbf{a},\mathbf{b})\in\left\{\ \|\mathbf{a}-\mathbf{b}\|_2,\ \sqrt{(\mathbf{a}-\mathbf{b})^\top\mathbf{\Sigma}^{-1}(\mathbf{a}-\mathbf{b})}\ \right\},
 \]
-and the per-target tolerance indicator $\mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})=\mathbb{I}[\,d(\mathbf{f}(\widehat{\mathbf{x}}),\mathbf{y}^{\ast})\le\epsilon\,]$.
+where $\mathbf{\Sigma}$ is the outcome covariance estimated from a calibration split (Mahalanobis). We report median and IQR over targets.
 
-
-\section{RQ1: Target attainment accuracy on bbob-biobj}\label{sec:rq1}
-\subsection{Outcome-space discrepancy (primary)}
-Table~\ref{tab:rq1_outcome_error} summarises median~(IQR) of $\mathcal{E}_{\mathcal{Y}}$ across selected bbob-biobj problems and training sizes for the three inverse models: CVAE, MDN, and RBF. Figure~\ref{fig:rq1_ecdf} shows empirical CDFs of $\mathcal{E}_{\mathcal{Y}}$ over targets.
+\textit{Findings.} Table~\ref{tab:coco_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) across representative problems and training sizes; Figure~\ref{fig:coco_ecdf} shows empirical CDFs of $\mathcal{E}_{\mathcal{Y}}$ over targets.
 
 \begin{table}[t]
   \centering
-  \caption{Outcome-space error $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) on selected bbob-biobj problems across training sizes. Best per column in bold.}
-  \label{tab:rq1_outcome_error}
-  \begin{tabular}{lccc}
-  \toprule
-  Problem (dim / inst) & CVAE & MDN & RBF\\
-  \midrule
-  Ellipsoid/Linear Slope & \textbf{--} & -- & --\\
-  Sphere/Rastrigin (separable) & -- & \textbf{--} & --\\
-  Rastrigin/Schaffer (multimodal) & -- & -- & \textbf{--}\\
-  \bottomrule
+  \caption{COCO/bbob-biobj: outcome-space error $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) across selected problems and training sizes. Best per column in bold.}
+  \label{tab:coco_outcome_error}
+  \rarray{1.3}
+  \begin{tabular}{L{3.8cm}C{2.6cm}C{2.6cm}C{2.6cm}}
+    \toprule
+    Problem (dim / inst) & CVAE & MDN & RBF \\
+    \midrule
+    F61 Ellipsoid/Linear Slope (100) & \textbf{--} & -- & -- \\
+    F61 Ellipsoid/Linear Slope (200) & \textbf{--} & -- & -- \\
+    F61 Ellipsoid/Linear Slope (500) & \textbf{--} & -- & -- \\
+    \addlinespace
+    F62 Rastrigin/B{\"u}che-Rastrigin (100) & -- & \textbf{--} & -- \\
+    F62 Rastrigin/B{\"u}che-Rastrigin (200) & -- & \textbf{--} & -- \\
+    F62 Rastrigin/B{\"u}che-Rastrigin (500) & -- & \textbf{--} & -- \\
+    \addlinespace
+    F63 Rastrigin/Linear Slope (100) & -- & -- & \textbf{--} \\
+    F63 Rastrigin/Linear Slope (200) & -- & -- & \textbf{--} \\
+    F63 Rastrigin/Linear Slope (500) & -- & -- & \textbf{--} \\
+    \bottomrule
   \end{tabular}
 \end{table}
 
-\placeholderfigure{Empirical CDFs of $\mathcal{E}_{\mathcal{Y}}$ per model on selected bbob-biobj problems.}
-\label{fig:rq1_ecdf}
+\placeholderfigure{COCO/bbob-biobj: empirical CDFs of $\mathcal{E}_{\mathcal{Y}}$ per model.}
+\label{fig:coco_ecdf}
 
-\subsection{Tolerance success (primary)}
-For each target, we computed $\mathrm{Succ}_\epsilon$ using benchmark-specific tolerances. Figure~\ref{fig:rq1_success} reports success rates per model and training size; exact rates appear in Appendix tables.
+\subsection*{Tolerance success (primary)}
+\textit{Definition.}
+\[
+  \mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+  \;=\;
+  \mathbb{I}\!\left[\, d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big) \le \epsilon \right],
+\]
+with $\epsilon$ set per benchmark tolerance band (reported with the table).
 
-\placeholderfigure{Tolerance success rates $\mathrm{Succ}_\epsilon$ by model and training size (bars: median across problems; error bars: IQR).}
-\label{fig:rq1_success}
-
-\subsection{Decision-space RMSE (secondary)}
-Table~\ref{tab:rq1_rmse} lists decision-space RMSE (mean~$\pm$~std over five runs) for the same problems and sizes.
+\textit{Findings.} Table~\ref{tab:coco_success} lists $\mathrm{Succ}_\epsilon$ (median across targets; IQR in parentheses).
 
 \begin{table}[t]
   \centering
-  \caption{Decision-space RMSE ($\times 10^{-2}$) on selected bbob-biobj problems (mean~$\pm$~std over 5 runs).}
-  \label{tab:rq1_rmse}
-  \begin{tabular}{lccc}
-  \toprule
-  Problem & CVAE & MDN & RBF\\
-  \midrule
-  Ellipsoid/Linear Slope & -- & -- & --\\
-  Sphere/Rastrigin (separable) & -- & -- & --\\
-  Rastrigin/Schaffer (multimodal) & -- & -- & --\\
-  \bottomrule
+  \caption{COCO/bbob-biobj: tolerance success $\mathrm{Succ}_\epsilon$ (median across targets; IQR in parentheses).}
+  \label{tab:coco_success}
+  \rarray{1.3}
+  \begin{tabular}{L{3.8cm}C{2.6cm}C{2.6cm}C{2.6cm}}
+    \toprule
+    Problem & CVAE & MDN & RBF \\
+    \midrule
+    F61 Ellipsoid/Linear Slope & -- & -- & -- \\
+    F62 Rastrigin/B{\"u}che-Rastrigin & -- & -- & -- \\
+    F63 Rastrigin/Linear Slope & -- & -- & -- \\
+    \bottomrule
   \end{tabular}
 \end{table}
 
-\section{RQ2: Behaviour across function groups}\label{sec:rq2}
-\subsection{Outcome-space discrepancy and success}
-Table~\ref{tab:rq2_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_\epsilon$ aggregated by bbob-biobj function group (separable, ill-conditioned, multimodal, weakly-structured) at training size 500; Figure~\ref{fig:rq2_box} shows boxplots of $\mathcal{E}_{\mathcal{Y}}$.
+\subsection*{Decision-space error (secondary)}
+\textit{Definition.}
+\[
+  \mathrm{RMSE}_{\mathcal{X}}
+  \;=\;
+  \sqrt{\frac{1}{|\mathcal{T}|\,n}\sum_{i\in\mathcal{T}}\big\|g(\mathbf{y}_i)-\mathbf{x}_i\big\|_2^2},
+\]
+where $\mathcal{T}$ indexes test pairs and $n=\dim(\mathcal{X})$.
+
+\textit{Findings.} Table~\ref{tab:coco_rmse} summarises $\mathrm{RMSE}_{\mathcal{X}}$ (mean~$\pm$~std over five runs).
 
 \begin{table}[t]
   \centering
-  \caption{Outcome-space error $\mathcal{E}_{\mathcal{Y}}$ and tolerance success (median~[IQR]) by function group (bbob-biobj, 500 training pairs).}
-  \label{tab:rq2_outcome_error}
-  \begin{tabular}{lccc}
-  \toprule
-  Group & CVAE & MDN & RBF\\
-  \midrule
-  Separable & -- & -- & --\\
-  Ill-conditioned & -- & -- & --\\
-  Multimodal & -- & -- & --\\
-  Weakly-structured & -- & -- & --\\
-  \bottomrule
+  \caption{COCO/bbob-biobj: decision-space RMSE ($\times 10^{-2}$), mean~$\pm$~std over five runs.}
+  \label{tab:coco_rmse}
+  \rarray{1.3}
+  \begin{tabular}{L{3.8cm}C{2.6cm}C{2.6cm}C{2.6cm}}
+    \toprule
+    Problem & CVAE & MDN & RBF \\
+    \midrule
+    F61 Ellipsoid/Linear Slope & -- & -- & -- \\
+    F62 Rastrigin/B{\"u}che-Rastrigin & -- & -- & -- \\
+    F63 Rastrigin/Linear Slope & -- & -- & -- \\
+    \bottomrule
   \end{tabular}
 \end{table}
 
-\placeholderfigure{Boxplots of $\mathcal{E}_{\mathcal{Y}}$ by bbob-biobj group (500 training pairs).}
-\label{fig:rq2_box}
+\subsection*{Set-quality indicators (secondary)}
+\textit{Definition.} For achieved outcomes $S=\{\mathbf{f}(\widehat{\mathbf{x}})\}$ and a high-resolution reference front $P$:
+\[
+  \mathrm{GD}(S,P)
+  \;=\;
+  \left(\frac{1}{|S|}\sum_{\mathbf{s}\in S}\min_{\mathbf{p}\in P}\|\mathbf{s}-\mathbf{p}\|_2^p\right)^{\!\!1/p},
+  \qquad
+  \mathrm{IGD}(S,P)
+  \;=\;
+  \frac{1}{|P|}\sum_{\mathbf{p}\in P}\min_{\mathbf{s}\in S}\|\mathbf{s}-\mathbf{p}\|_2,
+\]
+with $p\in\{1,2\}$.
 
-\subsection{GD/IGD on reconstructed sets (secondary)}
-Figure~\ref{fig:gd_igd} presents GD and IGD with respect to reference fronts; definitions follow \cite{Ishibuchi2015GDIGD,Bezerra2017IGD}.
+\textit{Findings.} Figure~\ref{fig:coco_gd_igd} presents GD/IGD (means with error bars) versus a reference front.
 
-\placeholderfigure{GD and IGD across selected bbob-biobj problems (mean with error bars).}
-\label{fig:gd_igd}
+\placeholderfigure{COCO/bbob-biobj: GD and IGD relative to reference fronts (means with error bars).}
+\label{fig:coco_gd_igd}
 
-\section{RQ3: Effect of training size and cross-problem ranking}\label{sec:rq3}
-\subsection{Data size sensitivity}
-Figure~\ref{fig:size_sensitivity} shows $\mathcal{E}_{\mathcal{Y}}$ versus training size (100/200/500) aggregated over problems; Table~\ref{tab:size_rates} lists corresponding $\mathrm{Succ}_\epsilon$.
+\subsection*{Data-size sensitivity and cross-problem ranking}
+\textit{Definition.} We compare training sizes $\{100,200,500\}$ by aggregating $\mathcal{E}_{\mathcal{Y}}$ across problems; for cross-problem comparisons, we compute average ranks per model and apply the Friedman test with Nemenyi post-hoc at $\alpha=0.05$.
 
-\placeholderfigure{Median $\mathcal{E}_{\mathcal{Y}}$ by training size (aggregated over bbob-biobj problems).}
-\label{fig:size_sensitivity}
+\textit{Findings.} Figure~\ref{fig:coco_size} shows median $\mathcal{E}_{\mathcal{Y}}$ versus size; Figure~\ref{fig:coco_cd} shows the corresponding critical-difference diagram.
 
-\begin{table}[t]
-  \centering
-  \caption{Tolerance success $\mathrm{Succ}_\epsilon$ by training size (median across problems; IQR in parentheses).}
-  \label{tab:size_rates}
-  \begin{tabular}{lccc}
-  \toprule
-  Size & CVAE & MDN & RBF\\
-  \midrule
-  100 & -- & -- & --\\
-  200 & -- & -- & --\\
-  500 & -- & -- & --\\
-  \bottomrule
-  \end{tabular}
-\end{table}
+\placeholderfigure{COCO/bbob-biobj: median $\mathcal{E}_{\mathcal{Y}}$ by training size (aggregated over problems).}
+\label{fig:coco_size}
 
-\subsection{Across-problem ranking with statistical tests}
-Average ranks per model across problems were compared with the Friedman test and Nemenyi post-hoc at $\alpha=0.05$. Figure~\ref{fig:cd_plot} shows the critical-difference diagram; exact $p$-values are tabulated in Appendix~A. \cite{Demsar2006JMLR}
+\placeholderfigure{COCO/bbob-biobj: critical-difference diagram (Friedman + Nemenyi) for $\mathcal{E}_{\mathcal{Y}}$ across problems.}
+\label{fig:coco_cd}
 
-\placeholderfigure{Critical-difference diagram (Friedman + Nemenyi) over problems for $\mathcal{E}_{\mathcal{Y}}$.}
-\label{fig:cd_plot}
 
-\section{Real-world case study}\label{sec:real}
-A two-objective signal-processing task was used to assess external validity. Table~\ref{tab:sp_primary} reports $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_\epsilon$ on held-out targets; Table~\ref{tab:sp_secondary} lists RMSE and GD for completeness. Figure~\ref{fig:sp_scatter} plots $\mathbf{f}(\widehat{\mathbf{x}})$ against targets.
+\section{Experiment 2: Real-world signal-processing case}\label{sec:exp_real}
+
+\subsection*{Protocol}
+A two-objective signal-processing dataset with domain constraints was prepared analogously to Experiment~\ref{sec:exp_coco}. Representative decision–outcome pairs $\mathcal{D}$ were assembled from historical configurations and measurements. Data were split into train/validation/test (80/10/10). Targets were sampled within the observed outcome hull; each inverse model produced one decision per target under its selection policy. Models (CVAE, MDN, RBF) were tuned by cross-validation on the training partition. Primary indicators ($\mathcal{E}_{\mathcal{Y}}$, $\mathrm{Succ}_\epsilon$) and secondary indicators (RMSE, GD/IGD) followed the same definitions and reporting conventions.
+
+\subsection*{Findings (signal processing)}
+Table~\ref{tab:sp_primary} reports $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_\epsilon$ on held-out targets. Table~\ref{tab:sp_secondary} lists RMSE and GD for completeness. Figure~\ref{fig:sp_scatter} plots $\mathbf{f}(\widehat{\mathbf{x}})$ against targets.
 
 \begin{table}[t]
   \centering
   \caption{Signal-processing case: outcome-space error and tolerance success (median~[IQR]).}
   \label{tab:sp_primary}
-  \begin{tabular}{lcc}
+  \rarray{1.3}
+  \begin{tabular}{L{2.8cm}C{2.6cm}C{2.6cm}}
     \toprule
     Model & $\mathcal{E}_{\mathcal{Y}}$ & $\mathrm{Succ}_\epsilon$ \\
     \midrule
-    CVAE  & -- & --\\
-    MDN   & -- & --\\
-    RBF   & -- & --\\
+    CVAE  & -- & -- \\
+    MDN   & -- & -- \\
+    RBF   & -- & -- \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{table}[t]
   \centering
-  \caption{Signal-processing case: secondary indicators.}
+  \caption{Signal-processing case: secondary indicators (RMSE, GD).}
   \label{tab:sp_secondary}
-  \begin{tabular}{lcc}
+  \rarray{1.3}
+  \begin{tabular}{L{2.8cm}C{2.6cm}C{2.6cm}}
     \toprule
     Model & RMSE ($\times 10^{-2}$) & GD ($\times 10^{-2}$)\\
     \midrule
@@ -246,12 +177,12 @@ A two-objective signal-processing task was used to assess external validity. Tab
   \end{tabular}
 \end{table}
 
-\placeholderfigure{Scatter of forward-evaluated outcomes $\mathbf{f}(\widehat{\mathbf{x}})$ versus targets $\mathbf{y}^{\ast}$ in the signal-processing case.}
+\placeholderfigure{Signal-processing case: scatter of forward-evaluated outcomes $\mathbf{f}(\widehat{\mathbf{x}})$ versus targets $\mathbf{y}^{\ast}$.}
 \label{fig:sp_scatter}
+
 
 \section{Supplementary figures and tables}
 ECDFs, per-problem success curves, and statistical test tables are provided in Appendix~A.
-
 
 
 
