@@ -1,4 +1,3 @@
-import numpy as np
 from sklearn.model_selection import train_test_split
 
 from ....domain.common.interfaces.base_logger import BaseLogger
@@ -11,8 +10,8 @@ from .process_dataset_command import ProcessDatasetCommand
 
 class ProcessDatasetCommandHandler:
     """
-    Reads raw Pareto data, performs a train/test split with normalization,
-    and saves the processed dataset into the processed repository as a pickle.
+    Reads raw Pareto data, performs a train/test split, fits normalizers on train,
+    transforms train/test, and saves a processed dataset bundle.
     """
 
     def __init__(
@@ -32,43 +31,42 @@ class ProcessDatasetCommandHandler:
         generated_dataset = self._generated_dataset_repo.load(
             filename=command.source_filename
         )
-
         self._logger.log_info(
             f"[postprocess] data: X{generated_dataset.X.shape}, y{generated_dataset.y.shape}"
         )
 
-        # 2) Build normalizers (one per space)
-        X_normalizer = self._normalizer_factory.create(
+        # 2) Split FIRST (best practice to avoid leakage)
+        #    Note: dataset uses (objectives=y, decisions=X).
+        X_raw = generated_dataset.y  # objectives
+        y_raw = generated_dataset.X  # solutions/decisions
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_raw, y_raw, test_size=command.test_size, random_state=command.random_state
+        )
+
+        # 3) Build normalizers (one per space)
+        X_normalizer: BaseNormalizer = self._normalizer_factory.create(
             command.normalizer_config.model_dump()
         )
-        y_normalizer = self._normalizer_factory.create(
+        y_normalizer: BaseNormalizer = self._normalizer_factory.create(
             command.normalizer_config.model_dump()
         )
 
-        # NOTE: the pareto front and set is not normalized here, but could be if needed
-        # TODO: add option to normalize pareto front too
+        # 4) Fit on TRAIN only; transform TRAIN and TEST
+        X_train = X_normalizer.fit_transform(X_train)
+        X_test = X_normalizer.transform(X_test)
+        y_train = y_normalizer.fit_transform(y_train)
+        y_test = y_normalizer.transform(y_test)
 
-        # 3) Split + normalize (returns normalized arrays + the fitted normalizers)
-        X_train, X_test, y_train, y_test, X_normalizer_fitted, y_normalizer_fitted = (
-            self._split_and_normalize(
-                X=generated_dataset.y,
-                y=generated_dataset.X,
-                X_normalizer=X_normalizer,
-                y_normalizer=y_normalizer,
-                test_size=command.test_size,
-                random_state=command.random_state,
-            )
-        )
-
-        # 4) Bundle output
+        # 5) Bundle + save
         processed_dataset = ProcessedDataset.create(
             name="processed_dataset",
             X_train=X_train,
             y_train=y_train,
             X_test=X_test,
             y_test=y_test,
-            X_normalizer=X_normalizer_fitted,
-            y_normalizer=y_normalizer_fitted,
+            X_normalizer=X_normalizer,  # fitted instances
+            y_normalizer=y_normalizer,  # fitted instances
             pareto=generated_dataset.pareto,
             metadata={
                 "source": command.source_filename,
@@ -77,36 +75,7 @@ class ProcessDatasetCommandHandler:
                 "normalizer": command.normalizer_config.model_dump(),
             },
         )
-
-        # 5) Save to processed repository
         self._processed_dataset_repo.save(processed_dataset)
-
         self._logger.log_info(
             f"[postprocess] saved processed dataset to '{command.dest_filename}.pkl'"
         )
-
-    def _split_and_normalize(
-        X: np.ndarray,
-        y: np.ndarray,
-        X_normalizer: BaseNormalizer,
-        y_normalizer: BaseNormalizer,
-        test_size: float,
-        random_state: int,
-    ) -> tuple[
-        np.ndarray, np.ndarray, np.ndarray, np.ndarray, BaseNormalizer, BaseNormalizer
-    ]:
-        """
-        1) Delegates to DataPreparer for a single split (keeps your splitting behavior).
-        2) Applies the normalizers (fit_transform on train, transform on test).
-        Returns: X_train, X_test, y_train, y_test (normalized).
-        """
-        X_train_raw, X_test_raw, y_train_raw, y_test_raw = train_test_split(
-            X, y, test_size=test_size, random_state=random_state
-        )
-
-        X_train = X_normalizer.fit_transform(X_train_raw)
-        X_test = X_normalizer.transform(X_test_raw)
-        y_train = y_normalizer.fit_transform(y_train_raw)
-        y_test = y_normalizer.transform(y_test_raw)
-
-        return X_train, X_test, y_train, y_test, X_normalizer, y_normalizer
