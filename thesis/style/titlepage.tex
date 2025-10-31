@@ -4,51 +4,77 @@
 % !TeX root = ../thesis.tex
 % !TeX program = pdflatex
 %
-\newcounter{cAuthorList} 
+\newcounter{cAuthorList}
 \newcounter{cMatrList}
 \setcounter{cMatrList}{0}
-% this is the title page
+
+%───────────────────────────────────────────────────────────────────────────────
+% Title page (restructured order):
+% 1) Logo  →  2) Title  →  3) Author(s)  →  4) Degree statement
+%  →  5) Department → University  →  6) Filing date
+%───────────────────────────────────────────────────────────────────────────────
 \begin{titlepage}
 \begin{center}
+
+  % 1) Logo
   \begin{figure}\vspace{-1cm}
     \IfLanguageName{ngerman}{
       \includegraphics[height=2.5cm]{style/UPBDE}
     }{
       \includegraphics[height=2.5cm]{style/UPB.pdf}
     }
-    \hfill
-    \IfLanguageName{ngerman}{
-      \includegraphics[height=1.5cm]{style/NTLogoDE.pdf}
-    }{
-      \includegraphics[height=1.5cm]{style/NTLogoENG.pdf}
-    }
   \end{figure}
-$\:$ \newline
-{\textbf{\IfLanguageName{ngerman}{Institut für Elektrotechnik und Informationstechnik}{Faculty for Computer Science, Electrical Engineering and Mathematics}}}\\
-\IfLanguageName{ngerman}{Universität Paderborn}{Paderborn University}\\
-\IfLanguageName{ngerman}{Fachgebiet Nachrichtentechnik}{Communications Engineering}\\
-Prof. Dr.-Ing. Reinhold Häb-Umbach\\
-\vfill
-$\:$ \newline
-\Large{\textbf{\textsf{\WorkType \vspace{1cm} \\ \TitelWithLineBreaks}}}
-\vfill
-\large{\IfLanguageName{ngerman}{von}{by}\\}
-\vfill
-\foreach \n in \authorlist {
-  \addtocounter{cAuthorList}{1}
-  \setcounter{cMatrList}{0}
-  \foreach \m in \matrikellist {
-    \addtocounter{cMatrList}{1}
-    \ifnum\value{cMatrList} = \value{cAuthorList}
-      \Large{\large \n \\ \IfLanguageName{ngerman}{Matr.-Nr.}{Matr.-No.}: \m}
-      \vfill
-    \fi
+
+  % 2) Title
+  \vspace{0.5cm}
+  \Large{\textbf{\textsf{\WorkType}}}\\[1.0cm]
+  \LARGE{\textbf{\textsf{\TitelWithLineBreaks}}}
+
+  % 3) Author(s)
+  \vspace{1.2cm}
+  \large{\IfLanguageName{ngerman}{von}{by}}\\[0.3cm]
+  \normalsize
+  \foreach \n in \authorlist {
+    \addtocounter{cAuthorList}{1}
+    \setcounter{cMatrList}{0}
+    \foreach \m in \matrikellist {
+      \addtocounter{cMatrList}{1}
+      \ifnum\value{cMatrList} = \value{cAuthorList}
+        \Large \n \\[0.1cm]
+        \normalsize \IfLanguageName{ngerman}{Matr.-Nr.}{Matr.-No.}: \m
+        \par\vspace{0.6cm}
+      \fi
+    }
   }
-}
-\vfill
-\begin{flushleft}
-\large{\IfLanguageName{ngerman}{Abgabetermin}{Filing date}: \SubmissionDate \\}
-\end{flushleft}
-\renewcommand{\baselinestretch}{1}\normalsize
+
+  % 4) Degree statement
+  \vspace{0.4cm}
+  \normalsize
+  \IfLanguageName{ngerman}{
+    \textit{Diese Arbeit wird vorgelegt zur Erlangung des akademischen Grades}\\
+    \textbf{Master of Science (M.\,Sc.) \,–\, Computer Engineering}\\[0.2cm]
+    \textit{Schwerpunkt: Signal-, Bild- und Sprachverarbeitung}
+  }{
+    \textit{A thesis presented in partial fulfillment of the requirements for the degree of}\\
+    \textbf{Master of Science (M.Sc.) \,–\, Computer Engineering}\\[0.2cm]
+    \textit{Specialisation: Signal, Image and Speech Processing}
+  }
+
+  % 5) Department → University  (only these two lines kept)
+  \vspace{1.2cm}
+  \normalsize
+  {\IfLanguageName{ngerman}
+    {Institut für Elektrotechnik und Informationstechnik}
+    {Department of Electrical Engineering and Information Technology}}\\
+  \IfLanguageName{ngerman}{Universität Paderborn}{Paderborn University}\\
+
+  \vfill
+
+  % 6) Filing date (bottom-left)
+  \begin{flushleft}
+    \large{\IfLanguageName{ngerman}{Abgabetermin}{Filing date}: \SubmissionDate}
+  \end{flushleft}
+
+  \renewcommand{\baselinestretch}{1}\normalsize
 \end{center}
 \end{titlepage}

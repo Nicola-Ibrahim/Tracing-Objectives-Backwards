@@ -35,14 +35,60 @@ We focus on single-decision outputs for each query, meaning that for every $\mat
 \section{Research questions and design principles}\label{sec:rq_design}
 We address three questions: (i) how to learn an outcome$\!\to\!$decision map aligned with the forward behaviour of the system; (ii) how to return either one decision or a small set of proposals on demand; and (iii) how to evaluate attainment of $\vect{y}^{\star}$ in outcome space in a simple, reproducible way. The design follows three principles: \emph{forward consistency} (validate inverse predictions through $\vect{f}$), \emph{output uniformity} (define a clear selection policy for single or multiple proposals), and \emph{clean separation} between modelling choices (architectures, priors, loss terms) and evaluation choices (distances and tolerances).
 
-\section{Methodological framework}\label{sec:framework}
-We consider two complementary model families for the inverse relation $\mathcal{Y}\!\to\!\mathcal{X}$.
-\begin{enumerate}
-  \item \emph{Deterministic inverse models} $g_{\theta}:\mathcal{Y}\!\to\!\mathcal{X}$ learned by empirical risk minimisation (ERM) with capacity control and optional constraint handling (projection or penalties).
-  \item \emph{Probabilistic inverse models} $p_{\theta}(\vect{x}\mid\vect{y})$ trained by conditional maximum likelihood in expressive families (e.g., CVAEs or normalising flows), equipped with a \emph{selection policy} that returns either a single decision or a set of $k$ proposals at query time.
-\end{enumerate}
-To reduce the ambiguity of inverse problems (one-to-many mappings), both families may include a \emph{forward-consistency} term that encourages $\vect{f}(g_{\theta}(\vect{y}))\!\approx\!\vect{y}$ during training.
 
+%-------------------------------------------------------------------------------
+\section{Theoretical framework and model}\label{sec:theory_model}
+%-------------------------------------------------------------------------------
+
+We formalise inverse design as learning $g_\theta:\mathcal{Y}\!\to\!\mathcal{X}$ with a
+hybrid objective that balances decision-space supervision and forward outcome
+fidelity:
+\begin{equation}
+\widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}\Big[
+  \ell_{\mathcal{X}}(g_\theta(\vect{y}_i),\vect{x}_i)
+  + \alpha\, d\!\big(\vect{f}(g_\theta(\vect{y}_i)),\vect{y}_i\big)^2
+\Big] + \lambda\,\Omega(\theta),
+\label{eq:hybrid_inverse}
+\end{equation}
+with $d$ an outcome-space metric and $\alpha\!\ge\!0$ controlling forward
+consistency (the ``tandem'' idea). For distributional models, we fit
+$p_\theta(\vect{x}\mid\vect{y})$ by conditional likelihood and apply a selection
+policy to return a single $\widehat{\vect{x}}$ at query time; conformal calibration
+(\S\ref{sec:calibration}) uses split residuals in outcome space to provide
+distribution-free coverage.
+
+%-------------------------------------------------------------------------------
+\section{Methodology selection and defence}\label{sec:method_defence}
+%-------------------------------------------------------------------------------
+
+We adopt an \emph{inverse–mapping} methodology (rather than running a
+black-box optimiser at query-time) to enable amortised, real-time proposals from
+diverse archives while aligning predictions with the forward map. Forward
+consistency mitigates non-uniqueness; outcome-side evaluation matches the design
+goal; and conformal calibration adds simple, finite-sample guarantees without
+restrictive distributional assumptions. Optimisation-at-query-time (e.g., BO)
+is complementary but incurs additional search and simulator calls; we therefore
+treat it as an optional refinement stage rather than the default.
+
+
+\section{Methodological framework}\label{sec:framework}
+
+We consider two complementary inverse families for $\mathcal{Y}\!\to\!\mathcal{X}$.
+\begin{enumerate}
+  \item Deterministic inverse models $g_{\theta}:\mathcal{Y}\!\to\!\mathcal{X}$
+  learned by empirical risk minimisation (ERM) with capacity control and
+  constraint handling (projection or penalties).
+
+  \item Probabilistic inverse models $p_{\theta}(\vect{x}\mid\vect{y})$ trained by
+  conditional maximum likelihood in expressive families (e.g., CVAEs or
+  normalising flows), equipped with a \emph{selection policy} that returns a
+  single decision (MAP/mean/median) or a small set of $k$ proposals at query
+  time. For diversity-aware sets, we optionally use a determinantal point
+  process (DPP) subset selector over candidates.
+\end{enumerate}
+To reduce one-to-many ambiguity, both families may include a
+\emph{forward-consistency} term that encourages
+$\vect{f}(g_{\theta}(\vect{y}))\!\approx\!\vect{y}$ during training.
 \section{Inverse-model training}\label{sec:training}
 
 \subsection{Deterministic inverse ERM}\label{sec:det_inverse}
