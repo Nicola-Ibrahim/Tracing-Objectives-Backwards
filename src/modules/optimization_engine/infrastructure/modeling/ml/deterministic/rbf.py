@@ -39,7 +39,7 @@ class RBFEstimator(DeterministicEstimator):
     def type(self) -> str:
         return EstimatorTypeEnum.RBF.value
 
-    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64], **kwargs) -> None:
+    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         super().fit(X, y)
 
         if len(X) < 1:
@@ -71,7 +71,7 @@ class RBFEstimator(DeterministicEstimator):
             y=X_unique, d=y_unique, neighbors=self.neighbors, kernel=self.kernel
         )
 
-    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
+    def infer(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         if self._model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 

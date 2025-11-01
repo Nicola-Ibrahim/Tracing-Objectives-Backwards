@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..interfaces.base_estimator import BaseEstimator
+from ..interfaces.base_estimator import BaseEstimator, ProbabilisticEstimator
 from ..interfaces.base_validation_metric import BaseValidationMetric
 
 

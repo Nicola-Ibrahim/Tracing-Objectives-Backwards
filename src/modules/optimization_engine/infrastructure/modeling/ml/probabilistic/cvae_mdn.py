@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -15,13 +17,11 @@ from .....domain.modeling.interfaces.base_estimator import (
 LOG2PI = float(np.log(2.0 * np.pi))
 
 
-# -------------------- Conditional prior network -------------------- #
+# -------------------- Conditional prior p(z | cond) -------------------- #
 class PriorNet(nn.Module):
     """
-    Conditional prior p(z | X) with clamped log-variance for stability.
-
-    Maps condition X (inputs) -> (μ_p(X), log σ_p^2(X)).
-    Used in training (KL term) and inference (sampling z | X).
+    Conditional prior p(z | cond): maps condition -> (mu_p, logvar_p).
+    Clamps log-variance for numerical stability.
     """
 
     def __init__(
@@ -39,28 +39,25 @@ class PriorNet(nn.Module):
         self.min_logvar = float(min_logvar)
         self.max_logvar = float(max_logvar)
 
-    def forward(self, X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        h = F.relu(self.fc1(X))
+    def forward(self, cond: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        h = F.relu(self.fc1(cond))
         mu = self.fc_mu(h)
-        # Clamp variance range for numerical stability.
         logvar = torch.clamp(
             self.fc_logvar(h), min=self.min_logvar, max=self.max_logvar
         )
         return mu, logvar
 
 
-# -------------------- Encoder -------------------- #
+# -------------------- Encoder q(z | y, cond) -------------------- #
 class CVAEEncoder(nn.Module):
-    """
-    Amortized posterior q(z | y, X) -> (μ_q, log σ_q^2).
+    """Amortized posterior q(z | y, cond) -> (mu_q, logvar_q). Used only in training."""
 
-    Used ONLY during training: encodes target y with condition X to infer z.
-    """
-
-    def __init__(self, y_dim: int, X_dim: int, latent_dim: int = 8, hidden: int = 128):
+    def __init__(
+        self, y_dim: int, cond_dim: int, latent_dim: int = 8, hidden: int = 128
+    ):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(y_dim + X_dim, hidden),
+            nn.Linear(y_dim + cond_dim, hidden),
             nn.ReLU(),
             nn.Linear(hidden, hidden),
             nn.ReLU(),
@@ -69,25 +66,23 @@ class CVAEEncoder(nn.Module):
         self.fc_logvar = nn.Linear(hidden, latent_dim)
 
     def forward(
-        self, y: torch.Tensor, X: torch.Tensor
+        self, y: torch.Tensor, cond: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        # Concatenate y (target) and X (condition) to infer z.
-        h = self.net(torch.cat([y, X], dim=1))
+        h = self.net(torch.cat([y, cond], dim=1))
         return self.fc_mu(h), self.fc_logvar(h)
 
 
-# -------------------- MDN decoder -------------------- #
+# -------------------- MDN decoder p(y | z, cond) -------------------- #
 class CVAEDecoderMDN(nn.Module):
     """
-    Decoder p(y | z, X) as a K-component diagonal-Gaussian mixture.
-
-    Given (z, X), predicts mixture logits π, component means μ, and log-variances.
+    Mixture Density Network decoder:
+      p(y | z, cond) = sum_{k=1..K} pi_k * N(y; mu_k, diag(exp(logvar_k))).
     """
 
     def __init__(
         self,
         latent_dim: int,
-        X_dim: int,
+        cond_dim: int,
         y_dim: int,
         n_components: int = 5,
         hidden: int = 128,
@@ -95,19 +90,18 @@ class CVAEDecoderMDN(nn.Module):
         max_logvar: float = 4.0,
     ):
         super().__init__()
-        self.y_dim = int(y_dim)  # output dimensionality
+        self.y_dim = int(y_dim)
         self.K = int(n_components)
         self.min_logvar = float(min_logvar)
         self.max_logvar = float(max_logvar)
 
-        in_dim = latent_dim + X_dim
+        in_dim = latent_dim + cond_dim
         self.backbone = nn.Sequential(
             nn.Linear(in_dim, hidden),
             nn.ReLU(),
             nn.Linear(hidden, hidden),
             nn.ReLU(),
         )
-        # mixture parameters
         self.pi_head = nn.Linear(hidden, self.K)
         self.mu_head = nn.Linear(hidden, self.K * self.y_dim)
         self.logvar_head = nn.Linear(hidden, self.K * self.y_dim)
@@ -116,13 +110,11 @@ class CVAEDecoderMDN(nn.Module):
     def type(self) -> str:
         return getattr(EstimatorTypeEnum, "CVAE_MDN", EstimatorTypeEnum.CVAE_MDN).value
 
-    def forward(self, z: torch.Tensor, X: torch.Tensor):
-        # Predict mixture parameters π, μ, σ^2 for each (z, X).
-        h = self.backbone(torch.cat([z, X], dim=1))
+    def forward(self, z: torch.Tensor, cond: torch.Tensor):
+        h = self.backbone(torch.cat([z, cond], dim=1))
         pi_logits = self.pi_head(h)  # (B, K)
         mu = self.mu_head(h).view(-1, self.K, self.y_dim)  # (B, K, Dy)
         logvar = self.logvar_head(h).view(-1, self.K, self.y_dim)
-        # Clamp for stable likelihood and gradients.
         logvar = torch.clamp(logvar, min=self.min_logvar, max=self.max_logvar)
         return pi_logits, mu, logvar
 
@@ -130,47 +122,53 @@ class CVAEDecoderMDN(nn.Module):
     def mdn_nll(
         y: torch.Tensor, pi_logits: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
     ) -> torch.Tensor:
-        """Negative log-likelihood of y under a diagonal-Gaussian mixture.
-
-        Computes -log ∑_k π_k N(y; μ_k, σ_k^2) using log-sum-exp for stability.
         """
-        # y: (B, Dy) -> (B, 1, Dy) to broadcast across K.
-        y = y.unsqueeze(1)
+        Negative log-likelihood under a diagonal-Gaussian mixture:
+          -log sum_k softmax(pi_logits)_k * N(y; mu_k, diag(exp(logvar_k))).
+        Uses log-sum-exp for stability.
+        """
+        y = y.unsqueeze(1)  # (B, 1, Dy) for broadcast across K
         log_pi = F.log_softmax(pi_logits, dim=-1)  # (B, K)
-        inv_var = torch.exp(-logvar)
-        # Component log-prob: log N(y; μ, σ^2) → (B, K)
+        inv_var = torch.exp(-logvar)  # (B, K, Dy)
+        # Component log-probabilities: (B, K)
         log_prob = -0.5 * (
-            torch.sum(logvar + (y - mu) ** 2 * inv_var, dim=-1) + mu.shape[-1] * LOG2PI
+            torch.sum(logvar + (y - mu) ** 2 * inv_var, dim=-1) + mu.size(-1) * LOG2PI
         )
-        # log ∑_k exp(log π_k + log N_k)
+        # Log mixture
         log_mix = torch.logsumexp(log_pi + log_prob, dim=-1)  # (B,)
         return -torch.mean(log_mix)
 
     def sample_from_components(
         self, pi_logits: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
     ) -> torch.Tensor:
-        """Draw one sample per row from the mixture.
-
-        Steps: sample component index k ~ Cat(softmax(π)); then y ~ N(μ_k, σ_k^2).
+        """
+        Draw one y per row:
+          k ~ Categorical(softmax(pi_logits)), then y ~ N(mu_k, diag(exp(logvar_k))).
         """
         with torch.no_grad():
             pi = F.softmax(pi_logits, dim=-1)  # (B, K)
-            comp = torch.multinomial(pi, num_samples=1).squeeze(-1)  # (B,)
-            idx = comp.unsqueeze(-1).unsqueeze(-1).expand(-1, 1, mu.size(-1))
+            k = torch.multinomial(pi, num_samples=1).squeeze(-1)  # (B,)
+            idx = k.view(-1, 1, 1).expand(-1, 1, mu.size(-1))
             sel_mu = torch.gather(mu, 1, idx).squeeze(1)  # (B, Dy)
-            sel_std = torch.exp(0.5 * torch.gather(logvar, 1, idx).squeeze(1))
+            sel_lv = torch.gather(logvar, 1, idx).squeeze(1)  # (B, Dy)
+            sel_std = torch.exp(0.5 * sel_lv)
             eps = torch.randn_like(sel_mu)
-            return sel_mu + sel_std * eps
+            return sel_mu + sel_std * eps  # (B, Dy)
 
 
 # -------------------- CVAE Estimator (MDN decoder) -------------------- #
 class CVAEMDNEstimator(ProbabilisticEstimator):
-    """
-    CVAE with MDN decoder for multi-modal p(y | X).
+    r"""
+    Conditional VAE with an MDN decoder for multi-modal p(y | cond).
 
-    Training minimizes:  NLL(y | z, X)  +  β * KL[q(z|y,X) || p(z|X)]
-      - Reconstruction: MDN negative log-likelihood (not MSE).
-      - KL: aligns encoder posterior with conditional prior; warm-up & free-bits supported.
+    Training minimizes (negative ELBO):
+        NLL_MDN(y | z, cond) + β * KL[q(z|y,cond) || p(z|cond)].
+
+    Inference (given cond only):
+        - sample():      z ~ p(z|cond), then draw y from MDN
+        - infer_mean():  MC over z; for each (z,cond), take mixture mean Σ_k softmax(π)_k μ_k and average over draws
+        - infer_map():   z := μ_p(cond); take component with max weight and return its μ_k
+        - infer_median(): draw y samples and take elementwise medians
     """
 
     def __init__(
@@ -181,12 +179,18 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         beta: float = 0.1,
         kl_warmup: int = 100,
         free_nats: float = 0.0,
+        hidden: int = 128,
+        prior_min_logvar: float = -4.0,
+        prior_max_logvar: float = 2.0,
+        decoder_min_logvar: float = -6.0,
+        decoder_max_logvar: float = 4.0,
         epochs: int = 200,
         batch_size: int = 128,
         val_size: float = 0.2,
         random_state: int = 42,
     ):
         super().__init__()
+        # core hyperparams
         self._latent_dim = int(latent_dim)
         self._learning_rate = float(learning_rate)
         self._n_components = int(n_components)
@@ -194,76 +198,92 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         self.beta_final = float(beta)
         self.kl_warmup = int(kl_warmup)
         self.free_nats = float(free_nats)
+        self._hidden = int(hidden)
+        self._prior_min_lv = float(prior_min_logvar)
+        self._prior_max_lv = float(prior_max_logvar)
+        self._dec_min_lv = float(decoder_min_logvar)
+        self._dec_max_lv = float(decoder_max_logvar)
 
+        # modules
         self._encoder: CVAEEncoder
         self._decoder: CVAEDecoderMDN
         self._prior_net: PriorNet
 
-        self._X_dim: int | None = None  # input/condition dimension
-        self._y_dim: int | None = None  # output/target dimension
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # dims
+        self._cond_dim: int | None = None
+        self._y_dim: int | None = None
+        # keep BaseEstimator-compatible alias for dimensionality property
+        self._X_dim: int | None = None
 
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.val_size = val_size
-        self.random_state = random_state
+        # runtime
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.epochs = int(epochs)
+        self.batch_size = int(batch_size)
+        self.val_size = float(val_size)
+        self.random_state = int(random_state)
 
     @property
     def type(self) -> str:
         return getattr(EstimatorTypeEnum, "CVAE_MDN", EstimatorTypeEnum.CVAE_MDN).value
 
-    # ---- data ---- #
+    # ---------------- data ---------------- #
     def _prepare_dataloaders(
         self,
-        X: NDArray[np.float64],
+        cond: NDArray[np.float64],
         y: NDArray[np.float64],
     ):
-        # Standard train/val split on numpy arrays, then wrap to torch.
-        Xtr, Xval, ytr, yval = train_test_split(
-            X, y, test_size=self.val_size, random_state=self.random_state
+        """Train/val split + torch DataLoaders."""
+        c_tr, c_val, y_tr, y_val = train_test_split(
+            cond, y, test_size=self.val_size, random_state=self.random_state
         )
         to_t = lambda a: torch.tensor(a, dtype=torch.float32)
         train_loader = DataLoader(
-            TensorDataset(to_t(Xtr), to_t(ytr)),
+            TensorDataset(to_t(c_tr), to_t(y_tr)),
             batch_size=self.batch_size,
             shuffle=True,
         )
         val_loader = DataLoader(
-            TensorDataset(to_t(Xval), to_t(yval)),
+            TensorDataset(to_t(c_val), to_t(y_val)),
             batch_size=self.batch_size,
             shuffle=False,
         )
         return train_loader, val_loader
 
-    # ---- training ---- #
-    def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
-        """Fit the CVAE-MDN using the configured training hyperparameters."""
-        super().fit(X, y)
+    # ---------------- training ---------------- #
+    def fit(self, cond: NDArray[np.float64], y: NDArray[np.float64]) -> None:
+        """Optimize ELBO with MDN reconstruction term and β-KL regularization."""
+        super().fit(cond, y)
 
-        # Shapes: X is condition/input, y is target/output.
-        self._X_dim = int(X.shape[1])
+        self._cond_dim = int(cond.shape[1])
         self._y_dim = int(y.shape[1])
+        self._X_dim = self._cond_dim  # for BaseEstimator.dimensionality
 
-        # ---- model components ----
+        # build modules
         self._encoder = CVAEEncoder(
-            y_dim=self._y_dim, X_dim=self._X_dim, latent_dim=self._latent_dim
+            y_dim=self._y_dim,
+            cond_dim=self._cond_dim,
+            latent_dim=self._latent_dim,
+            hidden=self._hidden,
         ).to(self.device)
-
         self._decoder = CVAEDecoderMDN(
             latent_dim=self._latent_dim,
-            X_dim=self._X_dim,
+            cond_dim=self._cond_dim,
             y_dim=self._y_dim,
             n_components=self._n_components,
+            hidden=self._hidden,
+            min_logvar=self._dec_min_lv,
+            max_logvar=self._dec_max_lv,
         ).to(self.device)
-
         self._prior_net = PriorNet(
-            cond_dim=self._X_dim, latent_dim=self._latent_dim, hidden=128
+            cond_dim=self._cond_dim,
+            latent_dim=self._latent_dim,
+            hidden=self._hidden,
+            min_logvar=self._prior_min_lv,
+            max_logvar=self._prior_max_lv,
         ).to(self.device)
 
-        # Data loaders
-        train_loader, val_loader = self._prepare_dataloaders(X, y)
+        train_loader, val_loader = self._prepare_dataloaders(cond, y)
 
-        # Single optimizer over encoder, decoder, and prior net.
         params = (
             list(self._encoder.parameters())
             + list(self._decoder.parameters())
@@ -271,18 +291,15 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         )
         opt = torch.optim.Adam(params, lr=self._learning_rate)
 
-        # Track loss curves etc.
         self._training_history = TrainingHistory()
 
-        # KL(q||p) for diagonal Gaussians (per-sample mean).
         def kl_gaussians(mu_q, logvar_q, mu_p, logvar_p):
-            # Closed-form KL for diag Gaussians: sum over dims, average over batch.
+            """Closed-form KL[q||p] for diagonal Gaussians, with optional free-bits."""
             kl_per_dim = 0.5 * (
                 (logvar_p - logvar_q)
                 + (torch.exp(logvar_q) + (mu_q - mu_p) ** 2) / torch.exp(logvar_p)
                 - 1.0
             )
-            # Free-bits (free_nats) prevents KL from collapsing to zero immediately.
             if self.free_nats > 0.0:
                 kl_per_dim = torch.clamp(
                     kl_per_dim, min=self.free_nats / self._latent_dim
@@ -290,7 +307,6 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
             return torch.mean(torch.sum(kl_per_dim, dim=1))
 
         for epoch in range(1, self.epochs + 1):
-            # KL warmup: ramp β from 0 → beta_final across `kl_warmup` epochs.
             beta = self.beta_final * (
                 min(1.0, epoch / max(1, self.kl_warmup)) if self.kl_warmup > 0 else 1.0
             )
@@ -302,28 +318,26 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
             train_nll_sum = 0.0
             train_kl_sum = 0.0
 
-            for Xb, yb in train_loader:
-                Xb = Xb.to(self.device)  # Xb: conditions/inputs
-                yb = yb.to(self.device)  # yb: targets/outputs
+            for cond_b, y_b in train_loader:
+                cond_b = cond_b.to(self.device)
+                y_b = y_b.to(self.device)
                 opt.zero_grad()
 
-                # (1) Amortized posterior q(z|y,X)
-                mu_q, logvar_q = self._encoder(yb, Xb)
+                # q(z|y,cond) via reparameterization
+                mu_q, logvar_q = self._encoder(y_b, cond_b)
                 std_q = torch.exp(0.5 * logvar_q)
-                z = mu_q + std_q * torch.randn_like(std_q)  # reparam trick
+                z = mu_q + std_q * torch.randn_like(std_q)
 
-                # (2) Conditional prior p(z|X)
-                mu_p, logvar_p = self._prior_net(Xb)
+                # p(z|cond)
+                mu_p, logvar_p = self._prior_net(cond_b)
 
-                # (3) Decoder likelihood p(y|z,X) via MDN
-                pi_logits, mu, logvar = self._decoder(z, Xb)
+                # MDN recon term
+                pi_logits, mu, logvar = self._decoder(z, cond_b)
+                recon_nll = CVAEDecoderMDN.mdn_nll(y_b, pi_logits, mu, logvar)
 
-                # Reconstruction term: NLL under mixture (averaged over batch)
-                recon_nll = CVAEDecoderMDN.mdn_nll(yb, pi_logits, mu, logvar)
-                # Regularization: KL[q(z|y,X) || p(z|X)]
+                # KL regularizer
                 kl = kl_gaussians(mu_q, logvar_q, mu_p, logvar_p)
 
-                # (4) Total loss = recon + β * KL  (negative ELBO)
                 loss = recon_nll + beta * kl
                 loss.backward()
                 opt.step()
@@ -331,31 +345,33 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
                 train_nll_sum += float(recon_nll.item())
                 train_kl_sum += float(kl.item())
 
-            # Epoch-level averages (for logging)
             avg_train_nll = train_nll_sum / max(1, len(train_loader))
             avg_train_kl = train_kl_sum / max(1, len(train_loader))
             avg_train = avg_train_nll + beta * avg_train_kl
 
-            # ---- validate (same computations, no gradient) ----
+            # ---- validate ----
             self._encoder.eval()
             self._decoder.eval()
             self._prior_net.eval()
             val_nll_sum = 0.0
             val_kl_sum = 0.0
             with torch.no_grad():
-                for Xv, yv in val_loader:
-                    Xv = Xv.to(self.device)
-                    yv = yv.to(self.device)
-                    mu_q_v, logvar_q_v = self._encoder(yv, Xv)
+                for cond_v, y_v in val_loader:
+                    cond_v = cond_v.to(self.device)
+                    y_v = y_v.to(self.device)
+
+                    mu_q_v, logvar_q_v = self._encoder(y_v, cond_v)
                     z_v = mu_q_v + torch.exp(0.5 * logvar_q_v) * torch.randn_like(
                         logvar_q_v
                     )
-                    mu_p_v, logvar_p_v = self._prior_net(Xv)
-                    pi_logits_v, mu_v, logvar_v = self._decoder(z_v, Xv)
+                    mu_p_v, logvar_p_v = self._prior_net(cond_v)
+
+                    pi_logits_v, mu_v, logvar_v = self._decoder(z_v, cond_v)
                     recon_nll_v = CVAEDecoderMDN.mdn_nll(
-                        yv, pi_logits_v, mu_v, logvar_v
+                        y_v, pi_logits_v, mu_v, logvar_v
                     )
                     kl_v = kl_gaussians(mu_q_v, logvar_q_v, mu_p_v, logvar_p_v)
+
                     val_nll_sum += float(recon_nll_v.item())
                     val_kl_sum += float(kl_v.item())
 
@@ -363,7 +379,6 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
             avg_val_kl = val_kl_sum / max(1, len(val_loader))
             avg_val = avg_val_nll + beta * avg_val_kl
 
-            # Persist per-epoch metrics (useful for visualizer)
             self._training_history.log(
                 epoch=epoch,
                 train_loss=avg_train,
@@ -375,52 +390,61 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
                 beta=beta,
             )
 
-    # ---- latent sampling ---- #
-    def _sample_z_given_y(
+    # ---------------- latent helper ---------------- #
+    def _sample_z_given_cond(
         self,
-        X_tensor: torch.Tensor,
+        cond_tensor: torch.Tensor,
         n_samples: int,
         temperature: float,
-        seed: int,
+        seed: int | None,
     ) -> torch.Tensor:
         """
-        Draw S latent samples z ~ p(z|X) for each input X (inference helper).
-
-        Reparameterization using PriorNet stats:
-          z = μ_p(X) + (temperature * σ_p(X)) * ε, ε ~ N(0, I)
+        Draw z ~ p(z|cond) with variance tempering: std_T = sqrt(T) * std  (so Var ∝ T).
+        Returns (n, n_samples, latent_dim).
         """
         if n_samples < 1:
             raise ValueError("n_samples must be >= 1")
+        n = cond_tensor.shape[0]
 
-        n = X_tensor.shape[0]
-        gen = torch.Generator(device=self.device)
-        gen.manual_seed(int(seed))
+        gen = None
+        if seed is not None:
+            gen = torch.Generator(device=self.device)
+            gen.manual_seed(int(seed))
 
-        mu_p, logvar_p = self._prior_net(X_tensor)  # (n, latent)
-        std_p = torch.exp(0.5 * logvar_p)
+        mu_p, logvar_p = self._prior_net(cond_tensor)  # (n, L)
+        std_p = torch.exp(0.5 * logvar_p)  # (n, L)
+        t_std = std_p * np.sqrt(float(temperature))  # (n, L)
+
         eps = torch.randn(
             (n, n_samples, self._latent_dim), generator=gen, device=self.device
         )
-        return (
-            mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
-        )  # (n, S, latent)
+        return mu_p.unsqueeze(1) + t_std.unsqueeze(1) * eps  # (n, S, L)
 
-    # ---- public API: sample / predict ---- #
+    # ---------------- public API (ProbabilisticEstimator) ---------------- #
     def sample(
         self,
-        X: NDArray[np.float64],
+        cond: NDArray[np.float64] = None,
         n_samples: int = 200,
-        seed: int = 44,
+        seed: int = 43,
         temperature: float = 1.0,
-        use_prior: bool = True,
         max_outputs_per_chunk: int = 20_000,
+        **kwargs,
     ) -> NDArray[np.float64]:
         """
-        Draw `n_samples` IID samples per input from the CVAE-implied p(y|X):
-        z ~ p(z|X) (or N(0,I) if use_prior=False), then y ~ decoder(z, X) mixture.
-
-        Returns either (n, Dy) if n_samples==1 or (n, n_samples, Dy) otherwise.
+        Draw samples from p(y|cond) the conditional way:
+          z ~ p(z|cond), then y ~ MDN(z,cond).
+        Back-compat: if called with X=..., map it to cond (emits DeprecationWarning).
         """
+        if cond is None and "X" in kwargs:
+            warnings.warn(
+                "CVAEMDNEstimator.sample: argument 'X' is deprecated; use 'cond' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cond = kwargs.pop("X")
+        if cond is None:
+            raise TypeError("sample() requires argument: cond")
+
         if self._decoder is None:
             raise RuntimeError("Model not fitted.")
         if n_samples < 1:
@@ -429,167 +453,162 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         self._decoder.eval()
         self._prior_net.eval()
 
-        X_tensor = torch.tensor(X, dtype=torch.float32, device=self.device)
-        n = X_tensor.shape[0]
+        cond_t = torch.tensor(cond, dtype=torch.float32, device=self.device)
+        n = cond_t.shape[0]
         S = int(n_samples)
         Dy = int(self._y_dim)
 
-        # Sample latent z per input, conditionally (preferred) or unconditionally.
         if seed is not None:
             torch.manual_seed(int(seed))
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(int(seed))
 
-        if use_prior:
-            z = self._sample_z_given_y(
-                X_tensor, n_samples=S, temperature=temperature, seed=seed
-            )  # (n,S,latent)
-        else:
-            z = torch.randn((n, S, self._latent_dim), device=self.device) * float(
-                temperature
-            )
+        z = self._sample_z_given_cond(
+            cond_t, n_samples=S, temperature=temperature, seed=seed
+        )  # (n,S,L)
 
-        # Flatten samples and repeat conditions to run decoder in a single pass.
         total = n * S
-        z_flat = z.reshape(total, self._latent_dim)  # (T, latent)
-        X_rep = (
-            X_tensor.unsqueeze(1).expand(n, S, self._X_dim).reshape(total, self._X_dim)
-        )  # (T, DX)
+        z_flat = z.reshape(total, self._latent_dim)
+        cond_rep = (
+            cond_t.unsqueeze(1)
+            .expand(n, S, self._cond_dim)
+            .reshape(total, self._cond_dim)
+        )
 
         with torch.no_grad():
-            # Chunked decoding to bound memory.
             if total <= max_outputs_per_chunk:
-                pi_logits, mu, logvar = self._decoder(
-                    z_flat, X_rep
-                )  # (T,K), (T,K,Dy), (T,K,Dy)
+                pi_logits, mu, logvar = self._decoder(z_flat, cond_rep)
                 y_flat = self._decoder.sample_from_components(
                     pi_logits, mu, logvar
                 )  # (T, Dy)
             else:
-                out_chunks = []
+                outs = []
                 for start in range(0, total, max_outputs_per_chunk):
                     end = min(total, start + max_outputs_per_chunk)
                     pi_l, mu_c, lv_c = self._decoder(
-                        z_flat[start:end], X_rep[start:end]
+                        z_flat[start:end], cond_rep[start:end]
                     )
-                    y_c = self._decoder.sample_from_components(
-                        pi_l, mu_c, lv_c
-                    )  # (chunk, Dy)
-                    out_chunks.append(y_c)
-                y_flat = torch.cat(out_chunks, dim=0)
+                    outs.append(self._decoder.sample_from_components(pi_l, mu_c, lv_c))
+                y_flat = torch.cat(outs, dim=0)
 
         out = y_flat.view(n, S, Dy).cpu().numpy().astype(np.float64, copy=False)
         return out[:, 0, :] if S == 1 else out
 
-    def predict(
-        self,
-        X: np.typing.NDArray[np.float64],
-        n_samples: int = 1,
-        temperature: float = 1.0,
-        seed: int = 43,
-        use_prior: bool = True,
-        *,
-        max_outputs_per_chunk: int = 20_000,
-    ) -> np.typing.NDArray[np.float64]:
-        """
-        One **stochastic** draw per input (wrapper over sample with n_samples=1).
-        """
-        s = self.sample(
-            X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            use_prior=use_prior,
-            max_outputs_per_chunk=max_outputs_per_chunk,
-        )
-        return s.astype(np.float64, copy=False)
-
-    def predict_mean(
-        self,
-        X: NDArray[np.float64],
-        n_samples: int = 256,
-        seed: int = 43,
-        temperature: float = 1.0,
-        deterministic: bool = False,
-        max_outputs_per_chunk: int = 20_000,
+    def infer_mean(
+        self, cond: NDArray[np.float64] = None, **kwargs
     ) -> NDArray[np.float64]:
         """
-        Conditional mean E[y|X].
-
-        deterministic=True:
-          Use a single z = μ_p(X), then return analytic mixture mean Σ_k softmax(π)_k μ_k.
-        deterministic=False:
-          Monte-Carlo over z ~ p(z|X): take mixture mean per z, then average across S.
+        Estimate E[y|cond] without observation sampling:
+          Draw S=256 latents z ~ p(z|cond); for each, take mixture mean Σ_k softmax(π)_k μ_k; average over z-samples.
+        Back-compat: 'X=...' is mapped to 'cond'.
         """
+        if cond is None and "X" in kwargs:
+            warnings.warn(
+                "CVAEMDNEstimator.infer_mean: argument 'X' is deprecated; use 'cond' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cond = kwargs.pop("X")
+        if cond is None:
+            raise TypeError("infer_mean() requires argument: cond")
+
         if self._decoder is None:
             raise RuntimeError("Model not fitted.")
-        if not deterministic and n_samples < 1:
-            raise ValueError("n_samples must be >= 1")
 
         self._decoder.eval()
         self._prior_net.eval()
 
-        X_t = torch.tensor(X, dtype=torch.float32, device=self.device)
-        n = X_t.shape[0]
+        cond_t = torch.tensor(cond, dtype=torch.float32, device=self.device)
+        n = cond_t.shape[0]
         Dy = int(self._y_dim)
+        S = 256
+        temperature = 1.0
+        seed = 43
+        max_outputs_per_chunk = 20_000
 
-        # RNG for latent sampling
-        if seed is not None:
-            torch.manual_seed(int(seed))
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(int(seed))
+        torch.manual_seed(int(seed))
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(int(seed))
 
         with torch.no_grad():
-            # PriorNet provides p(z|X) parameters.
-            mu_p, logvar_p = self._prior_net(X_t)  # (n, latent)
+            mu_p, logvar_p = self._prior_net(cond_t)
             std_p = torch.exp(0.5 * logvar_p)
-
-            if deterministic:
-                S = 1
-                z = mu_p.unsqueeze(1)  # (n,1,latent)
-            else:
-                S = int(max(1, n_samples))
-                eps = torch.randn((n, S, self._latent_dim), device=self.device)
-                z = (
-                    mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
-                )  # (n,S,latent)
+            eps = torch.randn((n, S, self._latent_dim), device=self.device)
+            z = mu_p.unsqueeze(1) + float(temperature) * std_p.unsqueeze(1) * eps
 
             total = n * S
             z_flat = z.reshape(total, self._latent_dim)
-            X_rep = (
-                X_t.unsqueeze(1).expand(n, S, self._X_dim).reshape(total, self._X_dim)
+            cond_rep = (
+                cond_t.unsqueeze(1)
+                .expand(n, S, self._cond_dim)
+                .reshape(total, self._cond_dim)
             )
 
-            # Decode (z,X) and compute analytic mixture means per row (no component sampling).
-            def _mix_means_for_slice(start: int, end: int) -> torch.Tensor:
-                pi_logits, mu, logvar = self._decoder(
-                    z_flat[start:end], X_rep[start:end]
-                )
+            def _mixture_mean_slice(start: int, end: int) -> torch.Tensor:
+                pi_logits, mu, _ = self._decoder(z_flat[start:end], cond_rep[start:end])
                 pi = torch.softmax(pi_logits, dim=1)  # (chunk, K)
                 return torch.sum(pi.unsqueeze(-1) * mu, dim=1)  # (chunk, Dy)
 
             if total <= max_outputs_per_chunk:
-                mix_mean_flat = _mix_means_for_slice(0, total)  # (T, Dy)
+                mix_mean_flat = _mixture_mean_slice(0, total)
             else:
                 chunks = []
-                for start in range(0, total, max_outputs_per_chunk):
-                    end = min(total, start + max_outputs_per_chunk)
-                    chunks.append(_mix_means_for_slice(start, end))
-                mix_mean_flat = torch.cat(chunks, dim=0)  # (T, Dy)
+                for s in range(0, total, max_outputs_per_chunk):
+                    e = min(total, s + max_outputs_per_chunk)
+                    chunks.append(_mixture_mean_slice(s, e))
+                mix_mean_flat = torch.cat(chunks, dim=0)
 
-            mix_mean = mix_mean_flat.view(n, S, Dy)  # (n,S,Dy)
-            out = mix_mean.mean(dim=1) if S > 1 else mix_mean.squeeze(1)  # (n,Dy)
+            mix_mean = mix_mean_flat.view(n, S, Dy)
+            out = mix_mean.mean(dim=1)  # (n, Dy)
 
         return out.cpu().numpy().astype(np.float64, copy=False)
 
-    def predict_map(
-        self,
-        X: NDArray[np.float64],
-        *,
-        seed: int | None = None,
-        use_prior: bool = True,
+    def infer_median(
+        self, cond: NDArray[np.float64] = None, **kwargs
     ) -> NDArray[np.float64]:
-        """MAP estimate via the highest-weight mixture component with latent z=μ_p(X)."""
+        """
+        Approximate posterior median: draw S=501 y-samples from p(y|cond) and take elementwise medians.
+        Back-compat: 'X=...' is mapped to 'cond'.
+        """
+        if cond is None and "X" in kwargs:
+            warnings.warn(
+                "CVAEMDNEstimator.infer_median: argument 'X' is deprecated; use 'cond' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cond = kwargs.pop("X")
+        if cond is None:
+            raise TypeError("infer_median() requires argument: cond")
+
+        draws = self.sample(
+            cond=cond,
+            n_samples=501,
+            seed=43,
+            temperature=1.0,
+            max_outputs_per_chunk=20_000,
+        )
+        if draws.ndim == 2:
+            return draws.astype(np.float64, copy=False)
+        med = np.median(draws, axis=1)
+        return med.astype(np.float64, copy=False)
+
+    def infer_map(
+        self, cond: NDArray[np.float64] = None, **kwargs
+    ) -> NDArray[np.float64]:
+        """
+        Deterministic, MAP-like point at z := μ_p(cond):
+          choose component k* with highest weight and return μ_{k*}.
+        Back-compat: 'X=...' is mapped to 'cond'.
+        """
+        if cond is None and "X" in kwargs:
+            warnings.warn(
+                "CVAEMDNEstimator.infer_map: argument 'X' is deprecated; use 'cond' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cond = kwargs.pop("X")
+        if cond is None:
+            raise TypeError("infer_map() requires argument: cond")
 
         if self._decoder is None:
             raise RuntimeError("Model not fitted.")
@@ -597,53 +616,12 @@ class CVAEMDNEstimator(ProbabilisticEstimator):
         self._decoder.eval()
         self._prior_net.eval()
 
-        X_t = torch.tensor(X, dtype=torch.float32, device=self.device)
-        if seed is not None:
-            torch.manual_seed(int(seed))
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(int(seed))
-
+        cond_t = torch.tensor(cond, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            if use_prior:
-                mu_p, _ = self._prior_net(X_t)
-            else:
-                mu_p = torch.zeros((X_t.size(0), self._latent_dim), device=self.device)
-            z = mu_p
-            pi_logits, mu, _ = self._decoder(z, X_t)
-            pi = torch.softmax(pi_logits, dim=1)
-            k_star = torch.argmax(pi, dim=1)
-            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]
+            mu_p, _ = self._prior_net(cond_t)  # (n, L)
+            pi_logits, mu, _ = self._decoder(mu_p, cond_t)  # (n, K), (n, K, Dy)
+            pi = torch.softmax(pi_logits, dim=1)  # (n, K)
+            k_star = torch.argmax(pi, dim=1)  # (n,)
+            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]  # (n, Dy)
 
         return out.cpu().numpy().astype(np.float64, copy=False)
-
-    def predict_median(
-        self,
-        X: NDArray[np.float64],
-        n_samples: int = 501,
-        seed: int = 43,
-        *,
-        temperature: float = 1.0,
-        use_prior: bool = True,
-        max_outputs_per_chunk: int = 20_000,
-    ) -> NDArray[np.float64]:
-        """Approximate posterior median via Monte-Carlo draws from p(y|X)."""
-
-        if self._decoder is None:
-            raise RuntimeError("Model not fitted.")
-        if n_samples < 1:
-            raise ValueError("n_samples must be >= 1")
-
-        draws = self.sample(
-            X,
-            n_samples=n_samples,
-            seed=seed,
-            temperature=temperature,
-            use_prior=use_prior,
-            max_outputs_per_chunk=max_outputs_per_chunk,
-        )
-
-        if draws.ndim == 2:
-            return draws.astype(np.float64, copy=False)
-
-        median = np.median(draws, axis=1)
-        return median.astype(np.float64, copy=False)

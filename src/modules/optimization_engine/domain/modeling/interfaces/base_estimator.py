@@ -164,7 +164,9 @@ class DeterministicEstimator(BaseEstimator):
     A deterministic inverse decision mapper that uses a fixed mapping strategy.
     """
 
-    def predict(self, X, mode: Literal["standard"] = "standard"):
+    def predict(
+        self, X: np.typing.NDArray[np.float64], mode: Literal["standard"] = "standard"
+    ):
         """
         Make predictions for the input data.
 
@@ -177,10 +179,17 @@ class DeterministicEstimator(BaseEstimator):
         if mode == "standard":
             return self.infer(X)
 
-    @abstractmethod
-    def infer(self, X: npt.NDArray[np.float64], **kwargs) -> npt.NDArray[np.float64]:
-        """Deterministic inference for each input."""
-        raise NotImplementedError("Infer method not implemented")
+    def infer(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        """Perform inference to obtain predictions for the input data.
+
+        Args:
+            X (NDArray[np.float64]): Input data points.
+
+        Returns:
+            NDArray[np.float64]: Predicted outputs.
+        """
+        # Implement the inference logic here
+        raise NotImplementedError("Subclasses must implement the infer method.")
 
 
 @dataclass
@@ -251,7 +260,7 @@ class ProbabilisticEstimator(BaseEstimator):
 
         if mode == "mean":
             return self.infer_mean(X)
-        
+
         elif mode == "median":
             return self.infer_median(X)
 
@@ -259,14 +268,14 @@ class ProbabilisticEstimator(BaseEstimator):
             return self.infer_map(X)
 
         elif mode == "standard":
-            return self.sample(X)
+            return self.sample(X, n_samples=1)
 
     @abstractmethod
     def sample(
         self,
         X: npt.NDArray[np.float64],
         n_samples: int = 1,
-        seed: int | None = None,
+        seed: int = 42,
         **kwargs,
     ) -> npt.NDArray[np.float64]:
         """Draw samples from the predictive distribution p(y|X)."""
@@ -275,9 +284,6 @@ class ProbabilisticEstimator(BaseEstimator):
     def infer_mean(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 256,
-        seed: int | None = None,
-        **kwargs,
     ) -> npt.NDArray[np.float64]:
         """Compute the posterior mean E[y|X]."""
 
@@ -287,9 +293,6 @@ class ProbabilisticEstimator(BaseEstimator):
     def infer_median(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 501,
-        seed: int | None = None,
-        **kwargs,
     ) -> npt.NDArray[np.float64]:
         """Compute the posterior median for each input."""
 
@@ -299,7 +302,6 @@ class ProbabilisticEstimator(BaseEstimator):
     def infer_map(
         self,
         X: npt.NDArray[np.float64],
-        **kwargs,
     ) -> npt.NDArray[np.float64]:
         """Compute the posterior mode or MAP estimate for each input."""
 
