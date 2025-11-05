@@ -7,8 +7,8 @@ from ...application.visualization.visualize_model_performance.visualize_model_pe
     VisualizeModelPerformanceCommandHandler,
 )
 from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ...infrastructure.datasets.repositories.processed_dataset_repo import (
-    FileSystemProcessedDatasetRepository,
+from ...infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
 )
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
@@ -21,7 +21,7 @@ from ...infrastructure.modeling.visualizers.performance import (
 def _build_handler() -> VisualizeModelPerformanceCommandHandler:
     return VisualizeModelPerformanceCommandHandler(
         model_artificat_repo=FileSystemModelArtifactRepository(),
-        processed_dataset_repo=FileSystemProcessedDatasetRepository(),
+        processed_dataset_repo=FileSystemDatasetRepository(),
         visualizer=ModelPerformance2DVisualizer(),
     )
 
@@ -50,12 +50,20 @@ def _coerce_estimator(value: str) -> EstimatorTypeEnum:
     show_default=True,
     help="Processed dataset identifier to load",
 )
-def main(estimator_name: str, dataset_name: str) -> None:
+@click.option(
+    "--mapping-direction",
+    type=click.Choice(["inverse", "forward"]),
+    default="inverse",
+    show_default=True,
+    help="Whether to visualize the inverse (objectives->decisions) or forward (decisions->objectives) model.",
+)
+def main(estimator_name: str, dataset_name: str, mapping_direction: str) -> None:
     handler = _build_handler()
     command = VisualizeModelPerformanceCommand(
         estimator_type=_coerce_estimator(estimator_name),
         processed_file_name=dataset_name,
         data_file_name=dataset_name,
+        mapping_direction=mapping_direction,
     )
     handler.execute(command)
 

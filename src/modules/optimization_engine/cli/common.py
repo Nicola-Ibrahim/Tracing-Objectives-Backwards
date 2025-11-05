@@ -18,8 +18,8 @@ from ..application.modeling.train_model.train_model_command import (
 from ..application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
 )
-from ..infrastructure.datasets.repositories.processed_dataset_repo import (
-    FileSystemProcessedDatasetRepository,
+from ..infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
 )
 from ..infrastructure.loggers.cmd_logger import CMDLogger
 from ..infrastructure.modeling.repositories.model_artifact_repo import (
@@ -28,22 +28,12 @@ from ..infrastructure.modeling.repositories.model_artifact_repo import (
 
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
 
-ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
-    "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
-    "gaussian_process": GaussianProcessEstimatorParams,
-    "mdn": MDNEstimatorParams,
-    "neural_network": NeuralNetworkEstimatorParams,
-    "rbf": RBFEstimatorParams,
-    "coco": COCOEstimatorParams,
-}
-
 
 def build_processed_training_handler() -> TrainModelCommandHandler:
     """Return a handler configured for processed dataset training runs."""
 
     return TrainModelCommandHandler(
-        processed_data_repository=FileSystemProcessedDatasetRepository(),
+        processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         estimator_factory=EstimatorFactory(),
@@ -62,11 +52,15 @@ def make_validation_metric_configs(
 def create_estimator_params(
     estimator_key: str,
     overrides: Mapping[str, object] | None = None,
+    *,
+    registry: Mapping[str, Type[EstimatorParams]] | None = None,
 ) -> EstimatorParams:
     """Instantiate estimator params from the registry applying overrides."""
 
+    registry = registry
+
     try:
-        params_cls = ESTIMATOR_REGISTRY[estimator_key]
+        params_cls = registry[estimator_key]
     except KeyError as exc:  # pragma: no cover - CLI guards choices
         raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
 

@@ -16,18 +16,18 @@ class VisualizeDatasetCommandHandler:
     def __init__(
         self,
         dataset_repo: BaseDatasetRepository,
-        processed_dataset_repo: BaseDatasetRepository,
         visualizer: BaseVisualizer,
     ):
         self._dataset_repo = dataset_repo
-        self._processed_repo = processed_dataset_repo
         self._visualizer = visualizer
 
     def execute(self, command: VisualizeDatasetCommand) -> None:
         # 1) Load raw data from repository
-        raw: GeneratedDataset = self._dataset_repo.load(filename=command.data_file_name)
-        processed: ProcessedDataset = self._processed_repo.load(
-            filename=command.processed_file_name
+        raw: GeneratedDataset = self._dataset_repo.load(
+            filename=command.data_file_name, variant="raw"
+        )
+        processed: ProcessedDataset = self._dataset_repo.load(
+            filename=command.processed_file_name, variant="processed"
         )
 
         # 3) Package payload (arrays only)

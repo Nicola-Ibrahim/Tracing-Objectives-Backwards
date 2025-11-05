@@ -9,7 +9,6 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.factories.normalizer import NormalizerFactory
 from ...application.modeling.train_model.train_model_command import TrainModelCommand
 from ...application.modeling.train_model.train_model_handler import (
     TrainModelCommandHandler,
@@ -18,8 +17,8 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...infrastructure.repositories.datasets.generated_dataset_repo import (
-    FileSystemGeneratedDatasetRepository,
+from ...infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
 )
 from ..common import (
     DEFAULT_VALIDATION_METRICS,
@@ -42,11 +41,10 @@ def _build_command(param_cls: type[EstimatorParams]) -> TrainModelCommand:
 if __name__ == "__main__":
     # Initialize the command handler once, as its dependencies are fixed
     command_handler = TrainModelCommandHandler(
-        data_repository=FileSystemGeneratedDatasetRepository(),
-        estimator_factory=EstimatorFactory(),
-        logger=CMDLogger(name="InterpolationCMDLogger"),
+        processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
-        normalizer_factory=NormalizerFactory(),
+        logger=CMDLogger(name="InterpolationCMDLogger"),
+        estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
     )
 

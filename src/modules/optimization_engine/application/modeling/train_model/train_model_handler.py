@@ -52,16 +52,35 @@ class TrainModelCommandHandler:
         Unpacks command attributes to pass only necessary data to sub-methods.
         """
         processed_dataset: ProcessedDataset = self._processed_data_repository.load(
-            filename="dataset"
+            filename="dataset", variant="processed"
         )
+        match command.mapping_direction:
+            case "forward":
+                self._logger.log_info(
+                    "Training forward model (decisions ➝ objectives)."
+                )
+                X_train = processed_dataset.X_train
+                y_train = processed_dataset.y_train
+                X_test = processed_dataset.X_test
+                y_test = processed_dataset.y_test
+                X_normalizer = processed_dataset.X_normalizer
+                y_normalizer = processed_dataset.y_normalizer
 
-        objectives_X_train = processed_dataset.X_train
-        decisions_y_train = processed_dataset.y_train
-        objectives_X_test = processed_dataset.X_test
-        decisions_y_test = processed_dataset.y_test
+            case "inverse":
+                self._logger.log_info(
+                    "Training inverse model (objectives ➝ decisions)."
+                )
+                X_train = processed_dataset.y_train
+                y_train = processed_dataset.X_train
+                X_test = processed_dataset.y_test
+                y_test = processed_dataset.X_test
+                X_normalizer = processed_dataset.y_normalizer
+                y_normalizer = processed_dataset.X_normalizer
 
-        objectives_X_normalizer = processed_dataset.X_normalizer
-        decisions_y_normalizer = processed_dataset.y_normalizer
+            case _:
+                raise ValueError(
+                    f"Unsupported mapping direction: {command.mapping_direction}"
+                )
 
         # Unpack command attributes once at the highest level
         estimator_params = command.estimator_params.model_dump()
@@ -82,21 +101,25 @@ class TrainModelCommandHandler:
         validation_metrics = {metric.name: metric for metric in validation_metrics}
 
         # 1) Train and evaluate model based on command
-        parameters = {**estimator.to_dict(), "type": estimator.type}
+        parameters = {
+            **estimator.to_dict(),
+            "type": estimator.type,
+            "mapping_direction": command.mapping_direction,
+        }
 
         if tune_param_name and tune_param_range:
             self._logger.log_info("Starting hyperparameter tuning workflow.")
             fitted_estimator, loss_history, metrics = CrossValidationTrainer().search(
                 estimator=estimator,
-                X_train=objectives_X_train,
-                y_train=decisions_y_train,
-                X_test=objectives_X_test,
-                y_test=decisions_y_test,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
                 param_name=tune_param_name,
                 param_range=tune_param_range,
                 validation_metrics=validation_metrics,
-                X_normalizer=objectives_X_normalizer,
-                y_normalizer=decisions_y_normalizer,
+                X_normalizer=X_normalizer,
+                y_normalizer=y_normalizer,
                 parameters=parameters,
                 random_state=random_state,
                 cv=cv_splits,
@@ -107,10 +130,10 @@ class TrainModelCommandHandler:
             self._logger.log_info("Starting cross-validation workflow.")
             fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
                 estimator=estimator,
-                X_train=objectives_X_train,
-                y_train=decisions_y_train,
-                X_test=objectives_X_test,
-                y_test=decisions_y_test,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
                 validation_metrics=validation_metrics,
                 epochs=epochs,
                 n_splits=cv_splits,
@@ -124,8 +147,8 @@ class TrainModelCommandHandler:
                 fitted_estimator, loss_history, metrics = (
                     ProbabilisticModelTrainer().train(
                         estimator=estimator,
-                        X_train=objectives_X_train,
-                        y_train=decisions_y_train,
+                        X_train=X_train,
+                        y_train=y_train,
                     )
                 )
 
@@ -133,10 +156,10 @@ class TrainModelCommandHandler:
                 fitted_estimator, loss_history, metrics = (
                     DeterministicModelTrainer().train(
                         estimator=estimator,
-                        X_train=objectives_X_train,
-                        y_train=decisions_y_train,
-                        X_test=objectives_X_test,
-                        y_test=decisions_y_test,
+                        X_train=X_train,
+                        y_train=y_train,
+                        X_test=X_test,
+                        y_test=y_test,
                         learning_curve_steps=learning_curve_steps,
                         validation_metrics=validation_metrics,
                         random_state=random_state,

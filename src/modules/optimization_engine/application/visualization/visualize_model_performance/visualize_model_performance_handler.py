@@ -20,24 +20,42 @@ class VisualizeModelPerformanceCommandHandler:
     def execute(self, command: VisualizeModelPerformanceCommand) -> None:
         # 1) Load raw data and model artifact from repository
         model_artificat: ModelArtifact = self._model_artificat_repo.get_latest_version(
-            estimator_type=command.estimator_type
+            estimator_type=command.estimator_type,
+            mapping_direction=command.mapping_direction,
         )
         processed: ProcessedDataset = self._processed_repo.load(
-            filename=command.processed_file_name
+            filename=command.processed_file_name, variant="processed"
         )
+
+        if command.mapping_direction == "inverse":
+            X_train = processed.y_train
+            y_train = processed.X_train
+            X_test = processed.y_test
+            y_test = processed.X_test
+            X_normalizer = processed.y_normalizer
+            y_normalizer = processed.X_normalizer
+            mapping_label = "inverse"
+        else:
+            X_train = processed.X_train
+            y_train = processed.y_train
+            X_test = processed.X_test
+            y_test = processed.y_test
+            X_normalizer = processed.X_normalizer
+            y_normalizer = processed.y_normalizer
+            mapping_label = "forward"
 
         # 2) Visualize the model performance and fitted curve
         payload = {
             "estimator": model_artificat.estimator,
-            "X_train": processed.X_train,
-            "y_train": processed.y_train,
-            "X_test": processed.X_test,
-            "y_test": processed.y_test,
-            "X_normalizer": processed.X_normalizer,
-            "y_normalizer": processed.y_normalizer,
+            "X_train": X_train,
+            "y_train": y_train,
+            "X_test": X_test,
+            "y_test": y_test,
+            "X_normalizer": X_normalizer,
+            "y_normalizer": y_normalizer,
             "non_linear": False,  # or True to try UMAP if installed
             "n_samples": 300,
-            "title": f"Fitted {model_artificat.estimator.type}",
+            "title": f"Fitted {model_artificat.estimator.type} ({mapping_label} mapping)",
             "loss_history": model_artificat.loss_history,
         }
 

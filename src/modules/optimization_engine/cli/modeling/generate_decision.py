@@ -10,8 +10,8 @@ from ...domain.assurance.decision_validation.services.decision_validation_servic
 from ...infrastructure.assurance.repositories.calibration_repository import (
     FileSystemDecisionValidationCalibrationRepository,
 )
-from ...infrastructure.datasets.repositories.processed_dataset_repo import (
-    FileSystemProcessedDatasetRepository,
+from ...infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
@@ -40,7 +40,7 @@ def main():
     # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(
         model_repository=FileSystemModelArtifactRepository(),
-        processed_data_repository=FileSystemProcessedDatasetRepository(),
+        processed_data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         calibration_repository=calibration_repository,
     )

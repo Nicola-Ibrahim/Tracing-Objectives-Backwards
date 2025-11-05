@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -54,6 +54,14 @@ class TrainModelCommand(BaseModel):
 
     epochs: int = Field(
         100, description="The number of epochs for training Probabilistic model"
+    )
+
+    mapping_direction: Literal["inverse", "forward"] = Field(
+        "inverse",
+        description=(
+            "Whether to train the inverse mapper (objectives -> decisions) or the "
+            "forward mapper (decisions -> objectives)."
+        ),
     )
 
     class Config:

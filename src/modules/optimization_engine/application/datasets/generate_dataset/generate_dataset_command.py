@@ -2,6 +2,9 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from ...dtos import NormalizerConfig
+from ....domain.modeling.enums.normalizer_type import NormalizerTypeEnum
+
 
 class ProblemType(str, Enum):
     biobj = "biobj"
@@ -76,4 +79,19 @@ class GenerateDatasetCommand(BaseModel):
     )
     optimizer_config: ApplicationOptimizerConfig = Field(
         ..., description="Configuration of the optimizer execution."
+    )
+    normalizer_config: NormalizerConfig = Field(
+        default_factory=lambda: NormalizerConfig(
+            type=NormalizerTypeEnum.HYPERCUBE, params={}
+        ),
+        description="Normalizer applied to train/test splits during post-processing.",
+    )
+    test_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Proportion of samples reserved for evaluation (post-processing).",
+    )
+    random_state: int = Field(
+        42, description="Random seed used for the train/test partition."
     )

@@ -66,16 +66,6 @@ class GeodesicInterpolatorParams(EstimatorParams):
         extra = "forbid"
 
 
-class NearestNeighborEstimatorParams(EstimatorParams):
-    type: EstimatorTypeEnum = Field(
-        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,
-        description="Type of the nearest neighbor interpolation method.",
-    )
-
-    class Config:
-        extra = "forbid"
-
-
 class RBFEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for an
@@ -161,50 +151,6 @@ class GaussianProcessEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class SplineEstimatorParams(EstimatorParams):
-    """Pydantic model for SmoothBivariateSpline mapper parameters."""
-
-    type: EstimatorTypeEnum = Field(
-        EstimatorTypeEnum.SPLINE_ND.value,
-        description="Type of the spline interpolation method.",
-    )
-
-    # `s` is the smoothing factor. 0 means interpolation (passes through all points).
-    # A positive value will produce a smoother curve.
-    s: float = Field(
-        0.0, ge=0.0, description="Positive smoothing factor. 0 for interpolation."
-    )
-
-    class Config:
-        extra = "forbid"  # Forbid extra fields not defined
-
-        use_enum_values = True
-
-
-class KrigingEstimatorParams(EstimatorParams):
-    """Pydantic model for OrdinaryKriging mapper parameters."""
-
-    type: EstimatorTypeEnum = Field(
-        EstimatorTypeEnum.KRIGING_ND.value,
-        description="Type of the Kriging interpolation method.",
-    )
-
-    variogram_model: Literal["linear", "gaussian", "spherical", "exponential"] = Field(
-        "linear", description="Type of variogram model to use for Kriging."
-    )
-    # The number of data points to use in a local neighborhood search
-    # around the interpolation point. Use `None` to use all points.
-    n_neighbors: int | None = Field(
-        12,
-        ge=1,
-        description="Number of nearest neighbors to use for Kriging. None for all points.",
-    )
-
-    class Config:
-        extra = "forbid"  # Forbid extra fields not defined
-        use_enum_values = True
-
-
 class MDNEstimatorParams(EstimatorParams):
     """
     Pydantic model to define and validate parameters for an
@@ -216,15 +162,15 @@ class MDNEstimatorParams(EstimatorParams):
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
-        8, gt=0, description="The number of Gaussian mixture components for the MDN."
+        10, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
     learning_rate: float = Field(
-        1e-4, gt=0, description="Learning rate for the Adam optimizer."
+        1e-3, gt=0, description="Learning rate for the Adam optimizer."
     )
     epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     hidden_layers: list[int] = Field(
-        [256, 256, 256],
+        [256, 128, 128],
         description="List defining the number of units in each hidden layer of the MDN.",
     )
     gmm_boost: bool = Field(
@@ -237,7 +183,7 @@ class MDNEstimatorParams(EstimatorParams):
         description="Validation split fraction used during training.",
     )
     weight_decay: float = Field(
-        1e-3, ge=0.0, description="L2 weight decay applied during optimization."
+        1e-4, ge=0.0, description="L2 weight decay applied during optimization."
     )
     clip_grad_norm: float | None = Field(
         None,

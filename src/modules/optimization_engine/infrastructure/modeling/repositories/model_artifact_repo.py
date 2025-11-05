@@ -47,12 +47,40 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         self._version_manager = VersionManager(self._json_file_handler)
         self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
 
+    def _compute_models_directory(
+        self, estimator_type: str, mapping_direction: str
+    ) -> Path:
+        return self._base_model_storage_path / mapping_direction / estimator_type
+
+    def _resolve_models_directory_for_read(
+        self, estimator_type: str, mapping_direction: str
+    ) -> Path:
+        """
+        Resolve the directory where artifacts are stored. For inverse models we
+        keep a fallback to the legacy layout (<models>/<estimator_type>).
+        """
+        preferred = self._compute_models_directory(estimator_type, mapping_direction)
+        if preferred.exists():
+            return preferred
+
+        if mapping_direction == "inverse":
+            legacy = self._base_model_storage_path / estimator_type
+            if legacy.exists():
+                return legacy
+
+        return preferred
+
     def save(self, model_artifact: ModelArtifact) -> None:
         if not model_artifact.id:
             raise ValueError("ModelArtifact entity must have a unique 'id' for saving.")
 
         estimator_type = model_artifact.parameters.get("type", "unknown")
-        models_directory = self._base_model_storage_path / estimator_type
+        mapping_direction = model_artifact.parameters.get(
+            "mapping_direction", "inverse"
+        )
+        models_directory = self._compute_models_directory(
+            estimator_type, mapping_direction
+        )
         models_directory.mkdir(parents=True, exist_ok=True)
 
         # Let the VersionManager handle the logic of finding the next version
@@ -79,12 +107,19 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 "estimator",
             }
         )
+        metadata["mapping_direction"] = mapping_direction
         self._json_file_handler.save(metadata, metadata_path)
 
-    def load(self, estimator_type: str, version_id: str) -> ModelArtifact:
-        model_artifact_version_directory = (
-            self._base_model_storage_path / estimator_type / version_id
+    def load(
+        self,
+        estimator_type: str,
+        version_id: str,
+        mapping_direction: str = "inverse",
+    ) -> ModelArtifact:
+        models_directory = self._resolve_models_directory_for_read(
+            estimator_type, mapping_direction
         )
+        model_artifact_version_directory = models_directory / version_id
         if not model_artifact_version_directory.exists():
             raise FileNotFoundError(f"Model version '{version_id}' not found.")
 
@@ -115,7 +150,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             version=metadata.get("version"),
         )
 
-    def get_all_versions(self, estimator_type: str) -> list[ModelArtifact]:
+    def get_all_versions(
+        self, estimator_type: str, mapping_direction: str = "inverse"
+    ) -> list[ModelArtifact]:
         """
         Retrieves all trained versions of a model based on its 'type' from the parameters.
 
@@ -126,7 +163,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             A list of ModelArtifact entities, sorted by 'trained_at' timestamp in descending order (latest first).
         """
         found_model_versions: list[ModelArtifact] = []
-        models_directory = self._base_model_storage_path / estimator_type
+        models_directory = self._resolve_models_directory_for_read(
+            estimator_type, mapping_direction
+        )
         if not models_directory.exists():
             return []
 
@@ -135,7 +174,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 try:
                     # Pass the estimator_type along with the directory name (the ID) to the load method.
                     model_version = self.load(
-                        estimator_type, model_artifact_version_directory.name
+                        estimator_type,
+                        model_artifact_version_directory.name,
+                        mapping_direction=mapping_direction,
                     )
                     found_model_versions.append(model_version)
                 except (
@@ -152,7 +193,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         found_model_versions.sort(key=lambda model: model.trained_at, reverse=True)
         return found_model_versions
 
-    def get_latest_version(self, estimator_type: str) -> ModelArtifact:
+    def get_latest_version(
+        self, estimator_type: str, mapping_direction: str = "inverse"
+    ) -> ModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
         The 'latest' version is determined by the most recent 'trained_at' timestamp.
@@ -167,11 +210,14 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             FileNotFoundError: If no model versions are found for the given type.
             Exception: For other errors during version lookup.
         """
-        found_model_versions = self.get_all_versions(estimator_type)
+        found_model_versions = self.get_all_versions(
+            estimator_type, mapping_direction=mapping_direction
+        )
 
         if not found_model_versions:
             raise FileNotFoundError(
-                f"No model versions found for type: '{estimator_type}'"
+                f"No model versions found for type: '{estimator_type}' "
+                f"and mapping_direction: '{mapping_direction}'"
             )
 
         # The list is already sorted by 'trained_at' in descending order, so the first element is the latest.

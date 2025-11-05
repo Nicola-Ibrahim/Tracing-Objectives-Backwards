@@ -22,12 +22,19 @@ class BaseModelArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def load(self, model_version_id: str) -> ModelArtifact:
+    def load(
+        self,
+        estimator_type: str,
+        version_id: str,
+        mapping_direction: str = "inverse",
+    ) -> ModelArtifact:
         """
         Retrieves a specific ModelArtifact entity by its unique ID.
 
         Args:
-            model_id: The unique identifier of the specific model version to load.
+            estimator_type: The estimator family (e.g., 'gaussian_process_nd').
+            version_id: The unique identifier of the specific model version directory.
+            mapping_direction: Whether to fetch a forward or inverse artifact.
 
         Returns:
             The loaded ModelArtifact entity.
@@ -39,7 +46,9 @@ class BaseModelArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_versions(self, estimator_type: str) -> list[ModelArtifact]:
+    def get_all_versions(
+        self, estimator_type: str, mapping_direction: str = "inverse"
+    ) -> list[ModelArtifact]:
         """
         Retrieves all trained versions of a model based on its type.
 
@@ -52,7 +61,9 @@ class BaseModelArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_latest_version(self, estimator_type: str) -> ModelArtifact:
+    def get_latest_version(
+        self, estimator_type: str, mapping_direction: str = "inverse"
+    ) -> ModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
 

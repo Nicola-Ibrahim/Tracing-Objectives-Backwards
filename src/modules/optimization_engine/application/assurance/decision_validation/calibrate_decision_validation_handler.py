@@ -46,11 +46,11 @@ class CalibrateDecisionValidationCommandHandler:
 
     def execute(self, command: CalibrateDecisionValidationCommand) -> None:
         dataset: ProcessedDataset = self._processed_data_repository.load(
-            command.dataset_name
+            command.dataset_name, variant="processed"
         )
 
-        decisions = dataset.y_train
-        objectives = dataset.X_train
+        decisions = dataset.X_train
+        objectives = dataset.y_train
 
         estimator = self._estimator_factory.create(
             command.estimator_params.model_dump()

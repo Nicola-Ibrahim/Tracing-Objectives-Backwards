@@ -53,7 +53,9 @@ class GenerateDecisionCommandHandler:
     def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
         """Generate y for the requested estimator and x target, then validate."""
         estimator = self._load_estimator(command.estimator_type)
-        processed: ProcessedDataset = self._processed_data_repo.load("dataset")
+        processed: ProcessedDataset = self._processed_data_repo.load(
+            "dataset", variant="processed"
+        )
 
         objectives_normalizer = processed.X_normalizer  # objective normalizer
         decision_normalizer = processed.y_normalizer  # decision normalizer
@@ -99,7 +101,8 @@ class GenerateDecisionCommandHandler:
     def _load_estimator(self, estimator_type: EstimatorTypeEnum) -> BaseEstimator:
         """Return the most recent estimator artifact matching the type."""
         artifact = self._model_repository.get_latest_version(
-            estimator_type=estimator_type.value
+            estimator_type=estimator_type.value,
+            mapping_direction="inverse",
         )
         return artifact.estimator
 

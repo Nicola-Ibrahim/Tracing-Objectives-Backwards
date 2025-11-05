@@ -12,11 +12,14 @@ from ...application.datasets.generate_dataset.generate_dataset_command import (
 from ...application.datasets.generate_dataset.generate_dataset_handler import (
     GenerateDatasetCommandHandler,
 )
-from ...application.datasets.factories.algorithm import AlgorithmFactory
-from ...application.datasets.factories.optimizer import OptimizerFactory
-from ...application.datasets.factories.problem import ProblemFactory
-from ...infrastructure.datasets.repositories.generated_dataset_repo import (
-    FileSystemGeneratedDatasetRepository,
+from ...application.dtos import NormalizerConfig
+from ...application.factories.algorithm import AlgorithmFactory
+from ...application.factories.normalizer import NormalizerFactory
+from ...application.factories.optimizer import OptimizerFactory
+from ...application.factories.problem import ProblemFactory
+from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
+from ...infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
 
@@ -25,7 +28,30 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 @click.option(
     "--problem-id", required=True, type=int, help='Pareto problem ID (e.g., "55", "59")'
 )
-def generate_data(problem_id: int):
+@click.option(
+    "--test-size",
+    type=float,
+    default=0.2,
+    show_default=True,
+    help="Fraction of samples reserved for evaluation when processing the dataset.",
+)
+@click.option(
+    "--random-state",
+    type=int,
+    default=42,
+    show_default=True,
+    help="Random seed used for the train/test split.",
+)
+@click.option(
+    "--normalizer",
+    type=click.Choice([enum.value for enum in NormalizerTypeEnum]),
+    default=NormalizerTypeEnum.HYPERCUBE.value,
+    show_default=True,
+    help="Normalizer applied to decisions/objectives during processing.",
+)
+def generate_data(
+    problem_id: int, test_size: float, random_state: int, normalizer: str
+):
     problem_config = ApplicationProblemConfig(
         problem_id=problem_id, type=ProblemType.biobj
     )
@@ -46,6 +72,9 @@ def generate_data(problem_id: int):
         problem_config=problem_config,
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
+        normalizer_config=NormalizerConfig(type=normalizer, params={}),
+        test_size=test_size,
+        random_state=random_state,
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)
@@ -53,7 +82,8 @@ def generate_data(problem_id: int):
         problem_factory=ProblemFactory(),
         algorithm_factory=AlgorithmFactory(),
         optimizer_factory=OptimizerFactory(),
-        data_model_repository=FileSystemGeneratedDatasetRepository(),
+        data_model_repository=FileSystemDatasetRepository(),
+        normalizer_factory=NormalizerFactory(),
         logger=CMDLogger(),
     )
 

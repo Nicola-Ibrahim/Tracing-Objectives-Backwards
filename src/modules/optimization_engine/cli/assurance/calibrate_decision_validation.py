@@ -16,23 +16,25 @@ from ...application.factories.estimator import EstimatorFactory
 from ...infrastructure.assurance.repositories.calibration_repository import (
     FileSystemDecisionValidationCalibrationRepository,
 )
-from ...infrastructure.datasets.repositories.processed_dataset_repo import (
-    FileSystemProcessedDatasetRepository,
+from ...infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ..common import ESTIMATOR_REGISTRY, create_estimator_params
+from ..common import INVERSE_ESTIMATOR_REGISTRY, create_estimator_params
 
 
 @click.command(help="Calibrate decision-validation gates for a trained estimator")
 @click.option(
     "--estimator",
-    type=click.Choice(sorted(ESTIMATOR_REGISTRY.keys())),
+    type=click.Choice(sorted(INVERSE_ESTIMATOR_REGISTRY.keys())),
     default="coco",
     show_default=True,
     help="Estimator configuration used for calibration",
 )
 def cli(estimator: str) -> None:
-    estimator_params_model = create_estimator_params(estimator)
+    estimator_params_model = create_estimator_params(
+        estimator, registry=INVERSE_ESTIMATOR_REGISTRY
+    )
 
     command = CalibrateDecisionValidationCommand(
         estimator_params=estimator_params_model,
@@ -41,7 +43,7 @@ def cli(estimator: str) -> None:
     )
 
     handler = CalibrateDecisionValidationCommandHandler(
-        processed_data_repository=FileSystemProcessedDatasetRepository(),
+        processed_data_repository=FileSystemDatasetRepository(),
         calibration_repository=FileSystemDecisionValidationCalibrationRepository(),
         estimator_factory=EstimatorFactory(),
         ood_calibrator_factory=OODCalibratorFactory(),
