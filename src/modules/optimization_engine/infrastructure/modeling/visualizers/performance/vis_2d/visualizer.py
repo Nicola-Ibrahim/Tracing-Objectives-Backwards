@@ -18,11 +18,34 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
 
     def plot(self, data: dict) -> None:
         est = data["estimator"]
+        mapping_direction = data.get("mapping_direction", "inverse")
+        if mapping_direction == "inverse":
+            input_symbol = "y"
+            output_symbol = "x"
+        else:
+            input_symbol = "x"
+            output_symbol = "y"
+
+        def _sym(symbol: str, idx: int) -> str:
+            subscripts = {1: "\u2081", 2: "\u2082"}
+            return f"{symbol}{subscripts.get(idx, idx)}"
+
         Xtr, ytr = np.asarray(data["X_train"]), np.asarray(data["y_train"])
         Xte = np.asarray(data["X_test"]) if data.get("X_test") is not None else None
         yte = np.asarray(data["y_test"]) if data.get("y_test") is not None else None
         title = data.get("title", f"Model fit ({type(est).__name__})")
         loss_history = data["loss_history"]
+
+        subplot_titles = [
+            f"{_sym(output_symbol, 1)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
+            f"{_sym(output_symbol, 2)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
+            "Training / Validation / Test",
+            f"Residuals vs Fitted ({_sym(output_symbol, 1)})",
+            f"Residuals vs Fitted ({_sym(output_symbol, 2)})",
+            f"Residual distribution ({_sym(output_symbol, 1)})",
+            f"Residual distribution ({_sym(output_symbol, 2)})",
+            f"Residual joint distribution ({_sym(output_symbol, 1)} vs {_sym(output_symbol, 2)})",
+        ]
 
         fig = make_subplots(
             rows=5,
@@ -36,22 +59,21 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             ],
             vertical_spacing=0.06,
             horizontal_spacing=0.07,
-            subplot_titles=[
-                "Objectives (x1,x2) → Decision y1 (normalized)",
-                "Objectives (x1,x2) → Decision y2 (normalized)",
-                "Training / Validation / Test",
-                "Residuals vs Fitted (decision y1)",
-                "Residuals vs Fitted (decision y2)",
-                "Residual distribution (decision y1)",
-                "Residual distribution (decision y2)",
-                "Residual joint distribution (y1 vs y2)",
-            ],
+            subplot_titles=subplot_titles,
             row_heights=[0.42, 0.14, 0.18, 0.18, 0.08],
         )
 
         # Row 1
         add_surfaces_2d(
-            fig, row=1, estimator=est, X_train=Xtr, y_train=ytr, X_test=Xte, y_test=yte
+            fig,
+            row=1,
+            estimator=est,
+            X_train=Xtr,
+            y_train=ytr,
+            X_test=Xte,
+            y_test=yte,
+            input_symbol=input_symbol,
+            output_symbol=output_symbol,
         )
 
         # Row 2
@@ -74,7 +96,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 col=1,
                 fitted=yhat_te[:, 0],
                 resid=resid_te[:, 0],
-                label="y1 (test)",
+                label=f"{_sym(output_symbol, 1)} (test)",
             )
             add_residuals_vs_fitted(
                 fig,
@@ -82,7 +104,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 col=2,
                 fitted=yhat_te[:, 1],
                 resid=resid_te[:, 1],
-                label="y2 (test)",
+                label=f"{_sym(output_symbol, 2)} (test)",
             )
         add_residuals_vs_fitted(
             fig,
@@ -90,7 +112,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             col=1,
             fitted=yhat_tr[:, 0],
             resid=resid_tr[:, 0],
-            label="y1 (train)",
+            label=f"{_sym(output_symbol, 1)} (train)",
         )
         add_residuals_vs_fitted(
             fig,
@@ -98,24 +120,48 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             col=2,
             fitted=yhat_tr[:, 1],
             resid=resid_tr[:, 1],
-            label="y2 (train)",
+            label=f"{_sym(output_symbol, 2)} (train)",
         )
 
         # Row 4: hist
         if resid_te is not None:
             add_residual_hist(
-                fig, row=4, col=1, resid=resid_te[:, 0], label="y1 (test)"
+                fig,
+                row=4,
+                col=1,
+                resid=resid_te[:, 0],
+                label=f"{_sym(output_symbol, 1)} (test)",
             )
             add_residual_hist(
-                fig, row=4, col=2, resid=resid_te[:, 1], label="y2 (test)"
+                fig,
+                row=4,
+                col=2,
+                resid=resid_te[:, 1],
+                label=f"{_sym(output_symbol, 2)} (test)",
             )
-        add_residual_hist(fig, row=4, col=1, resid=resid_tr[:, 0], label="y1 (train)")
-        add_residual_hist(fig, row=4, col=2, resid=resid_tr[:, 1], label="y2 (train)")
+        add_residual_hist(
+            fig,
+            row=4,
+            col=1,
+            resid=resid_tr[:, 0],
+            label=f"{_sym(output_symbol, 1)} (train)",
+        )
+        add_residual_hist(
+            fig,
+            row=4,
+            col=2,
+            resid=resid_tr[:, 1],
+            label=f"{_sym(output_symbol, 2)} (train)",
+        )
 
         # Row 5: joint (if test)
         if resid_te is not None:
             add_joint_residual(
-                fig, row=5, col=1, resid_y1=resid_te[:, 0], resid_y2=resid_te[:, 1]
+                fig,
+                row=5,
+                col=1,
+                resid_y1=resid_te[:, 0],
+                resid_y2=resid_te[:, 1],
             )
 
         add_estimator_summary(fig, est)

@@ -57,6 +57,7 @@ class VisualizeModelPerformanceCommandHandler:
             "n_samples": 300,
             "title": f"Fitted {model_artificat.estimator.type} ({mapping_label} mapping)",
             "loss_history": model_artificat.loss_history,
+            "mapping_direction": command.mapping_direction,
         }
 
         self._visualizer.plot(data=payload)

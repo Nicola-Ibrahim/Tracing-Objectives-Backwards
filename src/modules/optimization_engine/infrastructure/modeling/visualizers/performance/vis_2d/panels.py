@@ -14,7 +14,13 @@ def add_surfaces_2d(
     X_test: np.ndarray | None,
     y_test: np.ndarray | None,
     grid_res: int = 50,
+    input_symbol: str = "x",
+    output_symbol: str = "y",
 ) -> None:
+    def _sym(symbol: str, idx: int) -> str:
+        subscripts = {1: "\u2081", 2: "\u2082"}
+        return f"{symbol}{subscripts.get(idx, idx)}"
+
     # --- build grid over TRAIN objective domain (x1,x2) ---
     x1_min, x1_max = float(np.min(X_train[:, 0])), float(np.max(X_train[:, 0]))
     x2_min, x2_max = float(np.min(X_train[:, 1])), float(np.max(X_train[:, 1]))
@@ -31,14 +37,24 @@ def add_surfaces_2d(
     # -------- row1: surfaces + TRAIN/TEST point clouds (x on axes; y as height) -----
     fig.add_trace(
         go.Surface(
-            x=GX1, y=GX2, z=z_y1, opacity=0.45, showscale=False, name="Decision y1(x)"
+            x=GX1,
+            y=GX2,
+            z=z_y1,
+            opacity=0.45,
+            showscale=False,
+            name=f"{_sym(output_symbol, 1)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
         ),
         row=row,
         col=1,
     )
     fig.add_trace(
         go.Surface(
-            x=GX1, y=GX2, z=z_y2, opacity=0.45, showscale=False, name="Decision y2(x)"
+            x=GX1,
+            y=GX2,
+            z=z_y2,
+            opacity=0.45,
+            showscale=False,
+            name=f"{_sym(output_symbol, 2)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
         ),
         row=row,
         col=2,
@@ -51,7 +67,7 @@ def add_surfaces_2d(
             y=X_train[:, 1],
             z=y_train[:, 0],
             mode="markers",
-            name="Train decisions (y1)",
+            name=f"Train {_sym(output_symbol, 1)}",
             marker=dict(size=3, opacity=0.5),
         ),
         row=row,
@@ -63,7 +79,7 @@ def add_surfaces_2d(
             y=X_train[:, 1],
             z=y_train[:, 1],
             mode="markers",
-            name="Train decisions (y2)",
+            name=f"Train {_sym(output_symbol, 2)}",
             marker=dict(size=3, opacity=0.5),
         ),
         row=row,
@@ -78,7 +94,7 @@ def add_surfaces_2d(
                 y=X_test[:, 1],
                 z=y_test[:, 0],
                 mode="markers",
-                name="Test decisions (y1)",
+                name=f"Test {_sym(output_symbol, 1)}",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=row,
@@ -90,7 +106,7 @@ def add_surfaces_2d(
                 y=X_test[:, 1],
                 z=y_test[:, 1],
                 mode="markers",
-                name="Test decisions (y2)",
+                name=f"Test {_sym(output_symbol, 2)}",
                 marker=dict(size=3, opacity=0.5),
             ),
             row=row,
@@ -134,19 +150,19 @@ def add_surfaces_2d(
 
     scene1_axes = dict(
         xaxis=dict(
-            title="Objective x1 (norm)",
+            title=_sym(input_symbol, 1),
             range=list(x_rng),
             tickmode="array",
             tickvals=_ticks(x_rng),
         ),
         yaxis=dict(
-            title="Objective x2 (norm)",
+            title=_sym(input_symbol, 2),
             range=list(y_rng),
             tickmode="array",
             tickvals=_ticks(y_rng),
         ),
         zaxis=dict(
-            title="Decision y1 (norm)",
+            title=_sym(output_symbol, 1),
             range=list(z_rng),
             tickmode="array",
             tickvals=_ticks(z_rng),
@@ -155,19 +171,19 @@ def add_surfaces_2d(
     )
     scene2_axes = dict(
         xaxis=dict(
-            title="Objective x1 (norm)",
+            title=_sym(input_symbol, 1),
             range=list(x_rng),
             tickmode="array",
             tickvals=_ticks(x_rng),
         ),
         yaxis=dict(
-            title="Objective x2 (norm)",
+            title=_sym(input_symbol, 2),
             range=list(y_rng),
             tickmode="array",
             tickvals=_ticks(y_rng),
         ),
         zaxis=dict(
-            title="Decision y2 (norm)",
+            title=_sym(output_symbol, 2),
             range=list(z_rng),
             tickmode="array",
             tickvals=_ticks(z_rng),
