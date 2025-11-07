@@ -1,31 +1,15 @@
-from typing import Type
-
-from ...application.dtos import (
-    COCOEstimatorParams,
-    CVAEEstimatorParams,
-    CVAEMDNEstimatorParams,
-    EstimatorParams,
-    GaussianProcessEstimatorParams,
-    MDNEstimatorParams,
-    NeuralNetworkEstimatorParams,
-    RBFEstimatorParams,
+from ...application.modeling.train_inverse_model import TrainInverseModelCommand
+from ..common import (
+    INVERSE_ESTIMATOR_REGISTRY,
+    build_inverse_training_handler,
 )
 from .train_single_model import create_training_cli
-
-INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
-    "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
-    "gaussian_process": GaussianProcessEstimatorParams,
-    "mdn": MDNEstimatorParams,
-    "neural_network": NeuralNetworkEstimatorParams,
-    "rbf": RBFEstimatorParams,
-    "coco": COCOEstimatorParams,
-}
 
 # Build a CLI tailored for inverse (objective -> decision) training workflows.
 cli = create_training_cli(
     estimator_registry=INVERSE_ESTIMATOR_REGISTRY,
-    mapping_direction="inverse",
+    command_cls=TrainInverseModelCommand,
+    handler_builder=build_inverse_training_handler,
     help_prefix="an inverse",
 )
 

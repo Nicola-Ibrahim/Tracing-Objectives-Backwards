@@ -1,32 +1,18 @@
-from typing import Type
-
-from ...application.dtos import (
-    COCOEstimatorParams,
-    CVAEEstimatorParams,
-    CVAEMDNEstimatorParams,
-    EstimatorParams,
-    GaussianProcessEstimatorParams,
-    MDNEstimatorParams,
-    NeuralNetworkEstimatorParams,
-    RBFEstimatorParams,
+from ...application.modeling.train_forward_model import (
+    TrainForwardModelCommand,
+)
+from ..common import (
+    FORWARD_ESTIMATOR_REGISTRY,
+    build_forward_training_handler,
 )
 from .train_single_model import create_training_cli
-
-FORWARD_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
-    "coco": COCOEstimatorParams,
-    "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
-    "gaussian_process": GaussianProcessEstimatorParams,
-    "mdn": MDNEstimatorParams,
-    "neural_network": NeuralNetworkEstimatorParams,
-    "rbf": RBFEstimatorParams,
-}
 
 
 # Build a separate CLI for forward (decision -> objective) training workflows.
 cli = create_training_cli(
     estimator_registry=FORWARD_ESTIMATOR_REGISTRY,
-    mapping_direction="forward",
+    command_cls=TrainForwardModelCommand,
+    handler_builder=build_forward_training_handler,
     help_prefix="a forward",
 )
 

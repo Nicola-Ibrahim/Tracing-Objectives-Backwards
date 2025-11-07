@@ -170,7 +170,7 @@ class MDNEstimatorParams(EstimatorParams):
     epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     hidden_layers: list[int] = Field(
-        [256, 128, 128],
+        [256, 256, 256],
         description="List defining the number of units in each hidden layer of the MDN.",
     )
     gmm_boost: bool = Field(

@@ -6,29 +6,17 @@ from ....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
     ProbabilisticEstimator,
 )
-from ....domain.modeling.interfaces.base_repository import (
-    BaseModelArtifactRepository,
-)
+from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ....domain.modeling.services.cross_validation import CrossValidationTrainer
 from ....domain.modeling.services.deterministic import DeterministicModelTrainer
 from ....domain.modeling.services.probabilistic import ProbabilisticModelTrainer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from .train_model_command import TrainModelCommand
+from .train_forward_model_command import TrainForwardModelCommand
 
 
-class TrainModelCommandHandler:
-    """
-    Orchestrates training, validation, logging, visualization, and persistence
-    of inverse decision mapping models.
-
-    Responsibilities:
-        - Fetch training data
-        - Normalize and split data
-        - Train model(s) with single split or CV
-        - Evaluate with configured metrics
-        - Save artifacts & visualize results
-    """
+class TrainForwardModelCommandHandler:
+    """Train, evaluate, and persist forward (decision ➝ objective) estimators."""
 
     def __init__(
         self,
@@ -39,50 +27,25 @@ class TrainModelCommandHandler:
         metric_factory: MetricFactory,
     ) -> None:
         self._processed_data_repository = processed_data_repository
-        self._estimator_factory = estimator_factory
-        self._logger = logger
         self._model_repository = model_repository
+        self._logger = logger
+        self._estimator_factory = estimator_factory
         self._metric_factory = metric_factory
 
-    # --------------------- PUBLIC ENTRY ---------------------
-
-    def execute(self, command: TrainModelCommand) -> None:
-        """
-        Executes the training workflow for a given command.
-        Unpacks command attributes to pass only necessary data to sub-methods.
-        """
+    def execute(self, command: TrainForwardModelCommand) -> None:
         processed_dataset: ProcessedDataset = self._processed_data_repository.load(
             filename="dataset", variant="processed"
         )
-        match command.mapping_direction:
-            case "forward":
-                self._logger.log_info(
-                    "Training forward model (decisions ➝ objectives)."
-                )
-                X_train = processed_dataset.X_train
-                y_train = processed_dataset.y_train
-                X_test = processed_dataset.X_test
-                y_test = processed_dataset.y_test
-                X_normalizer = processed_dataset.X_normalizer
-                y_normalizer = processed_dataset.y_normalizer
+        self._logger.log_info("Training forward model (decisions ➝ objectives).")
 
-            case "inverse":
-                self._logger.log_info(
-                    "Training inverse model (objectives ➝ decisions)."
-                )
-                X_train = processed_dataset.y_train
-                y_train = processed_dataset.X_train
-                X_test = processed_dataset.y_test
-                y_test = processed_dataset.X_test
-                X_normalizer = processed_dataset.y_normalizer
-                y_normalizer = processed_dataset.X_normalizer
+        X_train = processed_dataset.X_train
+        y_train = processed_dataset.y_train
+        X_test = processed_dataset.X_test
+        y_test = processed_dataset.y_test
+        X_normalizer = processed_dataset.X_normalizer
+        y_normalizer = processed_dataset.y_normalizer
+        mapping_direction = "forward"
 
-            case _:
-                raise ValueError(
-                    f"Unsupported mapping direction: {command.mapping_direction}"
-                )
-
-        # Unpack command attributes once at the highest level
         estimator_params = command.estimator_params.model_dump()
         metric_configs = [
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
@@ -100,11 +63,10 @@ class TrainModelCommandHandler:
         )
         validation_metrics = {metric.name: metric for metric in validation_metrics}
 
-        # 1) Train and evaluate model based on command
         parameters = {
             **estimator.to_dict(),
             "type": estimator.type,
-            "mapping_direction": command.mapping_direction,
+            "mapping_direction": mapping_direction,
         }
 
         if tune_param_name and tune_param_range:
@@ -175,5 +137,4 @@ class TrainModelCommandHandler:
             loss_history=loss_history,
         )
 
-        # 3) Persist artifact
         self._model_repository.save(artifact)

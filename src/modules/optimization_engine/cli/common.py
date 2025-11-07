@@ -9,14 +9,15 @@ from ..application.dtos import (
     MDNEstimatorParams,
     NeuralNetworkEstimatorParams,
     RBFEstimatorParams,
+    ValidationMetricConfig,
 )
 from ..application.factories.estimator import EstimatorFactory
 from ..application.factories.mertics import MetricFactory
-from ..application.modeling.train_model.train_model_command import (
-    ValidationMetricConfig,
+from ..application.modeling.train_forward_model import (
+    TrainForwardModelCommandHandler,
 )
-from ..application.modeling.train_model.train_model_handler import (
-    TrainModelCommandHandler,
+from ..application.modeling.train_inverse_model import (
+    TrainInverseModelCommandHandler,
 )
 from ..infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -27,15 +28,44 @@ from ..infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
+INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
+    "cvae": CVAEEstimatorParams,
+    "cvae_mdn": CVAEMDNEstimatorParams,
+    "gaussian_process": GaussianProcessEstimatorParams,
+    "mdn": MDNEstimatorParams,
+    "neural_network": NeuralNetworkEstimatorParams,
+    "rbf": RBFEstimatorParams,
+    "coco": COCOEstimatorParams,
+}
+FORWARD_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
+    "coco": COCOEstimatorParams,
+    "cvae": CVAEEstimatorParams,
+    "cvae_mdn": CVAEMDNEstimatorParams,
+    "gaussian_process": GaussianProcessEstimatorParams,
+    "mdn": MDNEstimatorParams,
+    "neural_network": NeuralNetworkEstimatorParams,
+    "rbf": RBFEstimatorParams,
+}
 
 
-def build_processed_training_handler() -> TrainModelCommandHandler:
-    """Return a handler configured for processed dataset training runs."""
-
-    return TrainModelCommandHandler(
+def build_inverse_training_handler() -> TrainInverseModelCommandHandler:
+    """Return a handler configured for inverse-model training runs."""
+    return TrainInverseModelCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
+
+
+def build_forward_training_handler() -> TrainForwardModelCommandHandler:
+    """Return a handler configured for forward-model training runs."""
+
+    return TrainForwardModelCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="ForwardCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
     )
@@ -57,7 +87,7 @@ def create_estimator_params(
 ) -> EstimatorParams:
     """Instantiate estimator params from the registry applying overrides."""
 
-    registry = registry
+    registry = registry or INVERSE_ESTIMATOR_REGISTRY
 
     try:
         params_cls = registry[estimator_key]

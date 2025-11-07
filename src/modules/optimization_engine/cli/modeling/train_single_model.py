@@ -1,13 +1,12 @@
 import ast
-from typing import Mapping, Sequence, Type
+from typing import Mapping, Sequence, Type, TypeVar
 
 import click
+from pydantic import BaseModel
 
 from ...application.dtos import EstimatorParams
-from ...application.modeling.train_model.train_model_command import TrainModelCommand
 from ..common import (
     DEFAULT_VALIDATION_METRICS,
-    build_processed_training_handler,
     create_estimator_params,
     make_validation_metric_configs,
 )
@@ -37,10 +36,14 @@ def _parse_overrides(pairs: Sequence[str]) -> dict[str, object]:
     return overrides
 
 
+CommandT = TypeVar("CommandT", bound=BaseModel)
+
+
 def create_training_cli(
     *,
     estimator_registry: Mapping[str, Type[EstimatorParams]],
-    mapping_direction: str,
+    command_cls: type[CommandT],
+    handler_builder,
     help_prefix: str,
 ) -> click.Group:
     """
@@ -115,12 +118,12 @@ def create_training_cli(
         learning_curve_steps: int,
         epochs: int,
     ) -> None:
-        handler = build_processed_training_handler()
+        handler = handler_builder()
         overrides = _parse_overrides(params)
         estimator_params = create_estimator_params(
             estimator, overrides, registry=estimator_registry
         )
-        command = TrainModelCommand(
+        command = command_cls(
             estimator_params=estimator_params,
             estimator_performance_metric_configs=make_validation_metric_configs(
                 metrics
@@ -129,7 +132,6 @@ def create_training_cli(
             cv_splits=1,
             learning_curve_steps=learning_curve_steps,
             epochs=epochs,
-            mapping_direction=mapping_direction,
         )
         handler.execute(command)
 
@@ -159,12 +161,12 @@ def create_training_cli(
                 param_hint="--cv-splits",
             )
 
-        handler = build_processed_training_handler()
+        handler = handler_builder()
         overrides = _parse_overrides(params)
         estimator_params = create_estimator_params(
             estimator, overrides, registry=estimator_registry
         )
-        command = TrainModelCommand(
+        command = command_cls(
             estimator_params=estimator_params,
             estimator_performance_metric_configs=make_validation_metric_configs(
                 metrics
@@ -173,7 +175,6 @@ def create_training_cli(
             cv_splits=cv_splits,
             learning_curve_steps=learning_curve_steps,
             epochs=epochs,
-            mapping_direction=mapping_direction,
         )
         handler.execute(command)
 
@@ -225,12 +226,12 @@ def create_training_cli(
                 param_hint="--tune-param-value",
             )
 
-        handler = build_processed_training_handler()
+        handler = handler_builder()
         overrides = _parse_overrides(params)
         estimator_params = create_estimator_params(
             estimator, overrides, registry=estimator_registry
         )
-        command = TrainModelCommand(
+        command = command_cls(
             estimator_params=estimator_params,
             estimator_performance_metric_configs=make_validation_metric_configs(
                 metrics
@@ -241,7 +242,6 @@ def create_training_cli(
             tune_param_range=[_literal(v) for v in tune_param_values],
             learning_curve_steps=learning_curve_steps,
             epochs=epochs,
-            mapping_direction=mapping_direction,
         )
         handler.execute(command)
 
