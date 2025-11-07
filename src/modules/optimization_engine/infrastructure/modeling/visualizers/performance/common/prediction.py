@@ -11,7 +11,7 @@ from ......domain.modeling.interfaces.base_estimator import (
 def point_predict(estimator: Any, X: np.ndarray) -> np.ndarray:
     """Stable 'point' prediction for diagnostics/surfaces."""
     if isinstance(estimator, ProbabilisticEstimator):
-        y = estimator.predict(X, mode="standard")
+        y = estimator.predict(X, mode="mean")
     elif isinstance(estimator, DeterministicEstimator):
         y = estimator.predict(X, mode="standard")
     y = np.asarray(y)

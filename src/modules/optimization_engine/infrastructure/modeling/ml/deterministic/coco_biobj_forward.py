@@ -37,6 +37,14 @@ class COCOEstimator(DeterministicEstimator):
             dimensions,
         )
 
+    @property
+    def type(self) -> str:
+        """
+        Returns the type of the inverse decision mapper.
+        This should be overridden by subclasses to return their specific type.
+        """
+        return "coco-bbob-biobj"
+
     @staticmethod
     def _build_problem(
         problem_name: str,

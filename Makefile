@@ -22,6 +22,7 @@ FORWARD_ESTIMATOR ?= mdn
 
 ifdef estimator
 INVERSE_ESTIMATOR := $(estimator)
+FORWARD_ESTIMATOR := $(estimator)
 endif
 ifdef inverse_estimator
 INVERSE_ESTIMATOR := $(inverse_estimator)
@@ -29,6 +30,10 @@ endif
 ifdef forward_estimator
 FORWARD_ESTIMATOR := $(forward_estimator)
 endif
+
+# Resolve the estimator passed to CLI targets (CLI flag > direction-specific > default)
+INVERSE_TARGET_ESTIMATOR = $(if $(inverse_estimator),$(inverse_estimator),$(if $(estimator),$(estimator),$(INVERSE_ESTIMATOR)))
+FORWARD_TARGET_ESTIMATOR = $(if $(forward_estimator),$(forward_estimator),$(if $(estimator),$(estimator),$(FORWARD_ESTIMATOR)))
 
 # ====================================================================================
 # Project Management
@@ -81,25 +86,25 @@ data-visualize:  # Visualize the generated data
 .PHONY: model-train-inverse
 model-train-inverse:  # Train an inverse model (objectives -> decisions) using a train/test split
 	@echo "$(BLUE)Training a single model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model standard --estimator $(INVERSE_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model standard --estimator $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
 .PHONY: model-train-inverse-cv
 model-train-inverse-cv:  # Train an inverse model with k-fold cross-validation
 	@echo "$(BLUE)Training a single model with cross-validation...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model cv --cv-splits 10 --estimator $(INVERSE_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model cv --cv-splits 10 --estimator $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Cross-validation training complete.$(RESET)"
 
 .PHONY: model-train-inverse-grid
 model-train-inverse-grid:  # Run grid search + CV for an inverse model
 	@echo "$(BLUE)Running grid search for a single model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model grid --cv-splits 10 --estimator $(INVERSE_ESTIMATOR) --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model grid --cv-splits 10 --estimator $(INVERSE_TARGET_ESTIMATOR) --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
 	@echo "$(GREEN)Grid search training complete.$(RESET)"
 
 .PHONY: model-train-forward
 model-train-forward:  # Train a forward model (decisions -> objectives) using a train/test split
 	@echo "$(BLUE)Training a forward model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_forward_model standard --estimator $(FORWARD_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_forward_model standard --estimator $(FORWARD_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Forward model training complete.$(RESET)"
 
 
@@ -118,13 +123,13 @@ assurance-calibrate-validation:  # Fit and persist assurance calibrators for dec
 .PHONY: model-visualize-inverse
 model-visualize-inverse:  # Visualize diagnostics for an inverse model (objectives -> decisions)
 	@echo "$(BLUE)Visualizing inverse model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(INVERSE_ESTIMATOR) --mapping-direction inverse
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(INVERSE_TARGET_ESTIMATOR) --mapping-direction inverse
 	@echo "$(GREEN)Inverse model performance visualization complete.$(RESET)"
 
 .PHONY: model-visualize-forward
 model-visualize-forward:  # Visualize diagnostics for a forward model (decisions -> objectives)
 	@echo "$(BLUE)Visualizing forward model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(FORWARD_ESTIMATOR) --mapping-direction forward
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(FORWARD_TARGET_ESTIMATOR) --mapping-direction forward
 	@echo "$(GREEN)Forward model performance visualization complete.$(RESET)"
 
 
@@ -134,4 +139,3 @@ model-visualize-forward:  # Visualize diagnostics for a forward model (decisions
 
 # Set the default goal to 'help' if no target is specified
 .DEFAULT_GOAL := help
-
