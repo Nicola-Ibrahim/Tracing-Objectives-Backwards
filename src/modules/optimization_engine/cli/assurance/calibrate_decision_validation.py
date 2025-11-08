@@ -1,3 +1,5 @@
+from typing import Type
+
 import click
 
 from ...application.assurance.decision_validation.calibrate_decision_validation_command import (
@@ -7,6 +9,16 @@ from ...application.assurance.decision_validation.calibrate_decision_validation_
 )
 from ...application.assurance.decision_validation.calibrate_decision_validation_handler import (
     CalibrateDecisionValidationCommandHandler,
+)
+from ...application.dtos import (
+    COCOEstimatorParams,
+    CVAEEstimatorParams,
+    CVAEMDNEstimatorParams,
+    EstimatorParams,
+    GaussianProcessEstimatorParams,
+    MDNEstimatorParams,
+    NeuralNetworkEstimatorParams,
+    RBFEstimatorParams,
 )
 from ...application.factories.assurance import (
     ConformalCalibratorFactory,
@@ -20,7 +32,26 @@ from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ...infrastructure.loggers.cmd_logger import CMDLogger
-from ..common import INVERSE_ESTIMATOR_REGISTRY, create_estimator_params
+
+INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
+    "cvae": CVAEEstimatorParams,
+    "cvae_mdn": CVAEMDNEstimatorParams,
+    "gaussian_process": GaussianProcessEstimatorParams,
+    "mdn": MDNEstimatorParams,
+    "neural_network": NeuralNetworkEstimatorParams,
+    "rbf": RBFEstimatorParams,
+    "coco": COCOEstimatorParams,
+}
+
+
+def _create_estimator_params(
+    estimator_key: str,
+) -> EstimatorParams:
+    try:
+        params_cls = INVERSE_ESTIMATOR_REGISTRY[estimator_key]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
+    return params_cls()
 
 
 @click.command(help="Calibrate decision-validation gates for a trained estimator")
@@ -32,9 +63,7 @@ from ..common import INVERSE_ESTIMATOR_REGISTRY, create_estimator_params
     help="Estimator configuration used for calibration",
 )
 def cli(estimator: str) -> None:
-    estimator_params_model = create_estimator_params(
-        estimator, registry=INVERSE_ESTIMATOR_REGISTRY
-    )
+    estimator_params_model = _create_estimator_params(estimator)
 
     command = CalibrateDecisionValidationCommand(
         estimator_params=estimator_params_model,

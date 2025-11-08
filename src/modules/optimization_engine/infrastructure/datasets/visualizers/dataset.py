@@ -42,31 +42,9 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         # Row 1: RAW 2D scatters
         (1, 1): {
             "type": "scatter_from2d",
-            "title": "Objective Space (raw x1 vs x2)",
+            "title": "Decision Space (raw x1 vs x2)",
             "x_label": "$x_1$",
             "y_label": "$x_2$",
-            "array2d_key": "pareto_front",
-            "xy_cols": (0, 1),
-            "base_name": "Pareto Front",
-            "base_color": _PARETO_COLOR,
-            "base_symbol": "circle",
-            "base_size": 7,
-            "overlays": [
-                {
-                    "key": "historical_objectives",
-                    "name": "Historical (Objectives)",
-                    "symbol": "cross",
-                    "size": 5,
-                    "opacity": 0.5,
-                    "color": _HISTORY_COLOR,
-                },
-            ],
-        },
-        (1, 2): {
-            "type": "scatter_from2d",
-            "title": "Decision Space (raw y1 vs y2)",
-            "x_label": "$y_1$",
-            "y_label": "$y_2$",
             "array2d_key": "pareto_set",
             "xy_cols": (0, 1),
             "base_name": "Pareto Set",
@@ -84,34 +62,56 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 },
             ],
         },
-        # Row 2 & 3: NEW — Raw 1D KDEs under the scatter row
+        (1, 2): {
+            "type": "scatter_from2d",
+            "title": "Objective Space (raw y1 vs y2)",
+            "x_label": "$y_1$",
+            "y_label": "$y_2$",
+            "array2d_key": "pareto_front",
+            "xy_cols": (0, 1),
+            "base_name": "Pareto Front",
+            "base_color": _PARETO_COLOR,
+            "base_symbol": "circle",
+            "base_size": 7,
+            "overlays": [
+                {
+                    "key": "historical_objectives",
+                    "name": "Historical (Objectives)",
+                    "symbol": "cross",
+                    "size": 5,
+                    "opacity": 0.5,
+                    "color": _HISTORY_COLOR,
+                },
+            ],
+        },
+        # Row 2 & 3: Raw 1D KDEs
         (2, 1): {
-            "type": "pdf1d_from2d",
-            "title": "Raw KDE: x1",
-            "source_2d_key": "pareto_front",
-            "col": 0,
-            "x_label": "$x_1$",
-        },
-        (2, 2): {
-            "type": "pdf1d_from2d",
-            "title": "Raw KDE: x2",
-            "source_2d_key": "pareto_front",
-            "col": 1,
-            "x_label": "$x_2$",
-        },
-        (3, 1): {
             "type": "pdf1d_from2d",
             "title": "Raw KDE: y1",
             "source_2d_key": "pareto_set",
             "col": 0,
             "x_label": "$y_1$",
         },
-        (3, 2): {
+        (2, 2): {
+            "type": "pdf1d_from2d",
+            "title": "Raw KDE: x1",
+            "source_2d_key": "pareto_front",
+            "col": 0,
+            "x_label": "$x_1$",
+        },
+        (3, 1): {
             "type": "pdf1d_from2d",
             "title": "Raw KDE: y2",
             "source_2d_key": "pareto_set",
             "col": 1,
             "x_label": "$y_2$",
+        },
+        (3, 2): {
+            "type": "pdf1d_from2d",
+            "title": "Raw KDE: x2",
+            "source_2d_key": "pareto_front",
+            "col": 1,
+            "x_label": "$x_2$",
         },
         # Row 4: NORMALIZED 2D scatters (train/test only)
         (4, 1): {
@@ -165,39 +165,30 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         # Row 5/6: PDFs (from normalized series, concatenated when present)
         (5, 1): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $x_1$",
-            "vec_keys": ["X_train", "X_test"],
-            "col": 0,
-        },
-        (5, 2): {
-            "type": "pdf1d_concat",
-            "title": "PDF: Norm $x_2$",
-            "vec_keys": ["X_train", "X_test"],
-            "col": 1,
-        },
-        (6, 1): {
-            "type": "pdf1d_concat",
             "title": "PDF: Norm $y_1$",
             "vec_keys": ["y_train", "y_test"],
             "col": 0,
         },
-        (6, 2): {
+        (5, 2): {
+            "type": "pdf1d_concat",
+            "title": "PDF: Norm $x_1$",
+            "vec_keys": ["X_train", "X_test"],
+            "col": 0,
+        },
+        (6, 1): {
             "type": "pdf1d_concat",
             "title": "PDF: Norm $y_2$",
             "vec_keys": ["y_train", "y_test"],
             "col": 1,
         },
+        (6, 2): {
+            "type": "pdf1d_concat",
+            "title": "PDF: Norm $x_2$",
+            "vec_keys": ["X_train", "X_test"],
+            "col": 1,
+        },
         # Row 7: 2D PDFs (from normalized series, concatenated when present)
         (7, 1): {
-            "type": "pdf2d_concat",
-            "title": "2D PDF: (Norm x1, Norm x2)",
-            "mat_keys": ["X_train", "X_test"],
-            "x_col": 0,
-            "y_col": 1,
-            "x_label": "Norm $x_1$",
-            "y_label": "Norm $x_2$",
-        },
-        (7, 2): {
             "type": "pdf2d_concat",
             "title": "2D PDF: (Norm y1, Norm y2)",
             "mat_keys": ["y_train", "y_test"],
@@ -205,6 +196,15 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
             "y_col": 1,
             "x_label": "Norm $y_1$",
             "y_label": "Norm $y_2$",
+        },
+        (7, 2): {
+            "type": "pdf2d_concat",
+            "title": "2D PDF: (Norm x1, Norm x2)",
+            "mat_keys": ["X_train", "X_test"],
+            "x_col": 0,
+            "y_col": 1,
+            "x_label": "Norm $x_1$",
+            "y_label": "Norm $x_2$",
         },
         # Row 8: 3D (normalized): (x1, x2, y1) and (x1, x2, y2) with train/test overlays
         (8, 1): {

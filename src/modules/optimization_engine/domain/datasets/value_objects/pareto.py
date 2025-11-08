@@ -1,3 +1,5 @@
+from typing import Self
+
 import numpy as np
 from pydantic import BaseModel, Field
 
@@ -29,3 +31,16 @@ class Pareto(BaseModel):
     def num_solutions(self) -> int:
         """Returns the number of Pareto-optimal solutions."""
         return self.set.shape[0]
+
+    @classmethod
+    def create(cls, set: np.typing.NDArray, front: np.typing.NDArray) -> Self:
+        """Factory method to create a Pareto object.
+
+        Args:
+            set (np.ndarray): Decision variables of the Pareto-optimal set.
+            front (np.ndarray): Objective values of the Pareto-optimal front.
+
+        Returns:
+            Pareto: An instance of the Pareto class.
+        """
+        return cls(set=set, front=front)

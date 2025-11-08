@@ -2,8 +2,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from ...dtos import NormalizerConfig
 from ....domain.modeling.enums.normalizer_type import NormalizerTypeEnum
+from ...dtos import NormalizerConfig
 
 
 class ProblemType(str, Enum):
@@ -61,7 +61,7 @@ class ApplicationOptimizerConfig(BaseModel):
     save_history: bool = Field(
         ...,
         description="Whether to save the optimization history.",
-        example=False,
+        example=True,
     )
     verbose: bool = Field(
         ...,

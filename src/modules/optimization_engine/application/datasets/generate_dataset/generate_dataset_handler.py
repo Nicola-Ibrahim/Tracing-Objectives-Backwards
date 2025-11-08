@@ -1,12 +1,8 @@
 from pathlib import Path
 
-from sklearn.model_selection import train_test_split
-
 from ....domain.common.interfaces.base_logger import BaseLogger
-from ....domain.datasets.entities.generated_dataset import GeneratedDataset
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
-from ....domain.datasets.value_objects.pareto import Pareto
+from ....domain.datasets.services import DatasetGenerationService
 from ...factories.algorithm import AlgorithmFactory
 from ...factories.normalizer import NormalizerFactory
 from ...factories.optimizer import OptimizerFactory
@@ -15,11 +11,7 @@ from .generate_dataset_command import GenerateDatasetCommand
 
 
 class GenerateDatasetCommandHandler:
-    """
-    Command handler for generating biobjective Pareto data.
-    This handler now directly orchestrates the core generation logic,
-    without delegating to a separate ParetoGenerationService.
-    """
+    """Command handler responsible for wiring factories, services, and persistence."""
 
     def __init__(
         self,
@@ -27,6 +19,7 @@ class GenerateDatasetCommandHandler:
         algorithm_factory: AlgorithmFactory,
         optimizer_factory: OptimizerFactory,
         data_model_repository: BaseDatasetRepository,
+        dataset_service: DatasetGenerationService,
         normalizer_factory: NormalizerFactory,
         logger: BaseLogger,
     ):
@@ -43,6 +36,7 @@ class GenerateDatasetCommandHandler:
         self._algorithm_factory = algorithm_factory
         self._optimizer_factory = optimizer_factory
         self._data_model_repository = data_model_repository
+        self._dataset_service = dataset_service
         self._normalizer_factory = normalizer_factory
         self._logger = logger
 
@@ -71,34 +65,50 @@ class GenerateDatasetCommandHandler:
             config=optimizer_config,
         )
 
-        # Execute the optimization process
-        run_data = optimizer.run()
+        problem_name = getattr(problem, "name", "unknown")
+        algorithm_name = algorithm.__class__.__name__
+        optimizer_name = optimizer.__class__.__name__
+        self._logger.log_info(
+            f"Starting dataset generation for problem '{problem_name}' "
+            f"(algorithm={algorithm_name}, optimizer={optimizer_name})."
+        )
 
-        self._logger.log_info("Optimization run completed.")
+        normalizer_cfg = command.normalizer_config.model_dump()
+        X_normalizer = self._normalizer_factory.create(normalizer_cfg)
+        y_normalizer = self._normalizer_factory.create(normalizer_cfg)
+
+        metadata = {
+            "source": "generated",
+            "normalizer": normalizer_cfg,
+        }
+
+        generated_dataset, processed_dataset = self._dataset_service.generate(
+            dataset_name="dataset",
+            optimizer=optimizer,
+            X_normalizer=X_normalizer,
+            y_normalizer=y_normalizer,
+            test_size=command.test_size,
+            random_state=command.random_state,
+            metadata=metadata,
+        )
+
+        if generated_dataset.pareto is not None:
+            self._logger.log_info(
+                f"Found {generated_dataset.pareto.set.shape[0]} Pareto-optimal solutions."
+            )
 
         self._logger.log_info(
-            f"Found {run_data.pareto_set.shape[0]} Pareto-optimal solutions."
+            f"Historical Pareto set contains {generated_dataset.X.shape[0]} solutions."
         )
+
         self._logger.log_info(
-            f"Historical Pareto set contains {run_data.historical_solutions.shape[0]} solutions."
-        )
-
-        pareto = Pareto(
-            set=run_data.pareto_set,
-            front=run_data.pareto_front,
-        )
-
-        # Build the GeneratedDataset from the optimization results and original configurations
-        generated_dataset = GeneratedDataset(
-            name="dataset",
-            X=run_data.historical_solutions,
-            y=run_data.historical_objectives,
-            pareto=pareto,
-        )
-
-        processed_dataset = self._build_processed_dataset(
-            raw_dataset=generated_dataset,
-            command=command,
+            "[postprocess] train shapes X%s y%s | test shapes X%s y%s"
+            % (
+                processed_dataset.X_train.shape,
+                processed_dataset.y_train.shape,
+                processed_dataset.X_test.shape,
+                processed_dataset.y_test.shape,
+            )
         )
 
         # Save both raw and processed variants using the repository
@@ -108,59 +118,3 @@ class GenerateDatasetCommandHandler:
         )
         self._logger.log_info(f"Pareto data saved to: {saved_path}")
         return saved_path
-
-    def _build_processed_dataset(
-        self,
-        *,
-        raw_dataset: GeneratedDataset,
-        command: GenerateDatasetCommand,
-    ) -> ProcessedDataset:
-        """
-        Split the raw dataset, fit normalizers, and package the processed bundle.
-        """
-
-        X_raw = raw_dataset.X
-        y_raw = raw_dataset.y
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_raw,
-            y_raw,
-            test_size=command.test_size,
-            random_state=command.random_state,
-        )
-
-        normalizer_cfg = command.normalizer_config.model_dump()
-        X_normalizer = self._normalizer_factory.create(normalizer_cfg)
-        y_normalizer = self._normalizer_factory.create(normalizer_cfg)
-
-        X_train_norm = X_normalizer.fit_transform(X_train)
-        X_test_norm = X_normalizer.transform(X_test)
-        y_train_norm = y_normalizer.fit_transform(y_train)
-        y_test_norm = y_normalizer.transform(y_test)
-
-        self._logger.log_info(
-            "[postprocess] train shapes X%s y%s | test shapes X%s y%s"
-            % (
-                X_train_norm.shape,
-                y_train_norm.shape,
-                X_test_norm.shape,
-                y_test_norm.shape,
-            )
-        )
-
-        return ProcessedDataset.create(
-            name=raw_dataset.name,
-            X_train=X_train_norm,
-            y_train=y_train_norm,
-            X_test=X_test_norm,
-            y_test=y_test_norm,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
-            pareto=raw_dataset.pareto,
-            metadata={
-                "source": "generated",
-                "test_size": command.test_size,
-                "random_state": command.random_state,
-                "normalizer": normalizer_cfg,
-            },
-        )

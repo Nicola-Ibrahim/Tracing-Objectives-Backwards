@@ -17,6 +17,7 @@ from ...application.factories.algorithm import AlgorithmFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.factories.optimizer import OptimizerFactory
 from ...application.factories.problem import ProblemFactory
+from ...domain.datasets.services import DatasetGenerationService
 from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -78,13 +79,16 @@ def generate_data(
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)
+    logger = CMDLogger()
+    dataset_service = DatasetGenerationService()
     handler = GenerateDatasetCommandHandler(
         problem_factory=ProblemFactory(),
         algorithm_factory=AlgorithmFactory(),
         optimizer_factory=OptimizerFactory(),
         data_model_repository=FileSystemDatasetRepository(),
+        dataset_service=dataset_service,
         normalizer_factory=NormalizerFactory(),
-        logger=CMDLogger(),
+        logger=logger,
     )
 
     # Execute
