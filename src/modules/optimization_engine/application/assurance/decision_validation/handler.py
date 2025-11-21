@@ -12,7 +12,7 @@ from ...factories.assurance import (
     OODCalibratorFactory,
 )
 from ...factories.estimator import EstimatorFactory
-from .calibrate_decision_validation_command import CalibrateDecisionValidationCommand
+from .command import CalibrateDecisionValidationCommand
 
 
 class CalibrateDecisionValidationCommandHandler:

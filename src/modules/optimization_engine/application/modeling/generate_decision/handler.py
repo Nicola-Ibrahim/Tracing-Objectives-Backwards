@@ -21,7 +21,7 @@ from ....domain.modeling.interfaces.base_estimator import (
 )
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ...factories.assurance import DiversityStrategyFactory, ScoreStrategyFactory
-from .generate_decision_command import GenerateDecisionCommand
+from .command import GenerateDecisionCommand
 
 
 class GenerateDecisionCommandHandler:

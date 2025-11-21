@@ -12,7 +12,7 @@ from ....domain.modeling.services.deterministic import DeterministicModelTrainer
 from ....domain.modeling.services.probabilistic import ProbabilisticModelTrainer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from .train_forward_model_command import TrainForwardModelCommand
+from .command import TrainForwardModelCommand
 
 
 class TrainForwardModelCommandHandler:

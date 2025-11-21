@@ -7,7 +7,7 @@ from ...factories.algorithm import AlgorithmFactory
 from ...factories.normalizer import NormalizerFactory
 from ...factories.optimizer import OptimizerFactory
 from ...factories.problem import ProblemFactory
-from .generate_dataset_command import GenerateDatasetCommand
+from .command import GenerateDatasetCommand
 
 
 class GenerateDatasetCommandHandler:

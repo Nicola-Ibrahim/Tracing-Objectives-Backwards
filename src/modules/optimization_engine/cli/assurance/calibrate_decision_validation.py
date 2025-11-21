@@ -2,12 +2,12 @@ from typing import Type
 
 import click
 
-from ...application.assurance.decision_validation.calibrate_decision_validation_command import (
+from ...application.assurance.decision_validation.command import (
     CalibrateDecisionValidationCommand,
     ConformalCalibratorParams,
     OODCalibratorParams,
 )
-from ...application.assurance.decision_validation.calibrate_decision_validation_handler import (
+from ...application.assurance.decision_validation.handler import (
     CalibrateDecisionValidationCommandHandler,
 )
 from ...application.dtos import (

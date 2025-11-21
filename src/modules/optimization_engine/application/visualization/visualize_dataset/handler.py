@@ -2,7 +2,7 @@ from ....domain.datasets.entities.generated_dataset import GeneratedDataset
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
-from .visualize_data_command import VisualizeDatasetCommand
+from .command import VisualizeDatasetCommand
 
 
 class VisualizeDatasetCommandHandler:

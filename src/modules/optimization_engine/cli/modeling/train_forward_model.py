@@ -16,8 +16,8 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_forward_model import (
-    TrainForwardModelCommand,
+from ...application.modeling.train_forward_model.command import TrainForwardModelCommand
+from ...application.modeling.train_forward_model.handler import (
     TrainForwardModelCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
@@ -141,9 +141,7 @@ def _common_training_options(func):
     return func
 
 
-@click.group(
-    help="Train a forward model using standard, CV, or grid-search workflows"
-)
+@click.group(help="Train a forward model using standard, CV, or grid-search workflows")
 def cli() -> None:
     return None
 
@@ -163,9 +161,7 @@ def command_standard(
     estimator_params = _create_estimator_params(estimator, overrides)
     command = TrainForwardModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_validation_metric_configs(
-            metrics
-        ),
+        estimator_performance_metric_configs=_make_validation_metric_configs(metrics),
         random_state=random_state,
         cv_splits=1,
         learning_curve_steps=learning_curve_steps,
@@ -203,9 +199,7 @@ def command_cv(
     estimator_params = _create_estimator_params(estimator, overrides)
     command = TrainForwardModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_validation_metric_configs(
-            metrics
-        ),
+        estimator_performance_metric_configs=_make_validation_metric_configs(metrics),
         random_state=random_state,
         cv_splits=cv_splits,
         learning_curve_steps=learning_curve_steps,
@@ -267,9 +261,7 @@ def command_grid(
     estimator_params = _create_estimator_params(estimator, overrides)
     command = TrainForwardModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_validation_metric_configs(
-            metrics
-        ),
+        estimator_performance_metric_configs=_make_validation_metric_configs(metrics),
         random_state=random_state,
         cv_splits=cv_splits,
         tune_param_name=tune_param_name,

@@ -14,7 +14,6 @@ class DatasetGenerationService:
 
     def generate(
         self,
-        *,
         dataset_name: str,
         optimizer: BaseOptimizer,
         X_normalizer: BaseNormalizer,

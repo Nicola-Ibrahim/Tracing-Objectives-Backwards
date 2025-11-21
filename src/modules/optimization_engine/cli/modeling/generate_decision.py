@@ -1,7 +1,7 @@
-from ...application.modeling.generate_decision.generate_decision_command import (
+from ...application.modeling.generate_decision.command import (
     GenerateDecisionCommand,
 )
-from ...application.modeling.generate_decision.generate_decision_handler import (
+from ...application.modeling.generate_decision.handler import (
     GenerateDecisionCommandHandler,
 )
 from ...domain.assurance.decision_validation.services.decision_validation_service import (

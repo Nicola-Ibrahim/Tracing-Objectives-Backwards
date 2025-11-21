@@ -1,7 +1,7 @@
-from ...application.visualization.visualize_dataset.visualize_data_command import (
+from ...application.visualization.visualize_dataset.command import (
     VisualizeDatasetCommand,
 )
-from ...application.visualization.visualize_dataset.visualize_data_handler import (
+from ...application.visualization.visualize_dataset.handler import (
     VisualizeDatasetCommandHandler,
 )
 from ...infrastructure.datasets.visualizers.dataset import PlotlyDatasetVisualizer

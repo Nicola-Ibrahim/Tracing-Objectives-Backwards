@@ -1,6 +1,6 @@
 import click
 
-from ...application.datasets.generate_dataset.generate_dataset_command import (
+from ...application.datasets.generate_dataset.command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
@@ -9,7 +9,7 @@ from ...application.datasets.generate_dataset.generate_dataset_command import (
     OptimizerType,
     ProblemType,
 )
-from ...application.datasets.generate_dataset.generate_dataset_handler import (
+from ...application.datasets.generate_dataset.handler import (
     GenerateDatasetCommandHandler,
 )
 from ...application.dtos import NormalizerConfig

@@ -12,7 +12,7 @@ from ....domain.modeling.services.deterministic import DeterministicModelTrainer
 from ....domain.modeling.services.probabilistic import ProbabilisticModelTrainer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from .train_inverse_model_command import TrainInverseModelCommand
+from .command import TrainInverseModelCommand
 
 
 class TrainInverseModelCommandHandler:
@@ -20,20 +20,20 @@ class TrainInverseModelCommandHandler:
 
     def __init__(
         self,
-        processed_data_repository: BaseDatasetRepository,
+        data_repository: BaseDatasetRepository,
         model_repository: BaseModelArtifactRepository,
         logger: BaseLogger,
         estimator_factory: EstimatorFactory,
         metric_factory: MetricFactory,
     ) -> None:
-        self._processed_data_repository = processed_data_repository
+        self._data_repository = data_repository
         self._model_repository = model_repository
         self._logger = logger
         self._estimator_factory = estimator_factory
         self._metric_factory = metric_factory
 
     def execute(self, command: TrainInverseModelCommand) -> None:
-        processed_dataset: ProcessedDataset = self._processed_data_repository.load(
+        processed_dataset: ProcessedDataset = self._data_repository.load(
             filename="dataset", variant="processed"
         )
         self._logger.log_info("Training inverse model (objectives ➝ decisions).")
