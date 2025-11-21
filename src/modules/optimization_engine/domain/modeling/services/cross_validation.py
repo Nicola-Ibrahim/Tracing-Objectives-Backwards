@@ -151,15 +151,13 @@ class CrossValidationTrainer:
             except Exception:
                 pass
 
-            res = self.validate(
+            _, _, candidate_metrics = self.validate(
                 estimator=estimator_clonned,
                 X_train=X_train,
                 y_train=y_train,
                 X_test=X_test,
                 y_test=y_test,
                 validation_metrics=validation_metrics,
-                parameters={**parameters, param_name: val},
-                test_size=test_size,
                 random_state=random_state,
                 n_splits=cv,
                 epochs=epochs,
@@ -169,7 +167,7 @@ class CrossValidationTrainer:
 
             # aggregate primary metric (mean over folds)
             for m in validation_metrics.keys():
-                fold_vals = [float(fold.get(m, float("nan"))) for fold in res.cv_scores]
+                fold_vals = [float(fold.get(m, float("nan"))) for fold in candidate_metrics.cv]
                 mean_val = (
                     float(np.nanmean(fold_vals)) if len(fold_vals) > 0 else float("nan")
                 )
@@ -191,8 +189,6 @@ class CrossValidationTrainer:
             X_test,
             y_test,
             validation_metrics,
-            parameters={**parameters, param_name: best_val},
-            test_size=test_size,
             random_state=random_state,
             n_splits=cv,
             epochs=epochs,

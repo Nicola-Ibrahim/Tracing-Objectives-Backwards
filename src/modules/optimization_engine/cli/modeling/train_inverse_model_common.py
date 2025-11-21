@@ -16,9 +16,17 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_forward_model import (
-    TrainForwardModelCommand,
-    TrainForwardModelCommandHandler,
+from ...application.modeling.train_inverse_model import (
+    TrainInverseModelCommand,
+    TrainInverseModelCommandHandler,
+)
+from ...application.modeling.train_inverse_model_cv import (
+    TrainInverseModelCrossValidationCommand,
+    TrainInverseModelCrossValidationCommandHandler,
+)
+from ...application.modeling.train_inverse_model_grid_search import (
+    TrainInverseModelGridSearchCommand,
+    TrainInverseModelGridSearchCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -29,14 +37,14 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
-FORWARD_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
-    "coco": COCOEstimatorParams,
+INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
     "cvae": CVAEEstimatorParams,
     "cvae_mdn": CVAEMDNEstimatorParams,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,
     "neural_network": NeuralNetworkEstimatorParams,
     "rbf": RBFEstimatorParams,
+    "coco": COCOEstimatorParams,
 }
 
 
@@ -60,14 +68,17 @@ def _parse_overrides(pairs: Sequence[str]) -> dict[str, object]:
     return overrides
 
 
-def _build_forward_training_handler() -> TrainForwardModelCommandHandler:
-    return TrainForwardModelCommandHandler(
-        processed_data_repository=FileSystemDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="ForwardCMDLogger"),
-        estimator_factory=EstimatorFactory(),
-        metric_factory=MetricFactory(),
-    )
+def _create_estimator_params(
+    estimator_key: str,
+    overrides: Mapping[str, object] | None = None,
+) -> EstimatorParams:
+    try:
+        params_cls = INVERSE_ESTIMATOR_REGISTRY[estimator_key]
+    except KeyError as exc:  # pragma: no cover - CLI guards choices
+        raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
+
+    overrides = dict(overrides or {})
+    return params_cls(**overrides) if overrides else params_cls()
 
 
 def _make_validation_metric_configs(
@@ -76,25 +87,42 @@ def _make_validation_metric_configs(
     return [ValidationMetricConfig(type=name, params={}) for name in metric_names]
 
 
-def _create_estimator_params(
-    estimator_key: str,
-    overrides: Mapping[str, object] | None = None,
-) -> EstimatorParams:
-    try:
-        params_cls = FORWARD_ESTIMATOR_REGISTRY[estimator_key]
-    except KeyError as exc:  # pragma: no cover - CLI guards choices
-        raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
+def _build_inverse_training_handler() -> TrainInverseModelCommandHandler:
+    return TrainInverseModelCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="InterpolationCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
 
-    overrides = dict(overrides or {})
-    return params_cls(**overrides) if overrides else params_cls()
+
+def _build_inverse_cv_handler() -> TrainInverseModelCrossValidationCommandHandler:
+    return TrainInverseModelCrossValidationCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="InterpolationCVCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
+
+
+def _build_inverse_grid_handler() -> TrainInverseModelGridSearchCommandHandler:
+    return TrainInverseModelGridSearchCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="InterpolationGridCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
 
 
 def _common_training_options(func):
     options = [
         click.option(
             "--estimator",
-            type=click.Choice(sorted(FORWARD_ESTIMATOR_REGISTRY.keys())),
-            default=next(iter(FORWARD_ESTIMATOR_REGISTRY)),
+            type=click.Choice(sorted(INVERSE_ESTIMATOR_REGISTRY.keys())),
+            default=next(iter(INVERSE_ESTIMATOR_REGISTRY)),
             show_default=True,
             help="Which estimator configuration to use",
         ),
@@ -141,37 +169,21 @@ def _common_training_options(func):
     return func
 
 
-@click.group(help="Train a forward model (single train/test split workflow)")
-def cli() -> None:
-    return None
-
-
-@cli.command(name="standard", help="Single train/test split training")
-@_common_training_options
-def command_standard(
-    estimator: str,
-    params: Sequence[str],
-    metrics: Sequence[str],
-    random_state: int,
-    learning_curve_steps: int,
-    epochs: int,
-) -> None:
-    handler = _build_forward_training_handler()
-    overrides = _parse_overrides(params)
-    estimator_params = _create_estimator_params(estimator, overrides)
-    command = TrainForwardModelCommand(
-        estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_validation_metric_configs(metrics),
-        random_state=random_state,
-        learning_curve_steps=learning_curve_steps,
-        epochs=epochs,
-    )
-    handler.execute(command)
-
-
-def main() -> None:
-    cli()
-
-
-if __name__ == "__main__":
-    main()
+__all__ = [
+    "_build_inverse_training_handler",
+    "_build_inverse_cv_handler",
+    "_build_inverse_grid_handler",
+    "_common_training_options",
+    "_create_estimator_params",
+    "_literal",
+    "_make_validation_metric_configs",
+    "_parse_overrides",
+    "DEFAULT_VALIDATION_METRICS",
+    "INVERSE_ESTIMATOR_REGISTRY",
+    "TrainInverseModelCommand",
+    "TrainInverseModelCommandHandler",
+    "TrainInverseModelCrossValidationCommand",
+    "TrainInverseModelCrossValidationCommandHandler",
+    "TrainInverseModelGridSearchCommand",
+    "TrainInverseModelGridSearchCommandHandler",
+]

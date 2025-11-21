@@ -2,20 +2,15 @@ from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
-from ....domain.modeling.interfaces.base_estimator import (
-    DeterministicEstimator,
-    ProbabilisticEstimator,
-)
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....domain.modeling.services.deterministic import DeterministicModelTrainer
-from ....domain.modeling.services.probabilistic import ProbabilisticModelTrainer
+from ....domain.modeling.services.cross_validation import CrossValidationTrainer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from .command import TrainInverseModelCommand
+from .command import TrainInverseModelCrossValidationCommand
 
 
-class TrainInverseModelCommandHandler:
-    """Train, evaluate, and persist inverse (objectives ➝ decisions) estimators."""
+class TrainInverseModelCrossValidationCommandHandler:
+    """Train, evaluate, and persist inverse estimators using k-fold CV."""
 
     def __init__(
         self,
@@ -25,17 +20,19 @@ class TrainInverseModelCommandHandler:
         estimator_factory: EstimatorFactory,
         metric_factory: MetricFactory,
     ) -> None:
-        self._data_repository = processed_data_repository
+        self._processed_data_repository = processed_data_repository
         self._model_repository = model_repository
         self._logger = logger
         self._estimator_factory = estimator_factory
         self._metric_factory = metric_factory
 
-    def execute(self, command: TrainInverseModelCommand) -> None:
-        processed_dataset: ProcessedDataset = self._data_repository.load(
+    def execute(self, command: TrainInverseModelCrossValidationCommand) -> None:
+        processed_dataset: ProcessedDataset = self._processed_data_repository.load(
             filename="dataset", variant="processed"
         )
-        self._logger.log_info("Training inverse model (objectives ➝ decisions).")
+        self._logger.log_info(
+            "Training inverse model with cross-validation (objectives ➝ decisions)."
+        )
 
         X_train = processed_dataset.y_train
         y_train = processed_dataset.X_train
@@ -48,6 +45,7 @@ class TrainInverseModelCommandHandler:
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
         random_state = command.random_state
+        cv_splits = command.cv_splits
         learning_curve_steps = command.learning_curve_steps
         epochs = command.epochs
 
@@ -61,31 +59,22 @@ class TrainInverseModelCommandHandler:
             **estimator.to_dict(),
             "type": estimator.type,
             "mapping_direction": mapping_direction,
+            "cv_splits": cv_splits,
         }
 
-        self._logger.log_info("Starting single train/test split workflow.")
-        if isinstance(estimator, ProbabilisticEstimator):
-            fitted_estimator, loss_history, metrics = ProbabilisticModelTrainer().train(
-                estimator=estimator,
-                X_train=X_train,
-                y_train=y_train,
-            )
-        elif isinstance(estimator, DeterministicEstimator):
-            fitted_estimator, loss_history, metrics = (
-                DeterministicModelTrainer().train(
-                    estimator=estimator,
-                    X_train=X_train,
-                    y_train=y_train,
-                    X_test=X_test,
-                    y_test=y_test,
-                    learning_curve_steps=learning_curve_steps,
-                    validation_metrics=validation_metrics,
-                    random_state=random_state,
-                )
-            )
-        else:  # pragma: no cover - defensive guard for unknown estimator types
-            raise TypeError(f"Unsupported estimator type: {type(estimator)!r}")
-        self._logger.log_info("Model training (single split) completed.")
+        fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
+            estimator=estimator,
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            validation_metrics=validation_metrics,
+            epochs=epochs,
+            n_splits=cv_splits,
+            random_state=random_state,
+            learning_curve_steps=learning_curve_steps,
+        )
+        self._logger.log_info("Cross-validation workflow completed.")
 
         artifact = ModelArtifact.create(
             parameters=parameters,
@@ -93,4 +82,5 @@ class TrainInverseModelCommandHandler:
             metrics=metrics,
             loss_history=loss_history,
         )
+
         self._model_repository.save(artifact)

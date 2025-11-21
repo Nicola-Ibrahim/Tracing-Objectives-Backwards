@@ -86,19 +86,19 @@ data-visualize:  # Visualize the generated data
 .PHONY: model-train-inverse
 model-train-inverse:  # Train an inverse model (objectives -> decisions) using a train/test split
 	@echo "$(BLUE)Training a single model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model standard --estimator $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model_standard --estimator $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
 .PHONY: model-train-inverse-cv
 model-train-inverse-cv:  # Train an inverse model with k-fold cross-validation
 	@echo "$(BLUE)Training a single model with cross-validation...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model cv --cv-splits 10 --estimator $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model_cv --cv-splits 10 --estimator $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Cross-validation training complete.$(RESET)"
 
 .PHONY: model-train-inverse-grid
 model-train-inverse-grid:  # Run grid search + CV for an inverse model
 	@echo "$(BLUE)Running grid search for a single model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model grid --cv-splits 10 --estimator $(INVERSE_TARGET_ESTIMATOR) --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model_grid_search --cv-splits 10 --estimator $(INVERSE_TARGET_ESTIMATOR) --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
 	@echo "$(GREEN)Grid search training complete.$(RESET)"
 
 .PHONY: model-train-forward

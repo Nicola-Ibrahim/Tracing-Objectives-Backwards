@@ -10,8 +10,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import (
+    BaseEstimator,
     ProbabilisticEstimator,
-    TrainingHistory,
 )
 
 LOG2PI = float(np.log(2.0 * np.pi))
@@ -244,11 +244,32 @@ class CVAEEstimator(ProbabilisticEstimator):
 
     # -------------------- training -------------------- #
     def fit(
-        self, cond: NDArray[np.float64] = None, y: NDArray[np.float64] = None, **kwargs
+        self,
+        cond: NDArray[np.float64] = None,
+        y: NDArray[np.float64] = None,
+        tandem: tuple[BaseEstimator, float] | None = None,
+        **kwargs,
     ) -> None:
         """
-        Train the CVAE. Backwards-compatible with callers that pass X=...:
-        we accept `fit(cond, y)` positionally, or `fit(X=<cond>, y=...)` via kwargs.
+        Train the CVAE.
+
+        Args
+        ----
+        cond : array, shape (n_samples, cond_dim)
+            Conditioning inputs (e.g. objectives).
+        y : array, shape (n_samples, y_dim)
+            Targets (e.g. decisions).
+        tandem : (forward_model, tandem_weight) or None
+            If provided, a tandem loss term is added:
+
+                loss = recon_nll + beta * KL + lambda * L_tandem
+
+            where:
+                forward_model : BaseEstimator with .predict(...)
+                    Typically a forward surrogate mapping decisions -> objectives.
+                tandem_weight : lambda >= 0.
+        **kwargs :
+            For backward compatibility. If `X` is provided, it is treated as `cond`.
         """
         # Back-compat shim
         if cond is None and "X" in kwargs:
@@ -261,11 +282,13 @@ class CVAEEstimator(ProbabilisticEstimator):
         if cond is None or y is None:
             raise TypeError("fit() requires arguments: cond, y")
 
+        # Base validation (sets _X_dim/_y_dim in BaseEstimator)
         super().fit(cond, y)
 
         self._cond_dim = int(cond.shape[1])
         self._y_dim = int(y.shape[1])
 
+        # Networks
         self._encoder = CVAEEncoder(
             y_dim=self._y_dim,
             cond_dim=self._cond_dim,
@@ -299,7 +322,14 @@ class CVAEEstimator(ProbabilisticEstimator):
         )
         opt = torch.optim.Adam(params, lr=self._learning_rate)
 
-        self._training_history = TrainingHistory()
+        # Unpack tandem
+        if tandem is not None:
+            forward_model, tandem_weight = tandem
+            tandem_weight = float(tandem_weight)
+        else:
+            forward_model, tandem_weight = None, 0.0
+
+        has_tandem = forward_model is not None and tandem_weight > 0.0
 
         def kl_gaussians(mu_q, logvar_q, mu_p, logvar_p):
             """Closed-form KL for diagonal Gaussians (elementwise → sum)."""
@@ -315,6 +345,7 @@ class CVAEEstimator(ProbabilisticEstimator):
             return torch.mean(torch.sum(kl_per_dim, dim=1))
 
         for epoch in range(1, self.epochs + 1):
+            # β-warmup
             beta = self.beta_final * (
                 min(1.0, epoch / max(1, self.kl_warmup)) if self.kl_warmup > 0 else 1.0
             )
@@ -325,6 +356,7 @@ class CVAEEstimator(ProbabilisticEstimator):
             self._prior_net.train()
             train_nll_sum = 0.0
             train_kl_sum = 0.0
+            train_tandem_sum = 0.0
 
             for cond_b, y_b in train_loader:
                 cond_b = cond_b.to(self.device)
@@ -344,16 +376,37 @@ class CVAEEstimator(ProbabilisticEstimator):
                 recon_nll = CVAEDecoderGaussian.gaussian_nll(y_b, mu_y, logvar_y)
                 kl = kl_gaussians(mu_q, logvar_q, mu_p, logvar_p)
 
-                loss = recon_nll + beta * kl
+                base_loss = recon_nll + beta * kl
+
+                tandem_loss = torch.tensor(0.0, device=self.device)
+                if has_tandem:
+                    # Treat mu_y as our decision estimate x_hat
+                    x_hat = mu_y  # (B, y_dim) – here y_dim ≈ decision dim
+                    x_hat_np = (
+                        x_hat.detach().cpu().numpy().astype(np.float64, copy=False)
+                    )
+                    # forward_model is a BaseEstimator, works in numpy space
+                    cond_hat_np = forward_model.predict(x_hat_np)
+                    cond_hat = torch.as_tensor(
+                        cond_hat_np, dtype=torch.float32, device=self.device
+                    )
+                    # Compare to conditioning cond_b (objectives)
+                    tandem_loss = F.mse_loss(cond_hat, cond_b)
+
+                loss = base_loss + tandem_weight * tandem_loss
                 loss.backward()
                 opt.step()
 
                 train_nll_sum += float(recon_nll.item())
                 train_kl_sum += float(kl.item())
+                train_tandem_sum += float(tandem_loss.item())
 
             avg_train_nll = train_nll_sum / max(1, len(train_loader))
             avg_train_kl = train_kl_sum / max(1, len(train_loader))
-            avg_train = avg_train_nll + beta * avg_train_kl
+            avg_train_tandem = train_tandem_sum / max(1, len(train_loader))
+            avg_train = (
+                avg_train_nll + beta * avg_train_kl + tandem_weight * avg_train_tandem
+            )
 
             # ---- validate ----
             self._encoder.eval()
@@ -361,6 +414,8 @@ class CVAEEstimator(ProbabilisticEstimator):
             self._prior_net.eval()
             val_nll_sum = 0.0
             val_kl_sum = 0.0
+            val_tandem_sum = 0.0
+
             with torch.no_grad():
                 for cond_v, y_v in val_loader:
                     cond_v = cond_v.to(self.device)
@@ -378,21 +433,45 @@ class CVAEEstimator(ProbabilisticEstimator):
                     )
                     kl_v = kl_gaussians(mu_q_v, logvar_q_v, mu_p_v, logvar_p_v)
 
+                    base_val = recon_nll_v + beta * kl_v
+
+                    tandem_v = torch.tensor(0.0, device=self.device)
+                    if has_tandem:
+                        x_hat_v = mu_y_v
+                        x_hat_v_np = (
+                            x_hat_v.detach()
+                            .cpu()
+                            .numpy()
+                            .astype(np.float64, copy=False)
+                        )
+                        cond_hat_v_np = forward_model.predict(x_hat_v_np)
+                        cond_hat_v = torch.as_tensor(
+                            cond_hat_v_np, dtype=torch.float32, device=self.device
+                        )
+                        tandem_v = F.mse_loss(cond_hat_v, cond_v)
+
+                    total_val = base_val + tandem_weight * tandem_v
+
                     val_nll_sum += float(recon_nll_v.item())
                     val_kl_sum += float(kl_v.item())
+                    val_tandem_sum += float(tandem_v.item())
 
             avg_val_nll = val_nll_sum / max(1, len(val_loader))
             avg_val_kl = val_kl_sum / max(1, len(val_loader))
-            avg_val = avg_val_nll + beta * avg_val_kl
+            avg_val_tandem = val_tandem_sum / max(1, len(val_loader))
+            avg_val = avg_val_nll + beta * avg_val_kl + tandem_weight * avg_val_tandem
 
+            # Log everything: total loss + decomposed parts
             self._training_history.log(
                 epoch=epoch,
                 train_loss=avg_train,
                 val_loss=avg_val,
                 train_recon=avg_train_nll,
                 train_kl=avg_train_kl,
+                train_tandem=avg_train_tandem,
                 val_recon=avg_val_nll,
                 val_kl=avg_val_kl,
+                val_tandem=avg_val_tandem,
                 beta=beta,
             )
 
