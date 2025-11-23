@@ -1,5 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
+import pandas as pd
 
 
 def _finite(values) -> np.ndarray:
@@ -49,17 +50,8 @@ def add_residuals_vs_fitted(
     col: int = 1,
 ) -> None:
     """
-    Plot residuals vs fitted values.
-
-    Args:
-        fig: Plotly figure to mutate.
-        row: Target subplot row (1-indexed).
-        fitted: Predicted values aligned with residuals.
-        resid: Residuals (observed - predicted).
-        label: Legend suffix identifying the split (e.g. "train").
-        col: Target subplot column (default: 1).
+    Plot residuals vs fitted values with enhanced styling.
     """
-    # Derive consistent axis limits so comparisons remain fair across estimators.
     fitted_limits = _pad_range(_percentile_limits(fitted))
     resid_limits = _pad_range(_symmetric_limits(resid))
 
@@ -70,7 +62,16 @@ def add_residuals_vs_fitted(
             y=resid,
             mode="markers",
             name=f"Residuals ({label})",
-            marker=dict(opacity=0.35, size=6),
+            marker=dict(
+                opacity=0.6,
+                size=5,
+                color=resid,
+                colorscale="RdBu",
+                cmid=0,
+                showscale=False,
+                line=dict(width=0.5, color="DarkSlateGrey"),
+            ),
+            hovertemplate="<b>Fitted</b>: %{x:.4f}<br><b>Resid</b>: %{y:.4f}<extra></extra>",
         ),
         row=row,
         col=col,
@@ -82,18 +83,29 @@ def add_residuals_vs_fitted(
             y=[0.0, 0.0],
             mode="lines",
             name="Zero residual",
-            line=dict(color="black", width=1),
+            line=dict(color="black", width=1.5, dash="dash"),
             showlegend=False,
+            hoverinfo="skip",
         ),
         row=row,
         col=col,
     )
     # Apply the normalized ranges to both axes.
     fig.update_xaxes(
-        title_text="Fitted (norm)", range=list(fitted_limits), row=row, col=col
+        title_text="Fitted (norm)",
+        range=list(fitted_limits),
+        row=row,
+        col=col,
+        gridcolor="lightgrey",
     )
     fig.update_yaxes(
-        title_text="Residual (norm)", range=list(resid_limits), row=row, col=col
+        title_text="Residual (norm)",
+        range=list(resid_limits),
+        row=row,
+        col=col,
+        gridcolor="lightgrey",
+        zeroline=True,
+        zerolinecolor="grey",
     )
 
 
@@ -106,51 +118,48 @@ def add_residual_hist(
     col: int = 1,
 ) -> None:
     """
-    Plot a residual histogram with density scaling.
-
-    Args:
-        fig: Plotly figure to mutate.
-        row: Target subplot row (1-indexed).
-        resid: Residual values to bin.
-        label: Legend suffix identifying the split.
-        col: Target subplot column (default: 1).
+    Plot a residual histogram with density scaling and KDE-like look.
     """
-    # Use symmetric limits matching the scatter view.
     resid_limits = _pad_range(_symmetric_limits(resid))
-    # Histogram plotted as density for apples-to-apples comparison across splits.
     fig.add_trace(
         go.Histogram(
             x=resid,
-            nbinsx=40,
+            nbinsx=50,
             histnorm="probability density",
             name=f"Resid ({label})",
             opacity=0.7,
+            marker=dict(color="Teal", line=dict(width=0.5, color="white")),
+            hovertemplate="<b>Resid</b>: %{x:.4f}<br><b>Density</b>: %{y:.4f}<extra></extra>",
         ),
         row=row,
         col=col,
     )
-    # Highlight zero to make bias easy to spot.
+    # Highlight zero
     vals = resid[np.isfinite(resid)]
     if vals.size:
-        counts, _ = np.histogram(vals, bins=40, density=True)
+        counts, _ = np.histogram(vals, bins=50, density=True)
         ymax = float(np.nanmax(counts)) if counts.size else 1.0
         fig.add_trace(
             go.Scatter(
                 x=[0.0, 0.0],
-                y=[0.0, ymax * 1.05],
+                y=[0.0, ymax * 1.1],
                 mode="lines",
                 name="Zero",
-                line=dict(color="black", width=1),
+                line=dict(color="black", width=1.5, dash="dash"),
                 showlegend=False,
+                hoverinfo="skip",
             ),
             row=row,
             col=col,
         )
-    # Clamp x-axis to the shared residual limits.
     fig.update_xaxes(
-        title_text="Residual (norm)", range=list(resid_limits), row=row, col=col
+        title_text="Residual (norm)",
+        range=list(resid_limits),
+        row=row,
+        col=col,
+        gridcolor="lightgrey",
     )
-    fig.update_yaxes(title_text="Density", row=row, col=col)
+    fig.update_yaxes(title_text="Density", row=row, col=col, gridcolor="lightgrey")
 
 
 def add_joint_residual(
@@ -162,47 +171,40 @@ def add_joint_residual(
     resid_y2,
 ) -> None:
     """
-    Plot a joint density of two residual dimensions.
-
-    Args:
-        fig: Plotly figure to mutate.
-        row: Target subplot row.
-        col: Target subplot column.
-        resid_y1: Residuals for the first dimension.
-        resid_y2: Residuals for the second dimension.
+    Plot a joint density of two residual dimensions with improved contours.
     """
-    # Filter NaNs so contours render cleanly.
     vx = resid_y1[np.isfinite(resid_y1)]
     vy = resid_y2[np.isfinite(resid_y2)]
-    # Heatmap contours show joint density.
+    
     fig.add_trace(
         go.Histogram2dContour(
             x=vx,
             y=vy,
-            ncontours=20,
-            contours_coloring="heatmap",
+            ncontours=25,
+            colorscale="Viridis",
             showscale=False,
             name="Residual density",
-            opacity=0.85,
+            opacity=0.8,
+            hovertemplate="<b>Resid 1</b>: %{x:.4f}<br><b>Resid 2</b>: %{y:.4f}<br><b>Count</b>: %{z}<extra></extra>",
         ),
         row=row,
         col=col,
     )
-    # Scatter overlay reveals the actual residual samples.
     fig.add_trace(
         go.Scatter(
             x=vx,
             y=vy,
             mode="markers",
             name="Residuals",
-            marker=dict(size=4, opacity=0.25),
+            marker=dict(size=3, opacity=0.3, color="black"),
             showlegend=False,
+            hoverinfo="skip",
         ),
         row=row,
         col=col,
     )
-    fig.update_xaxes(title_text="Residual y1 (norm)", row=row, col=col)
-    fig.update_yaxes(title_text="Residual y2 (norm)", row=row, col=col)
+    fig.update_xaxes(title_text="Residual y1 (norm)", row=row, col=col, gridcolor="lightgrey")
+    fig.update_yaxes(title_text="Residual y2 (norm)", row=row, col=col, gridcolor="lightgrey")
 
 
 def add_loss_curves(
@@ -213,17 +215,10 @@ def add_loss_curves(
     col: int = 1,
 ) -> None:
     """
-    Draw training/validation/test loss curves.
-
-    Args:
-        fig: Plotly figure to mutate.
-        row: Target subplot row.
-        loss_history: Loss history payload (dict or model) compatible with .dict().
-        col: Target subplot column (default: 1).
+    Draw training/validation/test loss curves with better styling.
     """
     if loss_history is None:
         return
-    # Accept dict-like objects (Pydantic, dataclass, plain dict).
     lh = loss_history
     if hasattr(lh, "model_dump"):
         lh = lh.model_dump()
@@ -231,14 +226,14 @@ def add_loss_curves(
         lh = lh.dict()
     if not isinstance(lh, dict):
         return
-    # Extract time/bin axes and loss arrays (empty list fallback keeps logic simple).
+
     bins = list(lh.get("bins", []))
     train = list(lh.get("train_loss", []))
     val = list(lh.get("val_loss", []))
     test = list(lh.get("test_loss", []))
     n_tr = list(lh.get("n_train", []))
     bin_type: str = str(lh.get("bin_type", "bin"))
-    # Select an x-axis label/value sequence that matches the binning strategy.
+
     if bin_type == "train_fraction" and n_tr:
         x_vals, x_label = n_tr, "Number of Training Samples"
     elif bin_type == "epoch":
@@ -246,45 +241,109 @@ def add_loss_curves(
     else:
         x_vals = bins if bins else list(range(len(train)))
         x_label = {"param": "Parameter", "bin": "Bin"}.get(bin_type, bin_type.title())
-    # Plot each curve only if values exist.
+
     if train:
         fig.add_trace(
-            go.Scatter(x=x_vals, y=train, mode="lines+markers", name="Train"),
+            go.Scatter(
+                x=x_vals, 
+                y=train, 
+                mode="lines", 
+                name="Train Loss",
+                line=dict(color="RoyalBlue", width=2),
+                hovertemplate="<b>Train</b>: %{y:.4f}<extra></extra>"
+            ),
             row=row,
             col=col,
         )
     if any(v is not None for v in val):
         fig.add_trace(
-            go.Scatter(x=x_vals, y=val, mode="lines+markers", name="Validation"),
+            go.Scatter(
+                x=x_vals, 
+                y=val, 
+                mode="lines", 
+                name="Val Loss",
+                line=dict(color="FireBrick", width=2),
+                hovertemplate="<b>Val</b>: %{y:.4f}<extra></extra>"
+            ),
             row=row,
             col=col,
         )
     if any(v is not None for v in test):
         fig.add_trace(
-            go.Scatter(x=x_vals, y=test, mode="lines+markers", name="Test"),
+            go.Scatter(
+                x=x_vals, 
+                y=test, 
+                mode="lines", 
+                name="Test Loss",
+                line=dict(color="ForestGreen", width=2, dash="dot"),
+                hovertemplate="<b>Test</b>: %{y:.4f}<extra></extra>"
+            ),
             row=row,
             col=col,
         )
-    fig.update_xaxes(title_text=x_label, row=row, col=col)
-    fig.update_yaxes(title_text="Loss / Score", row=row, col=col)
+    fig.update_xaxes(title_text=x_label, row=row, col=col, gridcolor="lightgrey")
+    fig.update_yaxes(title_text="Loss / Score", row=row, col=col, gridcolor="lightgrey")
 
 
-def add_estimator_summary(fig: go.Figure, estimator) -> None:
+def add_estimator_summary(
+    fig: go.Figure, 
+    estimator, 
+    loss_history: dict | None = None
+) -> None:
     """
-    Annotate the figure with estimator parameters.
+    Annotate the figure with estimator parameters and final loss statistics.
 
     Args:
         fig: Plotly figure to mutate.
         estimator: Estimator object exposing .to_dict().
+        loss_history: Optional loss history dictionary.
     """
-    if not hasattr(estimator, "to_dict"):
+    lines = []
+    
+    # Add Estimator Parameters
+    if hasattr(estimator, "to_dict"):
+        params = estimator.to_dict()
+        if isinstance(params, dict) and params:
+            lines.append("<b>Estimator parameters:</b>")
+            lines.extend([f"{k}: {v}" for k, v in params.items()])
+            lines.append("<br>")  # Spacer
+
+    # Add Loss Statistics
+    if loss_history:
+        lh = loss_history
+        if hasattr(lh, "model_dump"):
+            lh = lh.model_dump()
+        elif hasattr(lh, "dict"):
+            lh = lh.dict()
+            
+        if isinstance(lh, dict):
+            lines.append("<b>Final Loss Statistics:</b>")
+            
+            # Helper to get last valid value
+            def get_last(key):
+                vals = lh.get(key, [])
+                valid = [v for v in vals if v is not None]
+                return valid[-1] if valid else None
+
+            train_loss = get_last("train_loss")
+            val_loss = get_last("val_loss")
+            test_loss = get_last("test_loss")
+
+            if train_loss is not None:
+                lines.append(f"Train Loss: {train_loss:.4f}")
+            if val_loss is not None:
+                lines.append(f"Val Loss: {val_loss:.4f}")
+            if test_loss is not None:
+                lines.append(f"Test Loss: {test_loss:.4f}")
+
+    if not lines:
         return
-    params = estimator.to_dict()
-    if not isinstance(params, dict) or not params:
-        return
-    # Format as lightweight HTML list.
-    lines = ["Estimator parameters:"] + [f"{k}: {v}" for k, v in params.items()]
+
     summary = "<br>".join(lines)
+    
+    # Update layout to make room for the annotation if needed
+    # (Though usually the right margin is sufficient)
+    
     fig.update_layout(
         legend=dict(
             x=1.02,
@@ -297,8 +356,9 @@ def add_estimator_summary(fig: go.Figure, estimator) -> None:
             traceorder="normal",
         ),
     )
-    line_count = max(len(lines), 1)
-    summary_top = max(0.0, 1.0 - 0.1 - 0.04 * (line_count - 1))
+    
+    # Calculate dynamic position based on content length
+    # But fixed top-right is usually best for summary
     fig.add_annotation(
         text=summary,
         align="left",
@@ -306,7 +366,7 @@ def add_estimator_summary(fig: go.Figure, estimator) -> None:
         xref="paper",
         yref="paper",
         x=1.02,
-        y=summary_top,
+        y=0.95,  # Slightly below top to avoid overlapping with potential title if wide
         xanchor="left",
         yanchor="top",
         bordercolor="rgba(0,0,0,0.2)",
@@ -315,3 +375,55 @@ def add_estimator_summary(fig: go.Figure, estimator) -> None:
         bgcolor="rgba(255,255,255,0.9)",
         font=dict(size=11),
     )
+
+
+def add_qq_plot(
+    fig: go.Figure,
+    *,
+    row: int,
+    resid,
+    label: str,
+    col: int = 1,
+) -> None:
+    """
+    Add a Q-Q plot to check for normality of residuals.
+    """
+    from scipy import stats
+
+    vals = _finite(resid)
+    if vals.size < 2:
+        return
+
+    (osm, osr), (slope, intercept, r) = stats.probplot(vals, dist="norm", fit=True)
+
+    fig.add_trace(
+        go.Scatter(
+            x=osm,
+            y=osr,
+            mode="markers",
+            name=f"Q-Q ({label})",
+            marker=dict(size=5, opacity=0.6, color="RoyalBlue"),
+            hovertemplate="<b>Theoretical</b>: %{x:.4f}<br><b>Sample</b>: %{y:.4f}<extra></extra>",
+        ),
+        row=row,
+        col=col,
+    )
+
+    x_line = np.array([osm.min(), osm.max()])
+    y_line = slope * x_line + intercept
+    fig.add_trace(
+        go.Scatter(
+            x=x_line,
+            y=y_line,
+            mode="lines",
+            name="Normal Fit",
+            line=dict(color="Red", width=1.5, dash="dash"),
+            showlegend=False,
+            hoverinfo="skip",
+        ),
+        row=row,
+        col=col,
+    )
+
+    fig.update_xaxes(title_text="Theoretical Quantiles", row=row, col=col, gridcolor="lightgrey")
+    fig.update_yaxes(title_text="Sample Quantiles", row=row, col=col, gridcolor="lightgrey")

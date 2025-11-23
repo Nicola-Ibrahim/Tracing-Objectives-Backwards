@@ -14,7 +14,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 from ...infrastructure.modeling.visualizers.performance import (
-    ModelPerformance2DVisualizer,
+    CompositeVisualizer,
 )
 
 
@@ -54,7 +54,7 @@ def main(
     handler = VisualizeModelPerformanceCommandHandler(
         model_artificat_repo=FileSystemModelArtifactRepository(),
         processed_dataset_repo=FileSystemDatasetRepository(),
-        visualizer=ModelPerformance2DVisualizer(),
+        visualizer=CompositeVisualizer(),
     )
     command = VisualizeModelPerformanceCommand(
         estimator_type=EstimatorTypeEnum(estimator_name),

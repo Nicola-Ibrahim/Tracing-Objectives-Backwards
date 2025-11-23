@@ -14,7 +14,14 @@ def add_fit_1d(
 ) -> None:
     order = np.argsort(X_red)
     fig.add_trace(
-        go.Scatter(x=X_red[order], y=center[order], mode="lines", name=name_center),
+        go.Scatter(
+            x=X_red[order], 
+            y=center[order], 
+            mode="lines", 
+            name=name_center,
+            line=dict(color="RoyalBlue", width=3),
+            hovertemplate="<b>%{y:.4f}</b><extra></extra>"
+        ),
         row=row,
         col=1,
     )
@@ -25,9 +32,9 @@ def add_fit_1d(
             x=ribbon_x,
             y=ribbon_y,
             fill="toself",
-            fillcolor="rgba(0,100,200,0.15)",
+            fillcolor="rgba(65, 105, 225, 0.2)",
             line=dict(color="rgba(255,255,255,0)"),
-            name="5–95%",
+            name="5–95% Conf",
             hoverinfo="skip",
         ),
         row=row,
@@ -51,7 +58,8 @@ def add_points_overlay(
                 y=y_train_1d[:, 0],
                 mode="markers",
                 name="Train",
-                marker=dict(opacity=0.35),
+                marker=dict(opacity=0.5, size=5, color="black"),
+                hovertemplate="<b>Train</b>: %{y:.4f}<extra></extra>",
             ),
             row=row,
             col=1,
@@ -63,7 +71,8 @@ def add_points_overlay(
                 y=y_test_1d[:, 0],
                 mode="markers",
                 name="Test",
-                marker=dict(opacity=0.35),
+                marker=dict(opacity=0.7, size=6, color="red", symbol="diamond"),
+                hovertemplate="<b>Test</b>: %{y:.4f}<extra></extra>",
             ),
             row=row,
             col=1,

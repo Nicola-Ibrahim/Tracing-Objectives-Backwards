@@ -40,9 +40,15 @@ def add_surfaces_2d(
             x=GX1,
             y=GX2,
             z=z_y1,
-            opacity=0.45,
+            opacity=0.8,
+            colorscale="Viridis",
             showscale=False,
-            name=f"{_sym(output_symbol, 1)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
+            name=f"{_sym(output_symbol, 1)} Surface",
+            contours_z=dict(
+                show=True, usecolormap=True, highlightcolor="limegreen", project_z=True
+            ),
+            lighting=dict(ambient=0.4, diffuse=0.5, roughness=0.9, specular=0.1),
+            hovertemplate=f"<b>{_sym(input_symbol, 1)}</b>: %{{x:.4f}}<br><b>{_sym(input_symbol, 2)}</b>: %{{y:.4f}}<br><b>{_sym(output_symbol, 1)}</b>: %{{z:.4f}}<extra></extra>",
         ),
         row=row,
         col=1,
@@ -52,9 +58,15 @@ def add_surfaces_2d(
             x=GX1,
             y=GX2,
             z=z_y2,
-            opacity=0.45,
+            opacity=0.8,
+            colorscale="Plasma",
             showscale=False,
-            name=f"{_sym(output_symbol, 2)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
+            name=f"{_sym(output_symbol, 2)} Surface",
+            contours_z=dict(
+                show=True, usecolormap=True, highlightcolor="limegreen", project_z=True
+            ),
+            lighting=dict(ambient=0.4, diffuse=0.5, roughness=0.9, specular=0.1),
+            hovertemplate=f"<b>{_sym(input_symbol, 1)}</b>: %{{x:.4f}}<br><b>{_sym(input_symbol, 2)}</b>: %{{y:.4f}}<br><b>{_sym(output_symbol, 2)}</b>: %{{z:.4f}}<extra></extra>",
         ),
         row=row,
         col=2,
@@ -68,7 +80,8 @@ def add_surfaces_2d(
             z=y_train[:, 0],
             mode="markers",
             name=f"Train {_sym(output_symbol, 1)}",
-            marker=dict(size=3, opacity=0.5),
+            marker=dict(size=3, opacity=0.6, color="black"),
+            hovertemplate=f"<b>Train</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 1)}: %{{z:.4f}}<extra></extra>",
         ),
         row=row,
         col=1,
@@ -80,7 +93,8 @@ def add_surfaces_2d(
             z=y_train[:, 1],
             mode="markers",
             name=f"Train {_sym(output_symbol, 2)}",
-            marker=dict(size=3, opacity=0.5),
+            marker=dict(size=3, opacity=0.6, color="black"),
+            hovertemplate=f"<b>Train</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 2)}: %{{z:.4f}}<extra></extra>",
         ),
         row=row,
         col=2,
@@ -95,7 +109,8 @@ def add_surfaces_2d(
                 z=y_test[:, 0],
                 mode="markers",
                 name=f"Test {_sym(output_symbol, 1)}",
-                marker=dict(size=3, opacity=0.5),
+                marker=dict(size=3, opacity=0.8, color="red", symbol="diamond"),
+                hovertemplate=f"<b>Test</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 1)}: %{{z:.4f}}<extra></extra>",
             ),
             row=row,
             col=1,
@@ -107,7 +122,8 @@ def add_surfaces_2d(
                 z=y_test[:, 1],
                 mode="markers",
                 name=f"Test {_sym(output_symbol, 2)}",
-                marker=dict(size=3, opacity=0.5),
+                marker=dict(size=3, opacity=0.8, color="red", symbol="diamond"),
+                hovertemplate=f"<b>Test</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 2)}: %{{z:.4f}}<extra></extra>",
             ),
             row=row,
             col=2,
@@ -148,51 +164,58 @@ def add_surfaces_2d(
     def _ticks(rng, n=5):
         return list(np.round(np.linspace(rng[0], rng[1], n), 5))
 
-    scene1_axes = dict(
+    scene_common = dict(
         xaxis=dict(
             title=_sym(input_symbol, 1),
             range=list(x_rng),
             tickmode="array",
             tickvals=_ticks(x_rng),
+            backgroundcolor="rgb(245, 245, 245)",
+            gridcolor="white",
+            showbackground=True,
+            zerolinecolor="white",
         ),
         yaxis=dict(
             title=_sym(input_symbol, 2),
             range=list(y_rng),
             tickmode="array",
             tickvals=_ticks(y_rng),
+            backgroundcolor="rgb(245, 245, 245)",
+            gridcolor="white",
+            showbackground=True,
+            zerolinecolor="white",
         ),
+        aspectmode="cube",
+    )
+
+    scene1_axes = scene_common.copy()
+    scene1_axes.update(
         zaxis=dict(
             title=_sym(output_symbol, 1),
             range=list(z_rng),
             tickmode="array",
             tickvals=_ticks(z_rng),
-        ),
-        aspectmode="cube",  # equal scaling on x/y/z
+            backgroundcolor="rgb(245, 245, 245)",
+            gridcolor="white",
+            showbackground=True,
+            zerolinecolor="white",
+        )
     )
-    scene2_axes = dict(
-        xaxis=dict(
-            title=_sym(input_symbol, 1),
-            range=list(x_rng),
-            tickmode="array",
-            tickvals=_ticks(x_rng),
-        ),
-        yaxis=dict(
-            title=_sym(input_symbol, 2),
-            range=list(y_rng),
-            tickmode="array",
-            tickvals=_ticks(y_rng),
-        ),
+
+    scene2_axes = scene_common.copy()
+    scene2_axes.update(
         zaxis=dict(
             title=_sym(output_symbol, 2),
             range=list(z_rng),
             tickmode="array",
             tickvals=_ticks(z_rng),
-        ),
-        aspectmode="cube",
+            backgroundcolor="rgb(245, 245, 245)",
+            gridcolor="white",
+            showbackground=True,
+            zerolinecolor="white",
+        )
     )
 
-    # Apply identical axes to both scenes (recommended approach: update_scenes)
-    fig.update_scenes(
-        row=row, col=1, **scene1_axes
-    )  # control 3D scene ranges/ticks/aspect here, not per-trace. :contentReference[oaicite:2]{index=2}
+    # Apply identical axes to both scenes
+    fig.update_scenes(row=row, col=1, **scene1_axes)
     fig.update_scenes(row=row, col=2, **scene2_axes)

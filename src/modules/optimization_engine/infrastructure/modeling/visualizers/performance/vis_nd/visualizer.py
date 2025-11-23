@@ -27,7 +27,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         loss_history = data["loss_history"]
 
         fig = make_subplots(
-            rows=5,
+            rows=6,
             cols=1,
             specs=[
                 [{"type": "xy"}],
@@ -35,15 +35,18 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
                 [{"type": "xy"}],
                 [{"type": "xy"}],
                 [{"type": "xy"}],
+                [{"type": "xy"}],
             ],
-            vertical_spacing=0.12,
+            vertical_spacing=0.08,
             subplot_titles=(
                 f"{title} — y0 (normalized)",
                 "Training / Validation / Test",
                 "Residuals vs Fitted (train + test)",
                 "Residual distribution (train + test)",
                 "Residual joint distribution",
+                "Q-Q Plot",
             ),
+            row_heights=[0.2, 0.1, 0.1, 0.1, 0.15, 0.15],
         )
 
         # Row 1: reduce, center+band, overlay
@@ -106,11 +109,18 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
                 fig, row=5, col=1, resid_y1=resid_te[:, 0], resid_y2=resid_te[:, 1]
             )
 
-        add_estimator_summary(fig, est)
+        # Row 6: Q-Q Plot
+        from ..common.diagnostics import add_qq_plot
+
+        if resid_te is not None:
+            add_qq_plot(fig, row=6, resid=resid_te[:, 0], label="y0 (test)")
+        add_qq_plot(fig, row=6, resid=resid_tr[:, 0], label="y0 (train)")
+
+        add_estimator_summary(fig, est, loss_history)
         fig.update_layout(
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
-            height=1100,
+            height=1600,
             width=1000,
             margin=dict(l=60, r=280, t=80, b=60),
         )

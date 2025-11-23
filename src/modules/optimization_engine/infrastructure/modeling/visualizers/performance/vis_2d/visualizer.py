@@ -45,10 +45,12 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             f"Residual distribution ({_sym(output_symbol, 1)})",
             f"Residual distribution ({_sym(output_symbol, 2)})",
             f"Residual joint distribution ({_sym(output_symbol, 1)} vs {_sym(output_symbol, 2)})",
+            f"Q-Q Plot ({_sym(output_symbol, 1)})",
+            f"Q-Q Plot ({_sym(output_symbol, 2)})",
         ]
 
         fig = make_subplots(
-            rows=5,
+            rows=6,
             cols=2,
             specs=[
                 [{"type": "surface"}, {"type": "surface"}],
@@ -56,11 +58,12 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 [{"type": "xy"}, {"type": "xy"}],
                 [{"type": "xy"}, {"type": "xy"}],
                 [{"type": "xy", "colspan": 2}, None],
+                [{"type": "xy"}, {"type": "xy"}],
             ],
             vertical_spacing=0.06,
             horizontal_spacing=0.07,
             subplot_titles=subplot_titles,
-            row_heights=[0.42, 0.14, 0.18, 0.18, 0.08],
+            row_heights=[0.42, 0.14, 0.18, 0.18, 0.08, 0.15],
         )
 
         # Row 1
@@ -164,12 +167,45 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 resid_y2=resid_te[:, 1],
             )
 
-        add_estimator_summary(fig, est)
+        # Row 6: Q-Q Plots
+        from ..common.diagnostics import add_qq_plot
+
+        if resid_te is not None:
+            add_qq_plot(
+                fig,
+                row=6,
+                col=1,
+                resid=resid_te[:, 0],
+                label=f"{_sym(output_symbol, 1)} (test)",
+            )
+            add_qq_plot(
+                fig,
+                row=6,
+                col=2,
+                resid=resid_te[:, 1],
+                label=f"{_sym(output_symbol, 2)} (test)",
+            )
+        add_qq_plot(
+            fig,
+            row=6,
+            col=1,
+            resid=resid_tr[:, 0],
+            label=f"{_sym(output_symbol, 1)} (train)",
+        )
+        add_qq_plot(
+            fig,
+            row=6,
+            col=2,
+            resid=resid_tr[:, 1],
+            label=f"{_sym(output_symbol, 2)} (train)",
+        )
+
+        add_estimator_summary(fig, est, loss_history)
         fig.update_layout(
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
             height=1600,
-            width=1600,
+            width=1100,
             margin=dict(l=60, r=280, t=80, b=60),
         )
         fig.show()
