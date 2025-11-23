@@ -15,6 +15,11 @@ class VisualizeModelPerformanceCommand(BaseModel):
         "inverse",
         description="Which mapping direction ('inverse' or 'forward') to visualize.",
     )
+    model_number: int | None = Field(
+        None,
+        ge=1,
+        description="Nth most recent model to visualize (1 = latest). Defaults to latest.",
+    )
 
     class Config:
         use_enum_values = True

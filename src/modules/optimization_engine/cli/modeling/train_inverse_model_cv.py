@@ -1,46 +1,83 @@
 import click
 
-from .train_inverse_model_common import (
-    _build_inverse_cv_handler,
-    _common_training_options,
-    _create_estimator_params,
-    _make_validation_metric_configs,
-    _parse_overrides,
-    TrainInverseModelCrossValidationCommand,
+from ...application.dtos import (
+    COCOEstimatorParams,
+    CVAEEstimatorParams,
+    CVAEMDNEstimatorParams,
+    EstimatorParams,
+    GaussianProcessEstimatorParams,
+    MDNEstimatorParams,
+    NeuralNetworkEstimatorParams,
+    RBFEstimatorParams,
+    ValidationMetricConfig,
 )
+from ...application.factories.estimator import EstimatorFactory
+from ...application.factories.mertics import MetricFactory
+from ...application.modeling.train_inverse_model_cv import (
+    TrainInverseModelCrossValidationCommand,
+    TrainInverseModelCrossValidationCommandHandler,
+)
+from ...infrastructure.datasets.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
+)
+from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.modeling.repositories.model_artifact_repo import (
+    FileSystemModelArtifactRepository,
+)
+
+DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
+INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
+    "cvae": CVAEEstimatorParams,
+    "cvae_mdn": CVAEMDNEstimatorParams,
+    "gaussian_process": GaussianProcessEstimatorParams,
+    "mdn": MDNEstimatorParams,
+    "neural_network": NeuralNetworkEstimatorParams,
+    "rbf": RBFEstimatorParams,
+    "coco": COCOEstimatorParams,
+}
+
+
+def _create_estimator_params(estimation: str) -> EstimatorParams:
+    try:
+        params_cls = INVERSE_ESTIMATOR_REGISTRY[estimation]
+    except KeyError as exc:  # pragma: no cover - enforced by click.Choice
+        raise click.BadParameter(
+            f"Unsupported estimation '{estimation}'", param_hint="--estimation"
+        ) from exc
+    return params_cls()
+
+
+def _default_metric_configs() -> list[ValidationMetricConfig]:
+    return [
+        ValidationMetricConfig(type=name, params={})
+        for name in DEFAULT_VALIDATION_METRICS
+    ]
+
+
+def _build_inverse_cv_handler() -> TrainInverseModelCrossValidationCommandHandler:
+    return TrainInverseModelCrossValidationCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="InterpolationCVCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
 
 
 @click.command(help="Train inverse model with k-fold cross-validation")
-@_common_training_options
 @click.option(
-    "--cv-splits",
-    type=int,
-    default=5,
+    "--estimation",
+    type=click.Choice(sorted(INVERSE_ESTIMATOR_REGISTRY.keys())),
+    default="mdn",
     show_default=True,
-    help="Number of cross-validation splits (must be > 1)",
+    help="Which estimator configuration to use.",
 )
-def cli(
-    estimator: str,
-    params: tuple[str, ...],
-    metrics: tuple[str, ...],
-    random_state: int,
-    learning_curve_steps: int,
-    epochs: int,
-    cv_splits: int,
-) -> None:
-    if cv_splits <= 1:
-        raise click.BadParameter("must be greater than 1", param_hint="--cv-splits")
-
+def cli(estimation: str) -> None:
     handler = _build_inverse_cv_handler()
-    overrides = _parse_overrides(params)
-    estimator_params = _create_estimator_params(estimator, overrides)
+    estimator_params = _create_estimator_params(estimation)
     command = TrainInverseModelCrossValidationCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_validation_metric_configs(metrics),
-        random_state=random_state,
-        cv_splits=cv_splits,
-        learning_curve_steps=learning_curve_steps,
-        epochs=epochs,
+        estimator_performance_metric_configs=_default_metric_configs(),
     )
     handler.execute(command)
 

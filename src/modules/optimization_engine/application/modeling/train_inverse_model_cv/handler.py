@@ -45,6 +45,8 @@ class TrainInverseModelCrossValidationCommandHandler:
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
         random_state = command.random_state
+        tandem_forward_type = command.tandem_forward_estimator_type
+        tandem_weight = command.tandem_weight
         cv_splits = command.cv_splits
         learning_curve_steps = command.learning_curve_steps
         epochs = command.epochs
@@ -60,7 +62,24 @@ class TrainInverseModelCrossValidationCommandHandler:
             "type": estimator.type,
             "mapping_direction": mapping_direction,
             "cv_splits": cv_splits,
+            "tandem_forward_estimator_type": tandem_forward_type,
+            "tandem_weight": tandem_weight,
         }
+
+        tandem: tuple[object, float] | None = None
+        if tandem_forward_type and tandem_weight > 0:
+            try:
+                forward_artifact = self._model_repository.get_latest_version(
+                    estimator_type=tandem_forward_type, mapping_direction="forward"
+                )
+                tandem = (forward_artifact.estimator, tandem_weight)
+                self._logger.log_info(
+                    f"Loaded forward model '{tandem_forward_type}' for tandem loss."
+                )
+            except Exception as exc:
+                self._logger.log_warning(
+                    f"Could not load forward model '{tandem_forward_type}' for tandem loss: {exc}. Proceeding without tandem."
+                )
 
         fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
             estimator=estimator,
@@ -73,6 +92,7 @@ class TrainInverseModelCrossValidationCommandHandler:
             n_splits=cv_splits,
             random_state=random_state,
             learning_curve_steps=learning_curve_steps,
+            tandem=tandem,
         )
         self._logger.log_info("Cross-validation workflow completed.")
 

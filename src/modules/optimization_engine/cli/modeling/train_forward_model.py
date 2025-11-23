@@ -1,6 +1,3 @@
-import ast
-from typing import Mapping, Sequence, Type
-
 import click
 
 from ...application.dtos import (
@@ -29,7 +26,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
-FORWARD_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
+FORWARD_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
     "coco": COCOEstimatorParams,
     "cvae": CVAEEstimatorParams,
     "cvae_mdn": CVAEMDNEstimatorParams,
@@ -40,105 +37,11 @@ FORWARD_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
 }
 
 
-def _literal(value: str):
-    try:
-        return ast.literal_eval(value)
-    except (ValueError, SyntaxError):
-        return value
-
-
-def _parse_overrides(pairs: Sequence[str]) -> dict[str, object]:
-    overrides: dict[str, object] = {}
-    for pair in pairs:
-        if "=" not in pair:
-            raise click.BadParameter(
-                f"Parameter override '{pair}' must be in the form key=value",
-                param_hint="--param",
-            )
-        key, raw_value = pair.split("=", 1)
-        overrides[key.strip()] = _literal(raw_value.strip())
-    return overrides
-
-
-def _build_forward_training_handler() -> TrainForwardModelCommandHandler:
-    return TrainForwardModelCommandHandler(
-        processed_data_repository=FileSystemDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="ForwardCMDLogger"),
-        estimator_factory=EstimatorFactory(),
-        metric_factory=MetricFactory(),
-    )
-
-
-def _make_validation_metric_configs(
-    metric_names: Sequence[str],
-) -> list[ValidationMetricConfig]:
-    return [ValidationMetricConfig(type=name, params={}) for name in metric_names]
-
-
-def _create_estimator_params(
-    estimator_key: str,
-    overrides: Mapping[str, object] | None = None,
-) -> EstimatorParams:
-    try:
-        params_cls = FORWARD_ESTIMATOR_REGISTRY[estimator_key]
-    except KeyError as exc:  # pragma: no cover - CLI guards choices
-        raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
-
-    overrides = dict(overrides or {})
-    return params_cls(**overrides) if overrides else params_cls()
-
-
-def _common_training_options(func):
-    options = [
-        click.option(
-            "--estimator",
-            type=click.Choice(sorted(FORWARD_ESTIMATOR_REGISTRY.keys())),
-            default=next(iter(FORWARD_ESTIMATOR_REGISTRY)),
-            show_default=True,
-            help="Which estimator configuration to use",
-        ),
-        click.option(
-            "--param",
-            "params",
-            multiple=True,
-            metavar="KEY=VALUE",
-            help="Override estimator parameter (may be supplied multiple times)",
-        ),
-        click.option(
-            "--metric",
-            "metrics",
-            multiple=True,
-            default=DEFAULT_VALIDATION_METRICS,
-            show_default=True,
-            help="Validation metrics to report",
-        ),
-        click.option(
-            "--random-state",
-            type=int,
-            default=42,
-            show_default=True,
-            help="Random seed for reproducibility",
-        ),
-        click.option(
-            "--learning-curve-steps",
-            type=int,
-            default=50,
-            show_default=True,
-            help="Number of steps for deterministic learning curves",
-        ),
-        click.option(
-            "--epochs",
-            type=int,
-            default=100,
-            show_default=True,
-            help="Epochs for probabilistic estimators",
-        ),
+def _default_metric_configs() -> list[ValidationMetricConfig]:
+    return [
+        ValidationMetricConfig(type=name, params={})
+        for name in DEFAULT_VALIDATION_METRICS
     ]
-
-    for option in reversed(options):
-        func = option(func)
-    return func
 
 
 @click.group(help="Train a forward model (single train/test split workflow)")
@@ -147,24 +50,25 @@ def cli() -> None:
 
 
 @cli.command(name="standard", help="Single train/test split training")
-@_common_training_options
-def command_standard(
-    estimator: str,
-    params: Sequence[str],
-    metrics: Sequence[str],
-    random_state: int,
-    learning_curve_steps: int,
-    epochs: int,
-) -> None:
-    handler = _build_forward_training_handler()
-    overrides = _parse_overrides(params)
-    estimator_params = _create_estimator_params(estimator, overrides)
+@click.option(
+    "--estimation",
+    type=click.Choice(sorted(FORWARD_ESTIMATOR_REGISTRY.keys())),
+    default="mdn",
+    show_default=True,
+    help="Which estimator configuration to use.",
+)
+def command_standard(estimation: str) -> None:
+    handler = TrainForwardModelCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="ForwardCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
+    estimator_params = FORWARD_ESTIMATOR_REGISTRY[estimation]()
     command = TrainForwardModelCommand(
         estimator_params=estimator_params,
-        estimator_performance_metric_configs=_make_validation_metric_configs(metrics),
-        random_state=random_state,
-        learning_curve_steps=learning_curve_steps,
-        epochs=epochs,
+        estimator_performance_metric_configs=_default_metric_configs(),
     )
     handler.execute(command)
 

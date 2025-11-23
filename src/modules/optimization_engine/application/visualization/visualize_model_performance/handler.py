@@ -19,10 +19,28 @@ class VisualizeModelPerformanceCommandHandler:
 
     def execute(self, command: VisualizeModelPerformanceCommand) -> None:
         # 1) Load raw data and model artifact from repository
-        model_artificat: ModelArtifact = self._model_artificat_repo.get_latest_version(
-            estimator_type=command.estimator_type,
-            mapping_direction=command.mapping_direction,
-        )
+        if command.model_number:
+            all_versions = self._model_artificat_repo.get_all_versions(
+                estimator_type=command.estimator_type,
+                mapping_direction=command.mapping_direction,
+            )
+            if not all_versions:
+                raise FileNotFoundError(
+                    f"No model versions found for type: '{command.estimator_type}' "
+                    f"and mapping_direction: '{command.mapping_direction}'"
+                )
+            index = command.model_number - 1
+            if index >= len(all_versions):
+                raise IndexError(
+                    f"Requested model number {command.model_number} exceeds "
+                    f"available versions ({len(all_versions)})."
+                )
+            model_artificat: ModelArtifact = all_versions[index]
+        else:
+            model_artificat = self._model_artificat_repo.get_latest_version(
+                estimator_type=command.estimator_type,
+                mapping_direction=command.mapping_direction,
+            )
         processed: ProcessedDataset = self._processed_repo.load(
             filename=command.processed_file_name, variant="processed"
         )

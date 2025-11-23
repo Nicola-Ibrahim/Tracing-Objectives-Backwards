@@ -48,6 +48,8 @@ class TrainInverseModelCommandHandler:
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
         random_state = command.random_state
+        tandem_forward_type = command.tandem_forward_estimator_type
+        tandem_weight = command.tandem_weight
         learning_curve_steps = command.learning_curve_steps
         epochs = command.epochs
 
@@ -61,7 +63,24 @@ class TrainInverseModelCommandHandler:
             **estimator.to_dict(),
             "type": estimator.type,
             "mapping_direction": mapping_direction,
+            "tandem_forward_estimator_type": tandem_forward_type,
+            "tandem_weight": tandem_weight,
         }
+
+        tandem: tuple[object, float] | None = None
+        if tandem_forward_type and tandem_weight > 0:
+            try:
+                forward_artifact = self._model_repository.get_latest_version(
+                    estimator_type=tandem_forward_type, mapping_direction="forward"
+                )
+                tandem = (forward_artifact.estimator, tandem_weight)
+                self._logger.log_info(
+                    f"Loaded forward model '{tandem_forward_type}' for tandem loss."
+                )
+            except Exception as exc:
+                self._logger.log_warning(
+                    f"Could not load forward model '{tandem_forward_type}' for tandem loss: {exc}. Proceeding without tandem."
+                )
 
         self._logger.log_info("Starting single train/test split workflow.")
         if isinstance(estimator, ProbabilisticEstimator):
@@ -69,19 +88,18 @@ class TrainInverseModelCommandHandler:
                 estimator=estimator,
                 X_train=X_train,
                 y_train=y_train,
+                tandem=tandem,
             )
         elif isinstance(estimator, DeterministicEstimator):
-            fitted_estimator, loss_history, metrics = (
-                DeterministicModelTrainer().train(
-                    estimator=estimator,
-                    X_train=X_train,
-                    y_train=y_train,
-                    X_test=X_test,
-                    y_test=y_test,
-                    learning_curve_steps=learning_curve_steps,
-                    validation_metrics=validation_metrics,
-                    random_state=random_state,
-                )
+            fitted_estimator, loss_history, metrics = DeterministicModelTrainer().train(
+                estimator=estimator,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
+                learning_curve_steps=learning_curve_steps,
+                validation_metrics=validation_metrics,
+                random_state=random_state,
             )
         else:  # pragma: no cover - defensive guard for unknown estimator types
             raise TypeError(f"Unsupported estimator type: {type(estimator)!r}")

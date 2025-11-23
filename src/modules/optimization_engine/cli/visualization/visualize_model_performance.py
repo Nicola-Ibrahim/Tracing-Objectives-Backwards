@@ -18,24 +18,6 @@ from ...infrastructure.modeling.visualizers.performance import (
 )
 
 
-def _build_handler() -> VisualizeModelPerformanceCommandHandler:
-    return VisualizeModelPerformanceCommandHandler(
-        model_artificat_repo=FileSystemModelArtifactRepository(),
-        processed_dataset_repo=FileSystemDatasetRepository(),
-        visualizer=ModelPerformance2DVisualizer(),
-    )
-
-
-def _coerce_estimator(value: str) -> EstimatorTypeEnum:
-    try:
-        return EstimatorTypeEnum(value)
-    except ValueError as exc:
-        valid = ", ".join(e.value for e in EstimatorTypeEnum)
-        raise click.BadParameter(
-            f"Unknown estimator '{value}'. Choose from: {valid}"
-        ) from exc
-
-
 @click.command(help="Visualize a trained model's performance diagnostics")
 @click.option(
     "--estimator",
@@ -57,13 +39,29 @@ def _coerce_estimator(value: str) -> EstimatorTypeEnum:
     show_default=True,
     help="Whether to visualize the inverse (objectives->decisions) or forward (decisions->objectives) model.",
 )
-def main(estimator_name: str, dataset_name: str, mapping_direction: str) -> None:
-    handler = _build_handler()
+@click.option(
+    "--model-number",
+    type=int,
+    default=None,
+    help="Nth most recent model to visualize (1 = latest). Defaults to latest.",
+)
+def main(
+    estimator_name: str,
+    dataset_name: str,
+    mapping_direction: str,
+    model_number: int | None,
+) -> None:
+    handler = VisualizeModelPerformanceCommandHandler(
+        model_artificat_repo=FileSystemModelArtifactRepository(),
+        processed_dataset_repo=FileSystemDatasetRepository(),
+        visualizer=ModelPerformance2DVisualizer(),
+    )
     command = VisualizeModelPerformanceCommand(
-        estimator_type=_coerce_estimator(estimator_name),
+        estimator_type=EstimatorTypeEnum(estimator_name),
         processed_file_name=dataset_name,
         data_file_name=dataset_name,
         mapping_direction=mapping_direction,
+        model_number=model_number,
     )
     handler.execute(command)
 

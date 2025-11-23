@@ -25,6 +25,17 @@ class TrainInverseModelCommand(BaseModel):
         description="Random seed used across train/test split & estimators.",
     )
 
+    tandem_forward_estimator_type: str | None = Field(
+        "mdn",
+        description="Estimator type string for the latest forward model to use in tandem loss.",
+    )
+
+    tandem_weight: float = Field(
+        1,
+        ge=0.0,
+        description="Non-negative weight applied to the tandem loss term. 0 disables tandem.",
+    )
+
     learning_curve_steps: int = Field(
         50, description="Number of learning-curve steps for deterministic estimators."
     )
