@@ -50,10 +50,17 @@ def add_residuals_vs_fitted(
     col: int = 1,
 ) -> None:
     """
-    Plot residuals vs fitted values with enhanced styling.
+    Plot residuals vs fitted values with enhanced styling and standard colors.
     """
     fitted_limits = _pad_range(_percentile_limits(fitted))
     resid_limits = _pad_range(_symmetric_limits(resid))
+
+    # Determine color based on label
+    color = "RoyalBlue"  # Default (Train)
+    if "test" in label.lower():
+        color = "FireBrick"
+    elif "val" in label.lower():
+        color = "ForestGreen"
 
     # Scatter each residual vs its fitted value.
     fig.add_trace(
@@ -65,10 +72,7 @@ def add_residuals_vs_fitted(
             marker=dict(
                 opacity=0.6,
                 size=5,
-                color=resid,
-                colorscale="RdBu",
-                cmid=0,
-                showscale=False,
+                color=color,
                 line=dict(width=0.5, color="DarkSlateGrey"),
             ),
             hovertemplate="<b>Fitted</b>: %{x:.4f}<br><b>Resid</b>: %{y:.4f}<extra></extra>",
@@ -118,17 +122,25 @@ def add_residual_hist(
     col: int = 1,
 ) -> None:
     """
-    Plot a residual histogram with density scaling and KDE-like look.
+    Plot a residual histogram with density scaling and standard colors.
     """
     resid_limits = _pad_range(_symmetric_limits(resid))
+    
+    # Determine color based on label
+    color = "RoyalBlue"  # Default (Train)
+    if "test" in label.lower():
+        color = "FireBrick"
+    elif "val" in label.lower():
+        color = "ForestGreen"
+
     fig.add_trace(
         go.Histogram(
             x=resid,
             nbinsx=50,
             histnorm="probability density",
             name=f"Resid ({label})",
-            opacity=0.7,
-            marker=dict(color="Teal", line=dict(width=0.5, color="white")),
+            opacity=0.6,
+            marker=dict(color=color, line=dict(width=0.5, color="white")),
             hovertemplate="<b>Resid</b>: %{x:.4f}<br><b>Density</b>: %{y:.4f}<extra></extra>",
         ),
         row=row,
@@ -171,7 +183,7 @@ def add_joint_residual(
     resid_y2,
 ) -> None:
     """
-    Plot a joint density of two residual dimensions with improved contours.
+    Plot a joint density of two residual dimensions.
     """
     vx = resid_y1[np.isfinite(resid_y1)]
     vy = resid_y2[np.isfinite(resid_y2)]
@@ -215,7 +227,7 @@ def add_loss_curves(
     col: int = 1,
 ) -> None:
     """
-    Draw training/validation/test loss curves with better styling.
+    Draw training/validation/test loss curves with standard colors.
     """
     if loss_history is None:
         return
@@ -262,7 +274,7 @@ def add_loss_curves(
                 y=val, 
                 mode="lines", 
                 name="Val Loss",
-                line=dict(color="FireBrick", width=2),
+                line=dict(color="ForestGreen", width=2),
                 hovertemplate="<b>Val</b>: %{y:.4f}<extra></extra>"
             ),
             row=row,
@@ -275,7 +287,7 @@ def add_loss_curves(
                 y=test, 
                 mode="lines", 
                 name="Test Loss",
-                line=dict(color="ForestGreen", width=2, dash="dot"),
+                line=dict(color="FireBrick", width=2, dash="dot"),
                 hovertemplate="<b>Test</b>: %{y:.4f}<extra></extra>"
             ),
             row=row,
@@ -292,11 +304,6 @@ def add_estimator_summary(
 ) -> None:
     """
     Annotate the figure with estimator parameters and final loss statistics.
-
-    Args:
-        fig: Plotly figure to mutate.
-        estimator: Estimator object exposing .to_dict().
-        loss_history: Optional loss history dictionary.
     """
     lines = []
     
@@ -341,9 +348,6 @@ def add_estimator_summary(
 
     summary = "<br>".join(lines)
     
-    # Update layout to make room for the annotation if needed
-    # (Though usually the right margin is sufficient)
-    
     fig.update_layout(
         legend=dict(
             x=1.02,
@@ -357,8 +361,6 @@ def add_estimator_summary(
         ),
     )
     
-    # Calculate dynamic position based on content length
-    # But fixed top-right is usually best for summary
     fig.add_annotation(
         text=summary,
         align="left",
@@ -366,9 +368,9 @@ def add_estimator_summary(
         xref="paper",
         yref="paper",
         x=1.02,
-        y=0.95,  # Slightly below top to avoid overlapping with potential title if wide
+        y=0.5,  # Move down to separate from legend
         xanchor="left",
-        yanchor="top",
+        yanchor="middle",
         bordercolor="rgba(0,0,0,0.2)",
         borderwidth=1,
         borderpad=6,
@@ -386,7 +388,7 @@ def add_qq_plot(
     col: int = 1,
 ) -> None:
     """
-    Add a Q-Q plot to check for normality of residuals.
+    Add a Q-Q plot to check for normality of residuals with standard colors.
     """
     from scipy import stats
 
@@ -396,13 +398,20 @@ def add_qq_plot(
 
     (osm, osr), (slope, intercept, r) = stats.probplot(vals, dist="norm", fit=True)
 
+    # Determine color based on label
+    color = "RoyalBlue"  # Default (Train)
+    if "test" in label.lower():
+        color = "FireBrick"
+    elif "val" in label.lower():
+        color = "ForestGreen"
+
     fig.add_trace(
         go.Scatter(
             x=osm,
             y=osr,
             mode="markers",
             name=f"Q-Q ({label})",
-            marker=dict(size=5, opacity=0.6, color="RoyalBlue"),
+            marker=dict(size=5, opacity=0.6, color=color),
             hovertemplate="<b>Theoretical</b>: %{x:.4f}<br><b>Sample</b>: %{y:.4f}<extra></extra>",
         ),
         row=row,

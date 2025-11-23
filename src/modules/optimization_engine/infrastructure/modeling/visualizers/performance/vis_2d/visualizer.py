@@ -60,10 +60,10 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 [{"type": "xy", "colspan": 2}, None],
                 [{"type": "xy"}, {"type": "xy"}],
             ],
-            vertical_spacing=0.06,
+            vertical_spacing=0.08,
             horizontal_spacing=0.07,
             subplot_titles=subplot_titles,
-            row_heights=[0.42, 0.14, 0.18, 0.18, 0.08, 0.15],
+            row_heights=[0.35, 0.12, 0.15, 0.15, 0.10, 0.13],
         )
 
         # Row 1
@@ -201,11 +201,39 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         )
 
         add_estimator_summary(fig, est, loss_history)
+
+        # Add explanations under each row
+        explanations = [
+            (0.75, "<b>Model Surfaces</b>: Shows the predicted decision surface (color gradient) for each output dimension overlaid with training and test data points. <i>Goal</i>: Surface should smoothly follow the data distribution; large deviations indicate poor model fit.") ,
+            (0.60, "<b>Learning Curves</b>: Plots training (blue) and validation (green) loss over epochs. <i>Goal</i>: Both curves should decrease and converge; a widening gap suggests over‑fitting, while rising validation loss signals divergence.") ,
+            (0.42, "<b>Residuals vs Fitted</b>: Scatter of residuals against predicted values for each output. <i>Goal</i>: Residuals should be randomly scattered around zero. Systematic patterns (curves, funnels) reveal non‑linearity or heteroscedasticity.") ,
+            (0.25, "<b>Error Distribution</b>: Histogram of residuals for each output. <i>Goal</i>: Ideally a bell‑shaped (Gaussian) distribution centered at zero. Skewness or heavy tails indicate bias or outliers.") ,
+            (0.1, "<b>Joint Residuals</b>: 2‑D density plot of residuals for the two outputs. <i>Goal</i>: A roughly circular or elliptical blob shows independent errors; elongated shapes reveal correlation between output errors.") ,
+            (-0.05, "<b>Q‑Q Plot</b>: Quantile‑Quantile plot comparing residual quantiles to a theoretical normal distribution. The <b>red dashed line</b> represents the ideal normal fit. <i>Goal</i>: Points should lie on the line; deviations, especially in the tails, indicate heavy‑tailed errors or outliers.")
+        ]
+
+        for y_pos, text in explanations:
+            fig.add_annotation(
+                text=text,
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=y_pos,
+                showarrow=False,
+                xanchor="center",
+                yanchor="bottom",
+                font=dict(size=11, color="#444"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.1)",
+                borderwidth=1,
+                borderpad=4,
+            )
+
         fig.update_layout(
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
-            height=1600,
+            height=1800,  # Increased height to accommodate spacing
             autosize=True,
-            margin=dict(l=60, r=280, t=80, b=60),
+            margin=dict(l=60, r=280, t=80, b=80),
         )
         fig.show()

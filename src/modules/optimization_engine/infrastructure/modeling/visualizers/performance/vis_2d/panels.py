@@ -72,16 +72,16 @@ def add_surfaces_2d(
         col=2,
     )
 
-    # TRAIN points
+    # 2. Scatter points (Train)
     fig.add_trace(
         go.Scatter3d(
             x=X_train[:, 0],
             y=X_train[:, 1],
             z=y_train[:, 0],
             mode="markers",
-            name=f"Train {_sym(output_symbol, 1)}",
-            marker=dict(size=3, opacity=0.6, color="black"),
-            hovertemplate=f"<b>Train</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 1)}: %{{z:.4f}}<extra></extra>",
+            name="Train Data",
+            marker=dict(size=3, color="RoyalBlue", opacity=0.8),
+            hovertemplate=f"<b>Train</b><br>{input_symbol}1: %{{x:.4f}}<br>{input_symbol}2: %{{y:.4f}}<br>{output_symbol}1: %{{z:.4f}}<extra></extra>",
         ),
         row=row,
         col=1,
@@ -92,15 +92,16 @@ def add_surfaces_2d(
             y=X_train[:, 1],
             z=y_train[:, 1],
             mode="markers",
-            name=f"Train {_sym(output_symbol, 2)}",
-            marker=dict(size=3, opacity=0.6, color="black"),
-            hovertemplate=f"<b>Train</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 2)}: %{{z:.4f}}<extra></extra>",
+            name="Train Data",
+            marker=dict(size=3, color="RoyalBlue", opacity=0.8),
+            showlegend=False,
+            hovertemplate=f"<b>Train</b><br>{input_symbol}1: %{{x:.4f}}<br>{input_symbol}2: %{{y:.4f}}<br>{output_symbol}2: %{{z:.4f}}<extra></extra>",
         ),
         row=row,
         col=2,
     )
 
-    # TEST points (if provided)
+    # 3. Scatter points (Test)
     if X_test is not None and y_test is not None:
         fig.add_trace(
             go.Scatter3d(
@@ -108,9 +109,9 @@ def add_surfaces_2d(
                 y=X_test[:, 1],
                 z=y_test[:, 0],
                 mode="markers",
-                name=f"Test {_sym(output_symbol, 1)}",
-                marker=dict(size=3, opacity=0.8, color="red", symbol="diamond"),
-                hovertemplate=f"<b>Test</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 1)}: %{{z:.4f}}<extra></extra>",
+                name="Test Data",
+                marker=dict(size=3, color="FireBrick", opacity=0.8, symbol="diamond"),
+                hovertemplate=f"<b>Test</b><br>{input_symbol}1: %{{x:.4f}}<br>{input_symbol}2: %{{y:.4f}}<br>{output_symbol}1: %{{z:.4f}}<extra></extra>",
             ),
             row=row,
             col=1,
@@ -121,9 +122,10 @@ def add_surfaces_2d(
                 y=X_test[:, 1],
                 z=y_test[:, 1],
                 mode="markers",
-                name=f"Test {_sym(output_symbol, 2)}",
-                marker=dict(size=3, opacity=0.8, color="red", symbol="diamond"),
-                hovertemplate=f"<b>Test</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, 2)}: %{{z:.4f}}<extra></extra>",
+                name="Test Data",
+                marker=dict(size=3, color="FireBrick", opacity=0.8, symbol="diamond"),
+                showlegend=False,
+                hovertemplate=f"<b>Test</b><br>{input_symbol}1: %{{x:.4f}}<br>{input_symbol}2: %{{y:.4f}}<br>{output_symbol}2: %{{z:.4f}}<extra></extra>",
             ),
             row=row,
             col=2,

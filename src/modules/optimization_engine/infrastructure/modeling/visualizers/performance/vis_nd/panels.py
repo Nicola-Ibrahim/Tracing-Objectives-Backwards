@@ -46,34 +46,40 @@ def add_points_overlay(
     fig: go.Figure,
     *,
     row: int,
-    X_train_red: np.ndarray | None,
-    y_train_1d: np.ndarray | None,
-    X_test_red: np.ndarray | None,
-    y_test_1d: np.ndarray | None,
+    X_train_red,
+    y_train_1d,
+    X_test_red=None,
+    y_test_1d=None,
+    col: int = 1,
 ) -> None:
-    if X_train_red is not None and y_train_1d is not None:
-        fig.add_trace(
-            go.Scatter(
-                x=X_train_red,
-                y=y_train_1d[:, 0],
-                mode="markers",
-                name="Train",
-                marker=dict(opacity=0.5, size=5, color="black"),
-                hovertemplate="<b>Train</b>: %{y:.4f}<extra></extra>",
-            ),
-            row=row,
-            col=1,
-        )
+    """
+    Overlay training (and optional test) points on the 1D plot with standard colors.
+    """
+    # Train points
+    fig.add_trace(
+        go.Scatter(
+            x=X_train_red.ravel(),
+            y=y_train_1d.ravel(),
+            mode="markers",
+            name="Train Data",
+            marker=dict(size=4, color="RoyalBlue", opacity=0.6),
+            hovertemplate="<b>Train</b><br>x_red: %{x:.4f}<br>y: %{y:.4f}<extra></extra>",
+        ),
+        row=row,
+        col=col,
+    )
+
+    # Test points
     if X_test_red is not None and y_test_1d is not None:
         fig.add_trace(
             go.Scatter(
-                x=X_test_red,
-                y=y_test_1d[:, 0],
+                x=X_test_red.ravel(),
+                y=y_test_1d.ravel(),
                 mode="markers",
-                name="Test",
-                marker=dict(opacity=0.7, size=6, color="red", symbol="diamond"),
-                hovertemplate="<b>Test</b>: %{y:.4f}<extra></extra>",
+                name="Test Data",
+                marker=dict(size=4, color="FireBrick", opacity=0.6, symbol="x"),
+                hovertemplate="<b>Test</b><br>x_red: %{x:.4f}<br>y: %{y:.4f}<extra></extra>",
             ),
             row=row,
-            col=1,
+            col=col,
         )

@@ -46,7 +46,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
                 "Residual joint distribution",
                 "Q-Q Plot",
             ),
-            row_heights=[0.2, 0.1, 0.1, 0.1, 0.15, 0.15],
+            row_heights=[0.20, 0.12, 0.15, 0.15, 0.15, 0.15],
         )
 
         # Row 1: reduce, center+band, overlay
@@ -117,11 +117,38 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         add_qq_plot(fig, row=6, resid=resid_tr[:, 0], label="y0 (train)")
 
         add_estimator_summary(fig, est, loss_history)
+
+        # Add explanations under each row
+        explanations = [
+            (0.80, "<b>1D Fit</b>: Reduced 1D view of model fit with uncertainty bands.<br><i>Goal</i>: Blue line should follow data trend. Points should mostly lie within shaded bands."),
+            (0.65, "<b>Learning Curves</b>: Tracks loss over epochs. Blue=Train, Green=Val.<br><i>Goal</i>: Both should decrease and converge. Large gap = Overfitting."),
+            (0.50, "<b>Residuals vs Fitted</b>: Errors vs Predicted values.<br><i>Goal</i>: Random scatter around 0. Patterns indicate non-linearity or heteroscedasticity."),
+            (0.35, "<b>Error Distribution</b>: Histogram of residuals.<br><i>Goal</i>: Bell-shaped (Gaussian) centered at 0."),
+            (0.20, "<b>Joint Residuals</b>: 2D error density.<br><i>Goal</i>: Spherical/Elliptical blob. Diagonal shape = Correlated errors."),
+            (0.05, "<b>Q-Q Plot</b>: Sample quantiles vs Theoretical Normal.<br><i>Goal</i>: Points should follow the <b>Red Dashed Line</b>. Deviations indicate heavy tails or outliers.")
+        ]
+        for y_pos, text in explanations:
+            fig.add_annotation(
+                text=text,
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=y_pos,
+                showarrow=False,
+                xanchor="center",
+                yanchor="bottom",
+                font=dict(size=11, color="#444"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.1)",
+                borderwidth=1,
+                borderpad=4,
+            )
+
         fig.update_layout(
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
-            height=1600,
+            height=1800,
             autosize=True,
-            margin=dict(l=60, r=280, t=80, b=60),
+            margin=dict(l=60, r=280, t=80, b=80),
         )
         fig.show()
