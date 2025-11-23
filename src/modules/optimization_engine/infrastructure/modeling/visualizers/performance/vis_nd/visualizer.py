@@ -121,7 +121,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
             height=1600,
-            width=1000,
+            autosize=True,
             margin=dict(l=60, r=280, t=80, b=60),
         )
         fig.show()
