@@ -27,26 +27,23 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         loss_history = data["loss_history"]
 
         fig = make_subplots(
-            rows=6,
-            cols=1,
+            rows=5,
+            cols=2,
             specs=[
-                [{"type": "xy"}],
-                [{"type": "xy"}],
-                [{"type": "xy"}],
-                [{"type": "xy"}],
-                [{"type": "xy"}],
-                [{"type": "xy"}],
+                [{"type": "xy", "colspan": 2}, None],
+                [None, None],  # Spacer
+                [{"type": "xy", "colspan": 2}, None],
+                [None, None],  # Spacer
+                [{"type": "xy"}, {"type": "xy"}],
+                [None, None],  # Spacer
+                [{"type": "xy"}, {"type": "xy"}],
+                [None, None],  # Spacer
+                [{"type": "xy"}, {"type": "xy"}],
             ],
-            vertical_spacing=0.08,
-            subplot_titles=(
-                f"{title} — y0 (normalized)",
-                "Training / Validation / Test",
-                "Residuals vs Fitted (train + test)",
-                "Residual distribution (train + test)",
-                "Residual joint distribution",
-                "Q-Q Plot",
-            ),
-            row_heights=[0.20, 0.12, 0.15, 0.15, 0.15, 0.15],
+            vertical_spacing=0.01,
+            subplot_titles=subplot_titles,
+            row_heights=[0.22, 0.03, 0.12, 0.03, 0.15, 0.03, 0.15, 0.03, 0.15],
+            column_titles=["Train", "Test"]
         )
 
         # Row 1: reduce, center+band, overlay
@@ -73,8 +70,8 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         fig.update_xaxes(title_text="Objective (reduced, normalized)", row=1, col=1)
         fig.update_yaxes(title_text="Decision (normalized)", row=1, col=1)
 
-        # Row 2
-        add_loss_curves(fig, row=2, loss_history=loss_history, col=1)
+        # Row 3 (was 2)
+        add_loss_curves(fig, row=3, loss_history=loss_history, col=1)
 
         # Residual diagnostics
         yhat_tr = point_predict(est, Xtr)
@@ -85,47 +82,98 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         else:
             yhat_te = resid_te = None
 
-        # Row 3
+        # Compute global residual limits for consistent scaling
+        all_resids = [resid_tr]
+        if resid_te is not None:
+            all_resids.append(resid_te)
+        concatenated = np.concatenate(all_resids, axis=0)
+        # Filter finite values
+        concatenated = concatenated[np.isfinite(concatenated)]
+        if concatenated.size > 0:
+            r_min, r_max = concatenated.min(), concatenated.max()
+            span = r_max - r_min
+            pad = span * 0.05 if span > 0 else 1.0
+            common_range = [r_min - pad, r_max + pad]
+        else:
+            common_range = [-1.0, 1.0]
+
+        # Row 5 (was 3): Residuals vs Fitted - Train (Col 1), Test (Col 2)
+        add_residuals_vs_fitted(
+            fig,
+            row=5,
+            col=1,
+            fitted=yhat_tr[:, 0],
+            resid=resid_tr[:, 0],
+            label="y0 (train)",
+            range_y=common_range,
+        )
         if yhat_te is not None:
             add_residuals_vs_fitted(
                 fig,
-                row=3,
+                row=5,
+                col=2,
                 fitted=yhat_te[:, 0],
                 resid=resid_te[:, 0],
                 label="y0 (test)",
+                range_y=common_range,
             )
-        add_residuals_vs_fitted(
-            fig, row=3, fitted=yhat_tr[:, 0], resid=resid_tr[:, 0], label="y0 (train)"
+
+        # Row 7 (was 4): Hist - Train (Col 1), Test (Col 2)
+        add_residual_hist(
+            fig,
+            row=7,
+            col=1,
+            resid=resid_tr[:, 0],
+            label="y0 (train)",
+            range_x=common_range,
         )
-
-        # Row 4
         if resid_te is not None:
-            add_residual_hist(fig, row=4, resid=resid_te[:, 0], label="y0 (test)")
-        add_residual_hist(fig, row=4, resid=resid_tr[:, 0], label="y0 (train)")
-
-        # Row 5
-        if resid_te is not None and ytr.shape[1] >= 2:
-            add_joint_residual(
-                fig, row=5, col=1, resid_y1=resid_te[:, 0], resid_y2=resid_te[:, 1]
+            add_residual_hist(
+                fig,
+                row=7,
+                col=2,
+                resid=resid_te[:, 0],
+                label="y0 (test)",
+                range_x=common_range,
             )
 
-        # Row 6: Q-Q Plot
+        # Row 9 (was 5): Q-Q Plot - Train (Col 1), Test (Col 2)
         from ..common.diagnostics import add_qq_plot
-
+        add_qq_plot(
+            fig,
+            row=9,
+            col=1,
+            resid=resid_tr[:, 0],
+            label="y0 (train)",
+            range_y=common_range,
+        )
         if resid_te is not None:
-            add_qq_plot(fig, row=6, resid=resid_te[:, 0], label="y0 (test)")
-        add_qq_plot(fig, row=6, resid=resid_tr[:, 0], label="y0 (train)")
+            add_qq_plot(
+                fig,
+                row=9,
+                col=2,
+                resid=resid_te[:, 0],
+                label="y0 (test)",
+                range_y=common_range,
+            )
 
         add_estimator_summary(fig, est, loss_history)
 
         # Add explanations under each row
+        # Recalculated Y positions for 9 rows
+        # Height ~2000
+        # Row 1 (Fit): Top ~1.0, Bottom ~0.78. Expl ~0.80
+        # Row 3 (Curves): Top ~0.75, Bottom ~0.63. Expl ~0.65
+        # Row 5 (Resid): Top ~0.60, Bottom ~0.45. Expl ~0.47
+        # Row 7 (Hist): Top ~0.42, Bottom ~0.27. Expl ~0.29
+        # Row 9 (QQ): Top ~0.24, Bottom ~0.09. Expl ~0.11
+
         explanations = [
-            (0.80, "<b>1D Fit</b>: Reduced 1D view of model fit with uncertainty bands.<br><i>Goal</i>: Blue line should follow data trend. Points should mostly lie within shaded bands."),
-            (0.65, "<b>Learning Curves</b>: Tracks loss over epochs. Blue=Train, Green=Val.<br><i>Goal</i>: Both should decrease and converge. Large gap = Overfitting."),
-            (0.50, "<b>Residuals vs Fitted</b>: Errors vs Predicted values.<br><i>Goal</i>: Random scatter around 0. Patterns indicate non-linearity or heteroscedasticity."),
-            (0.35, "<b>Error Distribution</b>: Histogram of residuals.<br><i>Goal</i>: Bell-shaped (Gaussian) centered at 0."),
-            (0.20, "<b>Joint Residuals</b>: 2D error density.<br><i>Goal</i>: Spherical/Elliptical blob. Diagonal shape = Correlated errors."),
-            (0.05, "<b>Q-Q Plot</b>: Sample quantiles vs Theoretical Normal.<br><i>Goal</i>: Points should follow the <b>Red Dashed Line</b>. Deviations indicate heavy tails or outliers.")
+            (0.80, "<b>1D Fit</b>: Reduced 1D view of model fit with uncertainty bands. <i>Goal</i>: Blue line should follow data trend."),
+            (0.65, "<b>Learning Curves</b>: Tracks loss over epochs. <i>Goal</i>: Both should decrease and converge. Large gap = Overfitting."),
+            (0.47, "<b>Residuals vs Fitted</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Patterns indicate non-linearity."),
+            (0.29, "<b>Error Distribution</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped (Gaussian) centered at 0."),
+            (0.11, "<b>Q-Q Plot</b>: Train (Left) vs Test (Right). <i>Goal</i>: Points should follow the <b>Red Dashed Line</b>."),
         ]
         for y_pos, text in explanations:
             fig.add_annotation(
@@ -147,7 +195,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         fig.update_layout(
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
-            height=1800,
+            height=2000,
             autosize=True,
             margin=dict(l=60, r=280, t=80, b=80),
         )

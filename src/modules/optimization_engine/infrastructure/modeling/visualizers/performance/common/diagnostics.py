@@ -48,6 +48,7 @@ def add_residuals_vs_fitted(
     resid,
     label: str,
     col: int = 1,
+    range_y: list[float] | None = None,
 ) -> None:
     """
     Plot residuals vs fitted values with enhanced styling and standard colors.
@@ -104,7 +105,7 @@ def add_residuals_vs_fitted(
     )
     fig.update_yaxes(
         title_text="Residual (norm)",
-        range=list(resid_limits),
+        range=range_y if range_y is not None else list(resid_limits),
         row=row,
         col=col,
         gridcolor="lightgrey",
@@ -120,6 +121,7 @@ def add_residual_hist(
     resid,
     label: str,
     col: int = 1,
+    range_x: list[float] | None = None,
 ) -> None:
     """
     Plot a residual histogram with density scaling and standard colors.
@@ -166,7 +168,7 @@ def add_residual_hist(
         )
     fig.update_xaxes(
         title_text="Residual (norm)",
-        range=list(resid_limits),
+        range=range_x if range_x is not None else list(resid_limits),
         row=row,
         col=col,
         gridcolor="lightgrey",
@@ -181,6 +183,8 @@ def add_joint_residual(
     col: int,
     resid_y1,
     resid_y2,
+    range_x: list[float] | None = None,
+    range_y: list[float] | None = None,
 ) -> None:
     """
     Plot a joint density of two residual dimensions.
@@ -215,8 +219,8 @@ def add_joint_residual(
         row=row,
         col=col,
     )
-    fig.update_xaxes(title_text="Residual y1 (norm)", row=row, col=col, gridcolor="lightgrey")
-    fig.update_yaxes(title_text="Residual y2 (norm)", row=row, col=col, gridcolor="lightgrey")
+    fig.update_xaxes(title_text="Residual y1 (norm)", row=row, col=col, gridcolor="lightgrey", range=range_x)
+    fig.update_yaxes(title_text="Residual y2 (norm)", row=row, col=col, gridcolor="lightgrey", range=range_y)
 
 
 def add_loss_curves(
@@ -386,6 +390,7 @@ def add_qq_plot(
     resid,
     label: str,
     col: int = 1,
+    range_y: list[float] | None = None,
 ) -> None:
     """
     Add a Q-Q plot to check for normality of residuals with standard colors.
@@ -435,4 +440,4 @@ def add_qq_plot(
     )
 
     fig.update_xaxes(title_text="Theoretical Quantiles", row=row, col=col, gridcolor="lightgrey")
-    fig.update_yaxes(title_text="Sample Quantiles", row=row, col=col, gridcolor="lightgrey")
+    fig.update_yaxes(title_text="Sample Quantiles", row=row, col=col, gridcolor="lightgrey", range=range_y)

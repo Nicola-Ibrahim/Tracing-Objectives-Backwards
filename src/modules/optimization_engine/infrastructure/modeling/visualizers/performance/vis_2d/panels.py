@@ -41,7 +41,7 @@ def add_surfaces_2d(
             y=GX2,
             z=z_y1,
             opacity=0.8,
-            colorscale="Viridis",
+            colorscale="Cividis",
             showscale=False,
             name=f"{_sym(output_symbol, 1)} Surface",
             contours_z=dict(
@@ -59,7 +59,7 @@ def add_surfaces_2d(
             y=GX2,
             z=z_y2,
             opacity=0.8,
-            colorscale="Plasma",
+            colorscale="Cividis",
             showscale=False,
             name=f"{_sym(output_symbol, 2)} Surface",
             contours_z=dict(

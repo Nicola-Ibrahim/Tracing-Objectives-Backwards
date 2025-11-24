@@ -11,6 +11,7 @@ from ..common.diagnostics import (
 )
 from ..common.prediction import point_predict
 from .panels import add_surfaces_2d
+from ..common.diagnostics import add_qq_plot
 
 
 class ModelPerformance2DVisualizer(BaseVisualizer):
@@ -40,30 +41,42 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             f"{_sym(output_symbol, 1)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
             f"{_sym(output_symbol, 2)}({_sym(input_symbol, 1)}, {_sym(input_symbol, 2)})",
             "Training / Validation / Test",
-            f"Residuals vs Fitted ({_sym(output_symbol, 1)})",
-            f"Residuals vs Fitted ({_sym(output_symbol, 2)})",
-            f"Residual distribution ({_sym(output_symbol, 1)})",
-            f"Residual distribution ({_sym(output_symbol, 2)})",
-            f"Residual joint distribution ({_sym(output_symbol, 1)} vs {_sym(output_symbol, 2)})",
-            f"Q-Q Plot ({_sym(output_symbol, 1)})",
-            f"Q-Q Plot ({_sym(output_symbol, 2)})",
+            f"Residuals vs Fitted ({_sym(output_symbol, 1)}) (Train)",
+            f"Residuals vs Fitted ({_sym(output_symbol, 1)}) (Test)",
+            f"Residuals vs Fitted ({_sym(output_symbol, 2)}) (Train)",
+            f"Residuals vs Fitted ({_sym(output_symbol, 2)}) (Test)",
+            f"Residual distribution ({_sym(output_symbol, 1)}) (Train)",
+            f"Residual distribution ({_sym(output_symbol, 1)}) (Test)",
+            f"Residual distribution ({_sym(output_symbol, 2)}) (Train)",
+            f"Residual distribution ({_sym(output_symbol, 2)}) (Test)",
+            f"Q-Q Plot ({_sym(output_symbol, 1)}) (Train)",
+            f"Q-Q Plot ({_sym(output_symbol, 1)}) (Test)",
+            f"Q-Q Plot ({_sym(output_symbol, 2)}) (Train)",
+            f"Q-Q Plot ({_sym(output_symbol, 2)}) (Test)",
         ]
 
         fig = make_subplots(
-            rows=6,
+            rows=12,
             cols=2,
             specs=[
                 [{"type": "surface"}, {"type": "surface"}],
+                [None, None],  # Spacer
                 [{"type": "xy", "colspan": 2}, None],
+                [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
                 [{"type": "xy"}, {"type": "xy"}],
-                [{"type": "xy", "colspan": 2}, None],
+                [None, None],  # Spacer
+                [{"type": "xy"}, {"type": "xy"}],
+                [{"type": "xy"}, {"type": "xy"}],
+                [None, None],  # Spacer
+                [{"type": "xy"}, {"type": "xy"}],
                 [{"type": "xy"}, {"type": "xy"}],
             ],
-            vertical_spacing=0.08,
+            vertical_spacing=0.01,
             horizontal_spacing=0.07,
             subplot_titles=subplot_titles,
-            row_heights=[0.35, 0.12, 0.15, 0.15, 0.10, 0.13],
+            row_heights=[0.22, 0.03, 0.12, 0.03, 0.10, 0.10, 0.03, 0.10, 0.10, 0.03, 0.10, 0.10],
+            column_titles=["Train", "Test"]
         )
 
         # Row 1
@@ -79,8 +92,8 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             output_symbol=output_symbol,
         )
 
-        # Row 2
-        add_loss_curves(fig, row=2, loss_history=loss_history, col=1)
+        # Row 3 (was 2)
+        add_loss_curves(fig, row=3, loss_history=loss_history, col=1)
 
         # Residual diagnostics
         yhat_tr = point_predict(est, Xtr)
@@ -91,125 +104,162 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         else:
             yhat_te = resid_te = None
 
-        # Row 3: residuals vs fitted
-        if yhat_te is not None:
-            add_residuals_vs_fitted(
-                fig,
-                row=3,
-                col=1,
-                fitted=yhat_te[:, 0],
-                resid=resid_te[:, 0],
-                label=f"{_sym(output_symbol, 1)} (test)",
-            )
-            add_residuals_vs_fitted(
-                fig,
-                row=3,
-                col=2,
-                fitted=yhat_te[:, 1],
-                resid=resid_te[:, 1],
-                label=f"{_sym(output_symbol, 2)} (test)",
-            )
+        # Compute global residual limits for consistent scaling
+        all_resids = [resid_tr]
+        if resid_te is not None:
+            all_resids.append(resid_te)
+        concatenated = np.concatenate(all_resids, axis=0)
+        # Filter finite values
+        concatenated = concatenated[np.isfinite(concatenated)]
+        if concatenated.size > 0:
+            r_min, r_max = concatenated.min(), concatenated.max()
+            span = r_max - r_min
+            pad = span * 0.05 if span > 0 else 1.0
+            common_range = [r_min - pad, r_max + pad]
+        else:
+            common_range = [-1.0, 1.0]
+
+        # Row 5 (was 3): Residuals vs Fitted (y1) - Train (Col 1), Test (Col 2)
         add_residuals_vs_fitted(
             fig,
-            row=3,
+            row=5,
             col=1,
             fitted=yhat_tr[:, 0],
             resid=resid_tr[:, 0],
             label=f"{_sym(output_symbol, 1)} (train)",
+            range_y=common_range,
         )
+        if yhat_te is not None:
+            add_residuals_vs_fitted(
+                fig,
+                row=5,
+                col=2,
+                fitted=yhat_te[:, 0],
+                resid=resid_te[:, 0],
+                label=f"{_sym(output_symbol, 1)} (test)",
+                range_y=common_range,
+            )
+
+        # Row 6 (was 4): Residuals vs Fitted (y2) - Train (Col 1), Test (Col 2)
         add_residuals_vs_fitted(
             fig,
-            row=3,
-            col=2,
+            row=6,
+            col=1,
             fitted=yhat_tr[:, 1],
             resid=resid_tr[:, 1],
             label=f"{_sym(output_symbol, 2)} (train)",
+            range_y=common_range,
         )
-
-        # Row 4: hist
-        if resid_te is not None:
-            add_residual_hist(
-                fig,
-                row=4,
-                col=1,
-                resid=resid_te[:, 0],
-                label=f"{_sym(output_symbol, 1)} (test)",
-            )
-            add_residual_hist(
-                fig,
-                row=4,
-                col=2,
-                resid=resid_te[:, 1],
-                label=f"{_sym(output_symbol, 2)} (test)",
-            )
-        add_residual_hist(
-            fig,
-            row=4,
-            col=1,
-            resid=resid_tr[:, 0],
-            label=f"{_sym(output_symbol, 1)} (train)",
-        )
-        add_residual_hist(
-            fig,
-            row=4,
-            col=2,
-            resid=resid_tr[:, 1],
-            label=f"{_sym(output_symbol, 2)} (train)",
-        )
-
-        # Row 5: joint (if test)
-        if resid_te is not None:
-            add_joint_residual(
-                fig,
-                row=5,
-                col=1,
-                resid_y1=resid_te[:, 0],
-                resid_y2=resid_te[:, 1],
-            )
-
-        # Row 6: Q-Q Plots
-        from ..common.diagnostics import add_qq_plot
-
-        if resid_te is not None:
-            add_qq_plot(
-                fig,
-                row=6,
-                col=1,
-                resid=resid_te[:, 0],
-                label=f"{_sym(output_symbol, 1)} (test)",
-            )
-            add_qq_plot(
+        if yhat_te is not None:
+            add_residuals_vs_fitted(
                 fig,
                 row=6,
                 col=2,
+                fitted=yhat_te[:, 1],
                 resid=resid_te[:, 1],
                 label=f"{_sym(output_symbol, 2)} (test)",
+                range_y=common_range,
             )
-        add_qq_plot(
+
+        # Row 8 (was 5): Hist (y1) - Train (Col 1), Test (Col 2)
+        add_residual_hist(
             fig,
-            row=6,
+            row=8,
             col=1,
             resid=resid_tr[:, 0],
             label=f"{_sym(output_symbol, 1)} (train)",
+            range_x=common_range,
         )
-        add_qq_plot(
+        if resid_te is not None:
+            add_residual_hist(
+                fig,
+                row=8,
+                col=2,
+                resid=resid_te[:, 0],
+                label=f"{_sym(output_symbol, 1)} (test)",
+                range_x=common_range,
+            )
+
+        # Row 9 (was 6): Hist (y2) - Train (Col 1), Test (Col 2)
+        add_residual_hist(
             fig,
-            row=6,
-            col=2,
+            row=9,
+            col=1,
             resid=resid_tr[:, 1],
             label=f"{_sym(output_symbol, 2)} (train)",
+            range_x=common_range,
         )
+        if resid_te is not None:
+            add_residual_hist(
+                fig,
+                row=9,
+                col=2,
+                resid=resid_te[:, 1],
+                label=f"{_sym(output_symbol, 2)} (test)",
+                range_x=common_range,
+            )
+
+        # Row 11 (was 7): Q-Q Plot (y1) - Train (Col 1), Test (Col 2)
+        add_qq_plot(
+            fig,
+            row=11,
+            col=1,
+            resid=resid_tr[:, 0],
+            label=f"{_sym(output_symbol, 1)} (train)",
+            range_y=common_range,
+        )
+        if resid_te is not None:
+            add_qq_plot(
+                fig,
+                row=11,
+                col=2,
+                resid=resid_te[:, 0],
+                label=f"{_sym(output_symbol, 1)} (test)",
+                range_y=common_range,
+            )
+
+        # Row 12 (was 8): Q-Q Plot (y2) - Train (Col 1), Test (Col 2)
+        add_qq_plot(
+            fig,
+            row=12,
+            col=1,
+            resid=resid_tr[:, 1],
+            label=f"{_sym(output_symbol, 2)} (train)",
+            range_y=common_range,
+        )
+        if resid_te is not None:
+            add_qq_plot(
+                fig,
+                row=12,
+                col=2,
+                resid=resid_te[:, 1],
+                label=f"{_sym(output_symbol, 2)} (test)",
+                range_y=common_range,
+            )
 
         add_estimator_summary(fig, est, loss_history)
 
         # Add explanations under each row
+        # Recalculated Y positions for 12 rows (approximate)
+        # Total height ~2800.
+        # Row 1 (Surface): Top ~1.0, Bottom ~0.78. Expl ~0.80
+        # Row 3 (Curves): Top ~0.75, Bottom ~0.63. Expl ~0.65
+        # Row 5 (Resid y1): Top ~0.60, Bottom ~0.50. Expl ~0.52
+        # Row 6 (Resid y2): Top ~0.49, Bottom ~0.39. Expl ~0.41
+        # Row 8 (Hist y1): Top ~0.36, Bottom ~0.26. Expl ~0.28
+        # Row 9 (Hist y2): Top ~0.25, Bottom ~0.15. Expl ~0.17
+        # Row 11 (QQ y1): Top ~0.12, Bottom ~0.02. Expl ~0.04
+        # Row 12 (QQ y2): Top ~0.01, Bottom ~-0.09. Expl ~-0.07
+        
         explanations = [
-            (0.75, "<b>Model Surfaces</b>: Shows the predicted decision surface (color gradient) for each output dimension overlaid with training and test data points. <i>Goal</i>: Surface should smoothly follow the data distribution; large deviations indicate poor model fit.") ,
-            (0.60, "<b>Learning Curves</b>: Plots training (blue) and validation (green) loss over epochs. <i>Goal</i>: Both curves should decrease and converge; a widening gap suggests over‑fitting, while rising validation loss signals divergence.") ,
-            (0.42, "<b>Residuals vs Fitted</b>: Scatter of residuals against predicted values for each output. <i>Goal</i>: Residuals should be randomly scattered around zero. Systematic patterns (curves, funnels) reveal non‑linearity or heteroscedasticity.") ,
-            (0.25, "<b>Error Distribution</b>: Histogram of residuals for each output. <i>Goal</i>: Ideally a bell‑shaped (Gaussian) distribution centered at zero. Skewness or heavy tails indicate bias or outliers.") ,
-            (0.1, "<b>Joint Residuals</b>: 2‑D density plot of residuals for the two outputs. <i>Goal</i>: A roughly circular or elliptical blob shows independent errors; elongated shapes reveal correlation between output errors.") ,
-            (-0.05, "<b>Q‑Q Plot</b>: Quantile‑Quantile plot comparing residual quantiles to a theoretical normal distribution. The <b>red dashed line</b> represents the ideal normal fit. <i>Goal</i>: Points should lie on the line; deviations, especially in the tails, indicate heavy‑tailed errors or outliers.")
+            (0.80, "<b>Model Surfaces</b>: Predicted decision surface (color) vs data points. <i>Goal</i>: Surface should follow data."),
+            (0.65, "<b>Learning Curves</b>: Loss over epochs. <i>Goal</i>: Decrease and converge. Gap = Overfitting."),
+            (0.52, "<b>Residuals vs Fitted (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Similar patterns."),
+            (0.41, "<b>Residuals vs Fitted (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Similar patterns."),
+            (0.28, "<b>Error Distribution (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped centered at 0. Similar shape."),
+            (0.17, "<b>Error Distribution (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped centered at 0. Similar shape."),
+            (0.04, "<b>Q-Q Plot (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Follow <b>Red Dashed Line</b>."),
+            (-0.07, "<b>Q-Q Plot (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Follow <b>Red Dashed Line</b>."),
         ]
 
         for y_pos, text in explanations:
@@ -232,7 +282,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         fig.update_layout(
             title=title + " — fit & diagnostics (normalized)",
             template="plotly_white",
-            height=1800,  # Increased height to accommodate spacing
+            height=2800,
             autosize=True,
             margin=dict(l=60, r=280, t=80, b=80),
         )
