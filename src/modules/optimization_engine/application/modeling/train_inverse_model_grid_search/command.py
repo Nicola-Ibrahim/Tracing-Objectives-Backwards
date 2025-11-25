@@ -26,17 +26,6 @@ class TrainInverseModelGridSearchCommand(BaseModel):
         description="Random seed used across train/test split & estimators.",
     )
 
-    tandem_forward_estimator_type: str | None = Field(
-        "mdn",
-        description="Estimator type string for the latest forward model to use in tandem loss.",
-    )
-
-    tandem_weight: float = Field(
-        0.0,
-        ge=0.0,
-        description="Non-negative weight applied to the tandem loss term. 0 disables tandem.",
-    )
-
     cv_splits: int = Field(
         5,
         ge=2,

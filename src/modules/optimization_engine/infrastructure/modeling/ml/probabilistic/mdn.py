@@ -377,7 +377,6 @@ class MDNEstimator(ProbabilisticEstimator):
         self,
         X: npt.NDArray[np.float64],
         y: npt.NDArray[np.float64],
-        tandem: tuple[BaseEstimator, float] | None = None,
     ) -> None:
         """
         Fit the MDN using the configured training hyperparameters.
@@ -388,23 +387,6 @@ class MDNEstimator(ProbabilisticEstimator):
             Conditioning inputs (e.g. objectives Y if MDN is an inverse mapper).
         y : array of shape (n_samples, out_dim)
             Targets (e.g. decisions X if MDN is an inverse mapper).
-        tandem : (forward_model, tandem_weight) or None
-            - forward_model: BaseEstimator implementing `.predict(X, mode=...)`.
-              Typically a *forward* surrogate mapping decisions -> objectives.
-            - tandem_weight: λ >= 0. If <= 0 the tandem term is effectively off.
-
-        Behaviour
-        ---------
-        - If tandem is None: use the original NLL-only MDN training loop.
-        - If tandem is given: add a tandem term
-
-              loss = NLL_MDN + λ * L_tandem
-
-          where, by default,
-
-              L_tandem = MSE( forward_model(x_hat), X ),
-
-          and x_hat is the MDN mixture mean (a point estimate of the decision).
         """
         # Base validation & dimension handling
         super().fit(X, y)
@@ -429,190 +411,54 @@ class MDNEstimator(ProbabilisticEstimator):
         best_loss = float("inf")
         self._best_model_state_dict = None
 
-        # Unpack tandem tuple if provided
-        if tandem is not None:
-            forward_model, tandem_weight = tandem
-            tandem_weight = float(tandem_weight)
-        else:
-            forward_model, tandem_weight = None, 0.0
-
-        # ------------------------------------------------------------------
-        # CASE 1: No forward model or weight -> original training loop
-        # ------------------------------------------------------------------
-        if forward_model is None or tandem_weight <= 0.0:
-            for epoch in range(self.epochs):
-                self._model.train()
-                train_loss = 0.0
-
-                for batch_X, batch_y in train_loader:
-                    batch_X = batch_X.to(self._device)
-                    batch_y = batch_y.to(self._device)
-
-                    optimizer.zero_grad()
-                    pi, mu, sigma = self._model(batch_X)
-                    dist = self._model._get_distribution(
-                        pi, mu, sigma, self._distribution_family
-                    )
-                    loss = -dist.log_prob(batch_y).mean()
-                    loss.backward()
-
-                    if self.clip_grad_norm is not None:
-                        torch.nn.utils.clip_grad_norm_(
-                            self._model.parameters(), self.clip_grad_norm
-                        )
-                    optimizer.step()
-                    train_loss += loss.item()
-
-                avg_train = train_loss / max(1, len(train_loader))
-
-                # Validation
-                self._model.eval()
-                val_loss = 0.0
-                with torch.no_grad():
-                    for batch_X, batch_y in val_loader:
-                        batch_X = batch_X.to(self._device)
-                        batch_y = batch_y.to(self._device)
-                        pi, mu, sigma = self._model(batch_X)
-                        dist = self._model._get_distribution(
-                            pi, mu, sigma, self._distribution_family
-                        )
-                        val_loss += (-dist.log_prob(batch_y).mean()).item()
-
-                avg_val = val_loss / max(1, len(val_loader))
-
-                # Track best validation performance
-                if avg_val < best_loss:
-                    best_loss = avg_val
-                    self._best_model_state_dict = self._model.state_dict()
-
-                self._training_history.epochs.append(epoch)
-                self._training_history.train_loss.append(float(avg_train))
-                self._training_history.val_loss.append(float(avg_val))
-
-            if self._best_model_state_dict is not None:
-                self._model.load_state_dict(self._best_model_state_dict)
-
-            self._model.eval()
-            return  # done
-
-        # ------------------------------------------------------------------
-        # CASE 2: Tandem training with forward_model and tandem_weight
-        # ------------------------------------------------------------------
         for epoch in range(self.epochs):
             self._model.train()
-
-            train_total = 0.0
-            train_tandem = 0.0
-            n_train_batches = 0
+            train_loss = 0.0
 
             for batch_X, batch_y in train_loader:
                 batch_X = batch_X.to(self._device)
                 batch_y = batch_y.to(self._device)
 
                 optimizer.zero_grad()
-
-                # MDN base NLL
                 pi, mu, sigma = self._model(batch_X)
                 dist = self._model._get_distribution(
                     pi, mu, sigma, self._distribution_family
                 )
-                nll = -dist.log_prob(batch_y).mean()
-
-                # Representative MDN output: mixture mean (shape: [B, out_dim])
-                # Here we assume y (targets) are decisions X, and X (inputs)
-                # are objectives Y. So mixture_mean ≈ x_hat.
-                mixture_mean = (pi.unsqueeze(-1) * mu).sum(dim=1)  # (B, out_dim)
-
-                # --- Tandem term via forward_model (BaseEstimator) ----------
-                # forward_model works with numpy, so we go:
-                #   torch -> numpy -> forward_model.predict -> torch
-                x_hat_np = (
-                    mixture_mean.detach().cpu().numpy().astype(np.float64, copy=False)
-                )
-                # Use default mode of predict; if probabilistic, this might be
-                # "standard" (one sample). If you prefer mean, implement that
-                # in the forward model.
-                pred_np = forward_model.predict(x_hat_np)  # shape: (B, in_dim) expected
-                pred = torch.as_tensor(
-                    pred_np, dtype=torch.float32, device=self._device
-                )
-
-                # By default, we compare to batch_X (original conditioning).
-                # If your semantics require comparing to batch_y instead,
-                # just change batch_X -> batch_y here.
-                tandem_loss = F.mse_loss(pred, batch_X)
-
-                loss = nll + tandem_weight * tandem_loss
+                loss = -dist.log_prob(batch_y).mean()
                 loss.backward()
 
                 if self.clip_grad_norm is not None:
                     torch.nn.utils.clip_grad_norm_(
                         self._model.parameters(), self.clip_grad_norm
                     )
-
                 optimizer.step()
+                train_loss += loss.item()
 
-                train_total += float(loss.item())
-                train_tandem += float(tandem_loss.item())
-                n_train_batches += 1
+            avg_train = train_loss / max(1, len(train_loader))
 
-            avg_train_total = train_total / max(1, n_train_batches)
-            avg_train_tandem = train_tandem / max(1, n_train_batches)
-
-            # ---------------- Validation with tandem ----------------
+            # Validation
             self._model.eval()
-            val_total = 0.0
-            val_tandem = 0.0
-            n_val_batches = 0
-
+            val_loss = 0.0
             with torch.no_grad():
                 for batch_X, batch_y in val_loader:
                     batch_X = batch_X.to(self._device)
                     batch_y = batch_y.to(self._device)
-
                     pi, mu, sigma = self._model(batch_X)
                     dist = self._model._get_distribution(
                         pi, mu, sigma, self._distribution_family
                     )
-                    nll = -dist.log_prob(batch_y).mean()
+                    val_loss += (-dist.log_prob(batch_y).mean()).item()
 
-                    mixture_mean = (pi.unsqueeze(-1) * mu).sum(dim=1)
-                    x_hat_np = (
-                        mixture_mean.detach()
-                        .cpu()
-                        .numpy()
-                        .astype(np.float64, copy=False)
-                    )
-                    pred_np = forward_model.predict(x_hat_np)
-                    pred = torch.as_tensor(
-                        pred_np, dtype=torch.float32, device=self._device
-                    )
-                    tandem_loss = F.mse_loss(pred, batch_X)
+            avg_val = val_loss / max(1, len(val_loader))
 
-                    total = nll + tandem_weight * tandem_loss
-
-                    val_total += float(total.item())
-                    val_tandem += float(tandem_loss.item())
-                    n_val_batches += 1
-
-            avg_val_total = val_total / max(1, n_val_batches)
-            avg_val_tandem = val_tandem / max(1, n_val_batches)
-
-            if avg_val_total < best_loss:
-                best_loss = avg_val_total
+            # Track best validation performance
+            if avg_val < best_loss:
+                best_loss = avg_val
                 self._best_model_state_dict = self._model.state_dict()
 
             self._training_history.epochs.append(epoch)
-            self._training_history.train_loss.append(float(avg_train_total))
-            self._training_history.val_loss.append(float(avg_val_total))
-
-            if self._verbose:
-                print(
-                    f"[Epoch {epoch+1}/{self.epochs}] "
-                    f"train={avg_train_total:.4f}, val={avg_val_total:.4f}, "
-                    f"train_tandem={avg_train_tandem:.4f}, "
-                    f"val_tandem={avg_val_tandem:.4f}"
-                )
+            self._training_history.train_loss.append(float(avg_train))
+            self._training_history.val_loss.append(float(avg_val))
 
         if self._best_model_state_dict is not None:
             self._model.load_state_dict(self._best_model_state_dict)

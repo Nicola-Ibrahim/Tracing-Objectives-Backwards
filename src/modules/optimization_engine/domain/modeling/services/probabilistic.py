@@ -18,7 +18,6 @@ class ProbabilisticModelTrainer:
         estimator: ProbabilisticEstimator,
         X_train: np.typing.NDArray,
         y_train: np.typing.NDArray,
-        tandem: tuple[BaseEstimator, float] | None = None,
     ) -> tuple[BaseEstimator, LossHistory]:
         """
         (helper) Fit estimator and extract per-epoch loss history if provided by estimator.
@@ -29,7 +28,7 @@ class ProbabilisticModelTrainer:
 
         # 1) Fit estimator for given number of epochs (estimator should internally record history)
 
-        estimator.fit(X_train, y_train, tandem=tandem)
+        estimator.fit(X_train, y_train)
 
         # 2) Try to read history from common accessor names
         history = estimator.get_loss_history()
@@ -57,7 +56,6 @@ class ProbabilisticModelTrainer:
         y_train: np.typing.NDArray,
         epochs: int = 50,
         batch_size: int = 64,
-        tandem: tuple[BaseEstimator, float] | None = None,
     ) -> tuple[BaseEstimator, LossHistory, Metrics]:
         """
         Public entry to train a probabilistic estimator on raw (X, y).
@@ -76,7 +74,6 @@ class ProbabilisticModelTrainer:
             estimator=estimator,
             X_train=X_train,
             y_train=y_train,
-            tandem=tandem,
         )
 
         # 2) produce TrainingOutcome; leave train/test point-scores None (caller can compute if desired)

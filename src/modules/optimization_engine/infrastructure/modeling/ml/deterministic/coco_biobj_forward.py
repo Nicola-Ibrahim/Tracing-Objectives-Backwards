@@ -1,6 +1,7 @@
 import cocoex
 import numpy as np
 from cocoex import Problem as COCOProblem
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 from .....domain.modeling.interfaces.base_estimator import DeterministicEstimator
 
@@ -43,7 +44,7 @@ class COCOEstimator(DeterministicEstimator):
         Returns the type of the inverse decision mapper.
         This should be overridden by subclasses to return their specific type.
         """
-        return "coco-bbob-biobj"
+        return getattr(EstimatorTypeEnum, "COCO", EstimatorTypeEnum.COCO).value
 
     @staticmethod
     def _build_problem(

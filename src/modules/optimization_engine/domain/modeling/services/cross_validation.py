@@ -36,7 +36,6 @@ class CrossValidationTrainer:
         epochs: int = 100,
         batch_size: int = 32,
         learning_curve_steps: int = 50,
-        tandem: tuple[BaseEstimator, float] | None = None,
     ) -> tuple[BaseEstimator, LossHistory, Metrics]:
         """
         Split + normalize, run k-fold CV, fit final estimator on full train portion,
@@ -59,7 +58,6 @@ class CrossValidationTrainer:
                         y_train=y_tr,
                         epochs=epochs,
                         batch_size=batch_size,
-                        tandem=tandem,
                     )
                 )
             else:
@@ -90,7 +88,6 @@ class CrossValidationTrainer:
                 y_train=y_train,
                 epochs=epochs,
                 batch_size=batch_size,
-                tandem=tandem,
             )
         else:
             fitted_estimator, loss_history, metrics = self._det_trainer.train(
@@ -137,7 +134,6 @@ class CrossValidationTrainer:
         epochs: int = 100,
         batch_size: int = 32,
         learning_curve_steps: int = 20,
-        tandem: tuple[BaseEstimator, float] | None = None,
     ) -> tuple[BaseEstimator, LossHistory, Metrics, dict[str, Any]]:
         """
         Grid search over param_range. Returns (TrainingOutcome for chosen param, summary).
@@ -167,7 +163,6 @@ class CrossValidationTrainer:
                 epochs=epochs,
                 batch_size=batch_size,
                 learning_curve_steps=learning_curve_steps,
-                tandem=tandem,
             )
 
             # aggregate primary metric (mean over folds)
@@ -199,7 +194,6 @@ class CrossValidationTrainer:
             epochs=epochs,
             batch_size=batch_size,
             learning_curve_steps=learning_curve_steps,
-            tandem=tandem,
         )
 
         summary = {

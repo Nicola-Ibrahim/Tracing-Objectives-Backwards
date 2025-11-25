@@ -56,7 +56,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         ]
 
         fig = make_subplots(
-            rows=12,
+            rows=15,
             cols=2,
             specs=[
                 [{"type": "surface"}, {"type": "surface"}],
@@ -64,18 +64,21 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 [{"type": "xy", "colspan": 2}, None],
                 [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
+                [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
                 [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
+                [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
                 [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
+                [None, None],  # Spacer
                 [{"type": "xy"}, {"type": "xy"}],
             ],
             vertical_spacing=0.01,
             horizontal_spacing=0.07,
             subplot_titles=subplot_titles,
-            row_heights=[0.22, 0.03, 0.12, 0.03, 0.10, 0.10, 0.03, 0.10, 0.10, 0.03, 0.10, 0.10],
+            row_heights=[0.22, 0.06, 0.12, 0.06, 0.10, 0.04, 0.10, 0.06, 0.10, 0.04, 0.10, 0.06, 0.10, 0.04, 0.10],
             column_titles=["Train", "Test"]
         )
 
@@ -92,7 +95,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             output_symbol=output_symbol,
         )
 
-        # Row 3 (was 2)
+        # Row 3
         add_loss_curves(fig, row=3, loss_history=loss_history, col=1)
 
         # Residual diagnostics
@@ -119,7 +122,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         else:
             common_range = [-1.0, 1.0]
 
-        # Row 5 (was 3): Residuals vs Fitted (y1) - Train (Col 1), Test (Col 2)
+        # Row 5: Residuals vs Fitted (y1)
         add_residuals_vs_fitted(
             fig,
             row=5,
@@ -140,10 +143,10 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 range_y=common_range,
             )
 
-        # Row 6 (was 4): Residuals vs Fitted (y2) - Train (Col 1), Test (Col 2)
+        # Row 7: Residuals vs Fitted (y2)
         add_residuals_vs_fitted(
             fig,
-            row=6,
+            row=7,
             col=1,
             fitted=yhat_tr[:, 1],
             resid=resid_tr[:, 1],
@@ -153,7 +156,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         if yhat_te is not None:
             add_residuals_vs_fitted(
                 fig,
-                row=6,
+                row=7,
                 col=2,
                 fitted=yhat_te[:, 1],
                 resid=resid_te[:, 1],
@@ -161,32 +164,13 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 range_y=common_range,
             )
 
-        # Row 8 (was 5): Hist (y1) - Train (Col 1), Test (Col 2)
-        add_residual_hist(
-            fig,
-            row=8,
-            col=1,
-            resid=resid_tr[:, 0],
-            label=f"{_sym(output_symbol, 1)} (train)",
-            range_x=common_range,
-        )
-        if resid_te is not None:
-            add_residual_hist(
-                fig,
-                row=8,
-                col=2,
-                resid=resid_te[:, 0],
-                label=f"{_sym(output_symbol, 1)} (test)",
-                range_x=common_range,
-            )
-
-        # Row 9 (was 6): Hist (y2) - Train (Col 1), Test (Col 2)
+        # Row 9: Hist (y1)
         add_residual_hist(
             fig,
             row=9,
             col=1,
-            resid=resid_tr[:, 1],
-            label=f"{_sym(output_symbol, 2)} (train)",
+            resid=resid_tr[:, 0],
+            label=f"{_sym(output_symbol, 1)} (train)",
             range_x=common_range,
         )
         if resid_te is not None:
@@ -194,15 +178,34 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
                 fig,
                 row=9,
                 col=2,
+                resid=resid_te[:, 0],
+                label=f"{_sym(output_symbol, 1)} (test)",
+                range_x=common_range,
+            )
+
+        # Row 11: Hist (y2)
+        add_residual_hist(
+            fig,
+            row=11,
+            col=1,
+            resid=resid_tr[:, 1],
+            label=f"{_sym(output_symbol, 2)} (train)",
+            range_x=common_range,
+        )
+        if resid_te is not None:
+            add_residual_hist(
+                fig,
+                row=11,
+                col=2,
                 resid=resid_te[:, 1],
                 label=f"{_sym(output_symbol, 2)} (test)",
                 range_x=common_range,
             )
 
-        # Row 11 (was 7): Q-Q Plot (y1) - Train (Col 1), Test (Col 2)
+        # Row 13: Q-Q Plot (y1)
         add_qq_plot(
             fig,
-            row=11,
+            row=13,
             col=1,
             resid=resid_tr[:, 0],
             label=f"{_sym(output_symbol, 1)} (train)",
@@ -211,17 +214,17 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         if resid_te is not None:
             add_qq_plot(
                 fig,
-                row=11,
+                row=13,
                 col=2,
                 resid=resid_te[:, 0],
                 label=f"{_sym(output_symbol, 1)} (test)",
                 range_y=common_range,
             )
 
-        # Row 12 (was 8): Q-Q Plot (y2) - Train (Col 1), Test (Col 2)
+        # Row 15: Q-Q Plot (y2)
         add_qq_plot(
             fig,
-            row=12,
+            row=15,
             col=1,
             resid=resid_tr[:, 1],
             label=f"{_sym(output_symbol, 2)} (train)",
@@ -230,7 +233,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         if resid_te is not None:
             add_qq_plot(
                 fig,
-                row=12,
+                row=15,
                 col=2,
                 resid=resid_te[:, 1],
                 label=f"{_sym(output_symbol, 2)} (test)",
@@ -240,26 +243,16 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         add_estimator_summary(fig, est, loss_history)
 
         # Add explanations under each row
-        # Recalculated Y positions for 12 rows (approximate)
-        # Total height ~2800.
-        # Row 1 (Surface): Top ~1.0, Bottom ~0.78. Expl ~0.80
-        # Row 3 (Curves): Top ~0.75, Bottom ~0.63. Expl ~0.65
-        # Row 5 (Resid y1): Top ~0.60, Bottom ~0.50. Expl ~0.52
-        # Row 6 (Resid y2): Top ~0.49, Bottom ~0.39. Expl ~0.41
-        # Row 8 (Hist y1): Top ~0.36, Bottom ~0.26. Expl ~0.28
-        # Row 9 (Hist y2): Top ~0.25, Bottom ~0.15. Expl ~0.17
-        # Row 11 (QQ y1): Top ~0.12, Bottom ~0.02. Expl ~0.04
-        # Row 12 (QQ y2): Top ~0.01, Bottom ~-0.09. Expl ~-0.07
-        
+        # Recalculated Y positions for 15 rows
         explanations = [
-            (0.80, "<b>Model Surfaces</b>: Predicted decision surface (color) vs data points. <i>Goal</i>: Surface should follow data."),
-            (0.65, "<b>Learning Curves</b>: Loss over epochs. <i>Goal</i>: Decrease and converge. Gap = Overfitting."),
-            (0.52, "<b>Residuals vs Fitted (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Similar patterns."),
-            (0.41, "<b>Residuals vs Fitted (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Similar patterns."),
-            (0.28, "<b>Error Distribution (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped centered at 0. Similar shape."),
-            (0.17, "<b>Error Distribution (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped centered at 0. Similar shape."),
-            (0.04, "<b>Q-Q Plot (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Follow <b>Red Dashed Line</b>."),
-            (-0.07, "<b>Q-Q Plot (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Follow <b>Red Dashed Line</b>."),
+            (0.82, "<b>Model Surfaces</b>: Predicted decision surface (color) vs data points. <i>Goal</i>: Surface should follow data."),
+            (0.70, "<b>Learning Curves</b>: Loss over epochs. <i>Goal</i>: Decrease and converge. Gap = Overfitting."),
+            (0.58, "<b>Residuals vs Fitted (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Similar patterns."),
+            (0.50, "<b>Residuals vs Fitted (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Random scatter around 0. Similar patterns."),
+            (0.38, "<b>Error Distribution (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped centered at 0. Similar shape."),
+            (0.30, "<b>Error Distribution (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Bell-shaped centered at 0. Similar shape."),
+            (0.18, "<b>Q-Q Plot (y1)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Follow <b>Red Dashed Line</b>."),
+            (0.10, "<b>Q-Q Plot (y2)</b>: Train (Left) vs Test (Right). <i>Goal</i>: Follow <b>Red Dashed Line</b>."),
         ]
 
         for y_pos, text in explanations:

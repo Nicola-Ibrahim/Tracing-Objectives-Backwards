@@ -42,7 +42,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             ],
             vertical_spacing=0.01,
             subplot_titles=subplot_titles,
-            row_heights=[0.22, 0.03, 0.12, 0.03, 0.15, 0.03, 0.15, 0.03, 0.15],
+            row_heights=[0.22, 0.06, 0.12, 0.06, 0.15, 0.06, 0.15, 0.06, 0.15],
             column_titles=["Train", "Test"]
         )
 

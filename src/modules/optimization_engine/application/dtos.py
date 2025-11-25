@@ -14,7 +14,7 @@ class EstimatorParams(BaseModel):
 
 
 class COCOEstimatorParams(EstimatorParams):
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.COCO.value,
         description="Type of the COCO interpolation method.",
     )
@@ -25,7 +25,7 @@ class COCOEstimatorParams(EstimatorParams):
 
 
 class CloughTocherEstimatorParams(EstimatorParams):
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.CLOUGH_TOCHER_ND.value,
         description="Type of the Clough-Tocher interpolation method.",
     )
@@ -36,7 +36,7 @@ class CloughTocherEstimatorParams(EstimatorParams):
 
 
 class NeuralNetworkEstimatorParams(EstimatorParams):
-    type: EstimatorTypeEnum = Field(
+    type:       str = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
@@ -72,7 +72,7 @@ class RBFEstimatorParams(EstimatorParams):
     RBFEstimator.
     """
 
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.RBF.value,
         description="Type of the radial basis function interpolation method.",
     )
@@ -115,7 +115,7 @@ class GaussianProcessEstimatorParams(EstimatorParams):
     GaussianProcessEstimator.
     """
 
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value,
         description="Type of the gaussian process interpolation method.",
     )
@@ -157,7 +157,7 @@ class MDNEstimatorParams(EstimatorParams):
     MDNEstimator.
     """
 
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.MDN.value,
         description="Type of the Mixture Density Network interpolation method.",
     )
@@ -203,7 +203,7 @@ class CVAEEstimatorParams(EstimatorParams):
     CVAEEstimator.
     """
 
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.CVAE.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
@@ -245,7 +245,7 @@ class CVAEMDNEstimatorParams(EstimatorParams):
     CVAEEstimator.
     """
 
-    type: EstimatorTypeEnum = Field(
+    type: str = Field(
         EstimatorTypeEnum.CVAE_MDN.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
