@@ -7,15 +7,10 @@ from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
 from ...infrastructure.modeling.ml.deterministic import (
-    CloughTocherEstimator,
     GaussianProcessEstimator,
-    KrigingEstimator,
-    LinearNDEstimator,
     NearestNDEstimator,
     NNEstimator,
     RBFEstimator,
-    SplineEstimator,
-    SVREstimator,
 )
 from ...infrastructure.modeling.ml.deterministic.coco_biobj_forward import COCOEstimator
 from ...infrastructure.modeling.ml.probabilistic import (
@@ -34,14 +29,9 @@ class EstimatorFactory:
     # A class-level registry to map the enum type to the corresponding class
     _registry: dict[EstimatorTypeEnum, BaseEstimator] = {
         EstimatorTypeEnum.RBF.value: RBFEstimator,
-        EstimatorTypeEnum.LINEAR_ND.value: LinearNDEstimator,
         EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value: NearestNDEstimator,
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value: NNEstimator,
-        EstimatorTypeEnum.CLOUGH_TOCHER_ND.value: CloughTocherEstimator,
         EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value: GaussianProcessEstimator,
-        EstimatorTypeEnum.SPLINE_ND.value: SplineEstimator,
-        EstimatorTypeEnum.KRIGING_ND.value: KrigingEstimator,
-        EstimatorTypeEnum.SVR_ND.value: SVREstimator,
         EstimatorTypeEnum.CVAE.value: CVAEEstimator,
         EstimatorTypeEnum.MDN.value: MDNEstimator,
         EstimatorTypeEnum.CVAE_MDN.value: CVAEMDNEstimator,

@@ -114,6 +114,12 @@ model-generate-decision:  # Use a trained model to generate a decision for a tar
 	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
+.PHONY: model-validate-inverse
+model-validate-inverse:  # Validate an inverse model using a forward simulator
+	@echo "$(BLUE)Validating inverse model...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.validate_inverse_model
+	@echo "$(GREEN)Inverse model validation complete.$(RESET)"
+
 .PHONY: assurance-calibrate-validation
 assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation
 	@echo "$(BLUE)Calibrating decision validation gates...$(RESET)"
