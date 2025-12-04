@@ -95,16 +95,19 @@ class InverseModelValidator:
         # --- Metrics Aggregation ---
         
         # 1. Best Shot (Min error per target) -> Mean across targets
+        # The best shot is the candidate that has the lowest error for each target.
         best_shots = np.min(errors, axis=1) # Shape: (n_test,)
         mean_best_shot = np.mean(best_shots)
 
         # 2. Reliability (Median error per target) -> Mean across targets
+        # The reliability is the median error for each target.
         reliabilities = np.median(errors, axis=1) # Shape: (n_test,)
         mean_reliability = np.mean(reliabilities)
 
         # 3. Diversity (Std Dev of candidates per target) -> Mean across targets
         # std along sample axis (axis=1), then mean over dimensions (axis=2)
         # This gives one diversity score per target.
+        # The diversity score is the standard deviation of the candidates for each target.
         diversities = np.std(candidates_3d, axis=1).mean(axis=1) # Shape: (n_test,)
         mean_diversity = np.mean(diversities)
 

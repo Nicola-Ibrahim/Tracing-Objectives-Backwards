@@ -7,9 +7,7 @@ from ...application.modeling.generate_decision.handler import (
 from ...domain.assurance.decision_validation.services.decision_validation_service import (
     DecisionValidationService,
 )
-from ...infrastructure.assurance.repositories.calibration_repository import (
-    FileSystemDecisionValidationCalibrationRepository,
-)
+
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
@@ -17,7 +15,7 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-
+from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 def main():
     """
@@ -27,22 +25,20 @@ def main():
 
     # Create the command object using the hardcoded values
     command = GenerateDecisionCommand(
-        estimator_type="mdn",
+        inverse_estimator_type=EstimatorTypeEnum.CVAE,
+        forward_estimator_type=EstimatorTypeEnum.COCO,
         target_objective=[411, 1500],
         distance_tolerance=0.02,
-        num_suggestions=5,
-        validation_enabled=True,
-        feasibility_enabled=False,
+        n_samples=50,
     )
 
-    calibration_repository = FileSystemDecisionValidationCalibrationRepository()
+
 
     # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(
         model_repository=FileSystemModelArtifactRepository(),
         processed_data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        calibration_repository=calibration_repository,
     )
 
     handler.execute(command)

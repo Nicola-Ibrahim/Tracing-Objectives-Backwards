@@ -74,8 +74,8 @@ class GenerateDatasetCommandHandler:
         )
 
         normalizer_cfg = command.normalizer_config.model_dump()
-        X_normalizer = self._normalizer_factory.create(normalizer_cfg)
-        y_normalizer = self._normalizer_factory.create(normalizer_cfg)
+        decisions_normalizer = self._normalizer_factory.create(normalizer_cfg)
+        objectives_normalizer = self._normalizer_factory.create(normalizer_cfg)
 
         metadata = {
             "source": "generated",
@@ -85,8 +85,8 @@ class GenerateDatasetCommandHandler:
         generated_dataset, processed_dataset = self._dataset_service.generate(
             dataset_name="dataset",
             optimizer=optimizer,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
+            decisions_normalizer=decisions_normalizer,
+            objectives_normalizer=objectives_normalizer,
             test_size=command.test_size,
             random_state=command.random_state,
             metadata=metadata,
@@ -98,16 +98,16 @@ class GenerateDatasetCommandHandler:
             )
 
         self._logger.log_info(
-            f"Historical Pareto set contains {generated_dataset.X.shape[0]} solutions."
+            f"Historical Pareto set contains {generated_dataset.decisions.shape[0]} solutions."
         )
 
         self._logger.log_info(
             "[postprocess] train shapes X%s y%s | test shapes X%s y%s"
             % (
-                processed_dataset.X_train.shape,
-                processed_dataset.y_train.shape,
-                processed_dataset.X_test.shape,
-                processed_dataset.y_test.shape,
+                processed_dataset.decisions_train.shape,
+                processed_dataset.objectives_train.shape,
+                processed_dataset.decisions_test.shape,
+                processed_dataset.objectives_test.shape,
             )
         )
 

@@ -1,16 +1,6 @@
 import numpy as np
+import plotly.graph_objects as go
 
-from ....domain.assurance.decision_validation.interfaces import (
-    BaseDecisionValidationCalibrationRepository,
-)
-from ....domain.assurance.decision_validation.services.decision_validation_service import (
-    DecisionValidationService,
-)
-from ....domain.assurance.feasibility.errors import ObjectiveOutOfBoundsError
-from ....domain.assurance.feasibility.services.objective_feasibility_service import (
-    ObjectiveFeasibilityService,
-)
-from ....domain.assurance.feasibility.value_objects.pareto_front import ParetoFront
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.processed_dataset import ProcessedDataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
@@ -20,205 +10,171 @@ from ....domain.modeling.interfaces.base_estimator import (
     ProbabilisticEstimator,
 )
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ...factories.assurance import DiversityStrategyFactory, ScoreStrategyFactory
 from .command import GenerateDecisionCommand
 
 
 class GenerateDecisionCommandHandler:
-    """Generate y for a requested x target and apply assurance checks."""
+    """
+    Generate Design Candidates (X) for a requested Objective (Y).
+    
+    Unified Handler for MDN and CVAE:
+    - Removes external Feasibility/Validation services (redundant).
+    - Adapts to model capabilities:
+        - If MDN: Uses analytic `predict_topk` to find exact modes.
+        - If CVAE: Uses `sample` to generate a cloud of options.
+    """
 
     def __init__(
         self,
         model_repository: BaseModelArtifactRepository,
         processed_data_repository: BaseDatasetRepository,
         logger: BaseLogger,
-        calibration_repository: BaseDecisionValidationCalibrationRepository,
     ):
-        """Wire infrastructure dependencies and optional assurance services."""
         self._model_repository = model_repository
         self._processed_data_repo = processed_data_repository
         self._logger = logger
-        self._feasibility_service = ObjectiveFeasibilityService(
-            scorer=ScoreStrategyFactory().create("kde"),
-            diversity_registry=DiversityStrategyFactory().create_bunch(["kmeans"]),
-        )
-        dv_calibration = calibration_repository.load()
-        self._decision_validation_service = DecisionValidationService(
-            tolerance=0.03,
-            ood_calibrator=dv_calibration.ood_calibrator,
-            conformal_calibrator=dv_calibration.conformal_calibrator,
-        )
-        self._calibration_repository = calibration_repository
 
-    def execute(self, command: GenerateDecisionCommand) -> np.ndarray:
-        """Generate y for the requested estimator and x target, then validate."""
-        estimator = self._load_estimator(command.estimator_type)
+    def execute(self, command: GenerateDecisionCommand) -> dict[str, np.ndarray]:
+        """
+        Generate candidates for the target.
+        Returns dictionary with 'candidates' (raw) and 'candidates_norm'.
+        """
+        # 1. Load Resources
+        estimator = self._load_estimator(command.inverse_estimator_type)
         processed: ProcessedDataset = self._processed_data_repo.load(
             "dataset", variant="processed"
         )
 
-        objectives_normalizer = processed.X_normalizer  # objective normalizer
-        decision_normalizer = processed.y_normalizer  # decision normalizer
+        decisions_normalizer = processed.decisions_normalizer
+        objectives_normalizer = processed.objectives_normalizer
 
-        pareto_set = processed.pareto.set
-        pareto_front = processed.pareto.front
+        # 2. Normalize Target (Y)
+        # command.target_objective is likely shape (y_dim,) -> (1, y_dim)
+        target_y_raw = np.array(command.target_objective, dtype=float).reshape(1, -1)
+        target_y_norm = objectives_normalizer.transform(target_y_raw)
 
-        target_objective_X, target_objective_X_norm = self._build_target_X(
-            command.target_objective, objectives_normalizer
-        )
-        self._logger.log_info(f"Target x (raw): {target_objective_X}")
-        self._logger.log_info(f"Target x (normalized): {target_objective_X_norm}")
+        self._logger.log_info(f"Target Objective (Raw): {target_y_raw.tolist()}")
 
-        # NOTE: Comment out feasibility for now as it is not yet used in practice
-        # if command.feasibility_enabled:
-        #     self._validate_feasibility(
-        #         pareto_front=pareto_front,
-        #         objectives_normalizer=objectives_normalizer,
-        #         target_x=target_x,
-        #         distance_tolerance=command.distance_tolerance,
-        #         num_suggestions=command.num_suggestions,
-        #         diversity_method=command.diversity_method,
-        #         suggestion_noise_scale=command.suggestion_noise_scale,
-        #     )
-
-        generated_decision_y, generated_decision_y_norm = self.infer(
-            estimator=estimator,
-            X_norm=target_objective_X_norm,
-            normalizer=decision_normalizer,
+        # 3. Generate Candidates (Polymorphic Logic)
+        candidates_norm = self._generate_candidates(
+            estimator, 
+            target_y_norm, 
+            n_samples=command.n_samples 
         )
 
-        self._logger.log_info(f"Generated y (raw): {generated_decision_y}")
-        self._logger.log_info(f"Generated y (normalized): {generated_decision_y_norm}")
 
-        if command.validation_enabled:
-            self._run_decision_validation(
-                X=generated_decision_y_norm,
-                y_target=target_objective_X_norm,
+        # 4. Denormalize Results (X_norm -> X_raw)
+        # Ensure 2D shape for inverse_transform: (N_samples, x_dim)
+        if candidates_norm.ndim == 3:
+            candidates_norm = candidates_norm.reshape(-1, candidates_norm.shape[-1])
+            
+        candidates_raw = decisions_normalizer.inverse_transform(candidates_norm)
+
+        self._logger.log_info(f"candidates_raw shape: {candidates_raw.shape}")
+
+        # 5. Verify with Forward Model (Optional but recommended for visualization)
+        forward_estimator = self._load_estimator(
+            command.forward_estimator_type, direction="forward"
+        )
+        
+        # Predict objectives for the generated candidates
+        # Forward model expects raw decisions (original space)
+        predicted_objectives = forward_estimator.predict(candidates_raw)
+
+        # 6. Visualize Results
+        pareto_front = processed.pareto.front if processed.pareto else np.zeros((0, 2))
+        self._visualize_results(
+            pareto_front=pareto_front,
+            target_objective=np.array(command.target_objective),
+            predicted_objectives=predicted_objectives,
+        )
+
+        self._logger.log_info(f"Generated {len(candidates_raw)} candidates.")
+
+        # 7. Return Results
+        return {
+            "decisions": candidates_raw,       
+            "decisions_norm": candidates_norm, 
+        }
+
+    def _visualize_results(
+        self, 
+        pareto_front: np.ndarray, 
+        target_objective: np.ndarray, 
+        predicted_objectives: np.ndarray
+    ):
+        """
+        Visualize the Target, Predicted Cloud, and Pareto Front.
+        """
+        fig = go.Figure()
+
+        # 1. Pareto Front (Background Reference)
+        fig.add_trace(
+            go.Scatter(
+                x=pareto_front[:, 0],
+                y=pareto_front[:, 1],
+                mode="markers",
+                name="Pareto Front",
+                marker=dict(color="lightgray", size=5, opacity=0.5),
             )
+        )
 
-        return generated_decision_y
+        # 2. Predicted Objectives (Cloud)
+        fig.add_trace(
+            go.Scatter(
+                x=predicted_objectives[:, 0],
+                y=predicted_objectives[:, 1],
+                mode="markers",
+                name="Predicted Outcomes",
+                marker=dict(color="blue", size=6, opacity=0.7),
+            )
+        )
 
-    def _load_estimator(self, estimator_type: EstimatorTypeEnum) -> BaseEstimator:
-        """Return the most recent estimator artifact matching the type."""
+        # 3. Target Objective (Star)
+        fig.add_trace(
+            go.Scatter(
+                x=[target_objective[0]],
+                y=[target_objective[1]],
+                mode="markers",
+                name="Target Objective",
+                marker=dict(color="red", symbol="star", size=15, line=dict(width=2, color="black")),
+            )
+        )
+
+        fig.update_layout(
+            title="Decision Generation Analysis",
+            xaxis_title="Objective 1",
+            yaxis_title="Objective 2",
+            template="plotly_white",
+            width=1000,
+            height=800,
+        )
+        
+        fig.show()
+
+    def _generate_candidates(
+        self, 
+        estimator: BaseEstimator, 
+        target_y_norm: np.ndarray, 
+        n_samples: int
+    ) -> np.ndarray:
+        """
+        Strategy pattern to handle different probabilistic models.
+        """
+
+        # CASE A: It's a Probabilistic Model (MDN or CVAE)
+        if isinstance(estimator, ProbabilisticEstimator):
+            return estimator.sample(target_y_norm, n_samples=n_samples)
+            
+
+
+    def _load_estimator(
+        self, 
+        estimator_type: EstimatorTypeEnum, 
+        direction: str = "inverse"
+    ) -> BaseEstimator:
         artifact = self._model_repository.get_latest_version(
             estimator_type=estimator_type.value,
-            mapping_direction="inverse",
+            mapping_direction=direction,
         )
         return artifact.estimator
-
-    def _build_target_X(self, target_objective_X: np.ndarray, normalizer):
-        """Return target objective in raw and normalized space."""
-        target_objective_X = np.asarray(target_objective_X, dtype=float)
-        target_objective_X_norm = normalizer.transform(
-            np.atleast_2d(target_objective_X)
-        )[0]
-        return target_objective_X, target_objective_X_norm
-
-    def _validate_feasibility(
-        self,
-        *,
-        pareto_front: np.ndarray | None,
-        objectives_normalizer,
-        target_x: tuple[np.ndarray, np.ndarray],
-        distance_tolerance: float,
-        num_suggestions: int,
-        diversity_method: str,
-        suggestion_noise_scale: float,
-    ) -> None:
-        """Check that target x fits within the support of the Pareto front."""
-        if pareto_front is None:
-            return
-
-        pareto_front_norm = objectives_normalizer.transform(pareto_front)
-        service = self._feasibility_service
-
-        pareto_vo = ParetoFront(
-            raw=pareto_front,
-            normalized=pareto_front_norm,
-        )
-
-        try:
-            service.validate(
-                pareto_front=pareto_vo,
-                tolerance=distance_tolerance,
-                target=target_x,
-                num_suggestions=num_suggestions,
-                suggestion_noise_scale=suggestion_noise_scale,
-                diversity_method=diversity_method,
-            )
-        except ObjectiveOutOfBoundsError as error:
-            self._handle_feasibility_error(error, objectives_normalizer)
-
-    def infer(
-        self,
-        *,
-        estimator: BaseEstimator,
-        X_norm: np.ndarray,
-        normalizer,
-        n_samples: int | None = 256,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Return denormalized and normalized outputs for the provided inputs."""
-
-        X_input = np.atleast_2d(np.asarray(X_norm, dtype=float))
-
-        if isinstance(estimator, ProbabilisticEstimator):
-            sample_count = int(n_samples) if n_samples is not None else 256
-            y_norm = estimator.predict_mean(X_input, n_samples=sample_count)
-        else:
-            y_norm = estimator.predict(X_input)
-
-        y_norm = np.atleast_2d(np.asarray(y_norm, dtype=float))
-        if y_norm.shape[0] != X_input.shape[0]:
-            raise ValueError(
-                "Estimator returned mismatched batch size during inference."
-            )
-
-        y_raw = normalizer.inverse_transform(y_norm)[0]
-        return y_raw, y_norm[0]
-
-    def _handle_feasibility_error(
-        self, error: ObjectiveOutOfBoundsError, objectives_normalizer
-    ) -> None:
-        """Report infeasible x diagnostics and re-raise the originating error."""
-        self._logger.log_error(
-            f"Feasibility failed: {error.reason.value} | {error.message}"
-        )
-        if error.suggestions is None:
-            raise error
-
-        suggestions = np.atleast_2d(np.asarray(error.suggestions))
-        if suggestions.size == 0:
-            raise error
-
-        try:
-            denorm_suggestions = objectives_normalizer.inverse_transform(suggestions)
-        except Exception:
-            raise error
-
-        suggestions_str = "; ".join(str(value.tolist()) for value in denorm_suggestions)
-        self._logger.log_error(f"Suggestions (original scale): {suggestions_str}")
-        raise error
-
-    def _run_decision_validation(self, X: np.ndarray, y_target: np.ndarray) -> None:
-        """Execute decision validation service if configured."""
-
-        report = self._decision_validation_service.validate(X=X, y_target=y_target)
-
-        if self._logger:
-            summary = {
-                "passed": report.verdict.value,
-                "gate1": {
-                    "md2": report.metrics.get("gate1_md2"),
-                    "thr": report.metrics.get("gate1_md2_threshold"),
-                },
-                "gate2": {
-                    "q": report.metrics.get("gate2_conformal_radius_q"),
-                    "dist": report.metrics.get("gate2_dist_to_target_l2"),
-                },
-            }
-
-            self._logger.log_metrics(summary)
-            explanations = {gate.name: gate.explanation for gate in report.gate_results}
-            self._logger.log_info(
-                f"[assurance] Verdict={report.verdict.value} | Reasons={explanations}"
-            )

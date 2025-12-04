@@ -29,30 +29,7 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 @click.option(
     "--problem-id", required=True, type=int, help='Pareto problem ID (e.g., "55", "59")'
 )
-@click.option(
-    "--test-size",
-    type=float,
-    default=0.2,
-    show_default=True,
-    help="Fraction of samples reserved for evaluation when processing the dataset.",
-)
-@click.option(
-    "--random-state",
-    type=int,
-    default=42,
-    show_default=True,
-    help="Random seed used for the train/test split.",
-)
-@click.option(
-    "--normalizer",
-    type=click.Choice([enum.value for enum in NormalizerTypeEnum]),
-    default=NormalizerTypeEnum.HYPERCUBE.value,
-    show_default=True,
-    help="Normalizer applied to decisions/objectives during processing.",
-)
-def generate_data(
-    problem_id: int, test_size: float, random_state: int, normalizer: str
-):
+def generate_data(problem_id: int):
     problem_config = ApplicationProblemConfig(
         problem_id=problem_id, type=ProblemType.biobj
     )
@@ -73,9 +50,6 @@ def generate_data(
         problem_config=problem_config,
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
-        normalizer_config=NormalizerConfig(type=normalizer, params={}),
-        test_size=test_size,
-        random_state=random_state,
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)

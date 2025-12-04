@@ -20,14 +20,14 @@ class ProcessedDataset(BaseModel):
     name: str = Field(..., description="Unique name/ID of the dataset")
 
     # normalized splits
-    X_train: np.typing.NDArray = Field(..., description="Training input features")
-    y_train: np.typing.NDArray = Field(..., description="Training target values")
-    X_test: np.typing.NDArray = Field(..., description="Test input features")
-    y_test: np.typing.NDArray = Field(..., description="Test target values")
+    decisions_train: np.typing.NDArray = Field(..., description="Training input features")
+    objectives_train: np.typing.NDArray = Field(..., description="Training target values")
+    decisions_test: np.typing.NDArray = Field(..., description="Test input features")
+    objectives_test: np.typing.NDArray = Field(..., description="Test target values")
 
     # fitted normalizers (sklearn-like wrappers)
-    X_normalizer: BaseNormalizer = Field(..., description="Fitted normalizer for X")
-    y_normalizer: BaseNormalizer = Field(..., description="Fitted normalizer for y")
+    decisions_normalizer: BaseNormalizer = Field(..., description="Fitted normalizer for decisions")
+    objectives_normalizer: BaseNormalizer = Field(..., description="Fitted normalizer for objectives")
 
     pareto: Pareto = None
 
@@ -38,12 +38,12 @@ class ProcessedDataset(BaseModel):
         cls,
         *,
         name: str,
-        X_train: np.ndarray,
-        y_train: np.ndarray,
-        X_test: np.ndarray,
-        y_test: np.ndarray,
-        X_normalizer: Any,
-        y_normalizer: Any,
+        decisions_train: np.ndarray,
+        objectives_train: np.ndarray,
+        decisions_test: np.ndarray,
+        objectives_test: np.ndarray,
+        decisions_normalizer: Any,
+        objectives_normalizer: Any,
         pareto: Pareto = None,
         metadata: dict = None,
     ) -> Self:
@@ -51,12 +51,12 @@ class ProcessedDataset(BaseModel):
 
         return cls(
             name=name,
-            X_train=X_train,
-            y_train=y_train,
-            X_test=X_test,
-            y_test=y_test,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
+            decisions_train=decisions_train,
+            objectives_train=objectives_train,
+            decisions_test=decisions_test,
+            objectives_test=objectives_test,
+            decisions_normalizer=decisions_normalizer,
+            objectives_normalizer=objectives_normalizer,
             pareto=pareto,
             metadata=metadata,
         )

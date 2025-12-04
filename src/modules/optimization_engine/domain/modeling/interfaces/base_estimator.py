@@ -274,7 +274,7 @@ class ProbabilisticEstimator(BaseEstimator):
     def sample(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 1,
+        n_samples: int = 50,
         seed: int = 42,
         **kwargs,
     ) -> npt.NDArray[np.float64]:

@@ -15,7 +15,6 @@ from ...infrastructure.modeling.ml.deterministic import (
 from ...infrastructure.modeling.ml.deterministic.coco_biobj_forward import COCOEstimator
 from ...infrastructure.modeling.ml.probabilistic import (
     CVAEEstimator,
-    CVAEMDNEstimator,
     MDNEstimator,
 )
 
@@ -34,7 +33,6 @@ class EstimatorFactory:
         EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value: GaussianProcessEstimator,
         EstimatorTypeEnum.CVAE.value: CVAEEstimator,
         EstimatorTypeEnum.MDN.value: MDNEstimator,
-        EstimatorTypeEnum.CVAE_MDN.value: CVAEMDNEstimator,
         EstimatorTypeEnum.COCO.value: COCOEstimator,
     }
 

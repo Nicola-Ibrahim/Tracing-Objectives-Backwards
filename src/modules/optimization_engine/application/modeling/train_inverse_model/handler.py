@@ -37,10 +37,10 @@ class TrainInverseModelCommandHandler:
         )
         self._logger.log_info("Training inverse model (objectives ➝ decisions).")
 
-        X_train = processed_dataset.y_train
-        y_train = processed_dataset.X_train
-        X_test = processed_dataset.y_test
-        y_test = processed_dataset.X_test
+        X_train = processed_dataset.objectives_train
+        y_train = processed_dataset.decisions_train
+        X_test = processed_dataset.objectives_test
+        y_test = processed_dataset.decisions_test
         mapping_direction = "inverse"
 
         estimator_params = command.estimator_params.model_dump()

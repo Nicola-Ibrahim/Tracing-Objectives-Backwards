@@ -17,7 +17,14 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 @click.command(help="Validate inverse model using forward simulator")
-def cli():
+@click.option(
+    "--estimator",
+    type=click.Choice([e.value for e in EstimatorTypeEnum]),
+    default=EstimatorTypeEnum.MDN.value,
+    show_default=True,
+    help="Inverse estimator type to validate.",
+)
+def cli(estimator: str):
     handler = ValidateInverseModelHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
@@ -26,7 +33,7 @@ def cli():
     )
 
     command = ValidateInverseModelCommand(
-        inverse_estimator_type=EstimatorTypeEnum.MDN,
+        inverse_estimator_type=EstimatorTypeEnum(estimator),
         forward_estimator_type=EstimatorTypeEnum.COCO,
     )
 

@@ -541,6 +541,7 @@ class MDNEstimator(ProbabilisticEstimator):
                 results.append(s_chunk.cpu())
 
         out = torch.cat(results, dim=0).numpy().astype(np.float64, copy=False)
+        
         return out
 
     def infer_mean(

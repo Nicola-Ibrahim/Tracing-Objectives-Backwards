@@ -16,8 +16,8 @@ class DatasetGenerationService:
         self,
         dataset_name: str,
         optimizer: BaseOptimizer,
-        X_normalizer: BaseNormalizer,
-        y_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
+        objectives_normalizer: BaseNormalizer,
         test_size: float,
         random_state: int,
         metadata: dict[str, Any] | None = None,
@@ -33,15 +33,17 @@ class DatasetGenerationService:
 
         generated_dataset = GeneratedDataset(
             name=dataset_name,
-            X=opt_data.historical_solutions,
-            y=opt_data.historical_objectives,
+            decisions=opt_data.historical_solutions,
+            objectives=opt_data.historical_objectives,
             pareto=pareto,
         )
+        print(opt_data.historical_solutions.shape)
+        print(opt_data.historical_objectives.shape)
 
         processed_dataset = self._build_processed_dataset(
             raw_dataset=generated_dataset,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
+            decisions_normalizer=decisions_normalizer,
+            objectives_normalizer=objectives_normalizer,
             test_size=test_size,
             random_state=random_state,
             metadata=dict(metadata or {}),
@@ -52,34 +54,34 @@ class DatasetGenerationService:
     def _build_processed_dataset(
         self,
         raw_dataset: GeneratedDataset,
-        X_normalizer: BaseNormalizer,
-        y_normalizer: BaseNormalizer,
+        decisions_normalizer: BaseNormalizer,
+        objectives_normalizer: BaseNormalizer,
         test_size: float,
         random_state: int,
         metadata: dict[str, Any],
     ) -> ProcessedDataset:
         """Split, normalize, and package processed data artifacts."""
 
-        X_raw = raw_dataset.pareto.set
-        y_raw = raw_dataset.pareto.front
+        decisions_raw = raw_dataset.decisions
+        objectives_raw = raw_dataset.objectives
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_raw,
-            y_raw,
+        decisions_train, decisions_test, objectives_train, objectives_test = train_test_split(
+            decisions_raw,
+            objectives_raw,
             test_size=test_size,
             random_state=random_state,
         )
 
-        X_train_norm = X_normalizer.fit_transform(X_train)
-        X_test_norm = X_normalizer.transform(X_test)
-        y_train_norm = y_normalizer.fit_transform(y_train)
-        y_test_norm = y_normalizer.transform(y_test)
+        decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
+        decisions_test_norm = decisions_normalizer.transform(decisions_test)
+        objectives_train_norm = objectives_normalizer.fit_transform(objectives_train)
+        objectives_test_norm = objectives_normalizer.transform(objectives_test)
 
         normalized_pareto = None
         if raw_dataset.pareto is not None:
             normalized_pareto = Pareto.create(
-                set=X_normalizer.transform(raw_dataset.pareto.set),
-                front=y_normalizer.transform(raw_dataset.pareto.front),
+                set=decisions_normalizer.transform(raw_dataset.pareto.set),
+                front=objectives_normalizer.transform(raw_dataset.pareto.front),
             )
 
         metadata.update(
@@ -91,12 +93,12 @@ class DatasetGenerationService:
 
         return ProcessedDataset.create(
             name=raw_dataset.name,
-            X_train=X_train_norm,
-            y_train=y_train_norm,
-            X_test=X_test_norm,
-            y_test=y_test_norm,
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
+            decisions_train=decisions_train_norm,
+            objectives_train=objectives_train_norm,
+            decisions_test=decisions_test_norm,
+            objectives_test=objectives_test_norm,
+            decisions_normalizer=decisions_normalizer,
+            objectives_normalizer=objectives_normalizer,
             pareto=normalized_pareto,
             metadata=metadata,
         )

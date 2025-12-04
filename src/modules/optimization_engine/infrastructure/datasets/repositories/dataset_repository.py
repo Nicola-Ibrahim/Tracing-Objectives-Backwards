@@ -106,21 +106,21 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         target_dir.mkdir(parents=True, exist_ok=True)
 
         dataset_pkl = target_dir / "dataset"
-        x_norm_pkl = target_dir / "X_normalizer"
-        y_norm_pkl = target_dir / "y_normalizer"
+        x_norm_pkl = target_dir / "decisions_normalizer"
+        y_norm_pkl = target_dir / "objectives_normalizer"
         meta_json = target_dir / "metadata.json"
 
-        payload = data.model_dump(exclude={"X_normalizer", "y_normalizer"})
+        payload = data.model_dump(exclude={"decisions_normalizer", "objectives_normalizer"})
         self._pkl.save(payload, dataset_pkl)
-        self._pkl.save(data.X_normalizer, x_norm_pkl)
-        self._pkl.save(data.y_normalizer, y_norm_pkl)
+        self._pkl.save(data.decisions_normalizer, x_norm_pkl)
+        self._pkl.save(data.objectives_normalizer, y_norm_pkl)
 
         metadata: dict[str, Any] = {
             "shapes": {
-                "X_train": list(data.X_train.shape),
-                "y_train": list(data.y_train.shape),
-                "X_test": list(data.X_test.shape),
-                "y_test": list(data.y_test.shape),
+                "decisions_train": list(data.decisions_train.shape),
+                "objectives_train": list(data.objectives_train.shape),
+                "decisions_test": list(data.decisions_test.shape),
+                "objectives_test": list(data.objectives_test.shape),
                 "pareto_set": list(data.pareto.set.shape),
                 "pareto_front": list(data.pareto.front.shape),
             },
@@ -157,12 +157,12 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             payload=payload,
             fallback_name=payload.get("name") or stem,
             normalizers=(
-                payload.get("X_normalizer"),
-                payload.get("y_normalizer"),
+                payload.get("decisions_normalizer"),
+                payload.get("objectives_normalizer"),
             ),
             normalizer_files=(
-                legacy_dir / f"{stem}_X_normalizer",
-                legacy_dir / f"{stem}_y_normalizer",
+                legacy_dir / f"{stem}_decisions_normalizer",
+                legacy_dir / f"{stem}_objectives_normalizer",
             ),
         )
 
@@ -170,26 +170,26 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         self, directory: Path, fallback_name: str
     ) -> ProcessedDataset:
         dataset_pkl = directory / "dataset"
-        x_norm_pkl = directory / "X_normalizer"
-        y_norm_pkl = directory / "y_normalizer"
+        decisions_norm_pkl = directory / "decisions_normalizer"
+        objectives_norm_pkl = directory / "objectives_normalizer"
 
         if not dataset_pkl.with_suffix(".pkl").exists():
             raise FileNotFoundError(f"Missing dataset payload: {dataset_pkl.with_suffix('.pkl')}")
-        if not x_norm_pkl.with_suffix(".pkl").exists() or not y_norm_pkl.with_suffix(
+        if not decisions_norm_pkl.with_suffix(".pkl").exists() or not objectives_norm_pkl.with_suffix(
             ".pkl"
         ).exists():
             raise FileNotFoundError(
-                f"Missing normalizers in {directory}. Expected 'X_normalizer.pkl' and 'y_normalizer.pkl'."
+                f"Missing normalizers in {directory}. Expected 'decisions_normalizer.pkl' and 'objectives_normalizer.pkl'."
             )
 
         payload = self._pkl.load(dataset_pkl)
-        X_normalizer = self._pkl.load(x_norm_pkl)
-        y_normalizer = self._pkl.load(y_norm_pkl)
+        decisions_normalizer = self._pkl.load(decisions_norm_pkl)
+        objectives_normalizer = self._pkl.load(objectives_norm_pkl)
 
         return self._rebuild_processed_dataset(
             payload=payload,
             fallback_name=payload.get("name", fallback_name),
-            normalizers=(X_normalizer, y_normalizer),
+            normalizers=(decisions_normalizer, objectives_normalizer),
         )
 
     def _rebuild_processed_dataset(
@@ -200,13 +200,13 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         normalizers: tuple[Any | None, Any | None],
         normalizer_files: tuple[Path, Path] | None = None,
     ) -> ProcessedDataset:
-        X_normalizer, y_normalizer = normalizers
+        decisions_normalizer, objectives_normalizer = normalizers
 
-        if (X_normalizer is None or y_normalizer is None) and normalizer_files:
-            sib_x, sib_y = normalizer_files
-            if sib_x.with_suffix(".pkl").exists() and sib_y.with_suffix(".pkl").exists():
-                X_normalizer = self._pkl.load(sib_x)
-                y_normalizer = self._pkl.load(sib_y)
+        if (decisions_normalizer is None or objectives_normalizer is None) and normalizer_files:
+            sib_decisions, sib_objectives = normalizer_files
+            if sib_decisions.with_suffix(".pkl").exists() and sib_objectives.with_suffix(".pkl").exists():
+                decisions_normalizer = self._pkl.load(sib_decisions)
+                objectives_normalizer = self._pkl.load(sib_objectives)
             else:
                 raise FileNotFoundError(
                     f"Legacy dataset missing embedded normalizers and no sibling files found for '{fallback_name}'."
@@ -227,12 +227,12 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
 
         return ProcessedDataset.create(
             name=fallback_name,
-            X_train=payload.get("X_train"),
-            y_train=payload.get("y_train"),
-            X_test=payload.get("X_test"),
-            y_test=payload.get("y_test"),
-            X_normalizer=X_normalizer,
-            y_normalizer=y_normalizer,
+            decisions_train=payload.get("decisions_train"),
+            objectives_train=payload.get("objectives_train"),
+            decisions_test=payload.get("decisions_test"),
+            objectives_test=payload.get("objectives_test"),
+            decisions_normalizer=decisions_normalizer,
+            objectives_normalizer=objectives_normalizer,
             pareto=pareto,
             metadata=payload.get("metadata"),
         )

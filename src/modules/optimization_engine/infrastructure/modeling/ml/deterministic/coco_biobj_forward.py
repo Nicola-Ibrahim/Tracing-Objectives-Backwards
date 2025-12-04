@@ -31,6 +31,7 @@ class COCOEstimator(DeterministicEstimator):
         self.function_indices = function_indices
         self.instance_indices = instance_indices
         self.dimensions = dimensions
+
         self._problem = self._build_problem(
             problem_name,
             function_indices,

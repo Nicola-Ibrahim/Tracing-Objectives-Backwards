@@ -16,8 +16,8 @@ class GeneratedDataset(BaseModel):
 
     name: str = Field(..., description="Identifier for the generated dataset.")
 
-    X: np.typing.NDArray = Field(..., description="List of input variable arrays.")
-    y: np.typing.NDArray = Field(..., description="List of output variable arrays.")
+    decisions: np.typing.NDArray = Field(..., description="List of input variable arrays.")
+    objectives: np.typing.NDArray = Field(..., description="List of output variable arrays.")
 
     pareto: Pareto = Field(
         ..., description="Snapshot of the optimized decision/objective data."
@@ -33,11 +33,11 @@ class GeneratedDataset(BaseModel):
         cls,
         name: str,
         *,
-        X: np.typing.NDArray,
-        y: np.typing.NDArray,
+        decisions: np.typing.NDArray,
+        objectives: np.typing.NDArray,
         pareto: Pareto,
     ) -> Self:
-        return cls(name=name, X=X, y=y, pareto=pareto)
+        return cls(name=name, decisions=decisions, objectives=objectives, pareto=pareto)
 
     class Config:
         arbitrary_types_allowed = True

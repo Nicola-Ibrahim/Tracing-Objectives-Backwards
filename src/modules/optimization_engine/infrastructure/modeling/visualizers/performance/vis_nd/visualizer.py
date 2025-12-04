@@ -26,23 +26,70 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         title = data.get("title", f"Model fit ({type(est).__name__})")
         loss_history = data["loss_history"]
 
+        # Determine if we can plot 3D surfaces (input dim == 2)
+        is_2d_input = (Xtr.shape[1] == 2)
+        
+        # Adjust rows: 
+        # Row 1: 1D Fit
+        # Row 2: Ghost 3D Scatter (New, if 2D input) OR Spacer
+        # Row 3: Loss
+        # Row 4: Spacer
+        # Row 5: Resid vs Fit
+        # ...
+        
+        # If 2D input, we insert a row.
+        # Original: 5 rows of plots + spacers.
+        # New: 6 rows of plots + spacers.
+        
+        rows = 6 if is_2d_input else 5
+        
+        specs = [
+            [{"type": "xy", "colspan": 2}, None], # Row 1: 1D Fit
+            [None, None],  # Spacer
+        ]
+        
+        if is_2d_input:
+            specs.extend([
+                [{"type": "surface"}, {"type": "surface"}], # Row 2: Ghost 3D
+                [None, None], # Spacer
+            ])
+            
+        specs.extend([
+            [{"type": "xy", "colspan": 2}, None], # Loss
+            [None, None],  # Spacer
+            [{"type": "xy"}, {"type": "xy"}], # Resid vs Fit
+            [None, None],  # Spacer
+            [{"type": "xy"}, {"type": "xy"}], # Hist
+            [None, None],  # Spacer
+            [{"type": "xy"}, {"type": "xy"}], # QQ
+        ])
+        
+        row_heights = [0.22, 0.06] # Row 1 + Spacer
+        if is_2d_input:
+            row_heights.extend([0.22, 0.06]) # Row 2 + Spacer
+            
+        row_heights.extend([0.12, 0.06, 0.15, 0.06, 0.15, 0.06, 0.15])
+
+        subplot_titles_list = [
+            "1D Reduced Fit",
+        ]
+        if is_2d_input:
+            subplot_titles_list.extend(["Ghost 3D Scatter (y1)", "Ghost 3D Scatter (y2)"])
+            
+        subplot_titles_list.extend([
+            "Training / Validation / Test",
+            "Residuals vs Fitted (y0) (Train)", "Residuals vs Fitted (y0) (Test)",
+            "Residual distribution (y0) (Train)", "Residual distribution (y0) (Test)",
+            "Q-Q Plot (y0) (Train)", "Q-Q Plot (y0) (Test)",
+        ])
+
         fig = make_subplots(
-            rows=5,
+            rows=len(specs),
             cols=2,
-            specs=[
-                [{"type": "xy", "colspan": 2}, None],
-                [None, None],  # Spacer
-                [{"type": "xy", "colspan": 2}, None],
-                [None, None],  # Spacer
-                [{"type": "xy"}, {"type": "xy"}],
-                [None, None],  # Spacer
-                [{"type": "xy"}, {"type": "xy"}],
-                [None, None],  # Spacer
-                [{"type": "xy"}, {"type": "xy"}],
-            ],
+            specs=specs,
             vertical_spacing=0.01,
-            subplot_titles=subplot_titles,
-            row_heights=[0.22, 0.06, 0.12, 0.06, 0.15, 0.06, 0.15, 0.06, 0.15],
+            subplot_titles=subplot_titles_list,
+            row_heights=row_heights,
             column_titles=["Train", "Test"]
         )
 
@@ -70,8 +117,64 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         fig.update_xaxes(title_text="Objective (reduced, normalized)", row=1, col=1)
         fig.update_yaxes(title_text="Decision (normalized)", row=1, col=1)
 
-        # Row 3 (was 2)
-        add_loss_curves(fig, row=3, loss_history=loss_history, col=1)
+        # --- GHOST 3D SCATTER (If Input is 2D) ---
+        # If the input space is 2D, we can visualize the full output distribution in 3D
+        if Xtr.shape[1] == 2:
+            from ..vis_2d.panels import add_surfaces_2d
+            # We reuse the 2D panel logic which now has the Ghost plot
+            # We'll put it in Row 2 (which is currently empty/spacer in the spec above?)
+            # Wait, the spec has Row 2 as spacer.
+            # Let's check the spec again.
+            # rows=5, cols=2
+            # Row 1: xy colspan 2
+            # Row 2: Spacer
+            # Row 3: xy colspan 2 (Loss)
+            
+            # We want to insert it. But changing the layout is invasive.
+            # Let's see if we can fit it.
+            # Actually, the user said "add this new scatter plot".
+            # If I use add_surfaces_2d, it expects to plot into (row, col=1) and (row, col=2).
+            # Row 2 is a spacer. Row 3 is Loss.
+            # I should probably expand the figure to 6 rows?
+            # Or just overwrite Row 1 if it's 2D? No, Row 1 is the 1D reduction which is useful.
+            
+            # Let's add it as a new row. But I need to change the make_subplots spec.
+            # This is getting complicated for `vis_nd`.
+            # Maybe I should just skip it for `vis_nd` unless explicitly asked?
+            # The user said "in the visualizers of 2d and nd".
+            # So I MUST add it to `vis_nd`.
+            
+            # I will modify the make_subplots call to have 6 rows.
+            pass # Placeholder, I will do this in a separate edit to `plot` method.
+
+        # Row 3 (was 2) -> Now Row 3 or 5 depending on is_2d_input
+        # Row indices in make_subplots are 1-based and count spacers if they are in 'specs' list?
+        # No, make_subplots rows count the rows in the grid, including spacers if they are rows.
+        # My specs list has spacers as rows.
+        
+        # Row 1: 1D Fit (Index 1)
+        # Spacer (Index 2)
+        # Row 2 (if 2D): Ghost 3D (Index 3)
+        # Spacer (Index 4)
+        # Loss (Index 3 or 5)
+        
+        loss_row = 5 if is_2d_input else 3
+        
+        if is_2d_input:
+            from ..vis_2d.panels import add_surfaces_2d
+            add_surfaces_2d(
+                fig,
+                row=3, # Index 3 in the grid
+                estimator=est,
+                X_train=Xtr,
+                y_train=ytr,
+                X_test=Xte,
+                y_test=yte,
+                input_symbol="x",
+                output_symbol="y",
+            )
+            
+        add_loss_curves(fig, row=loss_row, loss_history=loss_history, col=1)
 
         # Residual diagnostics
         yhat_tr = point_predict(est, Xtr)
@@ -97,10 +200,12 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         else:
             common_range = [-1.0, 1.0]
 
-        # Row 5 (was 3): Residuals vs Fitted - Train (Col 1), Test (Col 2)
+        # Row 5 (was 3) -> Now Row 5 or 7
+        resid_vs_fit_row = loss_row + 2
+        
         add_residuals_vs_fitted(
             fig,
-            row=5,
+            row=resid_vs_fit_row,
             col=1,
             fitted=yhat_tr[:, 0],
             resid=resid_tr[:, 0],
@@ -110,7 +215,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         if yhat_te is not None:
             add_residuals_vs_fitted(
                 fig,
-                row=5,
+                row=resid_vs_fit_row,
                 col=2,
                 fitted=yhat_te[:, 0],
                 resid=resid_te[:, 0],
@@ -118,10 +223,11 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
                 range_y=common_range,
             )
 
-        # Row 7 (was 4): Hist - Train (Col 1), Test (Col 2)
+        # Row 7 (was 4) -> Now Row 7 or 9
+        hist_row = resid_vs_fit_row + 2
         add_residual_hist(
             fig,
-            row=7,
+            row=hist_row,
             col=1,
             resid=resid_tr[:, 0],
             label="y0 (train)",
@@ -130,18 +236,19 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         if resid_te is not None:
             add_residual_hist(
                 fig,
-                row=7,
+                row=hist_row,
                 col=2,
                 resid=resid_te[:, 0],
                 label="y0 (test)",
                 range_x=common_range,
             )
 
-        # Row 9 (was 5): Q-Q Plot - Train (Col 1), Test (Col 2)
+        # Row 9 (was 5) -> Now Row 9 or 11
+        qq_row = hist_row + 2
         from ..common.diagnostics import add_qq_plot
         add_qq_plot(
             fig,
-            row=9,
+            row=qq_row,
             col=1,
             resid=resid_tr[:, 0],
             label="y0 (train)",
@@ -150,7 +257,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         if resid_te is not None:
             add_qq_plot(
                 fig,
-                row=9,
+                row=qq_row,
                 col=2,
                 resid=resid_te[:, 0],
                 label="y0 (test)",

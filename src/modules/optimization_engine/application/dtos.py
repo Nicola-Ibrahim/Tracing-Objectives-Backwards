@@ -36,7 +36,7 @@ class CloughTocherEstimatorParams(EstimatorParams):
 
 
 class NeuralNetworkEstimatorParams(EstimatorParams):
-    type:       str = Field(
+    type: str = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )

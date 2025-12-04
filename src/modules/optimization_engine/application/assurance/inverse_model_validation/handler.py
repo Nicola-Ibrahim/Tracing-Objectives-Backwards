@@ -39,7 +39,7 @@ class ValidateInverseModelHandler:
         processed_dataset: ProcessedDataset = self._data_repository.load(
             filename="dataset", variant="processed"
         )
-        test_objectives = processed_dataset.y_test # objective space
+        test_objectives = processed_dataset.objectives_test # objective space
 
 
         # 2. Load Inverse Model
@@ -80,8 +80,8 @@ class ValidateInverseModelHandler:
             inverse_estimator=inverse_estimator,
             forward_model=forward_model,
             test_objectives=test_objectives,
-            decision_normalizer=processed_dataset.X_normalizer,  # For inverse: X is decisions
-            objective_normalizer=processed_dataset.y_normalizer,  # For inverse: y is objectives
+            decision_normalizer=processed_dataset.decisions_normalizer,  # For inverse: X is decisions
+            objective_normalizer=processed_dataset.objectives_normalizer,  # For inverse: y is objectives
             num_samples=command.num_samples,
             random_state=command.random_state,
         )

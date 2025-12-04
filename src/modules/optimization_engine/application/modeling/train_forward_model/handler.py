@@ -39,10 +39,10 @@ class TrainForwardModelCommandHandler:
             "Training forward model with single train/test split (decisions ➝ objectives)."
         )
 
-        X_train = processed_dataset.X_train
-        y_train = processed_dataset.y_train
-        X_test = processed_dataset.X_test
-        y_test = processed_dataset.y_test
+        X_train = processed_dataset.decisions_train
+        y_train = processed_dataset.objectives_train
+        X_test = processed_dataset.decisions_test
+        y_test = processed_dataset.objectives_test
         mapping_direction = "forward"
 
         estimator_params = command.estimator_params.model_dump()
