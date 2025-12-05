@@ -1,13 +1,13 @@
-from ...application.visualization.visualize_dataset.command import (
+from ...application.visualizing.dataset.command import (
     VisualizeDatasetCommand,
 )
-from ...application.visualization.visualize_dataset.handler import (
+from ...application.visualizing.dataset.handler import (
     VisualizeDatasetCommandHandler,
 )
-from ...infrastructure.datasets.visualizers.dataset import PlotlyDatasetVisualizer
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
+from ...infrastructure.datasets.visualizers.dataset import PlotlyDatasetVisualizer
 
 command = VisualizeDatasetCommand(
     data_file_name="dataset", processed_file_name="dataset"

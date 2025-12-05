@@ -1,10 +1,10 @@
-from ...application.modeling.generate_decision.command import (
+from ...application.generating.decision.command import (
     GenerateDecisionCommand,
 )
-from ...application.modeling.generate_decision.handler import (
+from ...application.generating.decision.handler import (
     GenerateDecisionCommandHandler,
 )
-
+from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
@@ -12,7 +12,7 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
+
 
 def main():
     """
@@ -28,8 +28,6 @@ def main():
         distance_tolerance=0.02,
         n_samples=50,
     )
-
-
 
     # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(

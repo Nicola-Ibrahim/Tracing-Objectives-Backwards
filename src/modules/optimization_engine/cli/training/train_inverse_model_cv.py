@@ -13,9 +13,11 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_inverse_model_grid_search import (
-    TrainInverseModelGridSearchCommand,
-    TrainInverseModelGridSearchCommandHandler,
+from ...application.training.inverse_model_cv.command import (
+    TrainInverseModelCrossValidationCommand,
+)
+from ...application.training.inverse_model_cv.handler import (
+    TrainInverseModelCrossValidationCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -35,8 +37,6 @@ INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
     "rbf": RBFEstimatorParams,
     "coco": COCOEstimatorParams,
 }
-DEFAULT_TUNE_PARAM_NAME = "n_neighbors"
-DEFAULT_TUNE_PARAM_RANGE = [5, 10, 20, 40]
 
 
 def _create_estimator_params(estimation: str) -> EstimatorParams:
@@ -56,17 +56,17 @@ def _default_metric_configs() -> list[ValidationMetricConfig]:
     ]
 
 
-def _build_inverse_grid_handler() -> TrainInverseModelGridSearchCommandHandler:
-    return TrainInverseModelGridSearchCommandHandler(
+def _build_inverse_cv_handler() -> TrainInverseModelCrossValidationCommandHandler:
+    return TrainInverseModelCrossValidationCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="InterpolationGridCMDLogger"),
+        logger=CMDLogger(name="InterpolationCVCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
     )
 
 
-@click.command(help="Train inverse model with grid search + cross-validation")
+@click.command(help="Train inverse model with k-fold cross-validation")
 @click.option(
     "--estimation",
     type=click.Choice(sorted(INVERSE_ESTIMATOR_REGISTRY.keys())),
@@ -75,13 +75,11 @@ def _build_inverse_grid_handler() -> TrainInverseModelGridSearchCommandHandler:
     help="Which estimator configuration to use.",
 )
 def cli(estimation: str) -> None:
-    handler = _build_inverse_grid_handler()
+    handler = _build_inverse_cv_handler()
     estimator_params = _create_estimator_params(estimation)
-    command = TrainInverseModelGridSearchCommand(
+    command = TrainInverseModelCrossValidationCommand(
         estimator_params=estimator_params,
         estimator_performance_metric_configs=_default_metric_configs(),
-        tune_param_name=DEFAULT_TUNE_PARAM_NAME,
-        tune_param_range=DEFAULT_TUNE_PARAM_RANGE,
     )
     handler.execute(command)
 

@@ -13,9 +13,11 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_inverse_model_cv import (
-    TrainInverseModelCrossValidationCommand,
-    TrainInverseModelCrossValidationCommandHandler,
+from ...application.training.inverse_model.command import (
+    TrainInverseModelCommand,
+)
+from ...application.training.inverse_model.handler import (
+    TrainInverseModelCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -37,16 +39,6 @@ INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
 }
 
 
-def _create_estimator_params(estimation: str) -> EstimatorParams:
-    try:
-        params_cls = INVERSE_ESTIMATOR_REGISTRY[estimation]
-    except KeyError as exc:  # pragma: no cover - enforced by click.Choice
-        raise click.BadParameter(
-            f"Unsupported estimation '{estimation}'", param_hint="--estimation"
-        ) from exc
-    return params_cls()
-
-
 def _default_metric_configs() -> list[ValidationMetricConfig]:
     return [
         ValidationMetricConfig(type=name, params={})
@@ -54,17 +46,7 @@ def _default_metric_configs() -> list[ValidationMetricConfig]:
     ]
 
 
-def _build_inverse_cv_handler() -> TrainInverseModelCrossValidationCommandHandler:
-    return TrainInverseModelCrossValidationCommandHandler(
-        processed_data_repository=FileSystemDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="InterpolationCVCMDLogger"),
-        estimator_factory=EstimatorFactory(),
-        metric_factory=MetricFactory(),
-    )
-
-
-@click.command(help="Train inverse model with k-fold cross-validation")
+@click.command(help="Train inverse model using a single train/test split")
 @click.option(
     "--estimation",
     type=click.Choice(sorted(INVERSE_ESTIMATOR_REGISTRY.keys())),
@@ -73,18 +55,24 @@ def _build_inverse_cv_handler() -> TrainInverseModelCrossValidationCommandHandle
     help="Which estimator configuration to use.",
 )
 def cli(estimation: str) -> None:
-    handler = _build_inverse_cv_handler()
-    estimator_params = _create_estimator_params(estimation)
-    command = TrainInverseModelCrossValidationCommand(
-        estimator_params=estimator_params,
+    handler = TrainInverseModelCommandHandler(
+        processed_data_repository=FileSystemDatasetRepository(),
+        model_repository=FileSystemModelArtifactRepository(),
+        logger=CMDLogger(name="InterpolationCMDLogger"),
+        estimator_factory=EstimatorFactory(),
+        metric_factory=MetricFactory(),
+    )
+
+    command = TrainInverseModelCommand(
+        estimator_params=INVERSE_ESTIMATOR_REGISTRY[estimation](),
         estimator_performance_metric_configs=_default_metric_configs(),
     )
     handler.execute(command)
 
 
-def main() -> None:  # pragma: no cover - CLI entrypoint
+def main() -> None:
     cli()
 
 
-if __name__ == "__main__":  # pragma: no cover - CLI entrypoint
+if __name__ == "__main__":
     main()

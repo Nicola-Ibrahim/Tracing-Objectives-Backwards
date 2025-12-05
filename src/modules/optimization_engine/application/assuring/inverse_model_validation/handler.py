@@ -1,8 +1,5 @@
-import numpy as np
-
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
-from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository

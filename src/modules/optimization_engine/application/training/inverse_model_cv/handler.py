@@ -1,17 +1,16 @@
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
-from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ....domain.modeling.services.cross_validation import CrossValidationTrainer
 from ...factories.estimator import EstimatorFactory
 from ...factories.mertics import MetricFactory
-from .command import TrainInverseModelGridSearchCommand
+from .command import TrainInverseModelCrossValidationCommand
 
 
-class TrainInverseModelGridSearchCommandHandler:
-    """Train, tune, and persist inverse estimators using grid search."""
+class TrainInverseModelCrossValidationCommandHandler:
+    """Train, evaluate, and persist inverse estimators using k-fold CV."""
 
     def __init__(
         self,
@@ -27,7 +26,7 @@ class TrainInverseModelGridSearchCommandHandler:
         self._estimator_factory = estimator_factory
         self._metric_factory = metric_factory
 
-    def execute(self, command: TrainInverseModelGridSearchCommand) -> None:
+    def execute(self, command: TrainInverseModelCrossValidationCommand) -> None:
         dataset: Dataset = self._processed_data_repository.load(name="dataset")
         if not dataset.processed:
             raise ValueError(
@@ -36,7 +35,7 @@ class TrainInverseModelGridSearchCommandHandler:
         processed_data = dataset.processed
 
         self._logger.log_info(
-            "Training inverse model with grid search (objectives ➝ decisions)."
+            "Training inverse model with cross-validation (objectives ➝ decisions)."
         )
 
         X_train = processed_data.objectives_train
@@ -51,8 +50,6 @@ class TrainInverseModelGridSearchCommandHandler:
         ]
         random_state = command.random_state
         cv_splits = command.cv_splits
-        tune_param_name = command.tune_param_name
-        tune_param_range = command.tune_param_range
         learning_curve_steps = command.learning_curve_steps
         epochs = command.epochs
 
@@ -67,33 +64,24 @@ class TrainInverseModelGridSearchCommandHandler:
             "type": estimator.type,
             "mapping_direction": mapping_direction,
             "cv_splits": cv_splits,
-            "grid_searched_param": tune_param_name,
         }
 
-        (
-            fitted_estimator,
-            loss_history,
-            metrics,
-            search_summary,
-        ) = CrossValidationTrainer().search(
+        fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
             estimator=estimator,
             X_train=X_train,
             y_train=y_train,
             X_test=X_test,
             y_test=y_test,
-            param_name=tune_param_name,
-            param_range=tune_param_range,
             validation_metrics=validation_metrics,
-            parameters=parameters,
-            random_state=random_state,
-            cv=cv_splits,
             epochs=epochs,
+            n_splits=cv_splits,
+            random_state=random_state,
             learning_curve_steps=learning_curve_steps,
         )
-        self._logger.log_info("Grid search workflow completed.")
+        self._logger.log_info("Cross-validation workflow completed.")
 
         artifact = ModelArtifact.create(
-            parameters={**parameters, "grid_search_summary": search_summary},
+            parameters=parameters,
             estimator=fitted_estimator,
             metrics=metrics,
             loss_history=loss_history,

@@ -1,6 +1,11 @@
 import click
 
-from ...application.datasets.generate_dataset.command import (
+from ...application.dtos import NormalizerConfig
+from ...application.factories.algorithm import AlgorithmFactory
+from ...application.factories.normalizer import NormalizerFactory
+from ...application.factories.optimizer import OptimizerFactory
+from ...application.factories.problem import ProblemFactory
+from ...application.generating.dataset.command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
@@ -9,16 +14,10 @@ from ...application.datasets.generate_dataset.command import (
     OptimizerType,
     ProblemType,
 )
-from ...application.datasets.generate_dataset.handler import (
+from ...application.generating.dataset.handler import (
     GenerateDatasetCommandHandler,
 )
-from ...application.dtos import NormalizerConfig
-from ...application.factories.algorithm import AlgorithmFactory
-from ...application.factories.normalizer import NormalizerFactory
-from ...application.factories.optimizer import OptimizerFactory
-from ...application.factories.problem import ProblemFactory
 from ...domain.datasets.services import DatasetGenerationService
-from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )

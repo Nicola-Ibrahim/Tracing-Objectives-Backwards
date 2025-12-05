@@ -6,7 +6,6 @@ from ....domain.assurance.decision_validation.interfaces import (
 )
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
-from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ...factories.assurance import (
     ConformalCalibratorFactory,

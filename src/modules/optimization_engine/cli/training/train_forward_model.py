@@ -13,9 +13,11 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.modeling.train_inverse_model import (
-    TrainInverseModelCommand,
-    TrainInverseModelCommandHandler,
+from ...application.training.forward_model.command import (
+    TrainForwardModelCommand,
+)
+from ...application.training.forward_model.handler import (
+    TrainForwardModelCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -26,14 +28,14 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
-INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
+FORWARD_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
+    "coco": COCOEstimatorParams,
     "cvae": CVAEEstimatorParams,
     "cvae_mdn": CVAEMDNEstimatorParams,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,
     "neural_network": NeuralNetworkEstimatorParams,
     "rbf": RBFEstimatorParams,
-    "coco": COCOEstimatorParams,
 }
 
 
@@ -44,25 +46,30 @@ def _default_metric_configs() -> list[ValidationMetricConfig]:
     ]
 
 
-@click.command(help="Train inverse model using a single train/test split")
+@click.group(help="Train a forward model (single train/test split workflow)")
+def cli() -> None:
+    return None
+
+
+@cli.command(name="standard", help="Single train/test split training")
 @click.option(
     "--estimation",
-    type=click.Choice(sorted(INVERSE_ESTIMATOR_REGISTRY.keys())),
+    type=click.Choice(sorted(FORWARD_ESTIMATOR_REGISTRY.keys())),
     default="mdn",
     show_default=True,
     help="Which estimator configuration to use.",
 )
-def cli(estimation: str) -> None:
-    handler = TrainInverseModelCommandHandler(
+def command_standard(estimation: str) -> None:
+    handler = TrainForwardModelCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="InterpolationCMDLogger"),
+        logger=CMDLogger(name="ForwardCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
     )
-
-    command = TrainInverseModelCommand(
-        estimator_params=INVERSE_ESTIMATOR_REGISTRY[estimation](),
+    estimator_params = FORWARD_ESTIMATOR_REGISTRY[estimation]()
+    command = TrainForwardModelCommand(
+        estimator_params=estimator_params,
         estimator_performance_metric_configs=_default_metric_configs(),
     )
     handler.execute(command)

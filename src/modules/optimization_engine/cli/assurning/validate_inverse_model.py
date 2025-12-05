@@ -1,10 +1,11 @@
 import click
 
-from ...application.factories.estimator import EstimatorFactory
-from ...application.assurance.inverse_model_validation import (
+from ...application.assuring.inverse_model_validation import (
     ValidateInverseModelCommand,
     ValidateInverseModelHandler,
 )
+from ...application.factories.estimator import EstimatorFactory
+from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
@@ -13,8 +14,6 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
 
-
-from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 @click.command(help="Validate inverse model using forward simulator")
 @click.option(
@@ -38,7 +37,6 @@ def cli(estimator: str):
     )
 
     handler.execute(command)
-
 
 
 def main() -> None:

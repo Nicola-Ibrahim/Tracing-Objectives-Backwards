@@ -74,68 +74,68 @@ clean:  # Remove all generated data, trained models, and cache files
 .PHONY: data-generate
 data-generate:  # Generate synthetic Pareto front data for a specified problem
 	@echo "$(BLUE)Generating synthetic data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.datasets.generate_dataset --problem-id 5
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_dataset --problem-id 5
 	@echo "$(GREEN)Data generation complete.$(RESET)"
 
 .PHONY: data-visualize
 data-visualize:  # Visualize the generated data
 	@echo "$(BLUE)Visualizing generated data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_dataset
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_dataset
 	@echo "$(GREEN)Data visualization complete.$(RESET)"
 
 .PHONY: model-train-inverse
 model-train-inverse:  # Train an inverse model (objectives -> decisions) using a train/test split
 	@echo "$(BLUE)Training a single model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model_standard --estimation $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_standard --estimation $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
 .PHONY: model-train-inverse-cv
 model-train-inverse-cv:  # Train an inverse model with k-fold cross-validation
 	@echo "$(BLUE)Training a single model with cross-validation...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model_cv --estimation $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_cv --estimation $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Cross-validation training complete.$(RESET)"
 
 .PHONY: model-train-inverse-grid
 model-train-inverse-grid:  # Run grid search + CV for an inverse model
 	@echo "$(BLUE)Running grid search for a single model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_inverse_model_grid_search --estimation $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_grid_search --estimation $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Grid search training complete.$(RESET)"
 
 .PHONY: model-train-forward
 model-train-forward:  # Train a forward model (decisions -> objectives) using a train/test split
 	@echo "$(BLUE)Training a forward model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_forward_model standard --estimation $(FORWARD_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_forward_model standard --estimation $(FORWARD_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Forward model training complete.$(RESET)"
 
 
 .PHONY: model-generate-decision
 model-generate-decision:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.generate_decision
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
 .PHONY: model-validate-inverse
 model-validate-inverse:  # Validate an inverse model using a forward simulator
 	@echo "$(BLUE)Validating inverse model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.validate_inverse_model --estimator $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.validate_inverse_model --estimator $(INVERSE_TARGET_ESTIMATOR)
 	@echo "$(GREEN)Inverse model validation complete.$(RESET)"
 
 .PHONY: assurance-calibrate-validation
 assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation
 	@echo "$(BLUE)Calibrating decision validation gates...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.assurance.calibrate_decision_validation
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.calibrate_decision_validation
 	@echo "$(GREEN)Decision validation calibration complete.$(RESET)"
 
 .PHONY: model-visualize-inverse
 model-visualize-inverse:  # Visualize diagnostics for an inverse model (objectives -> decisions)
 	@echo "$(BLUE)Visualizing inverse model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(INVERSE_TARGET_ESTIMATOR) --mapping-direction inverse $(if $(model_number),--model-number $(model_number),)
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(INVERSE_TARGET_ESTIMATOR) --mapping-direction inverse $(if $(model_number),--model-number $(model_number),)
 	@echo "$(GREEN)Inverse model performance visualization complete.$(RESET)"
 
 .PHONY: model-visualize-forward
 model-visualize-forward:  # Visualize diagnostics for a forward model (decisions -> objectives)
 	@echo "$(BLUE)Visualizing forward model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(FORWARD_TARGET_ESTIMATOR) --mapping-direction forward $(if $(model_number),--model-number $(model_number),)
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(FORWARD_TARGET_ESTIMATOR) --mapping-direction forward $(if $(model_number),--model-number $(model_number),)
 	@echo "$(GREEN)Forward model performance visualization complete.$(RESET)"
 
 
