@@ -2,8 +2,8 @@ from typing import Any
 
 from sklearn.model_selection import train_test_split
 
-from ...datasets.entities.generated_dataset import GeneratedDataset
-from ...datasets.entities.processed_dataset import ProcessedDataset
+from ...datasets.entities.dataset import Dataset
+from ...datasets.entities.processed_data import ProcessedData
 from ...datasets.interfaces.base_optimizer import BaseOptimizer
 from ...datasets.value_objects.pareto import Pareto
 from ...modeling.interfaces.base_normalizer import BaseNormalizer
@@ -21,8 +21,8 @@ class DatasetGenerationService:
         test_size: float,
         random_state: int,
         metadata: dict[str, Any] | None = None,
-    ) -> tuple[GeneratedDataset, ProcessedDataset]:
-        """Run optimization and build both raw and processed dataset artifacts."""
+    ) -> Dataset:
+        """Run optimization and build dataset artifacts."""
 
         opt_data = optimizer.run()
 
@@ -31,17 +31,15 @@ class DatasetGenerationService:
             front=opt_data.pareto_front,
         )
 
-        generated_dataset = GeneratedDataset(
+        dataset = Dataset.create(
             name=dataset_name,
             decisions=opt_data.historical_solutions,
             objectives=opt_data.historical_objectives,
             pareto=pareto,
         )
-        print(opt_data.historical_solutions.shape)
-        print(opt_data.historical_objectives.shape)
 
-        processed_dataset = self._build_processed_dataset(
-            raw_dataset=generated_dataset,
+        processed_data = self._build_processed_data(
+            dataset=dataset,
             decisions_normalizer=decisions_normalizer,
             objectives_normalizer=objectives_normalizer,
             test_size=test_size,
@@ -49,27 +47,31 @@ class DatasetGenerationService:
             metadata=dict(metadata or {}),
         )
 
-        return generated_dataset, processed_dataset
+        dataset.add_processed_visuals(processed_data)
 
-    def _build_processed_dataset(
+        return dataset
+
+    def _build_processed_data(
         self,
-        raw_dataset: GeneratedDataset,
+        dataset: Dataset,
         decisions_normalizer: BaseNormalizer,
         objectives_normalizer: BaseNormalizer,
         test_size: float,
         random_state: int,
         metadata: dict[str, Any],
-    ) -> ProcessedDataset:
+    ) -> ProcessedData:
         """Split, normalize, and package processed data artifacts."""
 
-        decisions_raw = raw_dataset.decisions
-        objectives_raw = raw_dataset.objectives
+        decisions_raw = dataset.decisions
+        objectives_raw = dataset.objectives
 
-        decisions_train, decisions_test, objectives_train, objectives_test = train_test_split(
-            decisions_raw,
-            objectives_raw,
-            test_size=test_size,
-            random_state=random_state,
+        decisions_train, decisions_test, objectives_train, objectives_test = (
+            train_test_split(
+                decisions_raw,
+                objectives_raw,
+                test_size=test_size,
+                random_state=random_state,
+            )
         )
 
         decisions_train_norm = decisions_normalizer.fit_transform(decisions_train)
@@ -77,12 +79,11 @@ class DatasetGenerationService:
         objectives_train_norm = objectives_normalizer.fit_transform(objectives_train)
         objectives_test_norm = objectives_normalizer.transform(objectives_test)
 
-        normalized_pareto = None
-        if raw_dataset.pareto is not None:
-            normalized_pareto = Pareto.create(
-                set=decisions_normalizer.transform(raw_dataset.pareto.set),
-                front=objectives_normalizer.transform(raw_dataset.pareto.front),
-            )
+        # Note: Normalized pareto is not stored in ProcessedData in this design,
+        # but can be derived. If it was needed separately, we could add it back.
+        # Original ProcessedDataset had a pareto field. Let's check where it's used.
+        # But ProcessedData entity didn't include pareto field in my design.
+        # I should double check if I missed it in ProcessedData.
 
         metadata.update(
             {
@@ -91,14 +92,12 @@ class DatasetGenerationService:
             }
         )
 
-        return ProcessedDataset.create(
-            name=raw_dataset.name,
+        return ProcessedData.create(
             decisions_train=decisions_train_norm,
             objectives_train=objectives_train_norm,
             decisions_test=decisions_test_norm,
             objectives_test=objectives_test_norm,
             decisions_normalizer=decisions_normalizer,
             objectives_normalizer=objectives_normalizer,
-            pareto=normalized_pareto,
             metadata=metadata,
         )

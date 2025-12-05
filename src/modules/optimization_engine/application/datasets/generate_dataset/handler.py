@@ -82,7 +82,7 @@ class GenerateDatasetCommandHandler:
             "normalizer": normalizer_cfg,
         }
 
-        generated_dataset, processed_dataset = self._dataset_service.generate(
+        dataset = self._dataset_service.generate(
             dataset_name="dataset",
             optimizer=optimizer,
             decisions_normalizer=decisions_normalizer,
@@ -92,29 +92,27 @@ class GenerateDatasetCommandHandler:
             metadata=metadata,
         )
 
-        if generated_dataset.pareto is not None:
+        if dataset.pareto is not None:
             self._logger.log_info(
-                f"Found {generated_dataset.pareto.set.shape[0]} Pareto-optimal solutions."
+                f"Found {dataset.pareto.set.shape[0]} Pareto-optimal solutions."
             )
 
         self._logger.log_info(
-            f"Historical Pareto set contains {generated_dataset.decisions.shape[0]} solutions."
+            f"Historical Pareto set contains {dataset.decisions.shape[0]} solutions."
         )
 
-        self._logger.log_info(
-            "[postprocess] train shapes X%s y%s | test shapes X%s y%s"
-            % (
-                processed_dataset.decisions_train.shape,
-                processed_dataset.objectives_train.shape,
-                processed_dataset.decisions_test.shape,
-                processed_dataset.objectives_test.shape,
+        if dataset.processed:
+            self._logger.log_info(
+                "[postprocess] train shapes X%s y%s | test shapes X%s y%s"
+                % (
+                    dataset.processed.decisions_train.shape,
+                    dataset.processed.objectives_train.shape,
+                    dataset.processed.decisions_test.shape,
+                    dataset.processed.objectives_test.shape,
+                )
             )
-        )
 
-        # Save both raw and processed variants using the repository
-        saved_path = self._data_model_repository.save(
-            raw=generated_dataset,
-            processed=processed_dataset,
-        )
+        # Save the dataset aggregate
+        saved_path = self._data_model_repository.save(dataset)
         self._logger.log_info(f"Pareto data saved to: {saved_path}")
         return saved_path

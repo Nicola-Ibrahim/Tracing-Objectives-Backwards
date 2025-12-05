@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal, Union
 
 from .....shared.config import ROOT_PATH
-from ..entities.generated_dataset import GeneratedDataset
-from ..entities.processed_dataset import ProcessedDataset
+from ..entities.dataset import Dataset
 
 
 class BaseDatasetRepository(ABC):
@@ -18,13 +16,9 @@ class BaseDatasetRepository(ABC):
         self.base_path = ROOT_PATH / file_path
 
     @abstractmethod
-    def save(
-        self, *, raw: GeneratedDataset, processed: ProcessedDataset
-    ) -> Path:
-        """Persist both raw and processed dataset bundles."""
+    def save(self, dataset: Dataset) -> Path:
+        """Persist the dataset aggregate."""
 
     @abstractmethod
-    def load(
-        self, filename: str, variant: Literal["raw", "processed"] = "processed"
-    ) -> Union[GeneratedDataset, ProcessedDataset]:
-        """Retrieve either the raw or processed dataset variant."""
+    def load(self, name: str) -> Dataset:
+        """Retrieve the dataset aggregate."""

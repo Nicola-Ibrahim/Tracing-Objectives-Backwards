@@ -2,12 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ....optimization_engine.domain.services.pareto_generation_service import (
-    ParetoGenerationService,
-)
-from ...domain.datasets.entities.generated_dataset import (
-    GeneratedDataset,
-)
+from ...domain.datasets.entities.dataset import Dataset
+from ...domain.datasets.interfaces.base_repository import BaseDatasetRepository
 
 
 @dataclass
@@ -35,15 +31,14 @@ class GenerationDataACL:
     internal domain model or infrastructure.
     """
 
-    def __init__(self, pareto_generation_service: ParetoGenerationService):
+    def __init__(self, dataset_repository: BaseDatasetRepository):
         """
-        Initializes the ACL with a dependency on the ParetoGenerationService.
+        Initializes the ACL with a dependency on the BaseDatasetRepository.
 
         Args:
-            pareto_generation_service: An instance of the ParetoGenerationService
-                                       from the generation bounded context.
+            dataset_repository: An instance of the BaseDatasetRepository.
         """
-        self._pareto_service = pareto_generation_service
+        self._dataset_repo = dataset_repository
 
     def get_pareto_analysis_data(
         self, data_identifier: Path | str
@@ -53,36 +48,34 @@ class GenerationDataACL:
         suitable for analysis.
 
         Args:
-            data_identifier: The identifier (e.g., file path) of the Pareto data.
+            data_identifier: The identifier (e.g., name) of the dataset.
 
         Returns:
             AnalysisResultDTO: A Data Transfer Object containing the
                                transformed Pareto data for analysis.
 
         Raises:
-            FileNotFoundError: If the data specified by `data_identifier` is not found.
-            Exception: Any other exception from the underlying service.
+            ValueError: If the dataset is not found.
+            Exception: Any other exception from the underlying repository.
         """
-        # Call the service from the optimization bounded context
-        raw_pareto_data: GeneratedDataset = self._pareto_service.retrieve_pareto_data(
-            data_identifier
-        )
+        # Call the repository from the optimization bounded context
+        dataset: Dataset = self._dataset_repo.load(name=str(data_identifier))
 
         # --- Anti-Corruption / Translation Logic ---
-        # This is where the core ACL work happens.
-        # We map the GeneratedDataset from the 'optimization' context
-        # to the AnalysisResultDTO specific to the 'analyzing' context.
-        # If the 'analyzing' context needed different names for fields,
-        # or aggregated data, this is where that transformation would occur.
+        # Map Dataset aggregate to AnalysisResultDTO.
+
+        metadata = {}
+        if dataset.processed and dataset.processed.metadata:
+            metadata = dataset.processed.metadata
 
         transformed_data = AnalysisResultDTO(
             id=data_identifier,
-            solutions=raw_pareto_data.pareto_set,
-            objectives=raw_pareto_data.pareto_front,
-            problem_type=raw_pareto_data.problem_name,
-            original_metadata=raw_pareto_data.metadata,
+            solutions=dataset.pareto.set,  # Assuming this exists in Pareto value object
+            objectives=dataset.pareto.front,
+            problem_type=dataset.name,
+            original_metadata=metadata,
         )
         print(
-            f"ACL: Transformed GeneratedDataset ({data_identifier}) to AnalysisResultDTO for analysis."
+            f"ACL: Transformed Dataset ({data_identifier}) to AnalysisResultDTO for analysis."
         )
         return transformed_data

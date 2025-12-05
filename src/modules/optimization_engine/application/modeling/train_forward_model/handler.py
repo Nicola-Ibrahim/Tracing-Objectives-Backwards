@@ -1,5 +1,6 @@
 from ....domain.common.interfaces.base_logger import BaseLogger
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_estimator import (
@@ -32,17 +33,21 @@ class TrainForwardModelCommandHandler:
         self._metric_factory = metric_factory
 
     def execute(self, command: TrainForwardModelCommand) -> None:
-        processed_dataset: ProcessedDataset = self._processed_data_repository.load(
-            filename="dataset", variant="processed"
-        )
+        dataset: Dataset = self._processed_data_repository.load(name="dataset")
+        if not dataset.processed:
+            raise ValueError(
+                f"Dataset '{dataset.name}' has no processed data available for training."
+            )
+        processed_data = dataset.processed
+
         self._logger.log_info(
             "Training forward model with single train/test split (decisions ➝ objectives)."
         )
 
-        X_train = processed_dataset.decisions_train
-        y_train = processed_dataset.objectives_train
-        X_test = processed_dataset.decisions_test
-        y_test = processed_dataset.objectives_test
+        X_train = processed_data.decisions_train
+        y_train = processed_data.objectives_train
+        X_test = processed_data.decisions_test
+        y_test = processed_data.objectives_test
         mapping_direction = "forward"
 
         estimator_params = command.estimator_params.model_dump()
@@ -72,17 +77,15 @@ class TrainForwardModelCommandHandler:
                 y_train=y_train,
             )
         elif isinstance(estimator, DeterministicEstimator):
-            fitted_estimator, loss_history, metrics = (
-                DeterministicModelTrainer().train(
-                    estimator=estimator,
-                    X_train=X_train,
-                    y_train=y_train,
-                    X_test=X_test,
-                    y_test=y_test,
-                    learning_curve_steps=learning_curve_steps,
-                    validation_metrics=validation_metrics,
-                    random_state=random_state,
-                )
+            fitted_estimator, loss_history, metrics = DeterministicModelTrainer().train(
+                estimator=estimator,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
+                learning_curve_steps=learning_curve_steps,
+                validation_metrics=validation_metrics,
+                random_state=random_state,
             )
         else:  # pragma: no cover - defensive guard for unknown estimator types
             raise TypeError(f"Unsupported estimator type: {type(estimator)!r}")

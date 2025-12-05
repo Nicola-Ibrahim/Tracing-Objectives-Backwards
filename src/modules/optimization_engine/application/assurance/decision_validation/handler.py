@@ -5,7 +5,8 @@ from ....domain.assurance.decision_validation.interfaces import (
     BaseDecisionValidationCalibrationRepository,
 )
 from ....domain.common.interfaces.base_logger import BaseLogger
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ...factories.assurance import (
     ConformalCalibratorFactory,
@@ -45,12 +46,17 @@ class CalibrateDecisionValidationCommandHandler:
         self._logger = logger
 
     def execute(self, command: CalibrateDecisionValidationCommand) -> None:
-        dataset: ProcessedDataset = self._processed_data_repository.load(
-            command.dataset_name, variant="processed"
+        dataset: Dataset = self._processed_data_repository.load(
+            name=command.dataset_name
         )
+        if not dataset.processed:
+            raise ValueError(
+                f"Dataset '{dataset.name}' has no processed data available for calibration."
+            )
+        processed_data = dataset.processed
 
-        decisions = dataset.X_train
-        objectives = dataset.y_train
+        decisions = processed_data.decisions_train
+        objectives = processed_data.objectives_train
 
         estimator = self._estimator_factory.create(
             command.estimator_params.model_dump()

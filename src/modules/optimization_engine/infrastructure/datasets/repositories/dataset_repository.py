@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Any, Literal, Union
+from typing import Any
 
-from ....domain.datasets.entities.generated_dataset import GeneratedDataset
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.datasets.value_objects.pareto import Pareto
 from ...processing.files.json import JsonFileHandler
@@ -11,8 +11,8 @@ from ...processing.files.pickle import PickleFileHandler
 
 class FileSystemDatasetRepository(BaseDatasetRepository):
     """
-    Unified repository that persists both the raw generated dataset and its processed,
-    normalized counterpart. Supports loading either representation on demand.
+    Unified repository that persists the Dataset aggregate.
+    It saves the raw part to `data/raw` and the processed part (if present) to `data/processed`.
     """
 
     def __init__(self) -> None:
@@ -25,61 +25,67 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         self._pkl = PickleFileHandler()
         self._json = JsonFileHandler()
 
-    # ------------------------------------------------------------------
-    # BaseDatasetRepository API
-    # ------------------------------------------------------------------
+    def save(self, dataset: Dataset) -> Path:
+        """Persist the Dataset aggregate."""
+        # Save raw part
+        self._save_raw(dataset)
 
-    def save(
-        self, *, raw: GeneratedDataset, processed: ProcessedDataset
-    ) -> Path:
-        """Persist raw and processed variants to disk."""
-        self._save_raw(raw)
-        self._save_processed(processed)
+        # Save processed part if it exists
+        if dataset.processed:
+            self._save_processed(dataset)
+
         return self.base_path
 
-    def load(
-        self, filename: str, variant: Literal["raw", "processed"] = "processed"
-    ) -> Union[GeneratedDataset, ProcessedDataset]:
-        if variant == "raw":
-            return self._load_raw(filename)
-        if variant == "processed":
-            return self._load_processed(filename)
-        raise ValueError(f"Unsupported dataset variant: {variant!r}")
+    def load(self, name: str) -> Dataset:
+        """
+        Load the Dataset aggregate.
+        Always loads the raw data.
+        If processed data exists for this name, it loads that as well and attaches it.
+        """
+        # Load raw data
+        raw_payload = self._load_raw_payload(name)
+        dataset = self._rebuild_dataset(raw_payload, name)
+
+        # Try to load processed data
+        try:
+            processed = self._load_processed_part(name)
+            dataset.processed = processed
+        except FileNotFoundError:
+            # It's fine if processed data doesn't exist yet
+            pass
+
+        return dataset
 
     # ------------------------------------------------------------------
     # Raw dataset helpers
     # ------------------------------------------------------------------
 
-    def _save_raw(self, data: GeneratedDataset) -> None:
-        payload = data.model_dump()
-        target = self._raw_dir / data.name
+    def _save_raw(self, dataset: Dataset) -> None:
+        # Dump only the raw fields
+        payload = {
+            "name": dataset.name,
+            "decisions": dataset.decisions,
+            "objectives": dataset.objectives,
+            "pareto": dataset.pareto,
+            "created_at": dataset.created_at,
+        }
+        target = self._raw_dir / dataset.name
         self._pkl.save(payload, target)
 
-    def _load_raw(self, filename: str) -> GeneratedDataset:
-        stem = Path(filename).stem
+    def _load_raw_payload(self, name: str) -> dict[str, Any]:
         candidates = [
-            self._raw_dir / stem,
-            # Legacy layout: data/raw/<stem>.pkl
-            self.base_path / stem,
+            self._raw_dir / name,
+            # Legacy location fallback if needed, but we mostly look in raw
+            self._raw_dir / f"{name}.pkl",
         ]
 
-        last_error: Exception | None = None
         for candidate in candidates:
-            try:
-                payload = self._pkl.load(candidate)
-                return self._rebuild_generated_dataset(payload, fallback_name=stem)
-            except FileNotFoundError as error:
-                last_error = error
-                continue
+            if candidate.exists() or candidate.with_suffix(".pkl").exists():
+                return self._pkl.load(candidate)
 
-        if last_error:
-            raise last_error
-        raise FileNotFoundError(f"Raw dataset '{filename}' not found.")
+        raise FileNotFoundError(f"Raw dataset '{name}' not found.")
 
-    @staticmethod
-    def _rebuild_generated_dataset(
-        payload: dict[str, Any], fallback_name: str
-    ) -> GeneratedDataset:
+    def _rebuild_dataset(self, payload: dict[str, Any], name: str) -> Dataset:
         pareto_payload = payload.get("pareto", {})
         pareto = (
             pareto_payload
@@ -90,19 +96,20 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             )
         )
 
-        return GeneratedDataset.create(
-            name=payload.get("name", fallback_name),
-            X=payload.get("X"),
-            y=payload.get("y"),
+        return Dataset.create(
+            name=payload.get("name", name),
+            decisions=payload.get("decisions"),
+            objectives=payload.get("objectives"),
             pareto=pareto,
         )
 
     # ------------------------------------------------------------------
-    # Processed dataset helpers
+    # Processed part helpers
     # ------------------------------------------------------------------
 
-    def _save_processed(self, data: ProcessedDataset) -> None:
-        target_dir = self._processed_dir / data.name
+    def _save_processed(self, dataset: Dataset) -> None:
+        processed = dataset.processed
+        target_dir = self._processed_dir / dataset.name
         target_dir.mkdir(parents=True, exist_ok=True)
 
         dataset_pkl = target_dir / "dataset"
@@ -110,129 +117,53 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         y_norm_pkl = target_dir / "objectives_normalizer"
         meta_json = target_dir / "metadata.json"
 
-        payload = data.model_dump(exclude={"decisions_normalizer", "objectives_normalizer"})
-        self._pkl.save(payload, dataset_pkl)
-        self._pkl.save(data.decisions_normalizer, x_norm_pkl)
-        self._pkl.save(data.objectives_normalizer, y_norm_pkl)
-
-        metadata: dict[str, Any] = {
-            "shapes": {
-                "decisions_train": list(data.decisions_train.shape),
-                "objectives_train": list(data.objectives_train.shape),
-                "decisions_test": list(data.decisions_test.shape),
-                "objectives_test": list(data.objectives_test.shape),
-                "pareto_set": list(data.pareto.set.shape),
-                "pareto_front": list(data.pareto.front.shape),
-            },
-            "metadata": data.metadata,
+        # Dump processed fields
+        payload = {
+            "decisions_train": processed.decisions_train,
+            "objectives_train": processed.objectives_train,
+            "decisions_test": processed.decisions_test,
+            "objectives_test": processed.objectives_test,
+            "metadata": processed.metadata,
         }
-        self._json.save(metadata, meta_json)
 
-    def _load_processed(self, filename: str) -> ProcessedDataset:
-        stem = Path(filename).stem
-        modern_dir = self._processed_dir / stem
-        if modern_dir.exists():
-            return self._load_processed_from_directory(modern_dir, fallback_name=stem)
+        self._pkl.save(payload, dataset_pkl)
+        self._pkl.save(processed.decisions_normalizer, x_norm_pkl)
+        self._pkl.save(processed.objectives_normalizer, y_norm_pkl)
 
-        # Backwards compatibility with legacy layout (<data/processed>/dataset.pkl)
-        legacy_dir = self._processed_dir
-        if legacy_dir.exists():
-            try:
-                return self._load_processed_from_directory(
-                    legacy_dir, fallback_name=stem
-                )
-            except FileNotFoundError:
-                pass
+        metadata_summary: dict[str, Any] = {
+            "shapes": {
+                "decisions_train": list(processed.decisions_train.shape),
+                "objectives_train": list(processed.objectives_train.shape),
+                "decisions_test": list(processed.decisions_test.shape),
+                "objectives_test": list(processed.objectives_test.shape),
+            },
+            "metadata": processed.metadata,
+        }
+        self._json.save(metadata_summary, meta_json)
 
-        # Legacy single-file fallback: <data/processed>/<stem>.pkl
-        legacy_file = legacy_dir / stem
-        try:
-            payload = self._pkl.load(legacy_file)
-        except FileNotFoundError as error:
-            raise FileNotFoundError(
-                f"Processed dataset '{stem}' not found. "
-                "Ensure the dataset has been generated and processed."
-            ) from error
-        return self._rebuild_processed_dataset(
-            payload=payload,
-            fallback_name=payload.get("name") or stem,
-            normalizers=(
-                payload.get("decisions_normalizer"),
-                payload.get("objectives_normalizer"),
-            ),
-            normalizer_files=(
-                legacy_dir / f"{stem}_decisions_normalizer",
-                legacy_dir / f"{stem}_objectives_normalizer",
-            ),
-        )
+    def _load_processed_part(self, name: str) -> ProcessedData:
+        directory = self._processed_dir / name
+        if not directory.exists():
+            raise FileNotFoundError(f"Processed data directory for '{name}' not found.")
 
-    def _load_processed_from_directory(
-        self, directory: Path, fallback_name: str
-    ) -> ProcessedDataset:
         dataset_pkl = directory / "dataset"
         decisions_norm_pkl = directory / "decisions_normalizer"
         objectives_norm_pkl = directory / "objectives_normalizer"
 
         if not dataset_pkl.with_suffix(".pkl").exists():
-            raise FileNotFoundError(f"Missing dataset payload: {dataset_pkl.with_suffix('.pkl')}")
-        if not decisions_norm_pkl.with_suffix(".pkl").exists() or not objectives_norm_pkl.with_suffix(
-            ".pkl"
-        ).exists():
-            raise FileNotFoundError(
-                f"Missing normalizers in {directory}. Expected 'decisions_normalizer.pkl' and 'objectives_normalizer.pkl'."
-            )
+            # Fallback logic for legacy structures if needed, or fail
+            raise FileNotFoundError(f"Missing processed dataset payload for '{name}'")
 
         payload = self._pkl.load(dataset_pkl)
         decisions_normalizer = self._pkl.load(decisions_norm_pkl)
         objectives_normalizer = self._pkl.load(objectives_norm_pkl)
 
-        return self._rebuild_processed_dataset(
-            payload=payload,
-            fallback_name=payload.get("name", fallback_name),
-            normalizers=(decisions_normalizer, objectives_normalizer),
-        )
-
-    def _rebuild_processed_dataset(
-        self,
-        *,
-        payload: dict[str, Any],
-        fallback_name: str,
-        normalizers: tuple[Any | None, Any | None],
-        normalizer_files: tuple[Path, Path] | None = None,
-    ) -> ProcessedDataset:
-        decisions_normalizer, objectives_normalizer = normalizers
-
-        if (decisions_normalizer is None or objectives_normalizer is None) and normalizer_files:
-            sib_decisions, sib_objectives = normalizer_files
-            if sib_decisions.with_suffix(".pkl").exists() and sib_objectives.with_suffix(".pkl").exists():
-                decisions_normalizer = self._pkl.load(sib_decisions)
-                objectives_normalizer = self._pkl.load(sib_objectives)
-            else:
-                raise FileNotFoundError(
-                    f"Legacy dataset missing embedded normalizers and no sibling files found for '{fallback_name}'."
-                )
-
-        pareto_payload = payload.get("pareto") or {
-            "set": payload.get("pareto_set"),
-            "front": payload.get("pareto_front"),
-        }
-        pareto = (
-            pareto_payload
-            if isinstance(pareto_payload, Pareto)
-            else Pareto(
-                set=pareto_payload.get("set"),
-                front=pareto_payload.get("front"),
-            )
-        )
-
-        return ProcessedDataset.create(
-            name=fallback_name,
+        return ProcessedData.create(
             decisions_train=payload.get("decisions_train"),
             objectives_train=payload.get("objectives_train"),
             decisions_test=payload.get("decisions_test"),
             objectives_test=payload.get("objectives_test"),
             decisions_normalizer=decisions_normalizer,
             objectives_normalizer=objectives_normalizer,
-            pareto=pareto,
             metadata=payload.get("metadata"),
         )

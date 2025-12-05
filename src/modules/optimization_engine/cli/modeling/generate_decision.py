@@ -4,9 +4,6 @@ from ...application.modeling.generate_decision.command import (
 from ...application.modeling.generate_decision.handler import (
     GenerateDecisionCommandHandler,
 )
-from ...domain.assurance.decision_validation.services.decision_validation_service import (
-    DecisionValidationService,
-)
 
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -37,7 +34,7 @@ def main():
     # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(
         model_repository=FileSystemModelArtifactRepository(),
-        processed_data_repository=FileSystemDatasetRepository(),
+        data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )
 

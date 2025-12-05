@@ -1,12 +1,14 @@
 import numpy as np
+
 from ....domain.common.interfaces.base_logger import BaseLogger
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
-from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
+from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
+from ....domain.modeling.services.validation import InverseModelValidator
 from ...factories.estimator import EstimatorFactory
 from .command import ValidateInverseModelCommand
-from ....domain.modeling.services.validation import InverseModelValidator
 
 
 class ValidateInverseModelHandler:
@@ -36,11 +38,14 @@ class ValidateInverseModelHandler:
         )
 
         # 1. Load Test Data
-        processed_dataset: ProcessedDataset = self._data_repository.load(
-            filename="dataset", variant="processed"
-        )
-        test_objectives = processed_dataset.objectives_test # objective space
+        dataset: Dataset = self._data_repository.load(name="dataset")
+        if not dataset.processed:
+            raise ValueError(
+                f"Dataset '{dataset.name}' has no processed data available for validation."
+            )
+        processed_data = dataset.processed
 
+        test_objectives = processed_data.objectives_test  # objective space
 
         # 2. Load Inverse Model
         if command.inverse_version_id:
@@ -80,8 +85,8 @@ class ValidateInverseModelHandler:
             inverse_estimator=inverse_estimator,
             forward_model=forward_model,
             test_objectives=test_objectives,
-            decision_normalizer=processed_dataset.decisions_normalizer,  # For inverse: X is decisions
-            objective_normalizer=processed_dataset.objectives_normalizer,  # For inverse: y is objectives
+            decision_normalizer=processed_data.decisions_normalizer,  # For inverse: X is decisions
+            objective_normalizer=processed_data.objectives_normalizer,  # For inverse: y is objectives
             num_samples=command.num_samples,
             random_state=command.random_state,
         )

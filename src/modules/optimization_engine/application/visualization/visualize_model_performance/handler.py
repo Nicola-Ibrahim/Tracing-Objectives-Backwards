@@ -1,4 +1,5 @@
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
@@ -41,25 +42,31 @@ class VisualizeModelPerformanceCommandHandler:
                 estimator_type=command.estimator_type,
                 mapping_direction=command.mapping_direction,
             )
-        processed: ProcessedDataset = self._processed_repo.load(
-            filename=command.processed_file_name, variant="processed"
-        )
+
+        # Load dataset
+        dataset: Dataset = self._processed_repo.load(name=command.processed_file_name)
+        if not dataset.processed:
+            raise ValueError(
+                f"Dataset '{dataset.name}' has no processed data available for visualization."
+            )
+        processed = dataset.processed
 
         if command.mapping_direction == "inverse":
-            X_train = processed.y_train
-            y_train = processed.X_train
-            X_test = processed.y_test
-            y_test = processed.X_test
-            X_normalizer = processed.y_normalizer
-            y_normalizer = processed.X_normalizer
+            X_train = processed.objectives_train
+            y_train = processed.decisions_train
+            X_test = processed.objectives_test
+            y_test = processed.decisions_test
+            X_normalizer = processed.objectives_normalizer
+            y_normalizer = processed.decisions_normalizer
             mapping_label = "inverse"
         else:
-            X_train = processed.X_train
-            y_train = processed.y_train
-            X_test = processed.X_test
-            y_test = processed.y_test
-            X_normalizer = processed.X_normalizer
-            y_normalizer = processed.y_normalizer
+            # forward
+            X_train = processed.decisions_train
+            y_train = processed.objectives_train
+            X_test = processed.decisions_test
+            y_test = processed.objectives_test
+            X_normalizer = processed.decisions_normalizer
+            y_normalizer = processed.objectives_normalizer
             mapping_label = "forward"
 
         # 2) Visualize the model performance and fitted curve

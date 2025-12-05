@@ -1,5 +1,6 @@
 from ....domain.common.interfaces.base_logger import BaseLogger
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_estimator import (
@@ -32,15 +33,19 @@ class TrainInverseModelCommandHandler:
         self._metric_factory = metric_factory
 
     def execute(self, command: TrainInverseModelCommand) -> None:
-        processed_dataset: ProcessedDataset = self._data_repository.load(
-            filename="dataset", variant="processed"
-        )
+        dataset: Dataset = self._data_repository.load(name="dataset")
+        if not dataset.processed:
+            raise ValueError(
+                f"Dataset '{dataset.name}' has no processed data available for training."
+            )
+        processed_data = dataset.processed
+
         self._logger.log_info("Training inverse model (objectives ➝ decisions).")
 
-        X_train = processed_dataset.objectives_train
-        y_train = processed_dataset.decisions_train
-        X_test = processed_dataset.objectives_test
-        y_test = processed_dataset.decisions_test
+        X_train = processed_data.objectives_train
+        y_train = processed_data.decisions_train
+        X_test = processed_data.objectives_test
+        y_test = processed_data.decisions_test
         mapping_direction = "inverse"
 
         estimator_params = command.estimator_params.model_dump()

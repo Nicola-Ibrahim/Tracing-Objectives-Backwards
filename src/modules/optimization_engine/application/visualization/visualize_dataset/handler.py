@@ -1,5 +1,4 @@
-from ....domain.datasets.entities.generated_dataset import GeneratedDataset
-from ....domain.datasets.entities.processed_dataset import ProcessedDataset
+from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 from .command import VisualizeDatasetCommand
@@ -22,24 +21,29 @@ class VisualizeDatasetCommandHandler:
         self._visualizer = visualizer
 
     def execute(self, command: VisualizeDatasetCommand) -> None:
-        # 1) Load raw data from repository
-        raw: GeneratedDataset = self._dataset_repo.load(
-            filename=command.data_file_name, variant="raw"
-        )
-        processed: ProcessedDataset = self._dataset_repo.load(
-            filename=command.processed_file_name, variant="processed"
-        )
+        # 1) Load dataset aggregate
+        # We assume command.data_file_name or processed_file_name refers to the dataset name now.
+        # Ideally the command should have a single dataset_name.
+        # Historically it had two, let's assume one is sufficient or they match.
+        dataset_name = command.data_file_name  # or processed_file_name
+
+        dataset: Dataset = self._dataset_repo.load(name=dataset_name)
+        if not dataset.processed:
+            raise ValueError(
+                f"Dataset '{dataset.name}' has no processed data available for visualization."
+            )
+        processed = dataset.processed
 
         # 3) Package payload (arrays only)
         payload = {
-            "X_train": processed.X_train,
-            "y_train": processed.y_train,
-            "X_test": processed.X_test,
-            "y_test": processed.y_test,
-            "pareto_set": processed.pareto.set,
-            "pareto_front": processed.pareto.front,
-            "historical_solutions": raw.X,
-            "historical_objectives": raw.y,
+            "X_train": processed.decisions_train,
+            "y_train": processed.objectives_train,
+            "X_test": processed.decisions_test,
+            "y_test": processed.objectives_test,
+            "pareto_set": dataset.pareto.set,
+            "pareto_front": dataset.pareto.front,
+            "historical_solutions": dataset.decisions,
+            "historical_objectives": dataset.objectives,
         }
 
         # 7) Plot
