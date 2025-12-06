@@ -6,8 +6,8 @@ from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 
 class GenerateDecisionCommand(BaseModel):
-    inverse_estimator_type: EstimatorTypeEnum = Field(
-        ..., description="Name of the interpolator to load"
+    inverse_estimator_types: List[EstimatorTypeEnum] = Field(
+        ..., description="List of inverse estimators to use for generation"
     )
     forward_estimator_type: EstimatorTypeEnum = Field(
         ..., description="Name of the forward model to use for verification"

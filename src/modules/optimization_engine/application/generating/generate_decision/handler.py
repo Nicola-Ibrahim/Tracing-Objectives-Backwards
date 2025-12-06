@@ -1,8 +1,6 @@
 from typing import Any, Tuple
 
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
@@ -11,6 +9,7 @@ from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
+from ....domain.modeling.services.decision_generation import DecisionGenerator
 from .command import GenerateDecisionCommand
 
 
@@ -18,11 +17,9 @@ class GenerateDecisionCommandHandler:
     """
     Generate Design Candidates (X) for a requested Objective (Y).
 
-    Unified Handler for MDN and CVAE:
-    - Removes external Feasibility/Validation services (redundant).
-    - Adapts to model capabilities:
-        - If MDN: Uses analytic `predict_topk` to find exact modes.
-        - If CVAE: Uses `sample` to generate a cloud of options.
+    Unified Handler for Multiple Models:
+    - Uses DecisionGenerator domain service.
+    - Compares generation capability across multiple inverse models (MDN, CVAE, etc).
     """
 
     def __init__(
@@ -30,18 +27,24 @@ class GenerateDecisionCommandHandler:
         model_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,
+        generator_service: DecisionGenerator,
     ):
         self._model_repository = model_repository
         self._data_repository = data_repository
         self._logger = logger
+        self._generator_service = generator_service
 
-    def execute(self, command: GenerateDecisionCommand) -> dict[str, np.ndarray]:
+    def execute(self, command: GenerateDecisionCommand) -> dict[str, Any]:
         """
-        Generate candidates for the target.
-        Returns dictionary with 'candidates' (raw) and 'candidates_norm'.
+        Generate candidates for the target using multiple models.
+        Returns dictionary with results for each model.
         """
-        # 1. Load Resources
-        inverse_estimator, forward_estimator, dataset = self._load_context(command)
+        # 1. Load Resources (Forward Model & Dataset)
+        forward_estimator = self._load_estimator(
+            command.forward_estimator_type, direction="forward"
+        )
+
+        dataset: Dataset = self._data_repository.load("dataset")
         processed_data = dataset.processed
         if not processed_data:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
@@ -55,44 +58,60 @@ class GenerateDecisionCommandHandler:
             f"Target Objective (Raw): {target_objective_raw.tolist()}"
         )
 
-        # 3. Generate Candidates
-        candidates_raw, candidates_norm = self._generate_decisions(
-            inverse_estimator,
-            target_objective_norm,
-            command.n_samples,
-            processed_data.decisions_normalizer,
-        )
+        # 3. Iterate over Inverse Models & Generate
+        results_map = {}
 
-        # 4. Predict Outcomes (Verification)
-        predicted_objectives = self._predict_outcomes(forward_estimator, candidates_raw)
+        for estimator_type in command.inverse_estimator_types:
+            try:
+                self._logger.log_info(
+                    f"Generating decisions with {estimator_type.value}..."
+                )
 
-        # 5. Visualize Results
-        self._visualize_results(
-            pareto_front=dataset.pareto.front,
-            target_objective=target_objective_raw.flatten(),
-            predicted_objectives=predicted_objectives,
-            generated_decisions=candidates_raw,
-        )
+                # Load Inverse Estimator
+                inverse_estimator = self._load_estimator(
+                    estimator_type, direction="inverse"
+                )
 
-        # 6. Return Results
-        return {
-            "decisions": candidates_raw,
-            "decisions_norm": candidates_norm,
-        }
+                # Generate Candidates via Service
+                candidates_raw, candidates_norm = self._generator_service.generate(
+                    estimator=inverse_estimator,
+                    target_objective_norm=target_objective_norm,
+                    n_samples=command.n_samples,
+                    decisions_normalizer=processed_data.decisions_normalizer,
+                )
 
-    def _load_context(
-        self, command: GenerateDecisionCommand
-    ) -> Tuple[BaseEstimator, BaseEstimator, Dataset]:
-        """Loads the necessary estimators and dataset."""
-        inverse_estimator = self._load_estimator(
-            command.inverse_estimator_type, direction="inverse"
-        )
-        forward_estimator = self._load_estimator(
-            command.forward_estimator_type, direction="forward"
-        )
-        dataset: Dataset = self._data_repository.load("dataset")
+                # Predict Outcomes via Service
+                predicted_objectives = self._generator_service.predict_outcomes(
+                    forward_estimator=forward_estimator, candidates_raw=candidates_raw
+                )
 
-        return inverse_estimator, forward_estimator, dataset
+                # Store Results
+                results_map[estimator_type.value] = {
+                    "decisions": candidates_raw,
+                    "decisions_norm": candidates_norm,
+                    "predicted_objectives": predicted_objectives,
+                }
+
+            except Exception as e:
+                self._logger.log_error(
+                    f"Failed to generate with {estimator_type.value}: {e}"
+                )
+
+        # 4. Visualization (Comparison)
+        if results_map:
+            self._logger.log_info("Generating comparison visualization...")
+            fig = self._generator_service.compare_generators(
+                results_map=results_map,
+                pareto_front=dataset.pareto.front,
+                target_objective=target_objective_raw.flatten(),
+            )
+            try:
+                fig.show()
+            except Exception as e:
+                self._logger.log_warning(f"Could not display plot: {e}")
+
+        # 5. Return Results
+        return results_map
 
     def _load_estimator(
         self, estimator_type: EstimatorTypeEnum, direction: str = "inverse"
@@ -113,115 +132,3 @@ class GenerateDecisionCommandHandler:
             target_objective_raw
         )
         return target_objective_raw, target_objective_norm
-
-    def _generate_decisions(
-        self,
-        estimator: BaseEstimator,
-        target_objective_norm: np.ndarray,
-        n_samples: int,
-        decisions_normalizer: Any,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Generates decision candidates and handles denormalization."""
-        candidates_norm = estimator.sample(target_objective_norm, n_samples=n_samples)
-
-        # Ensure 2D shape for inverse_transform: (N_samples, x_dim)
-        if candidates_norm.ndim == 3:
-            candidates_norm = candidates_norm.reshape(-1, candidates_norm.shape[-1])
-
-        candidates_raw = decisions_normalizer.inverse_transform(candidates_norm)
-        return candidates_raw, candidates_norm
-
-    def _predict_outcomes(
-        self, forward_estimator: BaseEstimator, candidates_raw: np.ndarray
-    ) -> np.ndarray:
-        """Predicts objectives for the generated candidates using the forward model."""
-        return forward_estimator.predict(candidates_raw)
-
-    def _visualize_results(
-        self,
-        pareto_front: np.ndarray,
-        target_objective: np.ndarray,
-        predicted_objectives: np.ndarray,
-        generated_decisions: np.ndarray,
-    ):
-        """Orchestrates the visualization of results."""
-        # Single plot for Objective Space
-        fig = make_subplots(
-            rows=1,
-            cols=1,
-            subplot_titles=("Objective Space",),
-        )
-
-        self._plot_objective_space(
-            fig, pareto_front, predicted_objectives, target_objective, row=1, col=1
-        )
-
-        fig.update_layout(
-            title="Decision Generation Analysis",
-            template="plotly_white",
-            width=800,
-            height=600,
-            showlegend=True,
-        )
-
-        fig.show()
-
-    def _plot_objective_space(
-        self,
-        fig: go.Figure,
-        pareto_front: np.ndarray,
-        predicted_objectives: np.ndarray,
-        target_objective: np.ndarray,
-        row: int,
-        col: int,
-    ):
-        """Plots the objective space analysis."""
-        # Background: Pareto Front
-        fig.add_trace(
-            go.Scatter(
-                x=pareto_front[:, 0],
-                y=pareto_front[:, 1],
-                mode="markers",
-                name="Pareto Front",
-                marker=dict(color="lightgray", size=5, opacity=0.5),
-                showlegend=True,
-            ),
-            row=row,
-            col=col,
-        )
-
-        # Foreground: Predicted Cloud
-        fig.add_trace(
-            go.Scatter(
-                x=predicted_objectives[:, 0],
-                y=predicted_objectives[:, 1],
-                mode="markers",
-                name="Predicted Outcomes",
-                marker=dict(color="blue", size=6, opacity=0.7),
-                showlegend=True,
-            ),
-            row=row,
-            col=col,
-        )
-
-        # Target: Star
-        fig.add_trace(
-            go.Scatter(
-                x=[target_objective[0]],
-                y=[target_objective[1]],
-                mode="markers",
-                name="Target Objective",
-                marker=dict(
-                    color="red",
-                    symbol="star",
-                    size=15,
-                    line=dict(width=2, color="black"),
-                ),
-                showlegend=True,
-            ),
-            row=row,
-            col=col,
-        )
-
-        fig.update_xaxes(title_text="Objective 1", row=row, col=col)
-        fig.update_yaxes(title_text="Objective 2", row=row, col=col)
