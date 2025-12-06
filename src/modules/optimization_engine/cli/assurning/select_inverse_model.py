@@ -1,8 +1,8 @@
 import click
 
-from ...application.assuring.inverse_model_validation import (
-    ValidateInverseModelCommand,
-    ValidateInverseModelHandler,
+from ...application.assuring.select_inverse_model import (
+    SelectInverseModelCommand,
+    SelectInverseModelHandler,
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
@@ -15,24 +15,24 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 
-@click.command(help="Validate inverse model using forward simulator")
-@click.option(
-    "--estimator",
-    type=click.Choice([e.value for e in EstimatorTypeEnum]),
-    default=EstimatorTypeEnum.MDN.value,
-    show_default=True,
-    help="Inverse estimator type to validate.",
-)
-def cli(estimator: str):
-    handler = ValidateInverseModelHandler(
+@click.command(help="Select the best inverse model by comparing multiple candidates")
+def cli():
+    handler = SelectInverseModelHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="ValidationCMDLogger"),
+        logger=CMDLogger(name="ModelSelectionLogger"),
         estimator_factory=EstimatorFactory(),
     )
 
-    command = ValidateInverseModelCommand(
-        inverse_estimator_type=EstimatorTypeEnum(estimator),
+    # Hardcoded list of models to comparison as per request
+    estimator_types = [
+        EstimatorTypeEnum.MDN,
+        EstimatorTypeEnum.CVAE,
+        # EstimatorTypeEnum.FLOW
+    ]
+
+    command = SelectInverseModelCommand(
+        inverse_estimator_types=estimator_types,
         forward_estimator_type=EstimatorTypeEnum.COCO,
     )
 

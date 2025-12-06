@@ -1,9 +1,9 @@
 import click
 
-from ...application.visualizing.model_performance.command import (
+from ...application.visualizing.visualize_model_performance.command import (
     VisualizeModelPerformanceCommand,
 )
-from ...application.visualizing.model_performance.handler import (
+from ...application.visualizing.visualize_model_performance.handler import (
     VisualizeModelPerformanceCommandHandler,
 )
 from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum

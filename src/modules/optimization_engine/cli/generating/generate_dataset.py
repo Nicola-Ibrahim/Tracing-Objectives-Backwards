@@ -1,11 +1,10 @@
 import click
 
-from ...application.dtos import NormalizerConfig
 from ...application.factories.algorithm import AlgorithmFactory
 from ...application.factories.normalizer import NormalizerFactory
 from ...application.factories.optimizer import OptimizerFactory
 from ...application.factories.problem import ProblemFactory
-from ...application.generating.dataset.command import (
+from ...application.generating.generate_dataset.command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
@@ -14,7 +13,7 @@ from ...application.generating.dataset.command import (
     OptimizerType,
     ProblemType,
 )
-from ...application.generating.dataset.handler import (
+from ...application.generating.generate_dataset.handler import (
     GenerateDatasetCommandHandler,
 )
 from ...domain.datasets.services import DatasetGenerationService

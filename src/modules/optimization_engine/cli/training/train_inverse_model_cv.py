@@ -12,11 +12,11 @@ from ...application.dtos import (
     ValidationMetricConfig,
 )
 from ...application.factories.estimator import EstimatorFactory
-from ...application.factories.mertics import MetricFactory
-from ...application.training.inverse_model_cv.command import (
+from ...application.factories.metrics import MetricFactory
+from ...application.training.train_inverse_model_cv.command import (
     TrainInverseModelCrossValidationCommand,
 )
-from ...application.training.inverse_model_cv.handler import (
+from ...application.training.train_inverse_model_cv.handler import (
     TrainInverseModelCrossValidationCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (

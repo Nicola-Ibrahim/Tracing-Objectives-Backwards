@@ -20,9 +20,10 @@ class InverseModelValidator:
         objective_normalizer: BaseNormalizer,
         num_samples: int = 250,
         random_state: int = 42,
-    ) -> dict[str, float]:
+    ) -> dict[str, any]:
         """
         Validates the inverse estimator by sampling candidates for ALL targets simultaneously.
+        Returns detailed results including metrics and raw data for plotting.
         """
 
         # 1. Validate Input
@@ -37,7 +38,6 @@ class InverseModelValidator:
         # ---------------------------------------------------------
         # We ask the estimator to sample for ALL test targets at once.
         # Expected Output Shape: (n_test, num_samples, x_dim)
-        # Note: Your MDN.sample method supports batch inputs (X) and returns (N, samples, out).
         candidates_3d = inverse_estimator.sample(
             test_objectives,
             n_samples=num_samples,
@@ -115,73 +115,59 @@ class InverseModelValidator:
         # The diversity score is the standard deviation of the candidates for each target.
         diversities = np.std(candidates_3d, axis=1).mean(axis=1)  # Shape: (n_test,)
         mean_diversity = np.mean(diversities)
+
         return {
-            "best_shot_error": float(mean_best_shot),
-            "reliability_error": float(mean_reliability),
-            "diversity_score": float(mean_diversity),
+            "metrics": {
+                "best_shot_error": float(mean_best_shot),
+                "reliability_error": float(mean_reliability),
+                "diversity_score": float(mean_diversity),
+            },
+            "raw_errors": errors,  # (n_test, num_samples)
+            # We will handle calibration separately if we have the data
         }
 
-    def plot_calibration_curve(
+    def compare_models(
         self,
-        inverse_estimator: BaseEstimator,
+        results_map: dict[str, dict],  # {model_name: result_dict}
         test_objectives: np.ndarray,
-        test_decisions: np.ndarray,
-        decision_normalizer: BaseNormalizer,
-        n_samples: int = 50,
+        test_decisions: np.ndarray | None = None,
+        inverse_estimators: dict[str, BaseEstimator] | None = None,
     ) -> go.Figure:
         """
-        Generates a calibration curve (PIT CDF) for the inverse estimator.
+        Generates comparison plots for multiple models in a SINGLE figure.
+        Row 1: Calibration Curve (Left), Re-simulation Error Boxplot (Right, Spanned)
+        Row 2: Best Shot Error, Reliability Error, Diversity Score (Bar Charts)
         """
-        # Generate samples for calibration (normalized inputs -> normalized outputs)
-        # Shape: (N_test, n_samples, D_x)
-        calib_samples_norm = inverse_estimator.sample(
-            test_objectives, n_samples=n_samples
+        from plotly.subplots import make_subplots
+
+        fig = make_subplots(
+            rows=2,
+            cols=3,
+            specs=[
+                [{}, {"colspan": 2}, None],
+                [{}, {}, {}],
+            ],
+            subplot_titles=(
+                "Calibration Curve (Quantitative)",
+                "Re-simulation Error Boxplot",
+                "Best Shot Error (Lower is Better)",
+                "Reliability Error (Lower is Better)",
+                "Diversity Score (Higher is Better)",
+            ),
+            vertical_spacing=0.15,
         )
 
-        # Ensure 3D shape (N, S, D)
-        if calib_samples_norm.ndim == 2:
-            calib_samples_norm = calib_samples_norm[:, np.newaxis, :]
+        colors = [
+            "blue",
+            "red",
+            "green",
+            "orange",
+            "purple",
+        ]  # Simple color cycle
+        model_names = list(results_map.keys())
 
-        # Normalize test decisions if they are not already (assuming input is raw/denormalized?
-        # Wait, validation usually takes normalized data. Let's check `validate` signature.
-        # `validate` takes `test_objectives` (usually normalized) and `decision_normalizer`.
-        # But `test_decisions` passed here... usually we work with normalized data for PIT.
-        # Let's assume `test_decisions` is NORMALIZED because `inverse_estimator.sample` returns normalized.
-        # If the caller passes raw, we need to normalize.
-        # But `validate` doesn't take test_decisions.
-        # Let's assume the caller passes NORMALIZED test_decisions.
-
-        test_decisions_norm = test_decisions
-
-        n_test, _, d_x = calib_samples_norm.shape
-        pit_values = []
-
-        for i in range(n_test):
-            for d in range(d_x):
-                true_val = test_decisions_norm[i, d]
-                samples = calib_samples_norm[i, :, d]
-                # PIT = P(sample <= true_val)
-                pit = np.mean(samples <= true_val)
-                pit_values.append(pit)
-
-        pit_values = np.sort(pit_values)
-        cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
-
-        fig = go.Figure()
-
-        # Plot PIT CDF
-        fig.add_trace(
-            go.Scatter(
-                x=pit_values,
-                y=cdf_y,
-                mode="lines",
-                name="Calibration",
-                line=dict(color="blue", width=2),
-                showlegend=True,
-            )
-        )
-
-        # Plot Diagonal (Ideal)
+        # --- 1. Calibration Curve (Row 1, Col 1) ---
+        # Ideal Line
         fig.add_trace(
             go.Scatter(
                 x=[0, 1],
@@ -190,16 +176,160 @@ class InverseModelValidator:
                 name="Ideal",
                 line=dict(color="black", dash="dash"),
                 showlegend=True,
-            )
+            ),
+            row=1,
+            col=1,
         )
 
+        if test_decisions is not None and inverse_estimators is not None:
+            for idx, (model_name, estimator) in enumerate(inverse_estimators.items()):
+                color = colors[idx % len(colors)]
+
+                # Sample from estimator for PIT
+                # shape: (N, Samples, Dim)
+                samples = estimator.sample(test_objectives, n_samples=100)
+                if samples.ndim == 2:
+                    samples = samples[:, np.newaxis, :]
+
+                n_test, _, x_dim = samples.shape
+
+                # Check if x_dim matches test_decisions dim
+                if x_dim != test_decisions.shape[1]:
+                    # Mismatch dimension, skip calibration for this model or all?
+                    # This happens if models predict different decision space sizes? unlikely.
+                    pass
+
+                pit_values = []
+                for i in range(n_test):
+                    for d in range(x_dim):
+                        true_val = test_decisions[i, d]
+                        model_samples = samples[i, :, d]
+                        pit = np.mean(model_samples <= true_val)
+                        pit_values.append(pit)
+
+                pit_values = np.sort(pit_values)
+                cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=pit_values,
+                        y=cdf_y,
+                        mode="lines",
+                        name=f"{model_name}",
+                        line=dict(color=color, width=2),
+                        legendgroup=model_name,
+                    ),
+                    row=1,
+                    col=1,
+                )
+
+        # Annotations (Over/Under confident)
+        fig.add_annotation(
+            x=0.8,
+            y=0.2,
+            text="Overconfident",
+            showarrow=False,
+            font=dict(size=10, color="gray"),
+            row=1,
+            col=1,
+        )
+        fig.add_annotation(
+            x=0.2,
+            y=0.8,
+            text="Underconfident",
+            showarrow=False,
+            font=dict(size=10, color="gray"),
+            row=1,
+            col=1,
+        )
+
+        # --- 2. Re-simulation Error Boxplot (Row 1, Col 2-3) ---
+        for idx, model_name in enumerate(model_names):
+            if model_name in results_map:
+                res = results_map[model_name]
+                raw_errs = res["raw_errors"]  # (n_test, num_samples)
+                best_shots = np.min(raw_errs, axis=1)  # (n_test,)
+
+                color = colors[idx % len(colors)]
+
+                fig.add_trace(
+                    go.Box(
+                        y=best_shots,
+                        name=model_name,  # X-axis label
+                        boxmean=True,
+                        marker_color=color,
+                        showlegend=False,
+                        legendgroup=model_name,
+                    ),
+                    row=1,
+                    col=2,
+                )
+
+        # --- 3. Metrics Bar Charts (Row 2) ---
+        # Data preparation
+        best_shots_vals = []
+        reliability_vals = []
+        diversity_vals = []
+
+        for model_name in model_names:
+            metrics = results_map[model_name]["metrics"]
+            best_shots_vals.append(metrics["best_shot_error"])
+            reliability_vals.append(metrics["reliability_error"])
+            diversity_vals.append(metrics["diversity_score"])
+
+        # Row 2, Col 1: Best Shot
+        fig.add_trace(
+            go.Bar(
+                x=model_names,
+                y=best_shots_vals,
+                marker_color=[colors[i % len(colors)] for i in range(len(model_names))],
+                showlegend=False,
+                name="Best Shot Error",
+            ),
+            row=2,
+            col=1,
+        )
+
+        # Row 2, Col 2: Reliability
+        fig.add_trace(
+            go.Bar(
+                x=model_names,
+                y=reliability_vals,
+                marker_color=[colors[i % len(colors)] for i in range(len(model_names))],
+                showlegend=False,
+                name="Reliability Error",
+            ),
+            row=2,
+            col=2,
+        )
+
+        # Row 2, Col 3: Diversity
+        fig.add_trace(
+            go.Bar(
+                x=model_names,
+                y=diversity_vals,
+                marker_color=[colors[i % len(colors)] for i in range(len(model_names))],
+                showlegend=False,
+                name="Diversity Score",
+            ),
+            row=2,
+            col=3,
+        )
+
+        # Layout Update
         fig.update_layout(
-            title="Calibration Curve (PIT CDF)",
-            xaxis_title="Predicted Confidence",
-            yaxis_title="Observed Frequency",
+            title_text="Model Selection Analysis",
             template="plotly_white",
-            width=600,
-            height=600,
+            height=900,
+            width=1400,
+            # Axis Titles
+            xaxis1_title="Predicted Confidence",
+            yaxis1_title="Observed Frequency",
+            yaxis2_title="Error",
+            # Row 2 Y axes
+            yaxis3_title="Error",
+            yaxis4_title="Error",
+            yaxis5_title="Score",
         )
 
         return fig

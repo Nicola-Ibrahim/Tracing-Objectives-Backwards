@@ -13,10 +13,10 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.training.forward_model.command import (
+from ...application.training.train_forward_model.command import (
     TrainForwardModelCommand,
 )
-from ...application.training.forward_model.handler import (
+from ...application.training.train_forward_model.handler import (
     TrainForwardModelCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
