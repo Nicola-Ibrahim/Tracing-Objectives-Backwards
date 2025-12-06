@@ -1,9 +1,7 @@
 from pydantic import BaseModel, Field
 
 from ...dtos import EstimatorParams, ValidationMetricConfig
-from ....domain.modeling.enums.estimator_type import (
-    EstimatorTypeEnum,
-)
+
 
 class TrainInverseModelCommand(BaseModel):
     """Command payload for single-split inverse (objectives ➝ decisions) training."""

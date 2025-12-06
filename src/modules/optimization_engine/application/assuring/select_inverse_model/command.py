@@ -3,12 +3,22 @@ from pydantic import BaseModel, Field
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 
+class ModelCandidate(BaseModel):
+    """Represents a specific model candidate (type and optional version)."""
+
+    type: EstimatorTypeEnum
+    version: int | None = Field(
+        None,
+        description="Specific integer version number (e.g., 1). If None, latest is used.",
+    )
+
+
 class SelectInverseModelCommand(BaseModel):
     """Command payload for selecting the best inverse model by comparing candidates."""
 
-    inverse_estimator_types: list[EstimatorTypeEnum] = Field(
+    candidates: list[ModelCandidate] = Field(
         ...,
-        description="List of inverse estimator types to compare (e.g., ['mdn', 'cvae']).",
+        description="List of model candidates to compare.",
     )
 
     # We remove inverse_version_id as we likely want to compare the LATEST versions of the specified types.

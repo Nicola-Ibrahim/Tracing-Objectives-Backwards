@@ -30,7 +30,7 @@ class SelectInverseModelHandler:
         forward_type = command.forward_estimator_type.value
 
         self._logger.log_info(
-            f"Starting model selection. Candidates: {[t.value for t in command.inverse_estimator_types]}, Forward: {forward_type}"
+            f"Starting model selection. Candidates: {[(c.type.value, c.version) for c in command.candidates]}, Forward: {forward_type}"
         )
 
         # 1. Load Test Data
@@ -63,25 +63,48 @@ class SelectInverseModelHandler:
         results_map = {}
         inverse_estimators = {}
 
-        for inverse_type_enum in command.inverse_estimator_types:
-            inverse_type = inverse_type_enum.value
+        for candidate in command.candidates:
+            inverse_type = candidate.type.value
+            version_int = candidate.version
+
             try:
-                # Load latest version of each inverse model
-                inverse_artifact = self._model_repository.get_latest_version(
-                    estimator_type=inverse_type,
-                    mapping_direction="inverse",
-                )
-                inverse_estimator = inverse_artifact.estimator
+                # Load logic
+                if version_int is not None:
+                    # Find specific version by integer ID
+                    all_versions = self._model_repository.get_all_versions(
+                        estimator_type=inverse_type,
+                        mapping_direction="inverse",
+                    )
+                    # Filter for matching version
+                    target_artifact = next(
+                        (a for a in all_versions if a.version == version_int), None
+                    )
+
+                    if not target_artifact:
+                        raise ValueError(
+                            f"Version {version_int} not found for {inverse_type}"
+                        )
+
+                    inverse_estimator = target_artifact.estimator
+                    display_name = f"{inverse_type} (v{version_int})"
+                else:
+                    # Load latest
+                    inverse_artifact = self._model_repository.get_latest_version(
+                        estimator_type=inverse_type,
+                        mapping_direction="inverse",
+                    )
+                    inverse_estimator = inverse_artifact.estimator
+                    display_name = f"{inverse_type} (Latest)"
 
                 if not isinstance(inverse_estimator, ProbabilisticEstimator):
                     self._logger.log_warning(
                         f"Inverse estimator {inverse_type} is not probabilistic. Sampling might not work as expected."
                     )
 
-                inverse_estimators[inverse_type] = inverse_estimator
+                inverse_estimators[display_name] = inverse_estimator
 
                 # Validate
-                self._logger.log_info(f"Validating {inverse_type}...")
+                self._logger.log_info(f"Validating {display_name}...")
                 results = validator.validate(
                     inverse_estimator=inverse_estimator,
                     forward_model=forward_model,
@@ -91,7 +114,7 @@ class SelectInverseModelHandler:
                     num_samples=command.num_samples,
                     random_state=command.random_state,
                 )
-                results_map[inverse_type] = results
+                results_map[display_name] = results
 
             except Exception as e:
                 self._logger.log_error(f"Failed to validate {inverse_type}: {e}")

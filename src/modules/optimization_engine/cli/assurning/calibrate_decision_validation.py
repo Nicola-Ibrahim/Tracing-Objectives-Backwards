@@ -13,7 +13,6 @@ from ...application.assuring.calibrate_decision_validation.handler import (
 from ...application.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
-    CVAEMDNEstimatorParams,
     EstimatorParams,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
@@ -35,7 +34,6 @@ from ...infrastructure.loggers.cmd_logger import CMDLogger
 
 INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
     "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,
     "neural_network": NeuralNetworkEstimatorParams,

@@ -12,7 +12,7 @@ from ...infrastructure.modeling.ml.deterministic import (
     NNEstimator,
     RBFEstimator,
 )
-from ...infrastructure.modeling.ml.deterministic.coco_biobj_forward import COCOEstimator
+from ...infrastructure.modeling.ml.deterministic.coco_biobj_function import COCOEstimator
 from ...infrastructure.modeling.ml.probabilistic import (
     CVAEEstimator,
     MDNEstimator,

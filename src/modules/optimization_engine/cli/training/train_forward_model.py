@@ -3,7 +3,6 @@ import click
 from ...application.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
-    CVAEMDNEstimatorParams,
     EstimatorParams,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
@@ -31,7 +30,6 @@ DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
 FORWARD_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
     "coco": COCOEstimatorParams,
     "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,
     "neural_network": NeuralNetworkEstimatorParams,

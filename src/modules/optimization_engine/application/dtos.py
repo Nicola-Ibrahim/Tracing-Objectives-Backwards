@@ -24,17 +24,6 @@ class COCOEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class CloughTocherEstimatorParams(EstimatorParams):
-    type: str = Field(
-        EstimatorTypeEnum.CLOUGH_TOCHER_ND.value,
-        description="Type of the Clough-Tocher interpolation method.",
-    )
-
-    class Config:
-        extra = "forbid"  # Forbid extra fields not defined
-        use_enum_values = True
-
-
 class NeuralNetworkEstimatorParams(EstimatorParams):
     type: str = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
@@ -54,16 +43,6 @@ class NeuralNetworkEstimatorParams(EstimatorParams):
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
         use_enum_values = True
-
-
-class GeodesicInterpolatorParams(EstimatorParams):
-    num_paths: int = Field(100, gt=0, description="Number of geodesic paths to sample.")
-    max_iterations: int = Field(
-        50, gt=0, description="Max iterations for path finding."
-    )
-
-    class Config:
-        extra = "forbid"
 
 
 class RBFEstimatorParams(EstimatorParams):
@@ -162,7 +141,7 @@ class MDNEstimatorParams(EstimatorParams):
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
-        10, gt=0, description="The number of Gaussian mixture components for the MDN."
+        15, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
     learning_rate: float = Field(
         1e-3, gt=0, description="Learning rate for the Adam optimizer."
@@ -170,7 +149,7 @@ class MDNEstimatorParams(EstimatorParams):
     epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     hidden_layers: list[int] = Field(
-        [256, 256, 256],
+        [256, 256, 128, 128],
         description="List defining the number of units in each hidden layer of the MDN.",
     )
     gmm_boost: bool = Field(
@@ -213,49 +192,6 @@ class CVAEEstimatorParams(EstimatorParams):
     learning_rate: float = Field(
         1e-4, gt=0, description="Learning rate for the Adam optimizer."
     )
-    beta: float = Field(0.1, ge=0.0, description="Final KL divergence weight.")
-    kl_warmup: int = Field(
-        100,
-        ge=0,
-        description="Number of epochs used to warm-up the KL weight from 0 to beta.",
-    )
-    free_nats: float = Field(
-        0.0,
-        ge=0.0,
-        description="Free nats threshold applied to KL divergence per dimension.",
-    )
-    epochs: int = Field(100, gt=0, description="Number of training epochs.")
-    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
-    val_size: float = Field(
-        0.2,
-        gt=0.0,
-        lt=1.0,
-        description="Validation split fraction used during training.",
-    )
-    random_state: int = Field(42, description="Random seed for data splitting.")
-
-    class Config:
-        extra = "forbid"
-        use_enum_values = True
-
-
-class CVAEMDNEstimatorParams(EstimatorParams):
-    """
-    Pydantic model to define and validate parameters for a
-    CVAEEstimator.
-    """
-
-    type: str = Field(
-        EstimatorTypeEnum.CVAE_MDN.value,
-        description="Type of the Conditional Variational Autoencoder interpolation method.",
-    )
-    latent_dim: int = Field(
-        8, gt=0, description="Dimensionality of the latent space in the CVAE."
-    )
-    learning_rate: float = Field(
-        1e-4, gt=0, description="Learning rate for the Adam optimizer."
-    )
-    n_components: int = Field(5, gt=0, description="Number of MDN components")
     beta: float = Field(0.1, ge=0.0, description="Final KL divergence weight.")
     kl_warmup: int = Field(
         100,

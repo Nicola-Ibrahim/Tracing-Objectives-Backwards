@@ -1,6 +1,7 @@
 import click
 
 from ...application.assuring.select_inverse_model import (
+    ModelCandidate,
     SelectInverseModelCommand,
     SelectInverseModelHandler,
 )
@@ -24,15 +25,20 @@ def cli():
         estimator_factory=EstimatorFactory(),
     )
 
-    # Hardcoded list of models to comparison as per request
-    estimator_types = [
-        EstimatorTypeEnum.MDN,
-        EstimatorTypeEnum.CVAE,
-        # EstimatorTypeEnum.FLOW
+    # Define candidates (types and optional versions)
+    # Example: Compare latest MDN vs latest CVAE
+    candidates = [
+        ModelCandidate(type=EstimatorTypeEnum.MDN, version=1),
+        ModelCandidate(type=EstimatorTypeEnum.MDN, version=2),
+        ModelCandidate(type=EstimatorTypeEnum.MDN, version=3),
+        ModelCandidate(type=EstimatorTypeEnum.MDN, version=4),
+        ModelCandidate(type=EstimatorTypeEnum.MDN, version=5),
+        ModelCandidate(type=EstimatorTypeEnum.MDN, version=6),
+        ModelCandidate(type=EstimatorTypeEnum.CVAE, version=1),
     ]
 
     command = SelectInverseModelCommand(
-        inverse_estimator_types=estimator_types,
+        candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
     )
 

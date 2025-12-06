@@ -3,7 +3,6 @@ import click
 from ...application.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
-    CVAEMDNEstimatorParams,
     EstimatorParams,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
@@ -13,10 +12,10 @@ from ...application.dtos import (
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.mertics import MetricFactory
-from ...application.training.inverse_model_grid_search.command import (
+from ...application.training.train_inverse_model_grid_search.command import (
     TrainInverseModelGridSearchCommand,
 )
-from ...application.training.inverse_model_grid_search.handler import (
+from ...application.training.train_inverse_model_grid_search.handler import (
     TrainInverseModelGridSearchCommandHandler,
 )
 from ...infrastructure.datasets.repositories.dataset_repository import (
@@ -30,7 +29,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
 INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
     "cvae": CVAEEstimatorParams,
-    "cvae_mdn": CVAEMDNEstimatorParams,
+    "cvae_mdn": ,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,
     "neural_network": NeuralNetworkEstimatorParams,

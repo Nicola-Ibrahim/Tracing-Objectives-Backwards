@@ -111,7 +111,7 @@ model-train-forward:  # Train a forward model (decisions -> objectives) using a 
 .PHONY: model-generate-decision
 model-generate-decision:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision --estimator $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
 .PHONY: model-select-inverse
