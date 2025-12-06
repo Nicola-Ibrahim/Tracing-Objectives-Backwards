@@ -1,3 +1,5 @@
+import click
+
 from ...application.generating.decision.command import (
     GenerateDecisionCommand,
 )
@@ -14,15 +16,22 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 
-def main():
+@click.command(help="Generate decision candidates for a target objective.")
+@click.option(
+    "--estimator",
+    type=click.Choice([e.value for e in EstimatorTypeEnum]),
+    default=EstimatorTypeEnum.MDN.value,
+    show_default=True,
+    help="Inverse estimator type to use.",
+)
+def main(estimator: str):
     """
-    Main function to generate a decision using hardcoded parameters.
-    Modify the variables below to change the inputs.
+    Main function to generate a decision using parameters.
     """
 
-    # Create the command object using the hardcoded values
+    # Create the command object using the provided estimator and hardcoded target
     command = GenerateDecisionCommand(
-        inverse_estimator_type=EstimatorTypeEnum.CVAE,
+        inverse_estimator_type=EstimatorTypeEnum(estimator),
         forward_estimator_type=EstimatorTypeEnum.COCO,
         target_objective=[411, 1500],
         distance_tolerance=0.02,

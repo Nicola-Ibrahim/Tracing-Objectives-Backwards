@@ -2,19 +2,21 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.stats import gaussian_kde
 
+
 def add_pdf2d(
-    fig: go.Figure, 
-    row: int, 
-    col: int, 
-    x: np.ndarray, 
-    y: np.ndarray, 
-    x_label: str, 
+    fig: go.Figure,
+    row: int,
+    col: int,
+    x: np.ndarray,
+    y: np.ndarray,
+    x_label: str,
     y_label: str,
     colorscale: str = "Blues",
     reverse_scale: bool = True,
     line_color: str = "#0b0b0b",
     point_size: int = 4,
-    point_edge_color: str = "rgba(255,255,255,0.7)"
+    point_edge_color: str = "rgba(255,255,255,0.7)",
+    show_points: bool = False,
 ):
     # keep only finite & align
     x, y = x[np.isfinite(x)], y[np.isfinite(y)]
@@ -110,30 +112,31 @@ def add_pdf2d(
     )
 
     # Points colored by their KDE value (adds a “glow” without clutter)
-    fig.add_trace(
-        go.Scattergl(
-            x=x,
-            y=y,
-            mode="markers",
-            marker=dict(
-                size=point_size,
-                color=z_pts,
-                colorscale=colorscale,
-                reversescale=reverse_scale,
-                opacity=0.9,
-                line=dict(color=point_edge_color, width=0.5),
+    if show_points:
+        fig.add_trace(
+            go.Scattergl(
+                x=x,
+                y=y,
+                mode="markers",
+                marker=dict(
+                    size=point_size,
+                    color=z_pts,
+                    colorscale=colorscale,
+                    reversescale=reverse_scale,
+                    opacity=0.9,
+                    line=dict(color=point_edge_color, width=0.5),
+                ),
+                name="Points",
+                showlegend=False,
+                hovertemplate=(
+                    f"{x_label}: %{{x:.4f}}<br>"
+                    f"{y_label}: %{{y:.4f}}<br>"
+                    "p: %{{marker.color:.4f}}<extra></extra>"
+                ),
             ),
-            name="Points",
-            showlegend=False,
-            hovertemplate=(
-                f"{x_label}: %{{x:.4f}}<br>"
-                f"{y_label}: %{{y:.4f}}<br>"
-                "p: %{{marker.color:.4f}}<extra></extra>"
-            ),
-        ),
-        row=row,
-        col=col,
-    )
+            row=row,
+            col=col,
+        )
 
     # Axes titles + equal aspect so the shape isn’t distorted
     fig.update_xaxes(title_text=x_label, row=row, col=col)

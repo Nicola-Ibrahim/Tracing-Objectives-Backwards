@@ -47,16 +47,18 @@ class GenerateDecisionCommandHandler:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
 
         # 2. Prepare Target
-        target_y_raw, target_y_norm = self._prepare_target(
+        target_objective_raw, target_objective_norm = self._prepare_target(
             command.target_objective, processed_data
         )
 
-        self._logger.log_info(f"Target Objective (Raw): {target_y_raw.tolist()}")
+        self._logger.log_info(
+            f"Target Objective (Raw): {target_objective_raw.tolist()}"
+        )
 
         # 3. Generate Candidates
         candidates_raw, candidates_norm = self._generate_decisions(
             inverse_estimator,
-            target_y_norm,
+            target_objective_norm,
             command.n_samples,
             processed_data.decisions_normalizer,
         )
@@ -67,7 +69,7 @@ class GenerateDecisionCommandHandler:
         # 5. Visualize Results
         self._visualize_results(
             pareto_front=dataset.pareto.front,
-            target_objective=target_y_raw.flatten(),
+            target_objective=target_objective_raw.flatten(),
             predicted_objectives=predicted_objectives,
             generated_decisions=candidates_raw,
         )
@@ -106,19 +108,21 @@ class GenerateDecisionCommandHandler:
         self, target_objective: list, processed_data: ProcessedData
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Prepares raw and normalized target objectives."""
-        target_y_raw = np.array(target_objective, dtype=float).reshape(1, -1)
-        target_y_norm = processed_data.objectives_normalizer.transform(target_y_raw)
-        return target_y_raw, target_y_norm
+        target_objective_raw = np.array(target_objective, dtype=float).reshape(1, -1)
+        target_objective_norm = processed_data.objectives_normalizer.transform(
+            target_objective_raw
+        )
+        return target_objective_raw, target_objective_norm
 
     def _generate_decisions(
         self,
         estimator: BaseEstimator,
-        target_y_norm: np.ndarray,
+        target_objective_norm: np.ndarray,
         n_samples: int,
         decisions_normalizer: Any,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Generates decision candidates and handles denormalization."""
-        candidates_norm = estimator.sample(target_y_norm, n_samples=n_samples)
+        candidates_norm = estimator.sample(target_objective_norm, n_samples=n_samples)
 
         # Ensure 2D shape for inverse_transform: (N_samples, x_dim)
         if candidates_norm.ndim == 3:

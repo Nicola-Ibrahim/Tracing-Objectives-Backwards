@@ -4,7 +4,6 @@ from typing import Any
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scipy.stats import gaussian_kde
 
 from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 from .panels.pdf_1d import add_pdf1d
@@ -29,13 +28,21 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
       - y_train, y_test           : (.., 2) normalized decisions
     """
 
-    _PARETO_COLOR = "#3498db"
-    _HISTORY_COLOR = "#95a5a6"
-    _TRAIN_COLOR = "#2ecc71"
-    _TEST_COLOR = "#e74c3c"
+    # --- Color Palette ---
+    # Objectives (Blue Theme)
+    _OBJ_TRAIN = "#2980b9"  # Belize Hole
+    _OBJ_TEST = "#5dade2"  # Light Blue
+    _OBJ_COLORSCALE = "Blues"
+
+    # Decisions (Orange Theme)
+    _DEC_TRAIN = "#d35400"  # Pumpkin
+    _DEC_TEST = "#e59866"  # Light Orange
+    _DEC_COLORSCALE = "Oranges"
+
+    _HISTORY_COLOR = "#bdc3c7"  # Silver
+    _DEFAULT_COLOR = "#888888"  # Grey fallback
 
     # KDE styling
-    _KDE2D_COLORSCALE = "Blues"  # same family as your reference image
     _KDE2D_REVERSE = True  # dark = denser
     _KDE2D_LINE_COLOR = "#0b0b0b"
     _POINT_EDGE = "rgba(255,255,255,0.7)"
@@ -52,7 +59,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
             "array2d_key": "pareto_set",
             "xy_cols": (0, 1),
             "base_name": "Pareto Set",
-            "base_color": _PARETO_COLOR,
+            "base_color": _DEC_TRAIN,
             "base_symbol": "circle",
             "base_size": 7,
             "overlays": [
@@ -74,7 +81,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
             "array2d_key": "pareto_front",
             "xy_cols": (0, 1),
             "base_name": "Pareto Front",
-            "base_color": _PARETO_COLOR,
+            "base_color": _OBJ_TRAIN,
             "base_symbol": "circle",
             "base_size": 7,
             "overlays": [
@@ -88,41 +95,46 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 },
             ],
         },
-        # Row 2 & 3: Raw 1D KDEs
+        # Row 2: Raw 1D KDEs (Decisions - Orange)
         (2, 1): {
             "type": "pdf1d_from2d",
-            "title": "Raw KDE: y1",
+            "title": "Raw KDE: x1 (Dec)",
             "source_2d_key": "pareto_set",
             "col": 0,
-            "x_label": "$y_1$",
+            "x_label": "$x_1$",
+            "color": _DEC_TRAIN,
         },
         (2, 2): {
             "type": "pdf1d_from2d",
-            "title": "Raw KDE: x1",
-            "source_2d_key": "pareto_front",
-            "col": 0,
-            "x_label": "$x_1$",
-        },
-        (3, 1): {
-            "type": "pdf1d_from2d",
-            "title": "Raw KDE: y2",
+            "title": "Raw KDE: x2 (Dec)",
             "source_2d_key": "pareto_set",
             "col": 1,
-            "x_label": "$y_2$",
+            "x_label": "$x_2$",
+            "color": _DEC_TRAIN,
+        },
+        # Row 3: Raw 1D KDEs (Objectives - Blue)
+        (3, 1): {
+            "type": "pdf1d_from2d",
+            "title": "Raw KDE: y1 (Obj)",
+            "source_2d_key": "pareto_front",
+            "col": 0,
+            "x_label": "$y_1$",
+            "color": _OBJ_TRAIN,
         },
         (3, 2): {
             "type": "pdf1d_from2d",
-            "title": "Raw KDE: x2",
+            "title": "Raw KDE: y2 (Obj)",
             "source_2d_key": "pareto_front",
             "col": 1,
-            "x_label": "$x_2$",
+            "x_label": "$y_2$",
+            "color": _OBJ_TRAIN,
         },
         # Row 4: NORMALIZED 2D scatters (train/test only)
         (4, 1): {
             "type": "scatter_many",
-            "title": "Normalized Objectives (x1, x2)",
-            "x_label": "Norm $x_1$",
-            "y_label": "Norm $x_2$",
+            "title": "Normalized Objectives (y1, y2)",
+            "x_label": "Norm $y_1$",
+            "y_label": "Norm $y_2$",
             "series": [
                 {
                     "key": "X_train",
@@ -130,7 +142,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "symbol": "circle-open",
                     "size": 6,
                     "opacity": 0.7,
-                    "color": _TRAIN_COLOR,
+                    "color": _OBJ_TRAIN,
                 },
                 {
                     "key": "X_test",
@@ -138,15 +150,15 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "symbol": "x",
                     "size": 7,
                     "opacity": 0.9,
-                    "color": _TEST_COLOR,
+                    "color": _OBJ_TEST,
                 },
             ],
         },
         (4, 2): {
             "type": "scatter_many",
-            "title": "Normalized Decisions (y1, y2)",
-            "x_label": "Norm $y_1$",
-            "y_label": "Norm $y_2$",
+            "title": "Normalized Decisions (x1, x2)",
+            "x_label": "Norm $x_1$",
+            "y_label": "Norm $x_2$",
             "series": [
                 {
                     "key": "y_train",
@@ -154,7 +166,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "symbol": "circle-open",
                     "size": 6,
                     "opacity": 0.7,
-                    "color": _TRAIN_COLOR,
+                    "color": _DEC_TRAIN,
                 },
                 {
                     "key": "y_test",
@@ -162,56 +174,83 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "symbol": "x",
                     "size": 7,
                     "opacity": 0.9,
-                    "color": _TEST_COLOR,
+                    "color": _DEC_TEST,
                 },
             ],
         },
-        # Row 5/6: PDFs (from normalized series, concatenated when present)
+        # Row 5/6: PDFs (Normalized)
         (5, 1): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $y_1$",
-            "vec_keys": ["y_train", "y_test"],
+            "title": "PDF: Norm $y_1$ (Obj)",
+            "vec_keys": ["X_train", "X_test"],
             "col": 0,
+            "colors": [_OBJ_TRAIN, _OBJ_TEST],
         },
         (5, 2): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $x_1$",
-            "vec_keys": ["X_train", "X_test"],
+            "title": "PDF: Norm $x_1$ (Dec)",
+            "vec_keys": ["y_train", "y_test"],
             "col": 0,
+            "colors": [_DEC_TRAIN, _DEC_TEST],
         },
         (6, 1): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $y_2$",
-            "vec_keys": ["y_train", "y_test"],
+            "title": "PDF: Norm $y_2$ (Obj)",
+            "vec_keys": ["X_train", "X_test"],
             "col": 1,
+            "colors": [_OBJ_TRAIN, _OBJ_TEST],
         },
         (6, 2): {
             "type": "pdf1d_concat",
-            "title": "PDF: Norm $x_2$",
-            "vec_keys": ["X_train", "X_test"],
+            "title": "PDF: Norm $x_2$ (Dec)",
+            "vec_keys": ["y_train", "y_test"],
             "col": 1,
+            "colors": [_DEC_TRAIN, _DEC_TEST],
         },
-        # Row 7: 2D PDFs (from normalized series, concatenated when present)
+        # Row 7: Raw 2D PDFs (Moved from Row 10)
         (7, 1): {
             "type": "pdf2d_concat",
-            "title": "2D PDF: (Norm y1, Norm y2)",
-            "mat_keys": ["y_train", "y_test"],
+            "title": "2D PDF: Raw Decisions (x1, x2)",
+            "mat_keys": ["historical_solutions"],
+            "x_col": 0,
+            "y_col": 1,
+            "x_label": "$x_1$ (Raw)",
+            "y_label": "$x_2$ (Raw)",
+            "colorscale": _DEC_COLORSCALE,
+        },
+        (7, 2): {
+            "type": "pdf2d_concat",
+            "title": "2D PDF: Raw Objectives (y1, y2)",
+            "mat_keys": ["historical_objectives"],
+            "x_col": 0,
+            "y_col": 1,
+            "x_label": "$y_1$ (Raw)",
+            "y_label": "$y_2$ (Raw)",
+            "colorscale": _OBJ_COLORSCALE,
+        },
+        # Row 8: Normalized 2D PDFs (Shifted from Row 7)
+        (8, 1): {
+            "type": "pdf2d_concat",
+            "title": "2D PDF: (Norm y1, Norm y2) - Obj",
+            "mat_keys": ["X_train", "X_test"],
             "x_col": 0,
             "y_col": 1,
             "x_label": "Norm $y_1$",
             "y_label": "Norm $y_2$",
+            "colorscale": _OBJ_COLORSCALE,
         },
-        (7, 2): {
+        (8, 2): {
             "type": "pdf2d_concat",
-            "title": "2D PDF: (Norm x1, Norm x2)",
-            "mat_keys": ["X_train", "X_test"],
+            "title": "2D PDF: (Norm x1, Norm x2) - Dec",
+            "mat_keys": ["y_train", "y_test"],
             "x_col": 0,
             "y_col": 1,
             "x_label": "Norm $x_1$",
             "y_label": "Norm $x_2$",
+            "colorscale": _DEC_COLORSCALE,
         },
-        # Row 8: 3D (normalized): (x1, x2, y1) and (x1, x2, y2) with train/test overlays
-        (8, 1): {
+        # Row 9: 3D (normalized): (x1, x2, y1) and (x1, x2, y2) with train/test overlays
+        (9, 1): {
             "type": "3d_many",
             "title": "3D (normalized): (x1, x2, y1)",
             "x_label": "x1 (norm)",
@@ -228,7 +267,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "name": "Train",
                     "size": 3,
                     "opacity": 0.75,
-                    "color": _TRAIN_COLOR,
+                    "color": _DEC_TRAIN,
                 },
                 {
                     "x_key": "X_test",
@@ -240,11 +279,11 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "name": "Test",
                     "size": 3,
                     "opacity": 0.85,
-                    "color": _TEST_COLOR,
+                    "color": _DEC_TEST,
                 },
             ],
         },
-        (8, 2): {
+        (9, 2): {
             "type": "3d_many",
             "title": "3D (normalized): (x1, x2, y2)",
             "x_label": "x1 (norm)",
@@ -261,7 +300,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "name": "Train",
                     "size": 3,
                     "opacity": 0.75,
-                    "color": _TRAIN_COLOR,
+                    "color": _DEC_TRAIN,
                 },
                 {
                     "x_key": "X_test",
@@ -273,7 +312,74 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                     "name": "Test",
                     "size": 3,
                     "opacity": 0.85,
-                    "color": _TEST_COLOR,
+                    "color": _DEC_TEST,
+                },
+            ],
+        },
+        # Row 10: 3D (normalized): (y1, y2, x1) and (y1, y2, x2) Inverse Mapping
+        (10, 1): {
+            "type": "3d_many",
+            "title": "3D (normalized): (y1, y2, x1)",
+            "x_label": "y1 (norm)",
+            "y_label": "y2 (norm)",
+            "z_label": "x1 (norm)",
+            "series": [
+                {
+                    "x_key": "y_train",  # Objectives (y1)
+                    "x_col": 0,
+                    "y_key": "y_train",  # Objectives (y2)
+                    "y_col": 1,
+                    "z_key": "X_train",  # Decisions (x1)
+                    "z_col": 0,
+                    "name": "Train",
+                    "size": 3,
+                    "opacity": 0.75,
+                    "color": _OBJ_TRAIN,
+                },
+                {
+                    "x_key": "y_test",
+                    "x_col": 0,
+                    "y_key": "y_test",
+                    "y_col": 1,
+                    "z_key": "X_test",
+                    "z_col": 0,
+                    "name": "Test",
+                    "size": 3,
+                    "opacity": 0.85,
+                    "color": _OBJ_TEST,
+                },
+            ],
+        },
+        (10, 2): {
+            "type": "3d_many",
+            "title": "3D (normalized): (y1, y2, x2)",
+            "x_label": "y1 (norm)",
+            "y_label": "y2 (norm)",
+            "z_label": "x2 (norm)",
+            "series": [
+                {
+                    "x_key": "y_train",
+                    "x_col": 0,
+                    "y_key": "y_train",
+                    "y_col": 1,
+                    "z_key": "X_train",
+                    "z_col": 1,
+                    "name": "Train",
+                    "size": 3,
+                    "opacity": 0.75,
+                    "color": _OBJ_TRAIN,
+                },
+                {
+                    "x_key": "y_test",
+                    "x_col": 0,
+                    "y_key": "y_test",
+                    "y_col": 1,
+                    "z_key": "X_test",
+                    "z_col": 1,
+                    "name": "Test",
+                    "size": 3,
+                    "opacity": 0.85,
+                    "color": _OBJ_TEST,
                 },
             ],
         },
@@ -283,8 +389,8 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         "title_text": "Pareto Dashboard — Raw & Normalized Data",
         "title_x": 0.5,
         "title_font_size": 24,
-        "height": 3400,  # was 2800
-        "width": 1800,  # e.g. was 1600
+        "height": 5500,  # Increased height significantly
+        "width": 1800,
         "template": "plotly_white",
         "legend_orientation": "h",
         "legend_yanchor": "bottom",
@@ -422,7 +528,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                         x,
                         y,
                         name=cfg.get("base_name", "Data"),
-                        color=cfg.get("base_color", self._PARETO_COLOR),
+                        color=cfg.get("base_color", self._DEFAULT_COLOR),
                         symbol=cfg.get("base_symbol", "circle"),
                         size=cfg.get("base_size", 6),
                         x_label=cfg["x_label"],
@@ -453,7 +559,14 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 if arr2d.size == 0:
                     continue
                 v = arr2d[:, cfg["col"]]
-                add_pdf1d(fig, row, col, v, cfg["x_label"])
+                add_pdf1d(
+                    fig,
+                    row,
+                    col,
+                    v,
+                    cfg["x_label"],
+                    color=cfg.get("color", "#888"),
+                )
 
             elif t == "scatter_many":
                 any_plotted = False
@@ -475,7 +588,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                             symbol=s.get("symbol", "circle"),
                             size=s.get("size", 6),
                             opacity=s.get("opacity", 0.8),
-                            color=s.get("color", self._PARETO_COLOR),
+                            color=s.get("color", self._DEFAULT_COLOR),
                         )
                 if any_plotted:
                     # Derive axes limits from all plotted series
@@ -486,16 +599,46 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 fig.update_yaxes(title_text=cfg["y_label"], row=row, col=col)
 
             elif t == "pdf1d_concat":
-                v = self._concat_vecs(data, cfg["vec_keys"], col=cfg["col"])
-                if v.size:
-                    add_pdf1d(fig, row, col, v, cfg["title"])
+                # If colors provided for each key, overlay them. Else concat.
+                keys = cfg["vec_keys"]
+                colors = cfg.get("colors", None)
+
+                if colors and len(colors) == len(keys):
+                    # Overlay mode
+                    for k, color in zip(keys, colors):
+                        arr = self._get_2d(data, k)
+                        if arr.size and arr.shape[1] > cfg["col"]:
+                            v = arr[:, cfg["col"]]
+                            add_pdf1d(
+                                fig,
+                                row,
+                                col,
+                                v,
+                                cfg["title"],
+                                color=color,
+                            )
+                else:
+                    # Concat mode (legacy / fallback)
+                    v = self._concat_vecs(data, keys, col=cfg["col"])
+                    if v.size:
+                        add_pdf1d(fig, row, col, v, cfg["title"])
 
             elif t == "pdf2d_concat":
                 M = self._concat_mats(data, cfg["mat_keys"])
                 if M.size:
                     x = M[:, cfg["x_col"]]
                     y = M[:, cfg["y_col"]]
-                    add_pdf2d(fig, row, col, x, y, cfg["x_label"], cfg["y_label"])
+                    add_pdf2d(
+                        fig,
+                        row,
+                        col,
+                        x,
+                        y,
+                        cfg["x_label"],
+                        cfg["y_label"],
+                        colorscale=cfg.get("colorscale", "Blues"),
+                        show_points=False,
+                    )
 
             elif t == "3d_many":
                 plotted = False
@@ -518,7 +661,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                         name=s.get("name", "Series"),
                         size=s.get("size", 3),
                         opacity=s.get("opacity", 0.8),
-                        color=s.get("color", self._PARETO_COLOR),
+                        color=s.get("color", self._DEFAULT_COLOR),
                     )
                     plotted = True
                 if plotted:

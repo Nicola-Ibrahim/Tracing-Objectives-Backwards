@@ -73,7 +73,9 @@ class TrainInverseModelCommandHandler:
                 estimator=estimator,
                 X_train=X_train,
                 y_train=y_train,
+                epochs=epochs,
             )
+
         elif isinstance(estimator, DeterministicEstimator):
             fitted_estimator, loss_history, metrics = DeterministicModelTrainer().train(
                 estimator=estimator,
