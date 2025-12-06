@@ -58,19 +58,48 @@ class GenerateDecisionCommandHandler:
             f"Target Objective (Raw): {target_objective_raw.tolist()}"
         )
 
-        # 3. Iterate over Inverse Models & Generate
+        # 3. Iterate over Inverse Model Candidates & Generate
         results_map = {}
 
-        for estimator_type in command.inverse_estimator_types:
-            try:
-                self._logger.log_info(
-                    f"Generating decisions with {estimator_type.value}..."
-                )
+        for candidate in command.inverse_candidates:
+            inverse_type = candidate.type.value
+            version_int = candidate.version
 
-                # Load Inverse Estimator
-                inverse_estimator = self._load_estimator(
-                    estimator_type, direction="inverse"
-                )
+            try:
+                # Determine display name
+                if version_int is not None:
+                    display_name = f"{inverse_type} (v{version_int})"
+                    self._logger.log_info(
+                        f"Generating decisions with {display_name}..."
+                    )
+
+                    # Load specific version
+                    all_versions = self._model_repository.get_all_versions(
+                        estimator_type=inverse_type,
+                        mapping_direction="inverse",
+                    )
+                    target_artifact = next(
+                        (a for a in all_versions if a.version == version_int), None
+                    )
+
+                    if not target_artifact:
+                        raise ValueError(
+                            f"Version {version_int} not found for {inverse_type}"
+                        )
+
+                    inverse_estimator = target_artifact.estimator
+                else:
+                    display_name = f"{inverse_type} (Latest)"
+                    self._logger.log_info(
+                        f"Generating decisions with {display_name}..."
+                    )
+
+                    # Load latest version
+                    inverse_artifact = self._model_repository.get_latest_version(
+                        estimator_type=inverse_type,
+                        mapping_direction="inverse",
+                    )
+                    inverse_estimator = inverse_artifact.estimator
 
                 # Generate Candidates via Service
                 candidates_raw, candidates_norm = self._generator_service.generate(
@@ -80,23 +109,21 @@ class GenerateDecisionCommandHandler:
                     decisions_normalizer=processed_data.decisions_normalizer,
                 )
 
-                # Predict Outcomes via Service
+                # Predict Outcomes via Forward Model
                 predicted_objectives = self._generator_service.predict_outcomes(
-                    forward_estimator=forward_estimator, candidates_raw=candidates_raw
+                    forward_estimator=forward_estimator,
+                    candidates_raw=candidates_raw,
                 )
 
-                # Store Results
-                results_map[estimator_type.value] = {
+                # Store results
+                results_map[display_name] = {
                     "decisions": candidates_raw,
-                    "decisions_norm": candidates_norm,
                     "predicted_objectives": predicted_objectives,
                 }
 
             except Exception as e:
-                self._logger.log_error(
-                    f"Failed to generate with {estimator_type.value}: {e}"
-                )
-
+                self._logger.log_error(f"Failed to generate with {inverse_type}: {e}")
+                continue
         # 4. Visualization (Comparison)
         if results_map:
             self._logger.log_info("Generating comparison visualization...")

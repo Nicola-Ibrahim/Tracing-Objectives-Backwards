@@ -21,17 +21,9 @@ class SelectInverseModelCommand(BaseModel):
         description="List of model candidates to compare.",
     )
 
-    # We remove inverse_version_id as we likely want to compare the LATEST versions of the specified types.
-    # Or we could allow a map of type -> version_id, but for now we keep it simple.
-
     forward_estimator_type: EstimatorTypeEnum = Field(
         ...,
         description="Type of the forward estimator (simulator) to use for validation.",
-    )
-
-    forward_version_id: str | None = Field(
-        None,
-        description="Specific version ID for the forward model. If None, the latest version is used.",
     )
 
     num_samples: int = Field(

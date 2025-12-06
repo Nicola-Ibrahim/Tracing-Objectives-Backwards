@@ -1,6 +1,7 @@
 from typing import Any, Tuple
 
 import numpy as np
+import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -57,20 +58,33 @@ class DecisionGenerator:
     ) -> go.Figure:
         """
         Visualizes the generated solutions from multiple models in separate subplots.
+        3 plots per row, stacked vertically.
         """
         model_names = list(results_map.keys())
         n_models = len(model_names)
 
+        # Calculate rows and columns (3 per row)
+        n_cols = 3
+        n_rows = (n_models + n_cols - 1) // n_cols  # Ceiling division
+
         fig = make_subplots(
-            rows=1,
-            cols=n_models,
+            rows=n_rows,
+            cols=n_cols,
             subplot_titles=[f"{name} Predictions" for name in model_names],
         )
 
-        colors = ["blue", "green", "purple", "orange", "cyan"]
+        # Generate unique colors dynamically based on number of models
+        if n_models <= 10:
+            colors = px.colors.qualitative.Plotly
+        elif n_models <= 24:
+            colors = px.colors.qualitative.Dark24
+        else:
+            # Fall back to cycling through a large palette
+            colors = px.colors.qualitative.Dark24 + px.colors.qualitative.Plotly
 
         for idx, (model_name, res) in enumerate(results_map.items()):
-            col = idx + 1
+            row = (idx // n_cols) + 1
+            col = (idx % n_cols) + 1
             predicted = res["predicted_objectives"]
             color = colors[idx % len(colors)]
 
@@ -85,7 +99,7 @@ class DecisionGenerator:
                     showlegend=(idx == 0),  # Only show legend once
                     legendgroup="pareto",
                 ),
-                row=1,
+                row=row,
                 col=col,
             )
 
@@ -105,7 +119,7 @@ class DecisionGenerator:
                     showlegend=(idx == 0),  # Only show legend once
                     legendgroup="target",
                 ),
-                row=1,
+                row=row,
                 col=col,
             )
 
@@ -119,19 +133,19 @@ class DecisionGenerator:
                     marker=dict(color=color, size=6, opacity=0.7),
                     showlegend=True,
                 ),
-                row=1,
+                row=row,
                 col=col,
             )
 
             # Update Axes
-            fig.update_xaxes(title_text="Objective 1", row=1, col=col)
-            fig.update_yaxes(title_text="Objective 2", row=1, col=col)
+            fig.update_xaxes(title_text="Objective 1", row=row, col=col)
+            fig.update_yaxes(title_text="Objective 2", row=row, col=col)
 
         fig.update_layout(
-            title="Decision Generation Comparison (Separate Views)",
+            title="Decision Generation Comparison (Grid View)",
             template="plotly_white",
-            width=600 * n_models,
-            height=600,
+            width=1800,  # Fixed width for 3 columns
+            height=600 * n_rows,  # Scale height based on rows
         )
 
         return fig

@@ -1,9 +1,9 @@
+from ....domain.assurance.model_selection.services.model_selector import ModelSelector
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....domain.modeling.services.validation import InverseModelValidator
 from ...factories.estimator import EstimatorFactory
 from .command import SelectInverseModelCommand
 
@@ -45,21 +45,13 @@ class SelectInverseModelHandler:
         test_decisions = processed_data.decisions_test
 
         # 2. Load Forward Model
-        if command.forward_version_id:
-            forward_artifact = self._model_repository.load(
-                estimator_type=forward_type,
-                version_id=command.forward_version_id,
-                mapping_direction="forward",
-            )
-        else:
-            forward_artifact = self._model_repository.get_latest_version(
-                estimator_type=forward_type,
-                mapping_direction="forward",
-            )
-        forward_model = forward_artifact.estimator
+        forward_estimator = self._model_repository.get_latest_version(
+            estimator_type=forward_type,
+            mapping_direction="forward",
+        ).estimator
 
         # 3. Validate Each Inverse Model
-        validator = InverseModelValidator()
+        selector = ModelSelector()
         results_map = {}
         inverse_estimators = {}
 
@@ -89,11 +81,10 @@ class SelectInverseModelHandler:
                     display_name = f"{inverse_type} (v{version_int})"
                 else:
                     # Load latest
-                    inverse_artifact = self._model_repository.get_latest_version(
+                    inverse_estimator = self._model_repository.get_latest_version(
                         estimator_type=inverse_type,
                         mapping_direction="inverse",
-                    )
-                    inverse_estimator = inverse_artifact.estimator
+                    ).estimator
                     display_name = f"{inverse_type} (Latest)"
 
                 if not isinstance(inverse_estimator, ProbabilisticEstimator):
@@ -105,9 +96,9 @@ class SelectInverseModelHandler:
 
                 # Validate
                 self._logger.log_info(f"Validating {display_name}...")
-                results = validator.validate(
+                results = selector.validate(
                     inverse_estimator=inverse_estimator,
-                    forward_model=forward_model,
+                    forward_estimator=forward_estimator,
                     test_objectives=test_objectives,
                     decision_normalizer=processed_data.decisions_normalizer,
                     objective_normalizer=processed_data.objectives_normalizer,
@@ -121,7 +112,7 @@ class SelectInverseModelHandler:
 
         # 4. Generate Comparison Plots
         self._logger.log_info("Generating comparison plots...")
-        plots = validator.compare_models(
+        plots = selector.compare_models(
             results_map=results_map,
             test_objectives=test_objectives,
             test_decisions=test_decisions,  # Needed for calibration

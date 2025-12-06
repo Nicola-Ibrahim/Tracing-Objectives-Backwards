@@ -1,20 +1,28 @@
 import numpy as np
+import plotly.express as px
 import plotly.graph_objects as go
 
-from ..interfaces.base_estimator import BaseEstimator, ProbabilisticEstimator
-from ..interfaces.base_normalizer import BaseNormalizer
+from ....modeling.interfaces.base_estimator import BaseEstimator, ProbabilisticEstimator
+from ....modeling.interfaces.base_normalizer import BaseNormalizer
 
 
-class InverseModelValidator:
+class ModelSelector:
     """
-    Domain service for validating inverse models using a forward simulator.
+    Domain service for selecting and comparing inverse models using a forward simulator.
+
+    This service validates inverse model candidates against a forward model (simulator)
+    to assess their quality based on multiple criteria:
+    - Best Shot Error: Minimum prediction error achievable
+    - Reliability: Median prediction error (consistency)
+    - Diversity: Variety in generated candidate solutions
+
     Optimized with vectorized operations for batch processing.
     """
 
     def validate(
         self,
         inverse_estimator: BaseEstimator,
-        forward_model: BaseEstimator,
+        forward_estimator: BaseEstimator,
         test_objectives: np.ndarray,
         decision_normalizer: BaseNormalizer,
         objective_normalizer: BaseNormalizer,
@@ -68,7 +76,7 @@ class InverseModelValidator:
 
         # B. Run Simulator / Forward Model
         # This runs ONE big inference instead of N small ones.
-        pred_obj_flat = forward_model.predict(candidates_orig_flat)
+        pred_obj_flat = forward_estimator.predict(candidates_orig_flat)
 
         # Ensure numpy array
         if not isinstance(pred_obj_flat, np.ndarray):
@@ -157,14 +165,17 @@ class InverseModelValidator:
             vertical_spacing=0.15,
         )
 
-        colors = [
-            "blue",
-            "red",
-            "green",
-            "orange",
-            "purple",
-        ]  # Simple color cycle
         model_names = list(results_map.keys())
+
+        # Generate unique colors dynamically based on number of models
+        n_models = len(model_names)
+        if n_models <= 10:
+            colors = px.colors.qualitative.Plotly
+        elif n_models <= 24:
+            colors = px.colors.qualitative.Dark24
+        else:
+            # Fall back to cycling through a large palette
+            colors = px.colors.qualitative.Dark24 + px.colors.qualitative.Plotly
 
         # --- 1. Calibration Curve (Row 1, Col 1) ---
         # Ideal Line
@@ -217,6 +228,7 @@ class InverseModelValidator:
                         mode="lines",
                         name=f"{model_name}",
                         line=dict(color=color, width=2),
+                        opacity=0.7,
                         legendgroup=model_name,
                     ),
                     row=1,

@@ -3,11 +3,13 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
+from ...assuring.select_inverse_model.command import ModelCandidate
 
 
 class GenerateDecisionCommand(BaseModel):
-    inverse_estimator_types: List[EstimatorTypeEnum] = Field(
-        ..., description="List of inverse estimators to use for generation"
+    inverse_candidates: List[ModelCandidate] = Field(
+        ...,
+        description="List of inverse model candidates (type + version) to use for generation",
     )
     forward_estimator_type: EstimatorTypeEnum = Field(
         ..., description="Name of the forward model to use for verification"
