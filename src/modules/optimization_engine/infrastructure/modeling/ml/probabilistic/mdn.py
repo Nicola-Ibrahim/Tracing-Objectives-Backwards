@@ -1,3 +1,26 @@
+"""
+Mixture Density Network (MDN) Estimator for Inverse Problems.
+
+This module implements a probabilistic inverse mapper using Mixture Density Networks
+to model conditional distributions p(x|y) where the relationship between inputs and
+outputs is one-to-many or multimodal.
+
+Architecture:
+    - Neural network with configurable hidden layers
+    - Three output heads: π (mixture weights), μ (means), σ (scales)
+    - Supports multiple distribution families: Normal, Laplace, LogNormal
+    - Optional GMM-based initialization for mixture components
+
+Key Features:
+    - Automatic mixture component selection via BIC
+    - Temperature-based sampling control
+    - GMM boost for improved conditioning
+    - Flexible activation functions and optimizers
+
+Reference:
+    Bishop, C. "Mixture Density Networks" (1994)
+"""
+
 from enum import Enum
 from typing import Sequence
 

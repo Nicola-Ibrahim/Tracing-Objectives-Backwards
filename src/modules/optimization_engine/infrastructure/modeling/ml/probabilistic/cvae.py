@@ -1,3 +1,32 @@
+"""
+Conditional Variational Autoencoder (CVAE) Estimator for Inverse Problems.
+
+This module implements a conditional VAE with Gaussian decoder for modeling posterior
+distributions p(x|y) in inverse problems where multiple solutions x can explain the
+same observation y.
+
+Architecture:
+    - Encoder: q(z|y,cond) - amortized posterior
+    - Decoder: p(y|z,cond) - Gaussian likelihood
+    - Prior: p(z|cond) - learned conditional prior
+
+Training:
+    - Variational lower bound (ELBO) optimization
+    - β-VAE framework with KL warmup
+    - Free bits for preventing posterior collapse
+    - Reconstruction (NLL) + KL divergence loss
+
+Key Features:
+    - Conditional generation from learned latent space
+    - Temperature-controlled sampling diversity
+    - β-annealing for stable training
+    - Gaussian observation model with learned variance
+
+Reference:
+    Sohn et al. "Learning Structured Output Representation using Deep Conditional
+    Generative Models" (2015)
+"""
+
 import warnings
 
 import numpy as np
