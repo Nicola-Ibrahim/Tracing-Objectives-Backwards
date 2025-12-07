@@ -164,32 +164,18 @@ class DeterministicEstimator(BaseEstimator):
     A deterministic inverse decision mapper that uses a fixed mapping strategy.
     """
 
-    def predict(
-        self, X: np.typing.NDArray[np.float64], mode: Literal["standard"] = "standard"
-    ):
+    @abstractmethod
+    def predict(self, X: np.typing.NDArray[np.float64]):
         """
         Make predictions for the input data.
 
         Args:
             X (NDArray[np.float64]): Input data points.
-            mode (Literal): Prediction mode. Currently only 'standard' is supported.
         Returns:
             NDArray[np.float64]: Predicted outputs.
         """
-        if mode == "standard":
-            return self.infer(X)
 
-    def infer(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-        """Perform inference to obtain predictions for the input data.
-
-        Args:
-            X (NDArray[np.float64]): Input data points.
-
-        Returns:
-            NDArray[np.float64]: Predicted outputs.
-        """
-        # Implement the inference logic here
-        raise NotImplementedError("Subclasses must implement the infer method.")
+        raise NotImplementedError("Subclasses must implement the predict method.")
 
 
 @dataclass
@@ -243,33 +229,6 @@ class ProbabilisticEstimator(BaseEstimator):
     def get_loss_history(self) -> dict[str, list]:
         return self._training_history.as_dict()
 
-    def predict(
-        self,
-        X: npt.NDArray[np.float64],
-        mode: Literal["mean", "median", "map", "standard"] = "standard",
-    ) -> npt.NDArray[np.float64]:
-        """
-        Make predictions for the input data.
-
-        Args:
-            X (NDArray[np.float64]): Input data points.
-            mode (Literal): Prediction mode. One of 'mean', 'median', 'map', or 'standard'.
-        Returns:
-            NDArray[np.float64]: Predicted outputs.
-        """
-
-        if mode == "mean":
-            return self.infer_mean(X)
-
-        elif mode == "median":
-            return self.infer_median(X)
-
-        elif mode == "map":
-            return self.infer_map(X)
-
-        elif mode == "standard":
-            return self.sample(X, n_samples=1)
-
     @abstractmethod
     def sample(
         self,
@@ -280,29 +239,4 @@ class ProbabilisticEstimator(BaseEstimator):
     ) -> npt.NDArray[np.float64]:
         """Draw samples from the predictive distribution p(y|X)."""
 
-    @abstractmethod
-    def infer_mean(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
-        """Compute the posterior mean E[y|X]."""
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def infer_median(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
-        """Compute the posterior median for each input."""
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def infer_map(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
-        """Compute the posterior mode or MAP estimate for each input."""
-
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement the sample method.")

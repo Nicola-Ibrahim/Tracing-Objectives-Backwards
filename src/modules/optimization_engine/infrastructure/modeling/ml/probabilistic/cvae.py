@@ -9,10 +9,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from .....domain.modeling.interfaces.base_estimator import (
-    BaseEstimator,
-    ProbabilisticEstimator,
-)
+from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 
 LOG2PI = float(np.log(2.0 * np.pi))
 
@@ -367,9 +364,7 @@ class CVAEEstimator(ProbabilisticEstimator):
 
             avg_train_nll = train_nll_sum / max(1, len(train_loader))
             avg_train_kl = train_kl_sum / max(1, len(train_loader))
-            avg_train = (
-                avg_train_nll + beta * avg_train_kl
-            )
+            avg_train = avg_train_nll + beta * avg_train_kl
 
             # ---- validate ----
             self._encoder.eval()
@@ -519,62 +514,3 @@ class CVAEEstimator(ProbabilisticEstimator):
 
         out = y_flat.view(n, S, Dy).cpu().numpy().astype(np.float64, copy=False)
         return out[:, 0, :] if S == 1 else out
-
-    def infer_mean(self, cond: np.ndarray, *, S: int = 256) -> np.ndarray:
-        """Approximate posterior mean via sampling y ~ p(y|cond)."""
-        draws = self.sample(cond=cond, n_samples=S)  # (n, S, Dy)
-        return draws.mean(axis=1)  # (n, Dy)
-
-    def infer_median(
-        self, cond: NDArray[np.float64] = None, **kwargs
-    ) -> NDArray[np.float64]:
-        """Approximate posterior median via sampling y ~ p(y|cond)."""
-        if cond is None and "X" in kwargs:
-            warnings.warn(
-                "CVAEEstimator.infer_median: argument 'X' is deprecated; use 'cond' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            cond = kwargs.pop("X")
-        if cond is None:
-            raise TypeError("infer_median() requires argument: cond")
-
-        draws = self.sample(
-            cond=cond,
-            n_samples=501,
-            seed=43,
-            temperature=1.0,
-            max_outputs_per_chunk=20_000,
-        )
-        if draws.ndim == 2:
-            return draws.astype(np.float64, copy=False)
-        med = np.median(draws, axis=1)
-        return med.astype(np.float64, copy=False)
-
-    def infer_map(
-        self, cond: NDArray[np.float64] = None, **kwargs
-    ) -> NDArray[np.float64]:
-        """Deterministic point: z := μ_p(cond); return μ_y(z, cond)."""
-        if cond is None and "X" in kwargs:
-            warnings.warn(
-                "CVAEEstimator.infer_map: argument 'X' is deprecated; use 'cond' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            cond = kwargs.pop("X")
-        if cond is None:
-            raise TypeError("infer_map() requires argument: cond")
-
-        if self._decoder is None:
-            raise RuntimeError("Model not fitted.")
-
-        self._decoder.eval()
-        self._prior_net.eval()
-
-        cond_t = torch.tensor(cond, dtype=torch.float32, device=self.device)
-        with torch.no_grad():
-            mu_p, _ = self._prior_net(cond_t)  # (n, L)
-            mu_flat, _ = self._decoder(mu_p, cond_t)  # (n, Dy)
-            out = mu_flat
-
-        return out.cpu().numpy().astype(np.float64, copy=False)

@@ -23,10 +23,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from umap import UMAP
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from .....domain.modeling.interfaces.base_estimator import (
-    BaseEstimator,
-    ProbabilisticEstimator,
-)
+from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 
 # ======================================================================
 # Data containers & Enums
@@ -541,74 +538,8 @@ class MDNEstimator(ProbabilisticEstimator):
                 results.append(s_chunk.cpu())
 
         out = torch.cat(results, dim=0).numpy().astype(np.float64, copy=False)
-        
+
         return out
-
-    def infer_mean(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
-        """
-        **Monte-Carlo mean** per input: average of `n_samples` draws from p(x|y).
-
-        Rationale:
-        - Matches CVAE-style APIs and your `generate_point_predictions` idea.
-        - Avoids relying on analytic mixture moments when models differ.
-
-        Determinism:
-        - Stochastic unless you fix `seed`. Larger `n_samples` → lower MC noise.
-
-        Shapes:
-        - X: (n, in_dim)
-        - return: (n, out_dim)
-        """
-        s = self.sample(
-            X,
-            n_samples=256,
-        )
-        if s.ndim == 2:
-            return s.astype(np.float64, copy=False)  # n_samples==1, trivial mean
-        return s.mean(axis=1).astype(np.float64, copy=False)
-
-    def infer_median(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
-        """
-        **Monte-Carlo median** per input (marginal, per output dimension).
-
-        Shapes:
-        - X: (n, in_dim)
-        - return: (n, out_dim)
-        """
-        s = self.sample(
-            X,
-            n_samples=256,
-        )
-        if s.ndim == 2:
-            return s.astype(np.float64, copy=False)
-        return np.median(s, axis=1).astype(np.float64, copy=False)
-
-    def infer_map(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
-        """
-        **Deterministic** mean of the MAP component per input:
-        k* = argmax_k π_k(y); returns μ_{k*}(y).
-
-        Shapes:
-        - X: (n, in_dim)
-        - return: (n, out_dim)
-        """
-        self._ensure_fitted()
-        X_t = self._prepare_inputs(X)
-        with torch.no_grad():
-            pi, mu, sigma = self._model(X_t)  # (n,K,out)
-            score = torch.log(pi) - torch.log(sigma).sum(dim=-1)  # (n,K)
-            k_star = torch.argmax(score, dim=1)
-            out = mu[torch.arange(mu.size(0), device=mu.device), k_star, :]
-        return out.cpu().numpy().astype(np.float64, copy=False)
 
     def predict_topk(self, X: np.ndarray, K: int = 3, by: str = "score") -> np.ndarray:
         """
