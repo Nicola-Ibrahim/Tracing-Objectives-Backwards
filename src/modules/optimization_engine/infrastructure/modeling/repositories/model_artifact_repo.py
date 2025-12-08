@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from pathlib import Path
 
 from .....shared.config import ROOT_PATH
@@ -6,8 +7,22 @@ from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
+from ....domain.modeling.value_objects.loss_history import LossHistory
 from ...processing.files.json import JsonFileHandler
-from ...processing.files.pickle import PickleFileHandler
+from ..ml.deterministic.coco_biobj_function import COCOEstimator
+
+# Import estimators for registry
+from ..ml.probabilistic.cvae import CVAEEstimator
+from ..ml.probabilistic.inn import INNEstimator
+from ..ml.probabilistic.mdn import MDNEstimator
+
+# Estimator registry for loading from checkpoint
+ESTIMATOR_REGISTRY = {
+    "mdn": MDNEstimator,
+    "cvae": CVAEEstimator,
+    "inn": INNEstimator,
+    "coco": COCOEstimator,
+}
 
 
 class VersionManager:
@@ -42,7 +57,6 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
 
     def __init__(self):
         self._base_model_storage_path = ROOT_PATH / "models"
-        self._pickel_file_handler = PickleFileHandler()
         self._json_file_handler = JsonFileHandler()
         self._version_manager = VersionManager(self._json_file_handler)
         self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
@@ -94,20 +108,37 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         model_artifact_version_directory = models_directory / dir_name
         model_artifact_version_directory.mkdir(exist_ok=True)
 
-        # Define file paths
-        estimator_path = model_artifact_version_directory / "estimator.pkl"
-        metadata_path = model_artifact_version_directory / "metadata.json"
+        # Get checkpoint from estimator (contains model_state, dimensions, etc.)
+        checkpoint = model_artifact.estimator.to_checkpoint()
 
-        # Save all components using their dedicated handlers
-        self._pickel_file_handler.save(model_artifact.estimator, estimator_path)
+        # Get ALL init hyperparameters (including private ones like _hidden_layers)
+        hyperparams = model_artifact.estimator._collect_init_params_from_instance()
 
-        # Prepare and save metadata
+        # Serialize enums to strings
+        serialized_hyperparams = {}
+        for k, v in hyperparams.items():
+            if isinstance(v, Enum):
+                serialized_hyperparams[k] = v.value
+            else:
+                serialized_hyperparams[k] = v
+
+        # Merge hyperparameters and checkpoint into parameters (flattened structure)
+        # BUT extract training_history to put at root level
+        training_history = checkpoint.pop("training_history", None)
+        merged_parameters = {**serialized_hyperparams, **checkpoint}
+        merged_parameters["type"] = model_artifact.parameters.get("type")
+        merged_parameters["mapping_direction"] = mapping_direction
+
+        # Build metadata without estimator and loss_history
         metadata = model_artifact.model_dump(
-            exclude={
-                "estimator",
-            }
+            exclude={"estimator", "loss_history", "parameters"}
         )
-        metadata["mapping_direction"] = mapping_direction
+        metadata["parameters"] = merged_parameters  # Use merged params
+        if training_history:
+            metadata["training_history"] = training_history  # At root level
+
+        # Save only metadata.json
+        metadata_path = model_artifact_version_directory / "metadata.json"
         self._json_file_handler.save(metadata, metadata_path)
 
     def load(
@@ -123,13 +154,32 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         if not model_artifact_version_directory.exists():
             raise FileNotFoundError(f"Model version '{version_id}' not found.")
 
-        # Define file paths
+        # Load metadata.json
         metadata_path = model_artifact_version_directory / "metadata.json"
-        estimator_path = model_artifact_version_directory / "estimator.pkl"
-
-        # Use the correct handler for each file type
         metadata = self._json_file_handler.load(metadata_path)
-        estimator = self._pickel_file_handler.load(estimator_path)
+
+        parameters = metadata["parameters"]
+
+        # Check if this is new format (checkpoint merged into parameters)
+        # or old format (separate checkpoint field)
+        if "checkpoint" in metadata:
+            # Old format - merge checkpoint into parameters for compatibility
+            parameters.update(metadata["checkpoint"])
+
+        # Add training_history from root level if present
+        if "training_history" in metadata:
+            parameters["training_history"] = metadata["training_history"]
+
+        # Look up estimator class from registry
+        estimator_class = ESTIMATOR_REGISTRY.get(parameters.get("type"))
+        if not estimator_class:
+            raise ValueError(
+                f"Unknown estimator type: {parameters.get('type')}. "
+                f"Available types: {list(ESTIMATOR_REGISTRY.keys())}"
+            )
+
+        # Rebuild estimator from parameters (which now contains checkpoint data)
+        estimator = estimator_class.from_checkpoint(parameters)
 
         # Reconstruct the Pydantic model
         metrics_payload = metadata.get("metrics")
@@ -140,12 +190,18 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 "cv_scores": metadata.get("cv_scores", []),
             }
 
+        # Use loss_history from metadata (should be LossHistory compatible)
+        loss_history_data = metadata.get("loss_history", {})
+        loss_history = (
+            LossHistory(**loss_history_data) if loss_history_data else LossHistory()
+        )
+
         return ModelArtifact.from_data(
             id=metadata.get("id"),
             parameters=metadata["parameters"],
             estimator=estimator,
             metrics=metrics_payload,
-            loss_history=metadata.get("loss_history", {}),
+            loss_history=loss_history,
             trained_at=metadata.get("trained_at"),
             version=metadata.get("version"),
         )

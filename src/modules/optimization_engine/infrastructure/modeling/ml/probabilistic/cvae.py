@@ -543,3 +543,135 @@ class CVAEEstimator(ProbabilisticEstimator):
 
         out = y_flat.view(n, S, Dy).cpu().numpy().astype(np.float64, copy=False)
         return out[:, 0, :] if S == 1 else out
+
+    # -------------------- Checkpoint Serialization --------------------
+
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize CVAE model state to JSON-serializable checkpoint.
+
+        Returns:
+            dict: Checkpoint containing all network weights and training state
+        """
+        if self._decoder is None or self._encoder is None or self._prior_net is None:
+            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+
+        # Convert all network state_dicts to JSON-safe format
+        encoder_state = {
+            k: v.cpu().numpy().tolist() for k, v in self._encoder.state_dict().items()
+        }
+        decoder_state = {
+            k: v.cpu().numpy().tolist() for k, v in self._decoder.state_dict().items()
+        }
+        prior_state = {
+            k: v.cpu().numpy().tolist() for k, v in self._prior_net.state_dict().items()
+        }
+
+        checkpoint = {
+            "encoder_state": encoder_state,
+            "decoder_state": decoder_state,
+            "prior_state": prior_state,
+            "cond_dim": int(self._cond_dim) if self._cond_dim is not None else None,
+            "y_dim": int(self._y_dim) if self._y_dim is not None else None,
+            "training_history": self._training_history.as_dict(),
+        }
+
+        return checkpoint
+
+    @classmethod
+    def from_checkpoint(cls, parameters: dict) -> "CVAEEstimator":
+        """
+        Reconstruct trained CVAE estimator from parameters.
+
+        Args:
+            parameters: Full parameters dict containing hyperparameters and model state
+
+        Returns:
+            CVAEEstimator: Fully initialized trained estimator
+        """
+        # Filter out checkpoint fields and metadata
+        checkpoint_fields = {
+            "encoder_state",
+            "decoder_state",
+            "prior_state",
+            "cond_dim",
+            "y_dim",
+            "training_history",
+        }
+        parsed_params = {
+            k: v
+            for k, v in parameters.items()
+            if k not in checkpoint_fields and k not in ["type", "mapping_direction"]
+        }
+
+        # Create estimator instance
+        estimator = cls(**parsed_params)
+
+        # Restore dimensions
+        estimator._cond_dim = parameters.get("cond_dim")
+        estimator._y_dim = parameters.get("y_dim")
+        estimator._X_dim = estimator._cond_dim  # BaseEstimator convention
+
+        # Rebuild networks if dimensions are available
+        if estimator._cond_dim is not None and estimator._y_dim is not None:
+            # Create encoder
+            estimator._encoder = CVAEEncoder(
+                y_dim=estimator._y_dim,
+                cond_dim=estimator._cond_dim,
+                latent_dim=estimator._latent_dim,
+                hidden=estimator._hidden,
+            ).to(estimator.device)
+
+            # Create decoder
+            estimator._decoder = CVAEDecoderGaussian(
+                latent_dim=estimator._latent_dim,
+                cond_dim=estimator._cond_dim,
+                y_dim=estimator._y_dim,
+                hidden=estimator._hidden,
+                min_logvar=estimator._dec_min_lv,
+                max_logvar=estimator._dec_max_lv,
+            ).to(estimator.device)
+
+            # Create prior net
+            estimator._prior_net = PriorNet(
+                cond_dim=estimator._cond_dim,
+                latent_dim=estimator._latent_dim,
+                hidden=estimator._hidden,
+                min_logvar=estimator._prior_min_lv,
+                max_logvar=estimator._prior_max_lv,
+            ).to(estimator.device)
+
+            # Load weights from checkpoint
+            encoder_state = {
+                k: torch.tensor(v, device=estimator.device)
+                for k, v in parameters["encoder_state"].items()
+            }
+            decoder_state = {
+                k: torch.tensor(v, device=estimator.device)
+                for k, v in parameters["decoder_state"].items()
+            }
+            prior_state = {
+                k: torch.tensor(v, device=estimator.device)
+                for k, v in parameters["prior_state"].items()
+            }
+
+            estimator._encoder.load_state_dict(encoder_state)
+            estimator._decoder.load_state_dict(decoder_state)
+            estimator._prior_net.load_state_dict(prior_state)
+
+            # Set to eval mode
+            estimator._encoder.eval()
+            estimator._decoder.eval()
+            estimator._prior_net.eval()
+
+        # Restore training history
+        if "training_history" in parameters:
+            hist = parameters["training_history"]
+            estimator._training_history.epochs = hist.get("epochs", [])
+            estimator._training_history.train_loss = hist.get("train_loss", [])
+            estimator._training_history.val_loss = hist.get("val_loss", [])
+            for key, value in hist.items():
+                if key not in ["epochs", "train_loss", "val_loss"]:
+                    estimator._training_history.extras[key] = value
+
+        return estimator

@@ -655,6 +655,146 @@ class MDNEstimator(ProbabilisticEstimator):
             sigma_T = sigma * np.sqrt(T)
         return torch.clamp(sigma_T, min=1e-4)  # be conservative with a small floor
 
+    # -------------------- Checkpoint Serialization --------------------
+
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize MDN model state to JSON-serializable checkpoint.
+
+        Returns:
+            dict: Checkpoint containing model weights, training state, and metadata
+        """
+        if self._model is None:
+            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+
+        # Convert PyTorch state_dict to JSON-safe format
+        model_state = {}
+        for key, tensor in self._model.state_dict().items():
+            model_state[key] = tensor.cpu().numpy().tolist()
+
+        # Serialize GMM clusterer if used
+        clusterer_state = None
+        if self._gmm_boost and self._clusterer is not None:
+            clusterer_state = {
+                "means": self._clusterer.means_.tolist(),
+                "covariances": self._clusterer.covariances_.tolist(),
+                "weights": self._clusterer.weights_.tolist(),
+                "n_components": int(self._clusterer.n_components),
+                "covariance_type": self._clusterer.covariance_type,
+            }
+
+        checkpoint = {
+            "model_state": model_state,
+            "num_mixtures": int(self._num_mixtures),
+            "X_dim": int(self._X_dim) if self._X_dim is not None else None,
+            "y_dim": int(self._y_dim) if self._y_dim is not None else None,
+            "clusterer_state": clusterer_state,
+            "training_history": self._training_history.as_dict(),
+        }
+
+        return checkpoint
+
+    @classmethod
+    def from_checkpoint(cls, parameters: dict) -> "MDNEstimator":
+        """
+        Reconstruct trained MDN estimator from parameters.
+
+        Args:
+            parameters: Full parameters dict containing hyperparameters and model state
+
+        Returns:
+            MDNEstimator: Fully initialized trained estimator
+        """
+        # Parse enum parameters and filter out checkpoint-specific fields
+        checkpoint_fields = {
+            "model_state",
+            "X_dim",
+            "y_dim",
+            "clusterer_state",
+            "training_history",
+        }
+        parsed_params = {}
+        for key, value in parameters.items():
+            # Skip checkpoint-specific fields and metadata
+            if key in checkpoint_fields or key in ["type", "mapping_direction"]:
+                continue
+            # Parse enums
+            if key == "distribution_family":
+                parsed_params[key] = (
+                    DistributionFamilyEnum(value) if isinstance(value, str) else value
+                )
+            elif key == "hidden_activation_fn_name":
+                parsed_params[key] = (
+                    ActivationFunctionEnum(value) if isinstance(value, str) else value
+                )
+            elif key == "output_activation_fn_name":
+                parsed_params[key] = (
+                    ActivationFunctionEnum(value) if isinstance(value, str) else value
+                )
+            else:
+                parsed_params[key] = value
+
+        # Create estimator instance
+        estimator = cls(**parsed_params)
+
+        # Restore dimensions from parameters
+        estimator._X_dim = parameters.get("X_dim")
+        estimator._y_dim = parameters.get("y_dim")
+        estimator._num_mixtures = parameters["num_mixtures"]
+
+        # Rebuild PyTorch model architecture
+        if estimator._X_dim is not None and estimator._y_dim is not None:
+            input_dim = estimator._X_dim
+
+            # Restore GMM clusterer if it was used
+            if parameters.get("clusterer_state") is not None:
+                cs = parameters["clusterer_state"]
+                clusterer = GaussianMixture(
+                    n_components=cs["n_components"],
+                    covariance_type=cs["covariance_type"],
+                )
+                # Manually set fitted parameters
+                clusterer.means_ = np.array(cs["means"])
+                clusterer.covariances_ = np.array(cs["covariances"])
+                clusterer.weights_ = np.array(cs["weights"])
+                clusterer.precisions_cholesky_ = np.linalg.cholesky(
+                    np.linalg.inv(clusterer.covariances_)
+                )
+                estimator._clusterer = clusterer
+
+                # Adjust input dim for GMM boost
+                if estimator._gmm_boost:
+                    input_dim += cs["n_components"]
+
+            # Create MDN model
+            estimator._model = MDN(
+                input_dim=input_dim,
+                output_dim=estimator._y_dim,
+                num_mixtures=estimator._num_mixtures,
+                hidden_layers=estimator._hidden_layers,
+                hidden_activation_fn_name=estimator._hidden_activation_fn_name,
+            ).to(estimator._device)
+
+            # Load model weights from checkpoint
+            model_state = {}
+            for key, value_list in parameters["model_state"].items():
+                model_state[key] = torch.tensor(value_list, device=estimator._device)
+
+            estimator._model.load_state_dict(model_state)
+            estimator._model.eval()
+
+        # Restore training history
+        if "training_history" in parameters:
+            hist = parameters["training_history"]
+            estimator._training_history.epochs = hist.get("epochs", [])
+            estimator._training_history.train_loss = hist.get("train_loss", [])
+            estimator._training_history.val_loss = hist.get("val_loss", [])
+            for key, value in hist.items():
+                if key not in ["epochs", "train_loss", "val_loss"]:
+                    estimator._training_history.extras[key] = value
+
+        return estimator
+
 
 # ======================================================================
 # Visualization & helpers

@@ -11,7 +11,7 @@ from ...application.dtos import (
     ValidationMetricConfig,
 )
 from ...application.factories.estimator import EstimatorFactory
-from ...application.factories.mertics import MetricFactory
+from ...application.factories.metrics import MetricFactory
 from ...application.training.train_forward_model.command import (
     TrainForwardModelCommand,
 )

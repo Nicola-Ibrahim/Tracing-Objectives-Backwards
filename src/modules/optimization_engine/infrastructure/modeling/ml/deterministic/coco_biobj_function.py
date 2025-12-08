@@ -1,8 +1,8 @@
 import cocoex
 import numpy as np
 from cocoex import Problem as COCOProblem
-from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
+from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import DeterministicEstimator
 
 
@@ -101,3 +101,45 @@ class COCOEstimator(DeterministicEstimator):
         if F.ndim == 1:
             F = F.reshape(-1, 1)
         return F
+
+    # -------------------- Checkpoint Serialization --------------------
+
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize COCO estimator configuration to JSON-serializable checkpoint.
+
+        COCO problems are deterministic and don't have trainable parameters,
+        so we only need to store the configuration.
+
+        Returns:
+            dict: Checkpoint containing problem configuration
+        """
+        checkpoint = {
+            "problem_name": self.problem_name,
+            "function_indices": int(self.function_indices),
+            "instance_indices": int(self.instance_indices),
+            "dimensions": int(self.dimensions),
+        }
+        return checkpoint
+
+    @classmethod
+    def from_checkpoint(cls, parameters: dict) -> "COCOEstimator":
+        """
+        Reconstruct COCO estimator from parameters.
+
+        Args:
+            parameters: Full parameters dict containing configuration
+
+        Returns:
+            COCOEstimator: Fully initialized estimator
+        """
+        # For COCO, parameters contain the configuration
+        # Filter out metadata fields
+        config = {
+            k: v
+            for k, v in parameters.items()
+            if k
+            in ["problem_name", "function_indices", "instance_indices", "dimensions"]
+        }
+
+        return cls(**config)

@@ -113,10 +113,63 @@ class BaseEstimator(ABC):
             params[name] = val
         return params
 
-    def to_dict(self) -> dict[str, object]:
-        """Serialize the *actual* initialization (current) values of the estimator."""
-        params = self._collect_init_params_from_instance()
-        return {k: self._serialize(v) for k, v in params.items()}
+    def to_dict(self) -> dict:
+        """
+        Converts the estimator's initialization parameters to a dictionary.
+
+        Returns:
+            dict: A dictionary containing all the estimator's initialization parameters.
+        """
+        params = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                continue
+            if isinstance(value, enum.Enum):
+                params[key] = value.value
+            else:
+                params[key] = value
+        return params
+
+    @abstractmethod
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize model state to a JSON-serializable dictionary.
+
+        Returns a checkpoint containing all necessary state to reconstruct
+        this trained/configured estimator, including:
+        - Model architecture parameters
+        - Trained weights (if applicable, converted from tensors to lists)
+        - Training history (if applicable)
+        - Any other stateful components
+
+        Returns:
+            dict: JSON-serializable checkpoint data
+
+        Raises:
+            RuntimeError: If model is not fitted (for estimators requiring training)
+        """
+        raise NotImplementedError("Subclasses must implement the to_checkpoint method.")
+
+    @classmethod
+    @abstractmethod
+    def from_checkpoint(cls, parameters: dict) -> "BaseEstimator":
+        """
+        Reconstruct an estimator from parameters containing all state.
+
+        Args:
+            parameters: Full parameters dict containing both hyperparameters
+                       and checkpoint data (model_state, training_history, etc.)
+                       Enum values may be strings that need parsing.
+
+        Returns:
+            BaseEstimator: Fully initialized estimator (trained if applicable)
+
+        Raises:
+            ValueError: If parameters are invalid or incomplete
+        """
+        raise NotImplementedError(
+            "Subclasses must implement the from_checkpoint method."
+        )
 
     @classmethod
     def _serialize(cls, v):

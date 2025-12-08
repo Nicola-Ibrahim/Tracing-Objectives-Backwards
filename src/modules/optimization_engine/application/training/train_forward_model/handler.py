@@ -10,7 +10,7 @@ from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepo
 from ....domain.modeling.services.deterministic import DeterministicModelTrainer
 from ....domain.modeling.services.probabilistic import ProbabilisticModelTrainer
 from ...factories.estimator import EstimatorFactory
-from ...factories.mertics import MetricFactory
+from ...factories.metrics import MetricFactory
 from .command import TrainForwardModelCommand
 
 

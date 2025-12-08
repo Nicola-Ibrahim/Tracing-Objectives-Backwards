@@ -649,3 +649,89 @@ class INNEstimator(ProbabilisticEstimator):
             )
         else:
             raise ValueError(f"Unknown optimizer: {self._optimizer_name}")
+
+    # -------------------- Checkpoint Serialization --------------------
+
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize INN/Flow model state to JSON-serializable checkpoint.
+
+        Returns:
+            dict: Checkpoint containing flow weights and training state
+        """
+        if self._flow is None:
+            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+
+        # Convert flow state_dict to JSON-safe format
+        flow_state = {
+            k: v.cpu().numpy().tolist() for k, v in self._flow.state_dict().items()
+        }
+
+        checkpoint = {
+            "flow_state": flow_state,
+            "input_dim": int(self._flow.input_dim),
+            "cond_dim": int(self._flow.cond_dim),
+            "training_history": self._training_history.as_dict(),
+        }
+
+        return checkpoint
+
+    @classmethod
+    def from_checkpoint(cls, parameters: dict) -> "INNEstimator":
+        """
+        Reconstruct trained INN estimator from parameters.
+
+        Args:
+            parameters: Full parameters dict containing hyperparameters and model state
+
+        Returns:
+            INNEstimator: Fully initialized trained estimator
+        """
+        # Parse enum parameters from strings
+        parsed_params = {}
+        for key, value in parameters.items():
+            if key == "optimizer_name":
+                parsed_params[key] = (
+                    OptimizerEnum(value) if isinstance(value, str) else value
+                )
+            elif key not in ["type", "mapping_direction"]:  # Skip metadata fields
+                parsed_params[key] = value
+
+        # Create estimator instance
+        estimator = cls(**parsed_params)
+
+        # Restore dimensions
+        input_dim = parameters["input_dim"]
+        cond_dim = parameters["cond_dim"]
+        estimator._X_dim = cond_dim  # BaseEstimator convention
+        estimator._y_dim = input_dim
+
+        # Rebuild flow architecture
+        estimator._flow = ConditionalNormalizingFlow(
+            input_dim=input_dim,
+            cond_dim=cond_dim,
+            num_coupling_layers=estimator._num_coupling_layers,
+            hidden_dim=estimator._hidden_dim,
+            use_batch_norm=estimator._use_batch_norm,
+        ).to(estimator._device)
+
+        # Load weights from checkpoint
+        flow_state = {
+            k: torch.tensor(v, device=estimator._device)
+            for k, v in parameters["flow_state"].items()
+        }
+
+        estimator._flow.load_state_dict(flow_state)
+        estimator._flow.eval()
+
+        # Restore training history
+        if "training_history" in parameters:
+            hist = parameters["training_history"]
+            estimator._training_history.epochs = hist.get("epochs", [])
+            estimator._training_history.train_loss = hist.get("train_loss", [])
+            estimator._training_history.val_loss = hist.get("val_loss", [])
+            for key, value in hist.items():
+                if key not in ["epochs", "train_loss", "val_loss"]:
+                    estimator._training_history.extras[key] = value
+
+        return estimator

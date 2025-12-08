@@ -1,9 +1,8 @@
-import pickle
 from datetime import datetime
 from typing import Any, Self
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, Field
 
 from ..interfaces.base_estimator import BaseEstimator
 from ..value_objects.loss_history import LossHistory
@@ -12,9 +11,13 @@ from ..value_objects.metrics import Metrics
 
 class ModelArtifact(BaseModel):
     """
-    Represents a trained model model and its associated metadata.
+    Represents a trained model and its associated metadata.
+
     This entity encapsulates the actual fitted model instance
     along with essential identifying and descriptive information for a *specific training run*.
+
+    Note: The estimator field is NOT serialized by Pydantic. Serialization is handled
+    by the repository layer using the estimator's to_checkpoint() method.
     """
 
     id: str = Field(
@@ -46,24 +49,6 @@ class ModelArtifact(BaseModel):
     loss_history: LossHistory = Field(
         description="Training loss history for the model."
     )
-
-    # ---- (De)serialization for the estimator field only ----
-
-    @field_serializer("estimator")
-    def serialize_model(self, obj: Any) -> bytes:
-        """Serializes the object to a byte stream using pickle."""
-        return pickle.dumps(obj)
-
-    @field_validator(
-        "estimator",
-        mode="before",
-    )
-    @classmethod
-    def validate_and_deserialize_object(cls, obj: Any) -> Any:
-        """Deserializes the byte stream back into the original object."""
-        if isinstance(obj, bytes):
-            return pickle.loads(obj)
-        return obj
 
     class Config:
         arbitrary_types_allowed = True
