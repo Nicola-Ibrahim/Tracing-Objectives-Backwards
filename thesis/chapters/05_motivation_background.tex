@@ -104,6 +104,11 @@ surveys covering these algorithmic paradigms and assessment, see
 Deb; Emmerich \& Deutz. \cite{Deb2011Intro,Emmerich2018Tutorial}
 
 
+\section{Probabilistic View}\label{sec:inverse_data_eval}
+talk about the data and Bayesian view, and how to utilise this concept to generate more candidates and model the data via distribution instead of point-wise prediction. 
+
+Also talk about the distribution and how they model the data and start sampling from it.
+
 \section{Towards Inverse Design}\label{sec:inverse_data_eval}
 
 Most materials workflows are built for the \emph{forward} question $\,\vect{x}\!\mapsto\!\vect{y}$—given a candidate, what will it do? Design asks the converse: specify a target response $\vect{y}^{\star}$ and identify admissible decisions $\vect{x}$ that realise it under physical and process constraints. Because many $\vect{x}$ can yield similar $\vect{y}$, the inverse task is generically ill-posed. We therefore pose it explicitly as a regularised/Bayesian inverse problem (Eqs.~\ref{eq:tikhonov}–\ref{eq:posterior}), which affords (i) fast, feasible point proposals consistent with prior knowledge and constraints, and (ii) calibrated distributions over plausible designs that make non-uniqueness and uncertainty first-class citizens~\cite{BenningBurger2018,Stuart2010}.
@@ -275,6 +280,9 @@ Small $\alpha$ emphasises “any valid preimage” (useful under strong non-uniq
 
 Deterministic training yields fast, reproducible proposals but collapses potentially multi-valued inverse relations to a point and does not natively quantify uncertainty or support diversity of candidates. In the broader framework of this thesis, these objectives are complemented by probabilistic models that learn conditional distributions (e.g., $p(\vect{x}\mid\vect{y})$ or $p(\vect{y}\mid\vect{x})$), enabling uncertainty estimates, calibrated scoring, and sampling-based exploration when multiple designs can realise the same target.
 
+
+\subsection{MDN, CVAE, INN}
+Write abou these estimators in details and how each one define the problem and what we are optimising, loss function, modeling distribution.
 
 \subsection{Probabilistic Modelling}
 

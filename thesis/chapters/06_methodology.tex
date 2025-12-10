@@ -150,6 +150,9 @@ Policies (iii)–(iv) support multi-solution exploration when the inverse is int
 \section{Evaluation plan}\label{sec:evaluation}
 We evaluate the decision quality with outcome-space discrepancy and a specification-level success indicator. Unless otherwise noted, when multiple proposals are returned ($k\!>\!1$) for exploration, we report metrics on the \emph{top-ranked} candidate under the chosen policy to keep comparisons consistent.
 
+\subsection{forward estimator evaluation}
+Write about the use of the forward estimator
+
 \subsection{Outcome-space error}
 \begin{equation}
   \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
@@ -235,28 +238,6 @@ training, validation and test sets.
 We consider several modelling strategies for the inverse mapping
 \(\hat{g}\colon\calY\to\calX\):
 
-\paragraph{Gaussian Process Regression (GPR).}  GPR models the inverse
-map as a collection of independent Gaussian processes, one for each
-decision variable.  Given training pairs \((\vect{y}_i,x_{i,j})\), the
-process defines a mean function and covariance kernel over the objective
-space.  Hyperparameters of the kernel (e.g. length scales and noise
-variance) are optimised by maximising the marginal likelihood.  The
-advantage of GPR is its ability to quantify prediction uncertainty and to
-capture both smooth trends and local irregularities~\cite{Farias2024}.
-
-\paragraph{Radial Basis Function Networks (RBF).}  An RBF network
-comprises a hidden layer of basis functions \(\phi_k(\vect{y})=\exp(-\|\vect{y}-\vect{c}_k\|^2/(2\sigma_k^2))\) and a linear output layer.
-Centres \(\vect{c}_k\) and bandwidths \(\sigma_k\) are chosen by k‑means
-clustering and heuristics; weights are solved by linear least squares.
-RBFs are universal approximators and perform well with moderate amounts
-of data.
-
-\paragraph{Random Forest Regression (RF).}  RF ensembles multiple decision
-trees grown on bootstrap samples of the training data.  Each tree
-predicts a decision variable as a function of the objective vector.  The
-final prediction is the average over trees.  Random forests are robust to
-noise and can handle high‑dimensional inputs.  They have been shown to
-improve diversity and convergence in inverse evolutionary algorithms~\cite{Gholamnezhad2022}.
 
 \paragraph{Feed‑Forward Neural Networks (FFNN).}  A multi‑layer perceptron
 with fully connected layers and ReLU activations can approximate complex
@@ -336,6 +317,40 @@ desired, refine the target or adjust weights in the ranking.  Selected
 candidates can be saved for further simulation or fabrication.  User
 interactions can be logged to adapt the inverse model over time.
 
+
+\section{Training Pipeline}
+
+Given a dataset \(\mathcal{D}\) we perform the following steps for each
+problem:
+
+\begin{enumerate}
+  \item \textbf{Normalisation.}  Compute the minimum and maximum of each
+    objective and decision dimension and scale the data to \([0,1]\).
+  \item \textbf{Train–validation split.}  Use an 80/20 split for
+    training and validation.  When data is scarce we employ a leave‑one‑out
+    scheme.
+  \item \textbf{Hyperparameter search.}  For each inverse model type
+    (GPR, RBF, RF, FFNN) perform 50 random trials over predefined
+    hyperparameter ranges.  For GPR we search over squared exponential
+    kernels with length scales in \([0.1,10]\); for RBF we vary the
+    number of centres between 10 and 200; for RF we vary the number of
+    trees (50–300) and maximum depth (3–20); for FFNN we vary the number
+    of hidden layers (1–3) and neurons (50–200).
+  \item \textbf{Model training.}  Fit each candidate model on the
+    training data and evaluate performance on the validation set using
+    RMSE and generational distance.  Select the best hyperparameter
+    configuration.
+  \item \textbf{Forward surrogate.}  Train a Gaussian process regression
+    model on the same training data to act as the forward surrogate.  A
+    Matérn kernel is used with noise estimated via maximum likelihood.
+  \item \textbf{Testing.}  Evaluate the selected inverse and forward
+    models on the held‑out test data.  Report RMSE, \(R^2\) and the
+    proportion of predictions within a tolerance of the true decision
+    values.
+\end{enumerate}
+
+
+
 \section{Algorithmic Summary}
 
 Algorithm~\ref{alg:offline} summarises the offline training procedure and
@@ -343,7 +358,7 @@ Algorithm~\ref{alg:online} details the online exploration loop.  The
 pseudocode abstracts away implementation details to highlight the main
 steps.
 
-\begin{algorithm}[t]
+\begin{algorithm}[h]
   \caption{Offline Training of Inverse and Forward Models}
   \label{alg:offline}
   \begin{algorithmic}[1]
@@ -362,7 +377,7 @@ steps.
   \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[t]
+\begin{algorithm}[h]
   \caption{Online Inverse Decision Exploration}
   \label{alg:online}
   \begin{algorithmic}[1]

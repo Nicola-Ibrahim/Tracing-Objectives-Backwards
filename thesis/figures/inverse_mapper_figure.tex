@@ -1,95 +1,142 @@
-\begin{tikzpicture}
-  % ===== Colors (define before use) =====
-  \definecolor{panelBlue}{RGB}{33,111,219}   % used for left panel accent
-  \definecolor{softGray}{RGB}{246,248,250}   % light chip/bg
-  \definecolor{inversePurple}{RGB}{124,77,255} % right panel accent
-  \definecolor{textDim}{RGB}{80,80,90}
-
-  % ===== Global styles =====
-  \tikzset{
-    >={Latex[length=2.6mm]},
+\begin{tikzpicture}[
+    % --- Local configuration for this picture only ---
+    execute at begin picture={
+        % Local colour definitions
+        \definecolor{colDecision}{RGB}{65,117,252}  % Blue
+        \definecolor{colObjective}{RGB}{255,88,93}  % Red
+        \definecolor{colModel}{RGB}{100,100,110}   % Grey
+        \definecolor{bgFill}{RGB}{250,251,252}     % Light Background
+    },
+    % --- Global Styles ---
     font=\sffamily,
-    panel/.style={
-      draw, rounded corners=8pt, line width=0.8pt,
-      fill=softGray, inner sep=10pt,
-      minimum width=7.6cm, minimum height=4.2cm
+    >=Latex,
+    spaceBlob/.style={
+        fill=white, draw=#1, line width=1pt, densely dashed,
+        rounded corners=15pt, opacity=0.8
     },
-    title/.style={font=\small\itshape, text opacity=0.9, text=textDim},
-    box/.style={
-      draw, rounded corners=6pt, line width=0.8pt, fill=white,
-      align=center, inner sep=7pt, minimum height=10mm
+    point/.style={
+        circle, inner sep=0pt, minimum size=5pt, fill=#1, draw=white, line width=0.5pt
     },
-    circ/.style={
-      circle, draw, line width=0.9pt, fill=white, minimum size=9mm, align=center
+    modelBox/.style={
+        rectangle, draw=colModel, line width=1pt, rounded corners=4pt, 
+        fill=white, inner sep=8pt, align=center, drop shadow={opacity=0.1}
     },
-    cand/.style={box, minimum width=15mm, font=\footnotesize},
-    small/.style={box, minimum width=22mm, font=\scriptsize},
-    flow/.style={-Latex, line width=0.9pt},
-    softflow/.style={-Latex, line width=0.9pt, dashed, opacity=0.7},
-    labelchip/.style={
-      fill=softGray, rounded corners=3pt, inner sep=1.6pt,
-      font=\scriptsize, align=center
-    }
-  }
+    arrowMain/.style={->, line width=1.2pt, draw=colModel},
+    arrowCheck/.style={->, line width=0.8pt, dashed, draw=colModel!80},
+    labelSpace/.style={font=\bfseries\small, text=#1}
+]
 
-  % ===== Anchors for two panels =====
-  \coordinate (C) at (0,0);
-  \coordinate (L) at ($(C)+(-4.4,0)$);
-  \coordinate (R) at ($(C)+( 4.4,0)$);
+% =================================================================================
+% TOP PANEL: FORWARD PROBLEM
+% =================================================================================
 
-  % ===================== Left: Forward (evaluation) x -> y =====================
-  \node[panel, anchor=center] (PL) at (L) {};
-  % subtle accent strip
-  \draw[panelBlue!20, line width=6pt, rounded corners=6pt]
-       ($(PL.north west)+(6pt,-6pt)$) -- ++(2.1,0);
+\begin{scope}[yshift=4cm]
 
-  \node[title, anchor=west] at ($(PL.north west)+(6pt,-6pt)$)
-       {Forward (evaluation): $\mathbf{x}\!\rightarrow\!\mathbf{y}$};
+% Bounding box for panel (more padding inside)
+\node[draw=none, fill=bgFill, rounded corners=10pt,
+      minimum width=10cm, minimum height=7.2cm] (PanelL) at (0,0) {};
+\node[anchor=north west, font=\large\bfseries, text=colModel]
+      at ([xshift=4pt,yshift=-4pt]PanelL.north west) {A. Forward Problem};
+\node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
+      at (PanelL.north west) {Evaluation / Simulation};
 
-  \node[circ] (xL) at ($(PL.west)+(1.6cm,0)$) {$\mathbf{x}$};
-  \node[box, minimum width=27mm] (fbox) [right=12mm of xL] {$\mathbf{y}=f(\mathbf{x})$};
-  \node[circ] (yL) [right=12mm of fbox] {$\mathbf{y}$};
+% Decision Space X (Left) – pushed further left & down
+\draw[spaceBlob=colDecision] (-3.0,-0.4) ellipse (1.8cm and 2.3cm);
+\node[labelSpace=colDecision] at (-3.0, 2.1) {Decision Space $\mathcal{X}$};
+\node[font=\scriptsize, text=colDecision] at (-3.0, -3.4) {Parameters / Design};
 
-  \draw[flow, panelBlue!90!black] (xL) -- (fbox);
-  \draw[flow, panelBlue!90!black] (fbox) -- (yL);
+% Objective Space Y (Right) – pushed further right & down
+\draw[spaceBlob=colObjective] (3.0,-0.4) ellipse (1.8cm and 2.3cm);
+\node[labelSpace=colObjective] at (3.0, 2.1) {Objective Space $\mathcal{Y}$};
+\node[font=\scriptsize, text=colObjective] at (3.0, -3.4) {Performance / Metrics};
 
-  \node[labelchip, anchor=north] at ($(fbox.south)+(0,-3pt)$) {known/simulatable forward};
+% Mapping points – keep nice gap to box
+\node[point=colDecision, label={left:\small $x$}] (x_fwd) at (-3.0, 0.4) {};
+\node[point=colObjective, label={right:\small $y$}] (y_fwd) at (3.0, 0.4) {};
 
-  % ===================== Right: Inverse (design) y* -> {x} =====================
-  \node[panel, anchor=center] (PR) at (R) {};
-  % subtle accent strip
-  \draw[inversePurple!25, line width=6pt, rounded corners=6pt]
-       ($(PR.north west)+(6pt,-6pt)$) -- ++(2.1,0);
+% Function Box – centred with more space around
+\node[modelBox, font=\small, minimum width=2.5cm] (f_func) at (0, 0.4)
+      {$f(\mathbf{x})$\\{\scriptsize Simulator}};
 
-  \node[title, anchor=west] at ($(PR.north west)+(6pt,-6pt)$)
-       {Inverse (design): $\mathbf{y}\!\rightarrow\!\mathbf{x}$};
+% Arrows
+\draw[arrowMain] (x_fwd) -- (f_func);
+\draw[arrowMain] (f_func) -- (y_fwd);
 
-  \node[circ] (yR) at ($(PR.west)+(1.45cm,0.0)$) {$\mathbf{y}^{\star}$};
-  \node[box, minimum width=30mm] (gbox) [right=12mm of yR] {$\mathbf{x}=\hat{g}(\mathbf{y})$};
+% Annotation – further below
+\node[align=center, font=\scriptsize, text=colModel, anchor=north]
+      at (0, -2.6) {Well-posed\\(Unique Outcome)};
 
-  % candidates
-  \node[cand] (x1) [right=10mm of gbox, yshift=8mm]  {$\mathbf{x}^{(1)}$};
-  \node[cand] (x2) [right=10mm of gbox]              {$\mathbf{x}^{(2)}$};
-  \node[cand] (x3) [right=10mm of gbox, yshift=-8mm] {$\mathbf{x}^{(3)}$};
+\end{scope}
 
-  \draw[flow, inversePurple!80!black] (yR) -- (gbox);
-  \draw[flow, inversePurple!80!black] (gbox.east) .. controls ($(gbox.east)+(6mm, 7mm)$) .. (x1.west);
-  \draw[flow, inversePurple!80!black] (gbox.east) -- (x2.west);
-  \draw[flow, inversePurple!80!black] (gbox.east) .. controls ($(gbox.east)+(6mm,-7mm)$) .. (x3.west);
+% =================================================================================
+% BOTTOM PANEL: INVERSE PROBLEM
+% (same yshift as before -> same gap between panels)
+% =================================================================================
 
-  \node[labelchip, anchor=north] at ($(gbox.south)+(0,-3pt)$) {learned inverse model};
+\begin{scope}[yshift=-4cm]
 
-  % optional forward-check (dashed; helps intuition without clutter)
-  \node[small] (fhat) [below=10mm of x2] {$\hat{\mathbf{y}}=\hat{f}(\mathbf{x})$};
-  \node[circ, minimum size=8mm, font=\scriptsize] (yChk) [left=10mm of fhat] {$\hat{\mathbf{y}}$};
+% Bounding box for panel (more padding inside)
+\node[draw=none, fill=bgFill, rounded corners=10pt,
+      minimum width=11cm, minimum height=7.2cm] (PanelR) at (0,0) {};
+\node[anchor=north west, font=\large\bfseries, text=colModel]
+      at ([xshift=4pt,yshift=-4pt]PanelR.north west) {B. Inverse Design};
+\node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
+      at (PanelR.north west) {Exploration / Reconstruction};
 
-  \foreach \z in {x1,x2,x3}{
-    \draw[softflow] (\z.south) -- ++(0,-5mm) -| (fhat.north);
-  }
-  \draw[softflow] (fhat.west) -- (yChk.east);
-  \draw[softflow] (yChk) |- ($(yR.north)+(0,2mm)$);
+% Objective/Target Space Y (Left) – more left & a bit up
+\draw[spaceBlob=colObjective] (-3.2,-0.4) ellipse (1.8cm and 2.3cm);
+\node[labelSpace=colObjective] at (-3.2, 2.1) {Target Space $\mathcal{Y}$};
 
-  % light guide lines indicating comparison
-  \draw[densely dotted, opacity=0.5] (yR.south) -- ++(0,-1.3);
-  \draw[densely dotted, opacity=0.5] (yChk.north) -- ++(0,1.3);
+% Decision/Candidate Space X (Right) – more right & a bit up
+\draw[spaceBlob=colDecision] (3.2,-0.4) ellipse (1.8cm and 2.3cm);
+\node[labelSpace=colDecision] at (3.2, 2.1) {Candidate Space $\mathcal{X}$};
+
+% Target point – with more room above box
+\node[point=colObjective, label={left:\small $y^\star$}] (target) at (-3.2, 0.9) {};
+
+% Inverse Model – slightly higher to clear feedback loop
+\node[modelBox, minimum width=3.0cm] (inv_model) at (0, 0.9)
+      {$\hat{g}(\mathbf{y})$\\{\scriptsize Inverse Model}};
+
+% Data Input – higher
+\node[cylinder, shape border rotate=90, draw=gray, fill=white,
+      aspect=0.25, minimum height=1.0cm, minimum width=1.0cm,
+      font=\scriptsize] (db) at (0, 2.6) {$\mathcal{D}$};
+\draw[->, dotted, thick] (db) -- (inv_model)
+      node[midway, right, font=\tiny] {Training};
+
+% One-to-many outputs – spread horizontally and vertically
+\node[point=colDecision, label={right:\scriptsize $x^{(1)}$}] (c1) at (3.0, 1.2) {};
+\node[point=colDecision, label={right:\scriptsize $x^{(2)}$}] (c2) at (3.4, 0.2) {};
+
+% Arrows Forward
+\draw[arrowMain] (target) -- (inv_model);
+\draw[arrowMain] (inv_model.east) -- (c1.west);
+\draw[arrowMain] (inv_model.east) -- (c2.west);
+
+% The Feedback Loop (Forward Consistency) – clearly separated
+\node[modelBox, scale=0.8, fill=bgFill!90!gray, minimum width=3.3cm]
+      (f_check) at (0, -1.9)
+      {Forward Check $\hat{f}(\mathbf{x})$};
+
+% Paths for feedback – longer, smoother curves
+\draw[arrowCheck] (c1.south) to[out=250,in=5] (f_check.east);
+\draw[arrowCheck] (c2.south) to[out=260,in=5] (f_check.east);
+
+% Result of check – more left
+\node[point=colObjective, fill=white, draw=colObjective,
+      label={left:\scriptsize $\hat{y}$}] (y_hat) at (-3.0, -1.9) {};
+\draw[arrowCheck] (f_check) -- (y_hat);
+
+% Comparison Line – longer
+\draw[<->, densely dotted, thick, orange] (target) -- (y_hat)
+  node[midway, left, font=\tiny, align=right] {Error\\Minimize $\mathcal{L}$};
+
+% Annotation – pushed further down but still inside panel
+\node[align=center, font=\scriptsize, text=colModel, anchor=north]
+      at (0, -3.3)
+      {Ill-posed (One-to-Many)\\Requires \textbf{Forward Consistency}};
+
+\end{scope}
+
 \end{tikzpicture}
