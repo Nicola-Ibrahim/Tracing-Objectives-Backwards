@@ -1,4 +1,4 @@
-# ----------------------------- BaseOODCalibrator -----------------------------
+# ----------------------------- BaseOODValidator -----------------------------
 
 import inspect
 from abc import ABC, abstractmethod
@@ -7,13 +7,13 @@ from typing import Any
 import numpy as np
 
 
-class BaseOODCalibrator(ABC):
+class BaseOODValidator(ABC):
     """
-    Base contract for OOD calibrators.
+    Base contract for OOD validators.
 
     Required subclass API:
       - fit(X) -> None
-      - evaluate(X) -> (passed, metrics, explanation)
+      - validate(X) -> (passed, metrics, explanation)
       - inlier_threshold_sq (float property)
     """
 
@@ -24,13 +24,17 @@ class BaseOODCalibrator(ABC):
         """
 
     @abstractmethod
-    def evaluate(self, X: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
+    def validate(self, X: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
         """
         Decide inlier/outlier for X (or a batch) under the learned inlier criterion.
         """
 
+    def evaluate(self, X: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
+        """Backward-compatible alias for validate()."""
+        return self.validate(X)
+
     def describe(self) -> dict[str, Any]:
-        """Return a JSON-serialisable description of the calibrator."""
+        """Return a JSON-serialisable description of the validator."""
         return {
             "type": self.__class__.__name__,
             "module": self.__class__.__module__,
@@ -43,7 +47,7 @@ class BaseOODCalibrator(ABC):
         """Return the learned OOD threshold."""
         if not hasattr(self, "_threshold") or self._threshold is None:
             raise ValueError(
-                "Calibrator has not been fitted yet; threshold is undefined."
+                "Validator has not been fitted yet; threshold is undefined."
             )
         return self._threshold
 
@@ -84,3 +88,7 @@ class BaseOODCalibrator(ABC):
         if isinstance(value, _np.ndarray):
             return value.tolist()
         return str(value)
+
+
+# Backward-compatible name
+BaseOODCalibrator = BaseOODValidator

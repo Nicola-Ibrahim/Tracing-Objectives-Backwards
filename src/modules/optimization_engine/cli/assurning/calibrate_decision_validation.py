@@ -4,8 +4,8 @@ import click
 
 from ...application.assuring.calibrate_decision_validation.command import (
     CalibrateDecisionValidationCommand,
-    ConformalCalibratorParams,
-    OODCalibratorParams,
+    ConformalValidatorParams,
+    OODValidatorParams,
 )
 from ...application.assuring.calibrate_decision_validation.handler import (
     CalibrateDecisionValidationCommandHandler,
@@ -20,8 +20,8 @@ from ...application.dtos import (
     RBFEstimatorParams,
 )
 from ...application.factories.assurance import (
-    ConformalCalibratorFactory,
-    OODCalibratorFactory,
+    ConformalValidatorFactory,
+    OODValidatorFactory,
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...infrastructure.assurance.repositories.calibration_repository import (
@@ -65,16 +65,16 @@ def cli(estimator: str) -> None:
 
     command = CalibrateDecisionValidationCommand(
         estimator_params=estimator_params_model,
-        ood_calibrator_params=OODCalibratorParams(),
-        conformal_calibrator_params=ConformalCalibratorParams(),
+        ood_validator_params=OODValidatorParams(),
+        conformal_validator_params=ConformalValidatorParams(),
     )
 
     handler = CalibrateDecisionValidationCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         calibration_repository=FileSystemDecisionValidationCalibrationRepository(),
         estimator_factory=EstimatorFactory(),
-        ood_calibrator_factory=OODCalibratorFactory(),
-        conformal_calibrator_factory=ConformalCalibratorFactory(),
+        ood_validator_factory=OODValidatorFactory(),
+        conformal_validator_factory=ConformalValidatorFactory(),
         logger=CMDLogger(name="AssuranceCalibrationLogger"),
     )
 

@@ -1,9 +1,9 @@
-from ....domain.assurance.model_selection.services.model_selector import ModelSelector
 from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
+from ....workflows.model_selection_workflow import ModelSelector
 from ...factories.estimator import EstimatorFactory
 from .command import SelectInverseModelCommand
 

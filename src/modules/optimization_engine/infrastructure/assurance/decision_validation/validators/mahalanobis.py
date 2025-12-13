@@ -2,11 +2,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .....domain.assurance.decision_validation.interfaces.base_ood_calibrator import (
-    BaseOODCalibrator,
+    BaseOODValidator,
 )
 
 
-class MahalanobisCalibrator(BaseOODCalibrator):
+class MahalanobisOODValidator(BaseOODValidator):
     """
     Mahalanobis-based OOD calibrator.
 
@@ -131,7 +131,7 @@ class MahalanobisCalibrator(BaseOODCalibrator):
     # --------------------------------------------------------------------- #
     # Evaluation
     # --------------------------------------------------------------------- #
-    def _prepare_evaluation(
+    def _compute_diagnostics(
         self, X: np.ndarray
     ) -> dict[str, float | NDArray[np.float64]]:
         """
@@ -174,7 +174,7 @@ class MahalanobisCalibrator(BaseOODCalibrator):
             "inlier_threshold": float(self._inlier_threshold),
         }
 
-    def evaluate(self, X: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
+    def validate(self, X: np.ndarray) -> tuple[bool, dict[str, float | bool], str]:
         """
         Decide inlier/outlier for a sample (or batch) using the learned cutoff.
 
@@ -195,7 +195,7 @@ class MahalanobisCalibrator(BaseOODCalibrator):
             }
             explanation: short human-readable message.
         """
-        diag = self._prepare_evaluation(X)
+        diag = self._compute_diagnostics(X)
         md2_vec = np.asarray(diag["mahalanobis_sq"], dtype=float)  # (m,)
         inlier_threshold = float(diag["inlier_threshold"])
 
@@ -216,42 +216,3 @@ class MahalanobisCalibrator(BaseOODCalibrator):
             else "ABSTAIN: candidate lies outside the supported region (Mahalanobis outlier)."
         )
         return bool(passed), metrics, explanation
-
-    # --------------------------------------------------------------------- #
-    # Properties (telemetry / debugging)
-    # --------------------------------------------------------------------- #
-    @property
-    def threshold(self) -> float:
-        """Empirical md² cutoff learned in fit() (alias of inlier_threshold)."""
-        if self._inlier_threshold is None:
-            raise RuntimeError("Calibrator not fitted.")
-        return self._inlier_threshold
-
-    @property
-    def inlier_threshold_sq(self) -> float:
-        """Squared distance threshold used during evaluation."""
-        return self.threshold
-
-    @property
-    def mu(self) -> NDArray[np.float64]:
-        """Center (mean vector) learned from calibration data."""
-        if self._center is None:
-            raise RuntimeError("Calibrator not fitted.")
-        return self._center
-
-    @property
-    def precision(self) -> NDArray[np.float64] | None:
-        """
-        (Pseudo-)precision matrix Σ̂⁺ (may be None when the Cholesky path is used).
-        """
-        return self._inverse_covariance
-
-    @property
-    def cov_reg(self) -> float:
-        """Diagonal regularization λ used in Σ̂ = Cov(X) + λI."""
-        return self._covariance_ridge
-
-    @property
-    def percentile(self) -> float:
-        """Empirical percentile used to set the inlier md² cutoff."""
-        return self._inlier_percentile

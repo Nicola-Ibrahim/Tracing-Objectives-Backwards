@@ -30,18 +30,18 @@ class FileSystemDecisionValidationCalibrationRepository(
         self._base_path.mkdir(parents=True, exist_ok=True)
 
         self._pickle_file_handler.save(
-            calibration.ood_calibrator, self._base_path / "ood_calibrator.pkl"
+            calibration.ood_validator, self._base_path / "ood_validator.pkl"
         )
         self._pickle_file_handler.save(
-            calibration.conformal_calibrator,
-            self._base_path / "conformal_calibrator.pkl",
+            calibration.conformal_validator,
+            self._base_path / "conformal_validator.pkl",
         )
 
         metadata = {
             "id": calibration.id,
             "created_at": calibration.created_at.isoformat(),
-            "ood_calibrator": calibration.ood_calibrator.describe(),
-            "conformal_calibrator": calibration.conformal_calibrator.describe(),
+            "ood_validator": calibration.ood_validator.describe(),
+            "conformal_validator": calibration.conformal_validator.describe(),
         }
         self._json_file_handler.save(metadata, self._base_path / "metadata.json")
 
@@ -59,11 +59,15 @@ class FileSystemDecisionValidationCalibrationRepository(
         else:
             raise ValueError("Calibration metadata missing 'created_at'.")
 
-        ood_path = self._base_path / "ood_calibrator.pkl"
-        conformal_path = self._base_path / "conformal_calibrator.pkl"
+        ood_path = self._base_path / "ood_validator.pkl"
+        conformal_path = self._base_path / "conformal_validator.pkl"
+        if not ood_path.exists():
+            ood_path = self._base_path / "ood_calibrator.pkl"
+        if not conformal_path.exists():
+            conformal_path = self._base_path / "conformal_calibrator.pkl"
         if not ood_path.exists() or not conformal_path.exists():
             raise FileNotFoundError(
-                "Stored calibration is incomplete: missing calibrator artifacts."
+                "Stored calibration is incomplete: missing validator artifacts."
             )
 
         ood = self._pickle_file_handler.load(ood_path)
@@ -76,6 +80,6 @@ class FileSystemDecisionValidationCalibrationRepository(
         return DecisionValidationCalibration.from_data(
             id=calibration_id,
             created_at=created_at,
-            ood_calibrator=ood,
-            conformal_calibrator=conformal,
+            ood_validator=ood,
+            conformal_validator=conformal,
         )

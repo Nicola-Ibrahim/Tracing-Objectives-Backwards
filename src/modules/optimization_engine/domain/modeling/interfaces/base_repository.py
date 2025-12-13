@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from ..entities.model_artifact import ModelArtifact
+from .base_estimator import BaseEstimator
 
 
 class BaseModelArtifactRepository(ABC):
@@ -74,3 +75,23 @@ class BaseModelArtifactRepository(ABC):
             The ModelArtifact entity with the highest version
         """
         pass
+
+    @abstractmethod
+    def get_estimators(
+        self,
+        *,
+        mapping_direction: str,
+        requested: list[tuple[str, int | None]],
+        on_missing: str = "skip",
+    ) -> list[tuple[str, BaseEstimator]]:
+        """Resolve estimators for the requested (type, version) pairs.
+
+        Args:
+            mapping_direction: "inverse" or "forward".
+            requested: List of (estimator_type, version) pairs. If version is None, latest is used.
+            on_missing: "skip" (default) skips missing requests; "raise" raises on first missing request.
+
+        Returns:
+            List of (display_name, estimator) pairs in the same order as requested.
+        """
+        raise NotImplementedError

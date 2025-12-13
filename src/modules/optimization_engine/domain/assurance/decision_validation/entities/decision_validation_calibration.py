@@ -5,33 +5,37 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
-from ..interfaces import BaseConformalCalibrator, BaseOODCalibrator
+from ..interfaces import BaseConformalValidator, BaseOODValidator
 
 
 class DecisionValidationCalibration(BaseModel):
-    """Persisted bundle of fitted calibrators for decision validation."""
+    """Persisted bundle of fitted validators for decision validation."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
     id: str = Field(default_factory=lambda: str(uuid4()))
 
     created_at: datetime = Field(default_factory=datetime.now)
 
-    ood_calibrator: BaseOODCalibrator = Field(
-        ..., description="Fitted out-of-distribution calibrator instance."
+    ood_validator: BaseOODValidator = Field(
+        ...,
+        alias="ood_calibrator",
+        description="Fitted out-of-distribution validator instance.",
     )
-    conformal_calibrator: BaseConformalCalibrator = Field(
-        ..., description="Fitted conformal calibrator instance."
+    conformal_validator: BaseConformalValidator = Field(
+        ...,
+        alias="conformal_calibrator",
+        description="Fitted conformal validator instance.",
     )
 
-    # Serialize calibrators as pickled payloads to keep infrastructure concerns external.
-    @field_serializer("ood_calibrator", "conformal_calibrator")
-    def _serialize_calibrator(self, obj: Any) -> bytes:
+    # Serialize validators as pickled payloads to keep infrastructure concerns external.
+    @field_serializer("ood_validator", "conformal_validator")
+    def _serialize_validator(self, obj: Any) -> bytes:
         return pickle.dumps(obj)
 
-    @field_validator("ood_calibrator", "conformal_calibrator", mode="before")
+    @field_validator("ood_validator", "conformal_validator", mode="before")
     @classmethod
-    def _deserialize_calibrator(cls, value: Any) -> Any:
+    def _deserialize_validator(cls, value: Any) -> Any:
         if isinstance(value, bytes):
             return pickle.loads(value)
         return value
@@ -42,12 +46,21 @@ class DecisionValidationCalibration(BaseModel):
         *,
         id: str,
         created_at: datetime,
-        ood_calibrator: BaseOODCalibrator,
-        conformal_calibrator: BaseConformalCalibrator,
+        ood_validator: BaseOODValidator,
+        conformal_validator: BaseConformalValidator,
     ) -> Self:
         return cls(
             id=id,
             created_at=created_at,
-            ood_calibrator=ood_calibrator,
-            conformal_calibrator=conformal_calibrator,
+            ood_validator=ood_validator,
+            conformal_validator=conformal_validator,
         )
+
+    # ------------------------ backward-compatible props ------------------------ #
+    @property
+    def ood_calibrator(self) -> BaseOODValidator:
+        return self.ood_validator
+
+    @property
+    def conformal_calibrator(self) -> BaseConformalValidator:
+        return self.conformal_validator

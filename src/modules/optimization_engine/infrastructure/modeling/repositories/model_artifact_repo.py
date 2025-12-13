@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .....shared.config import ROOT_PATH
 from ....domain.modeling.entities.model_artifact import ModelArtifact
+from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
@@ -278,3 +279,58 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
 
         # The list is already sorted by 'trained_at' in descending order, so the first element is the latest.
         return found_model_versions[0]
+
+    def get_estimators(
+        self,
+        *,
+        mapping_direction: str,
+        requested: list[tuple[str, int | None]],
+        on_missing: str = "skip",
+    ) -> list[tuple[str, BaseEstimator]]:
+        """Resolve estimators by (type, version) pairs.
+
+        This keeps estimator selection logic inside the repository, so handlers don't need
+        to understand artifact directories or version lookups.
+
+        Args:
+            mapping_direction: "inverse" or "forward".
+            requested: List of (estimator_type, version) tuples. Version can be None for latest.
+            on_missing: "skip" to ignore missing estimators, "raise" to throw an error.
+
+        Returns:
+            List of (display_name, estimator) tuples for resolved estimators.
+        """
+        resolved: list[tuple[str, BaseEstimator]] = []
+
+        if on_missing not in {"skip", "raise"}:
+            raise ValueError("on_missing must be 'skip' or 'raise'")
+
+        for estimator_type, version in requested:
+            try:
+                if version is None:
+                    artifact = self.get_latest_version(
+                        estimator_type=estimator_type,
+                        mapping_direction=mapping_direction,
+                    )
+                    display_name = f"{estimator_type} (Latest)"
+                else:
+                    all_versions = self.get_all_versions(
+                        estimator_type=estimator_type,
+                        mapping_direction=mapping_direction,
+                    )
+                    artifact = next(
+                        (a for a in all_versions if a.version == version), None
+                    )
+                    if artifact is None:
+                        raise FileNotFoundError(
+                            f"Version {version} not found for estimator_type='{estimator_type}'."
+                        )
+                    display_name = f"{estimator_type} (v{version})"
+
+                resolved.append((display_name, artifact.estimator))
+            except Exception:
+                if on_missing == "raise":
+                    raise
+                continue
+
+        return resolved

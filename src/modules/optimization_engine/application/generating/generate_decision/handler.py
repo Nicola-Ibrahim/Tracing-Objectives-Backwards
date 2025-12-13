@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Tuple, cast
 
 import numpy as np
 
@@ -6,10 +6,11 @@ from ....domain.common.interfaces.base_logger import BaseLogger
 from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
-from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....domain.modeling.services.decision_generation import DecisionGenerator
+from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from ....workflows.decision_generation_workflow import DecisionGenerationWorkflow
+from ...assuring.select_inverse_model.command import ModelCandidate
 from .command import GenerateDecisionCommand
 
 
@@ -18,38 +19,38 @@ class GenerateDecisionCommandHandler:
     Generate Design Candidates (X) for a requested Objective (Y).
 
     Unified Handler for Multiple Models:
-    - Uses DecisionGenerator domain service.
+    - Uses a dedicated decision-generation workflow.
     - Compares generation capability across multiple inverse models (MDN, CVAE, etc).
     """
 
     def __init__(
         self,
+        workflow: DecisionGenerationWorkflow,
         model_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,
-        generator_service: DecisionGenerator,
+        visualizer: BaseVisualizer | None = None,
     ):
+        self._workflow = workflow
         self._model_repository = model_repository
         self._data_repository = data_repository
         self._logger = logger
-        self._generator_service = generator_service
+        self._visualizer = visualizer
 
     def execute(self, command: GenerateDecisionCommand) -> dict[str, Any]:
         """
         Generate candidates for the target using multiple models.
         Returns dictionary with results for each model.
         """
-        # 1. Load Resources (Forward Model & Dataset)
-        forward_estimator = self._load_estimator(
-            command.forward_estimator_type, direction="forward"
-        )
-
+        # 1) Load dataset + processed artifacts (normalizers, train/test splits, pareto front).
         dataset: Dataset = self._data_repository.load("dataset")
         processed_data = dataset.processed
         if not processed_data:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
 
-        # 2. Prepare Target
+        # 2) Prepare target objective:
+        #    - raw: in original objective units (used for selection + plotting)
+        #    - norm: in normalized objective space (used as inverse-estimator input)
         target_objective_raw, target_objective_norm = self._prepare_target(
             command.target_objective, processed_data
         )
@@ -58,97 +59,87 @@ class GenerateDecisionCommandHandler:
             f"Target Objective (Raw): {target_objective_raw.tolist()}"
         )
 
-        # 3. Iterate over Inverse Model Candidates & Generate
-        results_map = {}
+        # 3) Resolve inverse estimators requested by the command (type + optional version).
+        #    Version lookup and artifact reading are repository responsibilities.
+        inverse_estimators = self._load_inverse_estimators(command.inverse_candidates)
 
-        for candidate in command.inverse_candidates:
-            inverse_type = candidate.type.value
-            version_int = candidate.version
+        # 4) Resolve the forward estimator used for:
+        #    - predicting objective outcomes for generated candidates
+        #    - ranking/selecting the best candidate per inverse estimator
+        self._logger.log_info(
+            f"Loading forward estimator: {command.forward_estimator_type.value}..."
+        )
+        forward_artifact = self._model_repository.get_latest_version(
+            estimator_type=command.forward_estimator_type.value,
+            mapping_direction="forward",
+        )
+        forward_estimator: BaseEstimator = forward_artifact.estimator
 
-            try:
-                # Determine display name
-                if version_int is not None:
-                    display_name = f"{inverse_type} (v{version_int})"
-                    self._logger.log_info(
-                        f"Generating decisions with {display_name}..."
-                    )
+        # 5) Run generation workflow:
+        #    - generates candidates per inverse estimator
+        #    - predicts objectives via forward_estimator
+        #    - optionally applies validators and selects the best candidate
+        workflow_output: dict[str, object] = self._workflow.run(
+            inverse_estimators=inverse_estimators,
+            pareto_front=dataset.pareto.front,
+            target_objective_raw=target_objective_raw,
+            target_objective_norm=target_objective_norm,
+            decisions_normalizer=processed_data.decisions_normalizer,
+            forward_estimator=forward_estimator,
+            n_samples=command.n_samples,
+            distance_tolerance=command.distance_tolerance,
+        )
 
-                    # Load specific version
-                    all_versions = self._model_repository.get_all_versions(
-                        estimator_type=inverse_type,
-                        mapping_direction="inverse",
-                    )
-                    target_artifact = next(
-                        (a for a in all_versions if a.version == version_int), None
-                    )
+        # 6) Collect results and build a visualization payload in the handler.
+        #    The visualizer expects a plain dict with pareto_front/target/generators.
+        results_map = cast(dict[str, dict], workflow_output["results_map"])
+        generator_runs = cast(
+            list[dict[str, object]], workflow_output["generator_runs"]
+        )
+        visualization_data = {
+            "pareto_front": dataset.pareto.front,
+            "target_objective": target_objective_raw,
+            "generators": generator_runs,
+        }
 
-                    if not target_artifact:
-                        raise ValueError(
-                            f"Version {version_int} not found for {inverse_type}"
-                        )
-
-                    inverse_estimator = target_artifact.estimator
-                else:
-                    display_name = f"{inverse_type} (Latest)"
-                    self._logger.log_info(
-                        f"Generating decisions with {display_name}..."
-                    )
-
-                    # Load latest version
-                    inverse_artifact = self._model_repository.get_latest_version(
-                        estimator_type=inverse_type,
-                        mapping_direction="inverse",
-                    )
-                    inverse_estimator = inverse_artifact.estimator
-
-                # Generate Candidates via Service
-                candidates_raw, candidates_norm = self._generator_service.generate(
-                    estimator=inverse_estimator,
-                    target_objective_norm=target_objective_norm,
-                    n_samples=command.n_samples,
-                    decisions_normalizer=processed_data.decisions_normalizer,
-                )
-
-                # Predict Outcomes via Forward Model
-                predicted_objectives = self._generator_service.predict_outcomes(
-                    forward_estimator=forward_estimator,
-                    candidates_raw=candidates_raw,
-                )
-
-                # Store results
-                results_map[display_name] = {
-                    "decisions": candidates_raw,
-                    "predicted_objectives": predicted_objectives,
-                }
-
-            except Exception as e:
-                self._logger.log_error(f"Failed to generate with {inverse_type}: {e}")
-                continue
-        # 4. Visualization (Comparison)
-        if results_map:
+        # 7) Optional visualization: show how each estimator sampled (pre-validation) and
+        #    where the target lies relative to the pareto front.
+        if results_map and self._visualizer:
             self._logger.log_info("Generating comparison visualization...")
-            fig = self._generator_service.compare_generators(
-                results_map=results_map,
-                pareto_front=dataset.pareto.front,
-                target_objective=target_objective_raw.flatten(),
-            )
             try:
-                fig.show()
+                self._visualizer.plot(visualization_data)
             except Exception as e:
                 self._logger.log_warning(f"Could not display plot: {e}")
+        elif results_map:
+            self._logger.log_info("Visualization skipped (no visualizer provided).")
 
-        # 5. Return Results
+        # 6. Return Results
         return results_map
 
-    def _load_estimator(
-        self, estimator_type: EstimatorTypeEnum, direction: str = "inverse"
-    ) -> BaseEstimator:
-        """Helper to load an estimator from the repository."""
-        artifact = self._model_repository.get_latest_version(
-            estimator_type=estimator_type.value,
-            mapping_direction=direction,
+    def _load_inverse_estimators(
+        self, candidates: list[ModelCandidate]
+    ) -> list[tuple[str, BaseEstimator]]:
+        """Resolve inverse estimators (type + optional version) via the repository."""
+        requested = [(c.type.value, c.version) for c in candidates]
+        expected_names = [
+            f"{t} (v{v})" if v is not None else f"{t} (Latest)" for t, v in requested
+        ]
+
+        resolved = self._model_repository.get_estimators(
+            mapping_direction="inverse",
+            requested=requested,
+            on_missing="skip",
         )
-        return artifact.estimator
+
+        resolved_names = {name for name, _ in resolved}
+        for name in expected_names:
+            if name not in resolved_names:
+                self._logger.log_warning(f"Could not load inverse estimator: {name}")
+
+        for name, _ in resolved:
+            self._logger.log_info(f"Generating decisions with {name}...")
+
+        return resolved
 
     def _prepare_target(
         self, target_objective: list, processed_data: ProcessedData

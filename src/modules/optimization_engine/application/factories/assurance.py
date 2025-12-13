@@ -1,8 +1,8 @@
 from typing import Callable, Dict, Sequence, Type
 
 from ...domain.assurance.decision_validation.interfaces import (
-    BaseConformalCalibrator,
-    BaseOODCalibrator,
+    BaseConformalValidator,
+    BaseOODValidator,
 )
 from ...domain.assurance.feasibility.interfaces.diversity import (
     BaseDiversityStrategy,
@@ -10,9 +10,9 @@ from ...domain.assurance.feasibility.interfaces.diversity import (
 from ...domain.assurance.feasibility.interfaces.scoring import (
     BaseFeasibilityScoringStrategy,
 )
-from ...infrastructure.assurance.decision_validation.calibrators import (
-    MahalanobisCalibrator,
-    SplitConformalL2Calibrator,
+from ...infrastructure.assurance.decision_validation.validators import (
+    MahalanobisOODValidator,
+    SplitConformalL2Validator,
 )
 from ...infrastructure.assurance.diversity import (
     ClosestPointsDiversityStrategy,
@@ -117,50 +117,53 @@ class DiversityStrategyFactory:
         return KMeansDiversityStrategy(n_clusters=len(strategies))
 
 
-class OODCalibratorFactory:
+class OODValidatorFactory:
     _registry = {
-        "mahalanobis": MahalanobisCalibrator,
+        "mahalanobis": MahalanobisOODValidator,
     }
 
-    def create(self, config) -> BaseOODCalibrator:
-        """Create an OOD calibrator based on the specified method and parameters.
+    def create(self, config) -> BaseOODValidator:
+        """Create an OOD validator based on the specified method and parameters.
 
         Args:
             method (str): The calibration method to use.
             **config: Additional parameters required for the calibrator.
         Returns:
-            BaseOODCalibrator: An instance of the specified OOD calibrator.
+            BaseOODValidator: An instance of the specified OOD validator.
         Raises:
             ValueError: If the specified method is not recognized.
         """
-        calibrator_class = self._registry.get(config.pop("method", None))
-        if not calibrator_class:
-            raise ValueError(f"Unknown OOD calibrator method: {config.get('method')}")
-        return calibrator_class(**config)
+        validator_class = self._registry.get(config.pop("method", None))
+        if not validator_class:
+            raise ValueError(f"Unknown OOD validator method: {config.get('method')}")
+        return validator_class(**config)
 
 
-class ConformalCalibratorFactory:
+class ConformalValidatorFactory:
     _registry = {
-        "split_conformal_l2": SplitConformalL2Calibrator,
+        "split_conformal_l2": SplitConformalL2Validator,
     }
 
-    def create(self, config, **kwargs) -> BaseConformalCalibrator:
-        """Create a conformal calibrator based on the specified method and parameters.
+    def create(self, config, **_kwargs) -> BaseConformalValidator:
+        """Create a conformal validator based on the specified method and parameters.
 
         Args:
             method (str): The calibration method to use.
             **config: Additional parameters required for the calibrator.
         Returns:
-            BaseConformalCalibrator: An instance of the specified conformal calibrator.
+            BaseConformalValidator: An instance of the specified conformal validator.
         Raises:
             ValueError: If the specified method is not recognized.
         """
-        calibrator_class = self._registry.get(config.pop("method", None))
+        validator_class = self._registry.get(config.pop("method", None))
 
-        estimator = kwargs.get("estimator")
-
-        if not calibrator_class:
+        if not validator_class:
             raise ValueError(
-                f"Unknown conformal calibrator method: {config.get('method')}"
+                f"Unknown conformal validator method: {config.get('method')}"
             )
-        return calibrator_class(estimator=estimator, **config)
+        return validator_class(**config)
+
+
+# Backward-compatible names
+OODCalibratorFactory = OODValidatorFactory
+ConformalCalibratorFactory = ConformalValidatorFactory
