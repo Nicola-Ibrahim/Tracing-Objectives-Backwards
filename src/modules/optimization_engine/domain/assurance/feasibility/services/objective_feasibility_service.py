@@ -1,5 +1,3 @@
-from typing import Type
-
 import numpy as np
 
 from ...shared.ndarray_utils import clip01

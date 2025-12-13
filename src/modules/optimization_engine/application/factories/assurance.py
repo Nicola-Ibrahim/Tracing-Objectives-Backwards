@@ -10,7 +10,7 @@ from ...domain.assurance.feasibility.interfaces.diversity import (
 from ...domain.assurance.feasibility.interfaces.scoring import (
     BaseFeasibilityScoringStrategy,
 )
-from ...infrastructure.assurance.decision_validation.calibration import (
+from ...infrastructure.assurance.decision_validation.calibrators import (
     MahalanobisCalibrator,
     SplitConformalL2Calibrator,
 )
@@ -25,7 +25,6 @@ from ...infrastructure.assurance.scoring import (
     LocalSphereScoreStrategy,
     MinDistanceScoreStrategy,
 )
-from .estimator import EstimatorFactory
 
 
 class ScoreStrategyFactory:
