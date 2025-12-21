@@ -61,7 +61,11 @@ class GenerateDecisionCommandHandler:
 
         # 3) Resolve inverse estimators requested by the command (type + optional version).
         #    Version lookup and artifact reading are repository responsibilities.
-        inverse_estimators = self._load_inverse_estimators(command.inverse_candidates)
+        inverse_estimators = self._model_repository.get_estimators(
+            mapping_direction="inverse",
+            requested=[(c.type.value, c.version) for c in command.inverse_candidates],
+            on_missing="skip",
+        )
 
         # 4) Resolve the forward estimator used for:
         #    - predicting objective outcomes for generated candidates
@@ -115,31 +119,6 @@ class GenerateDecisionCommandHandler:
 
         # 6. Return Results
         return results_map
-
-    def _load_inverse_estimators(
-        self, candidates: list[ModelCandidate]
-    ) -> list[tuple[str, BaseEstimator]]:
-        """Resolve inverse estimators (type + optional version) via the repository."""
-        requested = [(c.type.value, c.version) for c in candidates]
-        expected_names = [
-            f"{t} (v{v})" if v is not None else f"{t} (Latest)" for t, v in requested
-        ]
-
-        resolved = self._model_repository.get_estimators(
-            mapping_direction="inverse",
-            requested=requested,
-            on_missing="skip",
-        )
-
-        resolved_names = {name for name, _ in resolved}
-        for name in expected_names:
-            if name not in resolved_names:
-                self._logger.log_warning(f"Could not load inverse estimator: {name}")
-
-        for name, _ in resolved:
-            self._logger.log_info(f"Generating decisions with {name}...")
-
-        return resolved
 
     def _prepare_target(
         self, target_objective: list, processed_data: ProcessedData

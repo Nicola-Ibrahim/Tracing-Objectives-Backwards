@@ -31,14 +31,19 @@ def main():
     command = GenerateDecisionCommand(
         inverse_candidates=[
             ModelCandidate(type=EstimatorTypeEnum.MDN, version="1"),
-            ModelCandidate(type=EstimatorTypeEnum.CVAE, version="2"),
+            ModelCandidate(type=EstimatorTypeEnum.MDN, version="2"),
             ModelCandidate(type=EstimatorTypeEnum.MDN, version="3"),
+            ModelCandidate(type=EstimatorTypeEnum.MDN, version="4"),
+            ModelCandidate(type=EstimatorTypeEnum.MDN, version="5"),
+            ModelCandidate(type=EstimatorTypeEnum.MDN, version="6"),
+            ModelCandidate(type=EstimatorTypeEnum.MDN, version="7"),
+            ModelCandidate(type=EstimatorTypeEnum.CVAE, version="0"),
             ModelCandidate(type=EstimatorTypeEnum.CVAE, version="1"),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
         target_objective=[408, 1282],
         distance_tolerance=0.02,
-        n_samples=50,
+        n_samples=3,
     )
 
     # Initialize the handler with pre-built services

@@ -2,8 +2,11 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from ....modeling.interfaces.base_estimator import BaseEstimator, ProbabilisticEstimator
-from ....modeling.interfaces.base_normalizer import BaseNormalizer
+from ..domain.modeling.interfaces.base_estimator import (
+    BaseEstimator,
+    ProbabilisticEstimator,
+)
+from ..domain.modeling.interfaces.base_normalizer import BaseNormalizer
 
 
 class ModelSelector:
