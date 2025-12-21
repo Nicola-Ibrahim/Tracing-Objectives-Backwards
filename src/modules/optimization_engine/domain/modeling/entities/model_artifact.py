@@ -5,7 +5,6 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from ..interfaces.base_estimator import BaseEstimator
-from ..value_objects.loss_history import LossHistory
 from ..value_objects.metrics import Metrics
 
 
@@ -46,8 +45,8 @@ class ModelArtifact(BaseModel):
 
     metrics: Metrics = Field(description="Metrics fo the the artifact")
 
-    loss_history: LossHistory = Field(
-        description="Training loss history for the model."
+    training_history: dict[str, list[float]] = Field(
+        description="Training and validation history for the model."
     )
 
     class Config:
@@ -66,7 +65,7 @@ class ModelArtifact(BaseModel):
         parameters: dict[str, Any],
         estimator: BaseEstimator,
         metrics: Metrics,
-        loss_history: LossHistory,
+        training_history: dict[str, list[float]],
         trained_at: datetime | None = None,
         version: int | None = None,
     ) -> Self:
@@ -79,7 +78,7 @@ class ModelArtifact(BaseModel):
             estimator=estimator,
             parameters=parameters,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=training_history,
             trained_at=trained_at,
             version=version,
         )
@@ -90,7 +89,7 @@ class ModelArtifact(BaseModel):
         parameters: dict[str, Any],
         estimator: BaseEstimator,
         metrics: Metrics,
-        loss_history: LossHistory,
+        training_history: dict[str, list[float]],
     ) -> Self:
         """
         Convenience factory that fills sensible defaults; pass only what you have.
@@ -100,5 +99,5 @@ class ModelArtifact(BaseModel):
             estimator=estimator,
             parameters=parameters,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=training_history,
         )

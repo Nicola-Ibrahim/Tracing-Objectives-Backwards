@@ -48,8 +48,10 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             "y_test": (
                 np.asarray(data["y_test"]) if data.get("y_test") is not None else None
             ),
-            "loss_history": data["loss_history"],
-            "title": data.get("title", f"Model fit ({type(data['estimator']).__name__})"),
+            "training_history": data["training_history"],
+            "title": data.get(
+                "title", f"Model fit ({type(data['estimator']).__name__})"
+            ),
             "input_symbol": input_symbol,
             "output_symbol": output_symbol,
         }
@@ -88,12 +90,10 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
         )
 
         # Row 3: Loss curves
-        add_loss_curves(
-            fig, row=3, loss_history=data["loss_history"], col=1
-        )
+        add_loss_curves(fig, row=3, training_history=data["training_history"], col=1)
 
         # Sidebar/Global: Estimator summary
-        add_estimator_summary(fig, data["estimator"], data["loss_history"])
+        add_estimator_summary(fig, data["estimator"], data["training_history"])
 
     def _add_annotations(self, fig: go.Figure) -> None:
         """Add explanatory notes to the visualization."""

@@ -9,7 +9,6 @@ from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
-from ....domain.modeling.value_objects.loss_history import LossHistory
 from ...processing.files.json import JsonFileHandler
 from ..estimators.deterministic.coco_biobj_function import COCOEstimator
 
@@ -125,17 +124,15 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 serialized_hyperparams[k] = v
 
         # Merge hyperparameters and checkpoint into parameters (flattened structure)
-        # BUT extract training_history to put at root level
-        training_history = checkpoint.pop("training_history", None)
+        # BUT extract training_history to ensure it's removed from checkpoint if it was there
+        checkpoint.pop("training_history", None)
         merged_parameters = {**serialized_hyperparams, **checkpoint}
         merged_parameters["type"] = model_artifact.parameters.get("type")
         merged_parameters["mapping_direction"] = mapping_direction
 
-        # Build metadata without estimator and loss_history
+        # Build metadata without estimator and old redundant fields
         metadata = model_artifact.model_dump(exclude={"estimator", "parameters"})
         metadata["parameters"] = merged_parameters  # Use merged params
-        if training_history:
-            metadata["training_history"] = training_history  # At root level
 
         # Save only metadata.json
         metadata_path = model_artifact_version_directory / "metadata.json"
@@ -190,18 +187,23 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 "cv_scores": metadata.get("cv_scores", []),
             }
 
-        # Use loss_history from metadata (should be LossHistory compatible)
-        loss_history_data = metadata.get("loss_history", {})
-        loss_history = (
-            LossHistory(**loss_history_data) if loss_history_data else LossHistory()
-        )
+        # Unified training_history from root level
+        training_history = metadata.get("training_history")
+        # Fallback for old loss_history if training_history is missing
+        if training_history is None:
+            old_loss = metadata.get("loss_history", {})
+            training_history = {
+                "epochs": old_loss.get("bins", []),
+                "train_loss": old_loss.get("train_loss", []),
+                "val_loss": old_loss.get("val_loss", []),
+            }
 
         return ModelArtifact.from_data(
             id=metadata.get("id"),
             parameters=metadata["parameters"],
             estimator=estimator,
             metrics=metrics_payload,
-            loss_history=loss_history,
+            training_history=training_history,
             trained_at=datetime.fromisoformat(metadata["trained_at"])
             if isinstance(metadata.get("trained_at"), str)
             else metadata.get("trained_at"),

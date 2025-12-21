@@ -1,6 +1,5 @@
 import numpy as np
 import plotly.graph_objects as go
-import pandas as pd
 
 
 def _finite(values) -> np.ndarray:
@@ -127,7 +126,7 @@ def add_residual_hist(
     Plot a residual histogram with density scaling and standard colors.
     """
     resid_limits = _pad_range(_symmetric_limits(resid))
-    
+
     # Determine color based on label
     color = "RoyalBlue"  # Default (Train)
     if "test" in label.lower():
@@ -191,7 +190,7 @@ def add_joint_residual(
     """
     vx = resid_y1[np.isfinite(resid_y1)]
     vy = resid_y2[np.isfinite(resid_y2)]
-    
+
     fig.add_trace(
         go.Histogram2dContour(
             x=vx,
@@ -219,23 +218,35 @@ def add_joint_residual(
         row=row,
         col=col,
     )
-    fig.update_xaxes(title_text="Residual y1 (norm)", row=row, col=col, gridcolor="lightgrey", range=range_x)
-    fig.update_yaxes(title_text="Residual y2 (norm)", row=row, col=col, gridcolor="lightgrey", range=range_y)
+    fig.update_xaxes(
+        title_text="Residual y1 (norm)",
+        row=row,
+        col=col,
+        gridcolor="lightgrey",
+        range=range_x,
+    )
+    fig.update_yaxes(
+        title_text="Residual y2 (norm)",
+        row=row,
+        col=col,
+        gridcolor="lightgrey",
+        range=range_y,
+    )
 
 
 def add_loss_curves(
     fig: go.Figure,
     *,
     row: int,
-    loss_history: dict | None,
+    training_history: dict | None,
     col: int = 1,
 ) -> None:
     """
     Draw training/validation/test loss curves with standard colors.
     """
-    if loss_history is None:
+    if training_history is None:
         return
-    lh = loss_history
+    lh = training_history
     if hasattr(lh, "model_dump"):
         lh = lh.model_dump()
     elif hasattr(lh, "dict"):
@@ -243,30 +254,31 @@ def add_loss_curves(
     if not isinstance(lh, dict):
         return
 
-    bins = list(lh.get("bins", []))
+    # Consolidated keys: epochs, train_loss, val_loss
+    epochs = list(lh.get("epochs", []))
     train = list(lh.get("train_loss", []))
     val = list(lh.get("val_loss", []))
     test = list(lh.get("test_loss", []))
-    n_tr = list(lh.get("n_train", []))
-    bin_type: str = str(lh.get("bin_type", "bin"))
 
-    if bin_type == "train_fraction" and n_tr:
-        x_vals, x_label = n_tr, "Number of Training Samples"
-    elif bin_type == "epoch":
-        x_vals, x_label = (bins if bins else list(range(1, len(train) + 1))), "Epoch"
-    else:
-        x_vals = bins if bins else list(range(len(train)))
-        x_label = {"param": "Parameter", "bin": "Bin"}.get(bin_type, bin_type.title())
+    if not train:
+        return
+
+    # Determine X-axis label based on values in 'epochs'
+    x_label = "Epoch"
+    if epochs and all(isinstance(e, (int, float)) and e <= 1.0 for e in epochs):
+        x_label = "Training Fraction"
+
+    x_vals = epochs if epochs else list(range(1, len(train) + 1))
 
     if train:
         fig.add_trace(
             go.Scatter(
-                x=x_vals, 
-                y=train, 
-                mode="lines", 
+                x=x_vals,
+                y=train,
+                mode="lines",
                 name="Train Loss",
                 line=dict(color="RoyalBlue", width=2),
-                hovertemplate="<b>Train</b>: %{y:.4f}<extra></extra>"
+                hovertemplate="<b>Train</b>: %{y:.4f}<extra></extra>",
             ),
             row=row,
             col=col,
@@ -274,12 +286,12 @@ def add_loss_curves(
     if any(v is not None for v in val):
         fig.add_trace(
             go.Scatter(
-                x=x_vals, 
-                y=val, 
-                mode="lines", 
+                x=x_vals,
+                y=val,
+                mode="lines",
                 name="Val Loss",
                 line=dict(color="ForestGreen", width=2),
-                hovertemplate="<b>Val</b>: %{y:.4f}<extra></extra>"
+                hovertemplate="<b>Val</b>: %{y:.4f}<extra></extra>",
             ),
             row=row,
             col=col,
@@ -287,12 +299,12 @@ def add_loss_curves(
     if any(v is not None for v in test):
         fig.add_trace(
             go.Scatter(
-                x=x_vals, 
-                y=test, 
-                mode="lines", 
+                x=x_vals,
+                y=test,
+                mode="lines",
                 name="Test Loss",
                 line=dict(color="FireBrick", width=2, dash="dot"),
-                hovertemplate="<b>Test</b>: %{y:.4f}<extra></extra>"
+                hovertemplate="<b>Test</b>: %{y:.4f}<extra></extra>",
             ),
             row=row,
             col=col,
@@ -302,15 +314,13 @@ def add_loss_curves(
 
 
 def add_estimator_summary(
-    fig: go.Figure, 
-    estimator, 
-    loss_history: dict | None = None
+    fig: go.Figure, estimator, training_history: dict | None = None
 ) -> None:
     """
     Annotate the figure with estimator parameters and final loss statistics.
     """
     lines = []
-    
+
     # Add Estimator Parameters
     if hasattr(estimator, "to_dict"):
         params = estimator.to_dict()
@@ -320,16 +330,16 @@ def add_estimator_summary(
             lines.append("<br>")  # Spacer
 
     # Add Loss Statistics
-    if loss_history:
-        lh = loss_history
+    if training_history:
+        lh = training_history
         if hasattr(lh, "model_dump"):
             lh = lh.model_dump()
         elif hasattr(lh, "dict"):
             lh = lh.dict()
-            
+
         if isinstance(lh, dict):
             lines.append("<b>Final Loss Statistics:</b>")
-            
+
             # Helper to get last valid value
             def get_last(key):
                 vals = lh.get(key, [])
@@ -351,7 +361,7 @@ def add_estimator_summary(
         return
 
     summary = "<br>".join(lines)
-    
+
     fig.update_layout(
         legend=dict(
             x=1.02,
@@ -364,7 +374,7 @@ def add_estimator_summary(
             traceorder="normal",
         ),
     )
-    
+
     fig.add_annotation(
         text=summary,
         align="left",
@@ -439,5 +449,13 @@ def add_qq_plot(
         col=col,
     )
 
-    fig.update_xaxes(title_text="Theoretical Quantiles", row=row, col=col, gridcolor="lightgrey")
-    fig.update_yaxes(title_text="Sample Quantiles", row=row, col=col, gridcolor="lightgrey", range=range_y)
+    fig.update_xaxes(
+        title_text="Theoretical Quantiles", row=row, col=col, gridcolor="lightgrey"
+    )
+    fig.update_yaxes(
+        title_text="Sample Quantiles",
+        row=row,
+        col=col,
+        gridcolor="lightgrey",
+        range=range_y,
+    )

@@ -80,7 +80,7 @@ class VisualizeModelPerformanceCommandHandler:
             "non_linear": False,  # or True to try UMAP if installed
             "n_samples": 300,
             "title": f"Fitted {model_artificat.estimator.type} ({mapping_label} mapping)",
-            "loss_history": model_artificat.loss_history,
+            "training_history": model_artificat.training_history,
             "mapping_direction": command.mapping_direction,
         }
 

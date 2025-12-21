@@ -10,7 +10,6 @@ from ..interfaces.base_estimator import (
 from ..interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ..value_objects.loss_history import LossHistory
 from ..value_objects.metrics import Metrics
 from .deterministic import DeterministicModelTrainer
 from .probabilistic import ProbabilisticModelTrainer
@@ -36,10 +35,10 @@ class CrossValidationTrainer:
         epochs: int = 100,
         batch_size: int = 32,
         learning_curve_steps: int = 50,
-    ) -> tuple[BaseEstimator, LossHistory, Metrics]:
+    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics]:
         """
         Split + normalize, run k-fold CV, fit final estimator on full train portion,
-        compute train/test metrics and return tuple (includes normalized arrays).
+        compute train/test metrics and return outcome.
         """
 
         # 1) CV
@@ -51,7 +50,7 @@ class CrossValidationTrainer:
 
             estimator_clonned = estimator.clone()
             if isinstance(estimator_clonned, ProbabilisticEstimator):
-                fold_fitted_estimator, fold_loss_history, fold_metrics = (
+                fold_fitted_estimator, fold_training_history, fold_metrics = (
                     self._prob_trainer.train(
                         estimator_clonned,
                         X_train=X_tr,
@@ -61,7 +60,7 @@ class CrossValidationTrainer:
                     )
                 )
             else:
-                fold_fitted_estimator, fold_loss_history, fold_metrics = (
+                fold_fitted_estimator, fold_training_history, fold_metrics = (
                     self._det_trainer.train(
                         estimator_clonned,
                         X_train=X_tr,
@@ -79,10 +78,10 @@ class CrossValidationTrainer:
             )
             cv_scores_by_fold.append(fold_scores)
 
-        # 2) final fit on full training portion via trainers (preserve internals)
+        # 2) final fit on full training portion via trainers
         final = estimator.clone()
         if isinstance(final, ProbabilisticEstimator):
-            fitted_estimator, loss_history, metrics = self._prob_trainer.train(
+            fitted_estimator, training_history, metrics = self._prob_trainer.train(
                 final,
                 X_train=X_train,
                 y_train=y_train,
@@ -90,7 +89,7 @@ class CrossValidationTrainer:
                 batch_size=batch_size,
             )
         else:
-            fitted_estimator, loss_history, metrics = self._det_trainer.train(
+            fitted_estimator, training_history, metrics = self._det_trainer.train(
                 final,
                 X_train=X_train,
                 y_train=y_train,
@@ -115,7 +114,7 @@ class CrossValidationTrainer:
             cv=cv_scores_by_fold,
         )
 
-        return fitted_estimator, loss_history, metrics
+        return fitted_estimator, training_history, metrics
 
     def search(
         self,
@@ -134,10 +133,9 @@ class CrossValidationTrainer:
         epochs: int = 100,
         batch_size: int = 32,
         learning_curve_steps: int = 20,
-    ) -> tuple[BaseEstimator, LossHistory, Metrics, dict[str, Any]]:
+    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics, dict[str, Any]]:
         """
         Grid search over param_range. Returns (TrainingOutcome for chosen param, summary).
-        Summary contains param_range and per-metric validation scores.
         """
         param_vals = list(param_range)
         valid_scores: dict[str, list[float]] = {
@@ -167,7 +165,9 @@ class CrossValidationTrainer:
 
             # aggregate primary metric (mean over folds)
             for m in validation_metrics.keys():
-                fold_vals = [float(fold.get(m, float("nan"))) for fold in candidate_metrics.cv]
+                fold_vals = [
+                    float(fold.get(m, float("nan"))) for fold in candidate_metrics.cv
+                ]
                 mean_val = (
                     float(np.nanmean(fold_vals)) if len(fold_vals) > 0 else float("nan")
                 )
@@ -182,7 +182,7 @@ class CrossValidationTrainer:
 
         setattr(best_clone, param_name, best_val)
 
-        estimator, loss_history, metrics = self.validate(
+        estimator, training_history, metrics = self.validate(
             best_clone,
             X_train,
             y_train,
@@ -203,4 +203,4 @@ class CrossValidationTrainer:
             "chosen_index": best_idx,
             "chosen_value": best_val,
         }
-        return estimator, loss_history, metrics, summary
+        return estimator, training_history, metrics, summary

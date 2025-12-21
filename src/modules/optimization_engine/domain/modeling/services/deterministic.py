@@ -6,7 +6,6 @@ from ..interfaces.base_estimator import BaseEstimator
 from ..interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ..value_objects.loss_history import LossHistory
 from ..value_objects.metrics import Metrics
 from .utils import evaluate_metrics
 
@@ -14,7 +13,6 @@ from .utils import evaluate_metrics
 class DeterministicModelTrainer:
     """
     Train deterministic estimators and return TrainingOutcome.
-    Internal processes preserved; method names clarified.
     """
 
     def compute_learning_curve(
@@ -25,10 +23,10 @@ class DeterministicModelTrainer:
         validation_metrics: dict[str, BaseValidationMetric],
         learning_curve_steps: int = 50,
         random_state: int = 0,
-    ) -> tuple[BaseEstimator, LossHistory]:
+    ) -> tuple[BaseEstimator, dict[str, list[float]]]:
         """
-        (helper) Build the learning-curve style LossHistory by subsampling training set.
-        Returns (possibly fitted) estimator and LossHistory.
+        (helper) Build the learning-curve style history by subsampling training set.
+        Returns (possibly fitted) estimator and history dictionary.
         """
 
         # Validate estimator type & inputs
@@ -40,8 +38,7 @@ class DeterministicModelTrainer:
         fractions = list(np.linspace(0.1, 1.0, learning_curve_steps))
         rng = np.random.RandomState(random_state)
 
-        bins: list[float] = []
-        n_train_list: list[int] = []
+        epochs_list: list[float] = []  # Fractions used as 'epochs' for consolidation
         train_loss_list: list[float] = []
         val_loss_list: list[float] = []
 
@@ -50,8 +47,7 @@ class DeterministicModelTrainer:
         for frac in fractions:
             # 2.a) Determine sample size for this fraction
             n = max(1, int(math.floor(frac * n_total)))
-            bins.append(float(frac))
-            n_train_list.append(n)
+            epochs_list.append(float(frac))
 
             # 2.b) Subsample without replacement and train a clone
             train_idx = rng.choice(np.arange(n_total), size=n, replace=False)
@@ -81,20 +77,17 @@ class DeterministicModelTrainer:
             else:
                 val_loss_list.append(float("nan"))
 
-        # 3) Build LossHistory object to return
-        loss_history = LossHistory(
-            bin_type="train_fraction",
-            bins=bins,
-            n_train=n_train_list,
-            train_loss=train_loss_list,
-            val_loss=val_loss_list,
-            test_loss=[],
-        )
+        # 3) Build history dictionary matching TrainingHistory format
+        training_history = {
+            "epochs": epochs_list,
+            "train_loss": train_loss_list,
+            "val_loss": val_loss_list,
+        }
 
         # 4) Fit the original estimator on the full training data so it is ready to use
         estimator.fit(X_train, y_train)
 
-        return estimator, loss_history
+        return estimator, training_history
 
     def train(
         self,
@@ -107,19 +100,13 @@ class DeterministicModelTrainer:
         learning_curve_steps: int = 50,
         random_state: int = 0,
         validation_metrics: dict[str, BaseValidationMetric],
-    ) -> tuple[BaseEstimator, LossHistory, Metrics]:
+    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics]:
         """
         Public entry to train a deterministic estimator on raw (X, y).
-        Process explained with numbered comments:
-          1) Split raw data into train/test
-          2) Normalize train and test using provided normalizers
-          3) If metrics provided, compute learning curve (subsampling) and fit final estimator
-          4) Compute point metrics (train/test)
-          5) Return tuple containing estimator, LossHistory and normalized arrays
         """
 
         # 1) compute learning curve & ensure estimator is fitted
-        estimator, loss_history = self.compute_learning_curve(
+        estimator, training_history = self.compute_learning_curve(
             estimator=estimator,
             X_train=X_train,
             y_train=y_train,
@@ -140,4 +127,4 @@ class DeterministicModelTrainer:
             cv=[],
         )
 
-        return estimator, loss_history, metrics
+        return estimator, training_history, metrics

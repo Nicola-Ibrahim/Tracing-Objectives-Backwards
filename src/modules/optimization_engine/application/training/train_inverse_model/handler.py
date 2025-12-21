@@ -69,23 +69,27 @@ class TrainInverseModelCommandHandler:
 
         self._logger.log_info("Starting single train/test split workflow.")
         if isinstance(estimator, ProbabilisticEstimator):
-            fitted_estimator, loss_history, metrics = ProbabilisticModelTrainer().train(
-                estimator=estimator,
-                X_train=X_train,
-                y_train=y_train,
-                epochs=epochs,
+            fitted_estimator, training_history, metrics = (
+                ProbabilisticModelTrainer().train(
+                    estimator=estimator,
+                    X_train=X_train,
+                    y_train=y_train,
+                    epochs=epochs,
+                )
             )
 
         elif isinstance(estimator, DeterministicEstimator):
-            fitted_estimator, loss_history, metrics = DeterministicModelTrainer().train(
-                estimator=estimator,
-                X_train=X_train,
-                y_train=y_train,
-                X_test=X_test,
-                y_test=y_test,
-                learning_curve_steps=learning_curve_steps,
-                validation_metrics=validation_metrics,
-                random_state=random_state,
+            fitted_estimator, training_history, metrics = (
+                DeterministicModelTrainer().train(
+                    estimator=estimator,
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_test=X_test,
+                    y_test=y_test,
+                    learning_curve_steps=learning_curve_steps,
+                    validation_metrics=validation_metrics,
+                    random_state=random_state,
+                )
             )
         else:  # pragma: no cover - defensive guard for unknown estimator types
             raise TypeError(f"Unsupported estimator type: {type(estimator)!r}")
@@ -95,6 +99,6 @@ class TrainInverseModelCommandHandler:
             parameters=parameters,
             estimator=fitted_estimator,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=training_history,
         )
         self._model_repository.save(artifact)
