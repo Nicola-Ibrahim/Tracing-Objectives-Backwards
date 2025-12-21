@@ -21,7 +21,7 @@ from ...application.training.train_inverse_model_grid_search.handler import (
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )

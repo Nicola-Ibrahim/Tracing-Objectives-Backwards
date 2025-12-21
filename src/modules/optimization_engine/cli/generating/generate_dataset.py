@@ -20,7 +20,7 @@ from ...domain.datasets.services import DatasetGenerationService
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 
 
 @click.command()

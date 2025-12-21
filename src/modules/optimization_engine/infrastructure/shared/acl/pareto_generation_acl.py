@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ...domain.datasets.entities.dataset import Dataset
-from ...domain.datasets.interfaces.base_repository import BaseDatasetRepository
+from ....domain.datasets.entities.dataset import Dataset
+from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 
 
 @dataclass

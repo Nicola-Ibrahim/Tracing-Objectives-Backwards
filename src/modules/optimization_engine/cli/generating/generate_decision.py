@@ -11,11 +11,11 @@ from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...infrastructure.modeling.visualizers.decision_generation import (
+from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
+from ...infrastructure.visualization.decision_generation import (
     DecisionGenerationComparisonVisualizer,
 )
 from ...workflows.decision_generation_workflow import DecisionGenerationWorkflow

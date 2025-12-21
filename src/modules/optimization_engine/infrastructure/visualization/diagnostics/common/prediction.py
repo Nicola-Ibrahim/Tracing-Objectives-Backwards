@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-from ......domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
+from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 
 
 def sample_band(

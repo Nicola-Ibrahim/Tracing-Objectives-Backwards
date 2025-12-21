@@ -6,14 +6,16 @@ from ...domain.modeling.enums.estimator_type import (
 from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
-from ...infrastructure.modeling.ml.deterministic import (
+from ...infrastructure.modeling.estimators.deterministic import (
     GaussianProcessEstimator,
     NearestNDEstimator,
     NNEstimator,
     RBFEstimator,
 )
-from ...infrastructure.modeling.ml.deterministic.coco_biobj_function import COCOEstimator
-from ...infrastructure.modeling.ml.probabilistic import (
+from ...infrastructure.modeling.estimators.deterministic.coco_biobj_function import (
+    COCOEstimator,
+)
+from ...infrastructure.modeling.estimators.probabilistic import (
     CVAEEstimator,
     MDNEstimator,
 )

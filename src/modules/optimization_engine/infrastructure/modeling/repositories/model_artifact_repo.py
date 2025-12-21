@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
@@ -10,12 +11,12 @@ from ....domain.modeling.interfaces.base_repository import (
 )
 from ....domain.modeling.value_objects.loss_history import LossHistory
 from ...processing.files.json import JsonFileHandler
-from ..ml.deterministic.coco_biobj_function import COCOEstimator
+from ..estimators.deterministic.coco_biobj_function import COCOEstimator
 
 # Import estimators for registry
-from ..ml.probabilistic.cvae import CVAEEstimator
-from ..ml.probabilistic.inn import INNEstimator
-from ..ml.probabilistic.mdn import MDNEstimator
+from ..estimators.probabilistic.cvae import CVAEEstimator
+from ..estimators.probabilistic.inn import INNEstimator
+from ..estimators.probabilistic.mdn import MDNEstimator
 
 # Estimator registry for loading from checkpoint
 ESTIMATOR_REGISTRY = {
@@ -131,9 +132,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         merged_parameters["mapping_direction"] = mapping_direction
 
         # Build metadata without estimator and loss_history
-        metadata = model_artifact.model_dump(
-            exclude={"estimator", "loss_history", "parameters"}
-        )
+        metadata = model_artifact.model_dump(exclude={"estimator", "parameters"})
         metadata["parameters"] = merged_parameters  # Use merged params
         if training_history:
             metadata["training_history"] = training_history  # At root level
@@ -203,7 +202,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             estimator=estimator,
             metrics=metrics_payload,
             loss_history=loss_history,
-            trained_at=metadata.get("trained_at"),
+            trained_at=datetime.fromisoformat(metadata["trained_at"])
+            if isinstance(metadata.get("trained_at"), str)
+            else metadata.get("trained_at"),
             version=metadata.get("version"),
         )
 

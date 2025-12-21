@@ -10,11 +10,11 @@ from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...infrastructure.modeling.visualizers.model_comparison.visualizer import (
+from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
+from ...infrastructure.visualization.comparison.visualizer import (
     InverseComparisonVisualizer,
 )
 

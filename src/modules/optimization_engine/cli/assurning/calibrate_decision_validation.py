@@ -30,7 +30,7 @@ from ...infrastructure.assurance.repositories.calibration_repository import (
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...infrastructure.loggers.cmd_logger import CMDLogger
+from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 
 INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
     "cvae": CVAEEstimatorParams,
