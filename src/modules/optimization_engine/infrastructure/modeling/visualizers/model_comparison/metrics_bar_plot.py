@@ -10,53 +10,63 @@ def add_metrics_bar_plots(
     model_names: list[str],
 ) -> None:
     """
-    Adds metrics bar charts (Best Shot, Reliability, Diversity) to Row 2.
+    Adds metrics bar charts (Best Shot, Calibration Error, Diversity) to Row 2.
+    Each model is added as a separate trace and linked to the legend via legendgroup.
     """
-    best_shots_vals = []
-    calibration_error_vals = []
-    diversity_vals = []
 
+    # 1. Best Shot (Row 2, Col 1)
     for model_name in model_names:
-        metrics = results_map[model_name]["metrics"]
-        best_shots_vals.append(metrics["best_shot_error"])
-        calibration_error_vals.append(metrics["calibration_error"])
-        diversity_vals.append(metrics["diversity_score"])
+        if model_name in results_map:
+            metrics = results_map[model_name]["metrics"]
+            color = color_map.get(model_name, "gray")
 
-    # Row 2, Col 1: Best Shot
-    fig.add_trace(
-        go.Bar(
-            x=model_names,
-            y=best_shots_vals,
-            marker_color=[color_map.get(m, "gray") for m in model_names],
-            showlegend=False,
-            name="Best Shot Error",
-        ),
-        row=2,
-        col=1,
-    )
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[metrics["best_shot_error"]],
+                    marker_color=color,
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="Best Shot Error",
+                ),
+                row=2,
+                col=1,
+            )
 
-    # Row 2, Col 2: Calibration Error
-    fig.add_trace(
-        go.Bar(
-            x=model_names,
-            y=calibration_error_vals,
-            marker_color=[color_map.get(m, "gray") for m in model_names],
-            showlegend=False,
-            name="Calibration Error",
-        ),
-        row=2,
-        col=2,
-    )
+    # 2. Calibration Error (Row 2, Col 2)
+    for model_name in model_names:
+        if model_name in results_map:
+            metrics = results_map[model_name]["metrics"]
+            color = color_map.get(model_name, "gray")
 
-    # Row 2, Col 3: Diversity
-    fig.add_trace(
-        go.Bar(
-            x=model_names,
-            y=diversity_vals,
-            marker_color=[color_map.get(m, "gray") for m in model_names],
-            showlegend=False,
-            name="Diversity Score",
-        ),
-        row=2,
-        col=3,
-    )
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[metrics["calibration_error"]],
+                    marker_color=color,
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="Calibration Error",
+                ),
+                row=2,
+                col=2,
+            )
+
+    # 3. Diversity (Row 2, Col 3)
+    for model_name in model_names:
+        if model_name in results_map:
+            metrics = results_map[model_name]["metrics"]
+            color = color_map.get(model_name, "gray")
+
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[metrics["diversity_score"]],
+                    marker_color=color,
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="Diversity Score",
+                ),
+                row=2,
+                col=3,
+            )

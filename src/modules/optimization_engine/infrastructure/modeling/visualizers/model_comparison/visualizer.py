@@ -37,7 +37,7 @@ class InverseComparisonVisualizer(BaseVisualizer):
                 "Calibration Curve (Quantitative)",
                 "Re-simulation Error Boxplot",
                 "Best Shot Error (Lower is Better)",
-                "Reliability Error (Lower is Better)",
+                "Calibration Error (Lower is Better)",
                 "Diversity Score (Higher is Better)",
             ),
             vertical_spacing=0.15,
