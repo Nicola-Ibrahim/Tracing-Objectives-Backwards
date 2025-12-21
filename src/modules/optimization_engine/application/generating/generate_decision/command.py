@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ...assuring.select_inverse_model.command import ModelCandidate
+from ...assuring.compare_inverse_models.command import ModelCandidate
 
 
 class GenerateDecisionCommand(BaseModel):

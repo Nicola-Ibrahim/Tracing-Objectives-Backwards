@@ -3,15 +3,15 @@ from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....workflows.model_selection_workflow import ModelSelector
+from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from ....workflows.inverse_model_comparison import InverseModelComparator
 from ...factories.estimator import EstimatorFactory
-from .command import SelectInverseModelCommand
+from .command import CompareInverseModelsCommand
 
 
-class SelectInverseModelHandler:
+class CompareInverseModelsHandler:
     """
-    Selects the best inverse model by validating and comparing multiple candidates
-    against a forward model (simulator).
+    Compares inverse model candidates against a forward model (simulator).
     """
 
     def __init__(
@@ -20,17 +20,19 @@ class SelectInverseModelHandler:
         model_repository: BaseModelArtifactRepository,
         logger: BaseLogger,
         estimator_factory: EstimatorFactory,
+        visualizer: BaseVisualizer | None = None,
     ) -> None:
         self._data_repository = processed_data_repository
         self._model_repository = model_repository
         self._logger = logger
         self._estimator_factory = estimator_factory
+        self._visualizer = visualizer
 
-    def execute(self, command: SelectInverseModelCommand) -> dict[str, dict]:
+    def execute(self, command: CompareInverseModelsCommand) -> dict[str, dict]:
         forward_type = command.forward_estimator_type.value
 
         self._logger.log_info(
-            f"Starting model selection. Candidates: {[(c.type.value, c.version) for c in command.candidates]}, Forward: {forward_type}"
+            f"Starting inverse model comparison. Candidates: {[(c.type.value, c.version) for c in command.candidates]}, Forward: {forward_type}"
         )
 
         # 1. Load Test Data
@@ -51,7 +53,7 @@ class SelectInverseModelHandler:
         ).estimator
 
         # 3. Validate Each Inverse Model
-        selector = ModelSelector()
+        comparator = InverseModelComparator()
         results_map = {}
         inverse_estimators = {}
 
@@ -96,12 +98,13 @@ class SelectInverseModelHandler:
 
                 # Validate
                 self._logger.log_info(f"Validating {display_name}...")
-                results = selector.validate(
+                results = comparator.validate(
                     inverse_estimator=inverse_estimator,
                     forward_estimator=forward_estimator,
                     test_objectives=test_objectives,
                     decision_normalizer=processed_data.decisions_normalizer,
                     objective_normalizer=processed_data.objectives_normalizer,
+                    test_decisions=test_decisions,
                     num_samples=command.num_samples,
                     random_state=command.random_state,
                 )
@@ -111,19 +114,17 @@ class SelectInverseModelHandler:
                 self._logger.log_error(f"Failed to validate {inverse_type}: {e}")
 
         # 4. Generate Comparison Plots
-        self._logger.log_info("Generating comparison plots...")
-        plots = selector.compare_models(
-            results_map=results_map,
-            test_objectives=test_objectives,
-            test_decisions=test_decisions,  # Needed for calibration
-            inverse_estimators=inverse_estimators,  # Needed for calibration
-        )
-
-        # 5. Display/Save Plots
-        fig = plots
-        try:
-            fig.show()
-        except Exception as e:
-            self._logger.log_warning(f"Could not display plot: {e}")
+        if self._visualizer:
+            self._logger.log_info("Generating comparison plots...")
+            visualization_data = {
+                "results_map": results_map,
+            }
+            try:
+                fig = self._visualizer.plot(visualization_data)
+                fig.show()
+            except Exception as e:
+                self._logger.log_warning(f"Could not display plot: {e}")
+        else:
+            self._logger.log_info("Visualization skipped (no visualizer provided).")
 
         return results_map

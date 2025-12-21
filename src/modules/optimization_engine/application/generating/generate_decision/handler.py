@@ -10,7 +10,6 @@ from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 from ....workflows.decision_generation_workflow import DecisionGenerationWorkflow
-from ...assuring.select_inverse_model.command import ModelCandidate
 from .command import GenerateDecisionCommand
 
 

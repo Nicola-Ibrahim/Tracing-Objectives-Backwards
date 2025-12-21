@@ -1,7 +1,5 @@
 from pydantic import BaseModel, Field
 
-from ...dtos import EstimatorParams
-
 
 class OODValidatorParams(BaseModel):
     method: str = Field(
@@ -40,10 +38,6 @@ class CalibrateDecisionValidationCommand(BaseModel):
         description="Identifier of the processed dataset to use for calibration.",
     )
 
-    estimator_params: EstimatorParams = Field(
-        ...,
-        description="Configurations for the estimator used in the forward models.",
-    )
     ood_validator_params: OODValidatorParams = Field(
         default_factory=OODValidatorParams,
         alias="ood_calibrator_params",
@@ -54,8 +48,3 @@ class CalibrateDecisionValidationCommand(BaseModel):
         alias="conformal_calibrator_params",
         description="Parameters for the conformal validator.",
     )
-
-
-# Backward-compatible names
-OODCalibratorParams = OODValidatorParams
-ConformalCalibratorParams = ConformalValidatorParams

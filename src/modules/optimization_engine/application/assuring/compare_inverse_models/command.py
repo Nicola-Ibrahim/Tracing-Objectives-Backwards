@@ -13,8 +13,8 @@ class ModelCandidate(BaseModel):
     )
 
 
-class SelectInverseModelCommand(BaseModel):
-    """Command payload for selecting the best inverse model by comparing candidates."""
+class CompareInverseModelsCommand(BaseModel):
+    """Command payload for comparing inverse model candidates."""
 
     candidates: list[ModelCandidate] = Field(
         ...,

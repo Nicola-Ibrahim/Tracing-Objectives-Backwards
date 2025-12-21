@@ -13,7 +13,7 @@ from ...infrastructure.datasets.repositories.dataset_repository import (
 from ...infrastructure.modeling.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...infrastructure.modeling.visualizers.performance.vis_2d.visualizer import (
+from ...infrastructure.modeling.visualizers.model_diagnostics.vis_2d.visualizer import (
     ModelPerformance2DVisualizer,
 )
 

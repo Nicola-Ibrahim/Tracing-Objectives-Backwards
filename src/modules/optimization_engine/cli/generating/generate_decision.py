@@ -1,6 +1,6 @@
 import click
 
-from ...application.assuring.select_inverse_model.command import ModelCandidate
+from ...application.assuring.compare_inverse_models.command import ModelCandidate
 from ...application.generating.generate_decision.command import (
     GenerateDecisionCommand,
 )
@@ -41,9 +41,9 @@ def main():
             ModelCandidate(type=EstimatorTypeEnum.CVAE, version="1"),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
-        target_objective=[408, 1282],
+        target_objective=[410, 1400],
         distance_tolerance=0.02,
-        n_samples=3,
+        n_samples=10,
     )
 
     # Initialize the handler with pre-built services
