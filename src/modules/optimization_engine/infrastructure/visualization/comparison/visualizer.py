@@ -69,15 +69,15 @@ class InverseComparisonVisualizer(BaseVisualizer):
             },
             template="plotly_white",
             height=1400,
-            width=1500,
-            margin=dict(t=100, b=50, l=80, r=80),
+            width=1800,
+            margin=dict(t=100, b=50, l=80, r=350),
             showlegend=True,
             legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1,
+                orientation="v",
+                yanchor="top",
+                y=1,
+                xanchor="left",
+                x=1.02,
             ),
             xaxis1_title="Predicted Confidence",
             yaxis1_title="Observed Frequency",
@@ -89,7 +89,7 @@ class InverseComparisonVisualizer(BaseVisualizer):
 
         fig.add_annotation(
             x=1.02,
-            y=0.98,
+            y=0.7,
             xref="paper",
             yref="paper",
             xanchor="left",
@@ -98,19 +98,17 @@ class InverseComparisonVisualizer(BaseVisualizer):
             showarrow=False,
             text=(
                 "<b>How to read the tradeoffs</b><br>"
-                "Accurate but Overconfident: Low best_shot_error, "
-                "low sharpness value (very narrow), but high calibration_error."
+                "• <b>Accurate but Overconfident</b>:<br>Low best_shot_error, narrow intervals,<br>but high calibration_error."
                 "<br><br>"
-                "Honest but Vague: Low calibration_error (hits the diagonal), "
-                "but high sharpness value (very wide intervals)."
+                "• <b>Honest but Vague</b>:<br>Low calibration_error (hits diagonal),<br>but wide intervals (high sharpness)."
                 "<br><br>"
-                "The Winner: The model that achieves the lowest CRPS, "
-                "as it represents the best compromise between being right and being certain."
+                "• <b>The Winner</b>:<br>Lowest CRPS - best compromise<br>between accuracy and uncertainty."
             ),
-            font=dict(size=12, color="gray"),
+            font=dict(size=12, color="#333"),
             bordercolor="lightgray",
             borderwidth=1,
-            bgcolor="white",
+            bgcolor="rgba(255, 255, 255, 0.9)",
+            width=300,
         )
 
         return fig
