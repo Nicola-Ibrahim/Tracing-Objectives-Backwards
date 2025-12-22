@@ -60,10 +60,17 @@ def _create_estimator_params(
     show_default=True,
     help="Estimator configuration used for calibration",
 )
-def cli(estimator: str) -> None:
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to load for calibration.",
+)
+def cli(estimator: str, dataset_name: str) -> None:
     estimator_params_model = _create_estimator_params(estimator)
 
     command = CalibrateDecisionValidationCommand(
+        dataset_name=dataset_name,
         estimator_params=estimator_params_model,
         ood_validator_params=OODValidatorParams(),
         conformal_validator_params=ConformalValidatorParams(),

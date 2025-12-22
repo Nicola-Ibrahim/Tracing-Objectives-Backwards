@@ -28,6 +28,7 @@ class BaseModelArtifactRepository(ABC):
         estimator_type: str,
         version_id: str,
         mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
     ) -> ModelArtifact:
         """
         Retrieves a specific ModelArtifact entity by its unique ID.
@@ -48,7 +49,10 @@ class BaseModelArtifactRepository(ABC):
 
     @abstractmethod
     def get_all_versions(
-        self, estimator_type: str, mapping_direction: str = "inverse"
+        self,
+        estimator_type: str,
+        mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
     ) -> list[ModelArtifact]:
         """
         Retrieves all trained versions of a model based on its type.
@@ -63,7 +67,10 @@ class BaseModelArtifactRepository(ABC):
 
     @abstractmethod
     def get_latest_version(
-        self, estimator_type: str, mapping_direction: str = "inverse"
+        self,
+        estimator_type: str,
+        mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
     ) -> ModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
@@ -82,6 +89,7 @@ class BaseModelArtifactRepository(ABC):
         *,
         mapping_direction: str,
         requested: list[tuple[str, int | None]],
+        dataset_name: str | None = None,
         on_missing: str = "skip",
     ) -> list[tuple[str, BaseEstimator]]:
         """Resolve estimators for the requested (type, version) pairs.

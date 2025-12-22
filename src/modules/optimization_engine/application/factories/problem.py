@@ -14,7 +14,6 @@ class ProblemFactory:
 
     def create(self, config: dict) -> BaseProblem:
         problem_type = config.get("type")
-
         try:
             problem_ctor = self._registry[problem_type]
 

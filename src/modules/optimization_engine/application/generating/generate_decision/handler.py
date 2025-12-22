@@ -42,7 +42,7 @@ class GenerateDecisionCommandHandler:
         Returns dictionary with results for each model.
         """
         # 1) Load dataset + processed artifacts (normalizers, train/test splits, pareto front).
-        dataset: Dataset = self._data_repository.load("dataset")
+        dataset: Dataset = self._data_repository.load(command.dataset_name)
         processed_data = dataset.processed
         if not processed_data:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
@@ -63,6 +63,7 @@ class GenerateDecisionCommandHandler:
         inverse_estimators = self._model_repository.get_estimators(
             mapping_direction="inverse",
             requested=[(c.type.value, c.version) for c in command.inverse_candidates],
+            dataset_name=command.dataset_name,
             on_missing="skip",
         )
 
@@ -75,6 +76,7 @@ class GenerateDecisionCommandHandler:
         forward_artifact = self._model_repository.get_latest_version(
             estimator_type=command.forward_estimator_type.value,
             mapping_direction="forward",
+            dataset_name=command.dataset_name,
         )
         forward_estimator: BaseEstimator = forward_artifact.estimator
 

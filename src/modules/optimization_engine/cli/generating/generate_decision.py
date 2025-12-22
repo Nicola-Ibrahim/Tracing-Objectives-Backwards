@@ -22,13 +22,20 @@ from ...workflows.decision_generation_workflow import DecisionGenerationWorkflow
 
 
 @click.command(help="Generate decision candidates for a target objective.")
-def main():
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to load for decision generation.",
+)
+def main(dataset_name: str):
     """
     Main function to generate a decision using parameters.
     """
 
     # Create the command object using the provided estimator and hardcoded target
     command = GenerateDecisionCommand(
+        dataset_name=dataset_name,
         inverse_candidates=[
             ModelCandidate(type=EstimatorTypeEnum.MDN, version="1"),
             ModelCandidate(type=EstimatorTypeEnum.MDN, version="2"),

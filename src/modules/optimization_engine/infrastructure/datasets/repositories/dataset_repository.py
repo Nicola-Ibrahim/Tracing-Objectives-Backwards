@@ -12,15 +12,13 @@ from ...processing.files.pickle import PickleFileHandler
 class FileSystemDatasetRepository(BaseDatasetRepository):
     """
     Unified repository that persists the Dataset aggregate.
-    It saves the raw part to `data/raw` and the processed part (if present) to `data/processed`.
+    It saves data under `data/<dataset_name>/{raw,processed}` with legacy fallbacks.
     """
 
-    def __init__(self) -> None:
-        super().__init__(file_path="data")
-        self._raw_dir = self.base_path / "raw"
-        self._processed_dir = self.base_path / "processed"
-        self._raw_dir.mkdir(parents=True, exist_ok=True)
-        self._processed_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, file_path: str | Path = "data") -> None:
+        super().__init__(file_path=file_path)
+        self._legacy_raw_dir = self.base_path / "raw"
+        self._legacy_processed_dir = self.base_path / "processed"
 
         self._pkl = PickleFileHandler()
         self._json = JsonFileHandler()
@@ -34,7 +32,7 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         if dataset.processed:
             self._save_processed(dataset)
 
-        return self.base_path
+        return self.base_path / dataset.name
 
     def load(self, name: str) -> Dataset:
         """
@@ -69,14 +67,19 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             "pareto": dataset.pareto,
             "created_at": dataset.created_at,
         }
-        target = self._raw_dir / dataset.name
+        raw_dir = self._raw_dir(dataset.name)
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        target = raw_dir / "dataset"
         self._pkl.save(payload, target)
 
     def _load_raw_payload(self, name: str) -> dict[str, Any]:
+        raw_dir = self._raw_dir(name)
         candidates = [
-            self._raw_dir / name,
+            raw_dir / "dataset",
+            raw_dir / name,
+            self._legacy_raw_dir / name,
             # Legacy location fallback if needed, but we mostly look in raw
-            self._raw_dir / f"{name}.pkl",
+            self._legacy_raw_dir / f"{name}.pkl",
         ]
 
         for candidate in candidates:
@@ -109,7 +112,7 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
 
     def _save_processed(self, dataset: Dataset) -> None:
         processed = dataset.processed
-        target_dir = self._processed_dir / dataset.name
+        target_dir = self._processed_dir(dataset.name)
         target_dir.mkdir(parents=True, exist_ok=True)
 
         dataset_pkl = target_dir / "dataset"
@@ -142,9 +145,15 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         self._json.save(metadata_summary, meta_json)
 
     def _load_processed_part(self, name: str) -> ProcessedData:
-        directory = self._processed_dir / name
+        directory = self._processed_dir(name)
         if not directory.exists():
-            raise FileNotFoundError(f"Processed data directory for '{name}' not found.")
+            legacy_dir = self._legacy_processed_dir / name
+            if legacy_dir.exists():
+                directory = legacy_dir
+            else:
+                raise FileNotFoundError(
+                    f"Processed data directory for '{name}' not found."
+                )
 
         dataset_pkl = directory / "dataset"
         decisions_norm_pkl = directory / "decisions_normalizer"
@@ -167,3 +176,9 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             objectives_normalizer=objectives_normalizer,
             metadata=payload.get("metadata"),
         )
+
+    def _raw_dir(self, name: str) -> Path:
+        return self.base_path / name / "raw"
+
+    def _processed_dir(self, name: str) -> Path:
+        return self.base_path / name / "processed"

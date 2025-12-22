@@ -36,7 +36,7 @@ class CompareInverseModelsHandler:
         )
 
         # 1. Load Test Data
-        dataset: Dataset = self._data_repository.load(name="dataset")
+        dataset: Dataset = self._data_repository.load(name=command.dataset_name)
         if not dataset.processed:
             raise ValueError(
                 f"Dataset '{dataset.name}' has no processed data available for validation."
@@ -50,6 +50,7 @@ class CompareInverseModelsHandler:
         forward_estimator = self._model_repository.get_latest_version(
             estimator_type=forward_type,
             mapping_direction="forward",
+            dataset_name=command.dataset_name,
         ).estimator
 
         # 3. Validate Each Inverse Model
@@ -68,6 +69,7 @@ class CompareInverseModelsHandler:
                     all_versions = self._model_repository.get_all_versions(
                         estimator_type=inverse_type,
                         mapping_direction="inverse",
+                        dataset_name=command.dataset_name,
                     )
                     # Filter for matching version
                     target_artifact = next(
@@ -86,6 +88,7 @@ class CompareInverseModelsHandler:
                     inverse_estimator = self._model_repository.get_latest_version(
                         estimator_type=inverse_type,
                         mapping_direction="inverse",
+                        dataset_name=command.dataset_name,
                     ).estimator
                     display_name = f"{inverse_type} (Latest)"
 

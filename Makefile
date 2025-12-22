@@ -19,6 +19,21 @@ PYTHON := uv run python
 # Default estimators for inverse (objective->decision) and forward (decision->objective) training
 INVERSE_ESTIMATOR ?= mdn
 FORWARD_ESTIMATOR ?= mdn
+FUNCTION_ID ?= 5
+DATASET_NAME ?= cocoex_f$(FUNCTION_ID)
+
+ifdef function-id
+FUNCTION_ID := $(function-id)
+endif
+ifdef function_id
+FUNCTION_ID := $(function_id)
+endif
+ifdef dataset-name
+DATASET_NAME := $(dataset-name)
+endif
+ifdef dataset_name
+DATASET_NAME := $(dataset_name)
+endif
 
 ifdef estimator
 INVERSE_ESTIMATOR := $(estimator)
@@ -74,68 +89,68 @@ clean:  # Remove all generated data, trained models, and cache files
 .PHONY: data-generate
 data-generate:  # Generate synthetic Pareto front data for a specified problem
 	@echo "$(BLUE)Generating synthetic data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_dataset --problem-id 5
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_dataset --function-id $(FUNCTION_ID)
 	@echo "$(GREEN)Data generation complete.$(RESET)"
 
 .PHONY: data-visualize
 data-visualize:  # Visualize the generated data
 	@echo "$(BLUE)Visualizing generated data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_dataset
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_dataset --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Data visualization complete.$(RESET)"
 
 .PHONY: model-train-inverse
 model-train-inverse:  # Train an inverse model (objectives -> decisions) using a train/test split
 	@echo "$(BLUE)Training a single model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_standard --estimation $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_standard --estimation $(INVERSE_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
 .PHONY: model-train-inverse-cv
 model-train-inverse-cv:  # Train an inverse model with k-fold cross-validation
 	@echo "$(BLUE)Training a single model with cross-validation...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_cv --estimation $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_cv --estimation $(INVERSE_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Cross-validation training complete.$(RESET)"
 
 .PHONY: model-train-inverse-grid
 model-train-inverse-grid:  # Run grid search + CV for an inverse model
 	@echo "$(BLUE)Running grid search for a single model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_grid_search --estimation $(INVERSE_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_grid_search --estimation $(INVERSE_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Grid search training complete.$(RESET)"
 
 .PHONY: model-train-forward
 model-train-forward:  # Train a forward model (decisions -> objectives) using a train/test split
 	@echo "$(BLUE)Training a forward model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_forward_model standard --estimation $(FORWARD_TARGET_ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_forward_model standard --estimation $(FORWARD_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Forward model training complete.$(RESET)"
 
 
 .PHONY: model-generate-decision
 model-generate-decision:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
 .PHONY: model-compare-inverse
 model-compare-inverse:  # Compare multiple inverse models
 	@echo "$(BLUE)Comparing inverse models...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.compare_inverse_models
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.compare_inverse_models --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Inverse model comparison complete.$(RESET)"
 
 .PHONY: assurance-calibrate-validation
 assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation
 	@echo "$(BLUE)Calibrating decision validation gates...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.calibrate_decision_validation
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.calibrate_decision_validation --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Decision validation calibration complete.$(RESET)"
 
 .PHONY: model-visualize-inverse
 model-visualize-inverse:  # Visualize diagnostics for an inverse model (objectives -> decisions)
 	@echo "$(BLUE)Visualizing inverse model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(INVERSE_TARGET_ESTIMATOR) --mapping-direction inverse $(if $(model_number),--model-number $(model_number),)
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(INVERSE_TARGET_ESTIMATOR) --mapping-direction inverse --dataset-name $(DATASET_NAME) $(if $(model_number),--model-number $(model_number),)
 	@echo "$(GREEN)Inverse model performance visualization complete.$(RESET)"
 
 .PHONY: model-visualize-forward
 model-visualize-forward:  # Visualize diagnostics for a forward model (decisions -> objectives)
 	@echo "$(BLUE)Visualizing forward model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(FORWARD_TARGET_ESTIMATOR) --mapping-direction forward $(if $(model_number),--model-number $(model_number),)
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(FORWARD_TARGET_ESTIMATOR) --mapping-direction forward --dataset-name $(DATASET_NAME) $(if $(model_number),--model-number $(model_number),)
 	@echo "$(GREEN)Forward model performance visualization complete.$(RESET)"
 
 

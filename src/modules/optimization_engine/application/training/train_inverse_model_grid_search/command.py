@@ -8,6 +8,11 @@ from ...dtos import EstimatorParams, ValidationMetricConfig
 class TrainInverseModelGridSearchCommand(BaseModel):
     """Payload for grid-search training of inverse (objectives ➝ decisions) estimators."""
 
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier of the processed dataset to use for training.",
+    )
+
     estimator_params: EstimatorParams = Field(
         ...,
         description="Parameters used to initialize/configure the inverse estimator.",

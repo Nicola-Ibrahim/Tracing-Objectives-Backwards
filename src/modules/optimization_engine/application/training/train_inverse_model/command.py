@@ -6,6 +6,11 @@ from ...dtos import EstimatorParams, ValidationMetricConfig
 class TrainInverseModelCommand(BaseModel):
     """Command payload for single-split inverse (objectives ➝ decisions) training."""
 
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier of the processed dataset to use for training.",
+    )
+
     estimator_params: EstimatorParams = Field(
         ...,
         description="Parameters (hyperparameters, configuration) used to initialize/configure "

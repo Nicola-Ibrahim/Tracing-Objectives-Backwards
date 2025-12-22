@@ -63,20 +63,32 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
 
     def _compute_models_directory(
-        self, estimator_type: str, mapping_direction: str
+        self, estimator_type: str, mapping_direction: str, dataset_name: str
     ) -> Path:
-        return self._base_model_storage_path / mapping_direction / estimator_type
+        return (
+            self._base_model_storage_path
+            / mapping_direction
+            / dataset_name
+            / estimator_type
+        )
 
     def _resolve_models_directory_for_read(
-        self, estimator_type: str, mapping_direction: str
+        self, estimator_type: str, mapping_direction: str, dataset_name: str | None
     ) -> Path:
         """
         Resolve the directory where artifacts are stored. For inverse models we
         keep a fallback to the legacy layout (<models>/<estimator_type>).
         """
-        preferred = self._compute_models_directory(estimator_type, mapping_direction)
+        dataset_key = dataset_name or "dataset"
+        preferred = self._compute_models_directory(
+            estimator_type, mapping_direction, dataset_key
+        )
         if preferred.exists():
             return preferred
+
+        legacy_mapping = self._base_model_storage_path / mapping_direction / estimator_type
+        if legacy_mapping.exists():
+            return legacy_mapping
 
         if mapping_direction == "inverse":
             legacy = self._base_model_storage_path / estimator_type
@@ -93,8 +105,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         mapping_direction = model_artifact.parameters.get(
             "mapping_direction", "inverse"
         )
+        dataset_name = model_artifact.parameters.get("dataset_name", "dataset")
         models_directory = self._compute_models_directory(
-            estimator_type, mapping_direction
+            estimator_type, mapping_direction, dataset_name
         )
         models_directory.mkdir(parents=True, exist_ok=True)
 
@@ -129,10 +142,12 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         merged_parameters = {**serialized_hyperparams, **checkpoint}
         merged_parameters["type"] = model_artifact.parameters.get("type")
         merged_parameters["mapping_direction"] = mapping_direction
+        merged_parameters["dataset_name"] = dataset_name
 
         # Build metadata without estimator and old redundant fields
         metadata = model_artifact.model_dump(exclude={"estimator", "parameters"})
         metadata["parameters"] = merged_parameters  # Use merged params
+        metadata["dataset_name"] = dataset_name
 
         # Save only metadata.json
         metadata_path = model_artifact_version_directory / "metadata.json"
@@ -143,9 +158,10 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         estimator_type: str,
         version_id: str,
         mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
     ) -> ModelArtifact:
         models_directory = self._resolve_models_directory_for_read(
-            estimator_type, mapping_direction
+            estimator_type, mapping_direction, dataset_name
         )
         model_artifact_version_directory = models_directory / version_id
         if not model_artifact_version_directory.exists():
@@ -211,7 +227,10 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         )
 
     def get_all_versions(
-        self, estimator_type: str, mapping_direction: str = "inverse"
+        self,
+        estimator_type: str,
+        mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
     ) -> list[ModelArtifact]:
         """
         Retrieves all trained versions of a model based on its 'type' from the parameters.
@@ -224,7 +243,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         """
         found_model_versions: list[ModelArtifact] = []
         models_directory = self._resolve_models_directory_for_read(
-            estimator_type, mapping_direction
+            estimator_type, mapping_direction, dataset_name
         )
         if not models_directory.exists():
             return []
@@ -237,6 +256,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                         estimator_type,
                         model_artifact_version_directory.name,
                         mapping_direction=mapping_direction,
+                        dataset_name=dataset_name,
                     )
                     found_model_versions.append(model_version)
                 except (
@@ -254,7 +274,10 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         return found_model_versions
 
     def get_latest_version(
-        self, estimator_type: str, mapping_direction: str = "inverse"
+        self,
+        estimator_type: str,
+        mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
     ) -> ModelArtifact:
         """
         Retrieves the latest trained version of a model based on its type.
@@ -271,7 +294,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             Exception: For other errors during version lookup.
         """
         found_model_versions = self.get_all_versions(
-            estimator_type, mapping_direction=mapping_direction
+            estimator_type,
+            mapping_direction=mapping_direction,
+            dataset_name=dataset_name,
         )
 
         if not found_model_versions:
@@ -288,6 +313,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         *,
         mapping_direction: str,
         requested: list[tuple[str, int | None]],
+        dataset_name: str | None = None,
         on_missing: str = "skip",
     ) -> list[tuple[str, BaseEstimator]]:
         """Resolve estimators by (type, version) pairs.
@@ -314,12 +340,14 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                     artifact = self.get_latest_version(
                         estimator_type=estimator_type,
                         mapping_direction=mapping_direction,
+                        dataset_name=dataset_name,
                     )
                     display_name = f"{estimator_type} (Latest)"
                 else:
                     all_versions = self.get_all_versions(
                         estimator_type=estimator_type,
                         mapping_direction=mapping_direction,
+                        dataset_name=dataset_name,
                     )
                     artifact = next(
                         (a for a in all_versions if a.version == version), None

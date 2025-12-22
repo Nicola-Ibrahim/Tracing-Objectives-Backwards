@@ -424,6 +424,10 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
                 data.pop(k, None)
 
         fig = self._create_figure_layout()
+        dataset_name = data.get("dataset_name")
+        if dataset_name:
+            title_base = self._FIGURE_LAYOUT_CONFIG["title_text"]
+            fig.update_layout(title_text=f"{title_base} — {dataset_name}")
         self._add_all_subplots(fig, data)
         fig.show()
         if self._save_path:

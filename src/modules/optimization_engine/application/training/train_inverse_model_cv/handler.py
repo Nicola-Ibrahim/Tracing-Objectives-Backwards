@@ -5,7 +5,7 @@ from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ....domain.modeling.services.cross_validation import CrossValidationTrainer
 from ...factories.estimator import EstimatorFactory
-from ...factories.mertics import MetricFactory
+from ...factories.metrics import MetricFactory
 from .command import TrainInverseModelCrossValidationCommand
 
 
@@ -27,7 +27,9 @@ class TrainInverseModelCrossValidationCommandHandler:
         self._metric_factory = metric_factory
 
     def execute(self, command: TrainInverseModelCrossValidationCommand) -> None:
-        dataset: Dataset = self._processed_data_repository.load(name="dataset")
+        dataset: Dataset = self._processed_data_repository.load(
+            name=command.dataset_name
+        )
         if not dataset.processed:
             raise ValueError(
                 f"Dataset '{dataset.name}' has no processed data available for training."
@@ -64,6 +66,7 @@ class TrainInverseModelCrossValidationCommandHandler:
             "type": estimator.type,
             "mapping_direction": mapping_direction,
             "cv_splits": cv_splits,
+            "dataset_name": command.dataset_name,
         }
 
         fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(

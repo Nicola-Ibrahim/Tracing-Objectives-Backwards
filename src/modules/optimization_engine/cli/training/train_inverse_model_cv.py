@@ -72,10 +72,17 @@ def _build_inverse_cv_handler() -> TrainInverseModelCrossValidationCommandHandle
     show_default=True,
     help="Which estimator configuration to use.",
 )
-def cli(estimation: str) -> None:
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to load for training.",
+)
+def cli(estimation: str, dataset_name: str) -> None:
     handler = _build_inverse_cv_handler()
     estimator_params = _create_estimator_params(estimation)
     command = TrainInverseModelCrossValidationCommand(
+        dataset_name=dataset_name,
         estimator_params=estimator_params,
         estimator_performance_metric_configs=_default_metric_configs(),
     )

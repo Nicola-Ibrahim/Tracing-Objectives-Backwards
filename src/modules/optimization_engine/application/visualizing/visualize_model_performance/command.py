@@ -6,6 +6,7 @@ from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 
 class VisualizeModelPerformanceCommand(BaseModel):
+    dataset_name: str | None = None
     data_file_name: str = "dataset"
     processed_file_name: str = "dataset"
     estimator_type: EstimatorTypeEnum = Field(

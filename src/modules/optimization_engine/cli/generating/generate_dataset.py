@@ -25,11 +25,15 @@ from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 
 @click.command()
 @click.option(
-    "--problem-id", required=True, type=int, help='Pareto problem ID (e.g., "55", "59")'
+    "--function-id",
+    "--problem-id",
+    required=True,
+    type=int,
+    help='COCO function index (e.g., "5", "55")',
 )
-def generate_data(problem_id: int):
+def generate_data(function_id: int):
     problem_config = ApplicationProblemConfig(
-        problem_id=problem_id, type=ProblemType.biobj
+        problem_id=function_id, type=ProblemType.biobj
     )
     algorithm_config = ApplicationAlgorithmConfig(
         type=AlgorithmType.nsga2, population_size=500
@@ -48,6 +52,7 @@ def generate_data(problem_id: int):
         problem_config=problem_config,
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
+        dataset_name=f"cocoex_f{function_id}",
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)

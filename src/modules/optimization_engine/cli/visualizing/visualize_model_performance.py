@@ -38,10 +38,17 @@ from ...infrastructure.visualization.diagnostics.vis_2d.visualizer import (
     default=None,
     help="Nth most recent model to visualize (1 = latest). Defaults to latest.",
 )
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to visualize.",
+)
 def main(
     estimator_name: str,
     mapping_direction: str,
     model_number: int | None,
+    dataset_name: str,
 ) -> None:
     handler = VisualizeModelPerformanceCommandHandler(
         model_artificat_repo=FileSystemModelArtifactRepository(),
@@ -49,6 +56,9 @@ def main(
         visualizer=ModelPerformance2DVisualizer(),
     )
     command = VisualizeModelPerformanceCommand(
+        dataset_name=dataset_name,
+        data_file_name=dataset_name,
+        processed_file_name=dataset_name,
         estimator_type=EstimatorTypeEnum(estimator_name),
         mapping_direction=mapping_direction,
         model_number=model_number,

@@ -57,7 +57,13 @@ def cli() -> None:
     show_default=True,
     help="Which estimator configuration to use.",
 )
-def command_standard(estimation: str) -> None:
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to load for training.",
+)
+def command_standard(estimation: str, dataset_name: str) -> None:
     handler = TrainForwardModelCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
@@ -67,6 +73,7 @@ def command_standard(estimation: str) -> None:
     )
     estimator_params = FORWARD_ESTIMATOR_REGISTRY[estimation]()
     command = TrainForwardModelCommand(
+        dataset_name=dataset_name,
         estimator_params=estimator_params,
         estimator_performance_metric_configs=_default_metric_configs(),
     )

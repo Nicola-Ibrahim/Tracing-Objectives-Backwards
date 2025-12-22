@@ -27,7 +27,9 @@ class TrainInverseModelGridSearchCommandHandler:
         self._metric_factory = metric_factory
 
     def execute(self, command: TrainInverseModelGridSearchCommand) -> None:
-        dataset: Dataset = self._processed_data_repository.load(name="dataset")
+        dataset: Dataset = self._processed_data_repository.load(
+            name=command.dataset_name
+        )
         if not dataset.processed:
             raise ValueError(
                 f"Dataset '{dataset.name}' has no processed data available for training."
@@ -67,6 +69,7 @@ class TrainInverseModelGridSearchCommandHandler:
             "mapping_direction": mapping_direction,
             "cv_splits": cv_splits,
             "grid_searched_param": tune_param_name,
+            "dataset_name": command.dataset_name,
         }
 
         (

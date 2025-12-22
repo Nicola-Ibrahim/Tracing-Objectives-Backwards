@@ -5,6 +5,10 @@ from ...assuring.compare_inverse_models.command import ModelCandidate
 
 
 class GenerateDecisionCommand(BaseModel):
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier of the processed dataset to use for decision generation.",
+    )
     inverse_candidates: list[ModelCandidate] = Field(
         ...,
         description="list of inverse model candidates (type + version) to use for generation",

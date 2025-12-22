@@ -16,6 +16,11 @@ class ModelCandidate(BaseModel):
 class CompareInverseModelsCommand(BaseModel):
     """Command payload for comparing inverse model candidates."""
 
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier of the processed dataset to use for comparison.",
+    )
+
     candidates: list[ModelCandidate] = Field(
         ...,
         description="List of model candidates to compare.",

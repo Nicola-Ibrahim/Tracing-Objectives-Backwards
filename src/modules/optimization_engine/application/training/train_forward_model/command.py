@@ -6,6 +6,11 @@ from ...dtos import EstimatorParams, ValidationMetricConfig
 class TrainForwardModelCommand(BaseModel):
     """Payload for standard forward (decisions ➝ objectives) training."""
 
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier of the processed dataset to use for training.",
+    )
+
     estimator_params: EstimatorParams = Field(
         ...,
         description="Parameters used to initialize/configure the forward estimator.",

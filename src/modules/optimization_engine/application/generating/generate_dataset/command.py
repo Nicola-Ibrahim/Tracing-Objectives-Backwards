@@ -80,6 +80,10 @@ class GenerateDatasetCommand(BaseModel):
     optimizer_config: ApplicationOptimizerConfig = Field(
         ..., description="Configuration of the optimizer execution."
     )
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier used when persisting dataset artifacts.",
+    )
     normalizer_config: NormalizerConfig = Field(
         default_factory=lambda: NormalizerConfig(
             type=NormalizerTypeEnum.HYPERCUBE, params={}

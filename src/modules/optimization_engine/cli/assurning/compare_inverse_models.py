@@ -20,7 +20,13 @@ from ...infrastructure.visualization.comparison.visualizer import (
 
 
 @click.command(help="Compare inverse model candidates against a forward simulator")
-def cli():
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to load for comparison.",
+)
+def cli(dataset_name: str):
     handler = CompareInverseModelsHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
@@ -44,6 +50,7 @@ def cli():
     ]
 
     command = CompareInverseModelsCommand(
+        dataset_name=dataset_name,
         candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
     )

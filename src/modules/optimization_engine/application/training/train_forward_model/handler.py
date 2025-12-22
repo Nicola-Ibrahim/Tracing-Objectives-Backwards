@@ -32,7 +32,9 @@ class TrainForwardModelCommandHandler:
         self._metric_factory = metric_factory
 
     def execute(self, command: TrainForwardModelCommand) -> None:
-        dataset: Dataset = self._processed_data_repository.load(name="dataset")
+        dataset: Dataset = self._processed_data_repository.load(
+            name=command.dataset_name
+        )
         if not dataset.processed:
             raise ValueError(
                 f"Dataset '{dataset.name}' has no processed data available for training."
@@ -67,6 +69,7 @@ class TrainForwardModelCommandHandler:
             **estimator.to_dict(),
             "type": estimator.type,
             "mapping_direction": mapping_direction,
+            "dataset_name": command.dataset_name,
         }
 
         if isinstance(estimator, ProbabilisticEstimator):

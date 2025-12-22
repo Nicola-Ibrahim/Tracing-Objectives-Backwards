@@ -1,3 +1,5 @@
+import click
+
 from ...application.visualizing.visualize_dataset.command import (
     VisualizeDatasetCommand,
 )
@@ -10,9 +12,18 @@ from ...infrastructure.datasets.repositories.dataset_repository import (
 from ...infrastructure.visualization.datasets.visualizer import PlotlyDatasetVisualizer
 
 
-def main():
+@click.command(help="Visualize a processed dataset")
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to visualize.",
+)
+def main(dataset_name: str):
     command = VisualizeDatasetCommand(
-        data_file_name="dataset", processed_file_name="dataset"
+        dataset_name=dataset_name,
+        data_file_name=dataset_name,
+        processed_file_name=dataset_name,
     )
     handler = VisualizeDatasetCommandHandler(
         dataset_repo=FileSystemDatasetRepository(),

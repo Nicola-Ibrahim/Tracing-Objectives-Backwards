@@ -57,7 +57,7 @@ class GenerateDatasetCommandHandler:
         # Create domain objects using the provided configurations
         problem = self._problem_factory.create(problem_config)
         algorithm = self._algorithm_factory.create(algorithm_config)
-
+        
         # Create optimizer runner with its dependencies (problem and algorithm)
         optimizer = self._optimizer_factory.create(
             problem=problem,
@@ -80,10 +80,11 @@ class GenerateDatasetCommandHandler:
         metadata = {
             "source": "generated",
             "normalizer": normalizer_cfg,
+            "problem_id": command.problem_config.problem_id,
         }
 
         dataset = self._dataset_service.generate(
-            dataset_name="dataset",
+            dataset_name=command.dataset_name,
             optimizer=optimizer,
             decisions_normalizer=decisions_normalizer,
             objectives_normalizer=objectives_normalizer,

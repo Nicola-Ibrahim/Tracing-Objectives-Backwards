@@ -6,6 +6,11 @@ from ...dtos import EstimatorParams, ValidationMetricConfig
 class TrainInverseModelCrossValidationCommand(BaseModel):
     """Payload for k-fold inverse (objectives ➝ decisions) training."""
 
+    dataset_name: str = Field(
+        default="dataset",
+        description="Identifier of the processed dataset to use for training.",
+    )
+
     estimator_params: EstimatorParams = Field(
         ...,
         description="Parameters used to initialize/configure the inverse estimator.",

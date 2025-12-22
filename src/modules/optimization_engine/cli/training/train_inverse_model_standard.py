@@ -52,7 +52,13 @@ def _default_metric_configs() -> list[ValidationMetricConfig]:
     show_default=True,
     help="Which estimator configuration to use.",
 )
-def cli(estimation: str) -> None:
+@click.option(
+    "--dataset-name",
+    default="dataset",
+    show_default=True,
+    help="Dataset identifier to load for training.",
+)
+def cli(estimation: str, dataset_name: str) -> None:
     handler = TrainInverseModelCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
@@ -62,6 +68,7 @@ def cli(estimation: str) -> None:
     )
 
     command = TrainInverseModelCommand(
+        dataset_name=dataset_name,
         estimator_params=INVERSE_ESTIMATOR_REGISTRY[estimation](),
         estimator_performance_metric_configs=_default_metric_configs(),
     )

@@ -19,10 +19,12 @@ class VisualizeModelPerformanceCommandHandler:
 
     def execute(self, command: VisualizeModelPerformanceCommand) -> None:
         # 1) Load raw data and model artifact from repository
+        dataset_name = command.dataset_name or command.processed_file_name
         if command.model_number:
             all_versions = self._model_artificat_repo.get_all_versions(
                 estimator_type=command.estimator_type,
                 mapping_direction=command.mapping_direction,
+                dataset_name=dataset_name,
             )
             if not all_versions:
                 raise FileNotFoundError(
@@ -40,10 +42,11 @@ class VisualizeModelPerformanceCommandHandler:
             model_artificat = self._model_artificat_repo.get_latest_version(
                 estimator_type=command.estimator_type,
                 mapping_direction=command.mapping_direction,
+                dataset_name=dataset_name,
             )
 
         # Load dataset
-        dataset: Dataset = self._processed_repo.load(name=command.processed_file_name)
+        dataset: Dataset = self._processed_repo.load(name=dataset_name)
         if not dataset.processed:
             raise ValueError(
                 f"Dataset '{dataset.name}' has no processed data available for visualization."
@@ -82,6 +85,7 @@ class VisualizeModelPerformanceCommandHandler:
             "title": f"Fitted {model_artificat.estimator.type} ({mapping_label} mapping)",
             "training_history": model_artificat.training_history,
             "mapping_direction": command.mapping_direction,
+            "dataset_name": dataset.name,
         }
 
         self._visualizer.plot(data=payload)
