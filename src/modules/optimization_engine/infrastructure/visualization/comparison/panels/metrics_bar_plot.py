@@ -42,7 +42,7 @@ def add_metrics_bar_plots(
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[metrics["calibration_error"]],
+                    y=[metrics.get("calibration_error", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -52,7 +52,26 @@ def add_metrics_bar_plots(
                 col=2,
             )
 
-    # 3. Diversity (Row 2, Col 3)
+    # 3. CRPS (Row 2, Col 3)
+    for model_name in model_names:
+        if model_name in results_map:
+            metrics = results_map[model_name]["metrics"]
+            color = color_map.get(model_name, "gray")
+
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[metrics.get("crps", 0)],
+                    marker_color=color,
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="CRPS",
+                ),
+                row=2,
+                col=3,
+            )
+
+    # 4. Diversity (Row 3, Col 1)
     for model_name in model_names:
         if model_name in results_map:
             metrics = results_map[model_name]["metrics"]
@@ -67,6 +86,25 @@ def add_metrics_bar_plots(
                     legendgroup=model_name,
                     name="Diversity Score",
                 ),
-                row=2,
-                col=3,
+                row=3,
+                col=1,
+            )
+
+    # 5. Sharpness (Row 3, Col 2)
+    for model_name in model_names:
+        if model_name in results_map:
+            metrics = results_map[model_name]["metrics"]
+            color = color_map.get(model_name, "gray")
+
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[metrics.get("sharpness", 0)],
+                    marker_color=color,
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="Sharpness",
+                ),
+                row=3,
+                col=2,
             )

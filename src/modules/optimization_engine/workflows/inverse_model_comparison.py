@@ -33,11 +33,6 @@ class InverseModelComparator:
         num_samples: int = 250,
         random_state: int = 42,
     ) -> dict[str, Any]:
-        """
-        Main entry point for inverse model validation.
-        Samples candidates, runs them through the simulator, and computes metrics.
-        """
-        # 1. Sample and simulate candidates using the forward model
         simulation_results = self._generate_and_simulate_candidates(
             inverse_estimator=inverse_estimator,
             forward_estimator=forward_estimator,
@@ -51,12 +46,10 @@ class InverseModelComparator:
         candidates_3d = simulation_results["candidates_3d"]
         raw_errors = simulation_results["raw_errors"]
 
-        # 2. Compute performance metrics (Best Shot, Reliability, Diversity)
         metrics = self._compute_performance_metrics(
             raw_errors=raw_errors, candidates_3d=candidates_3d
         )
 
-        # 3. Compute calibration data (PIT)
         calibration = self._compute_calibration_data(
             candidates_3d=candidates_3d, test_decisions=test_decisions
         )
@@ -65,6 +58,8 @@ class InverseModelComparator:
             "metrics": {
                 "best_shot_error": metrics["best_shot_error"],
                 "calibration_error": calibration["calibration_error"],
+                "sharpness": metrics["sharpness"],  # New Metric
+                "crps": calibration["crps"],  # New Metric
                 "diversity_score": metrics["diversity_score"],
             },
             "raw_errors": raw_errors,
@@ -130,58 +125,64 @@ class InverseModelComparator:
     def _compute_performance_metrics(
         self, raw_errors: np.ndarray, candidates_3d: np.ndarray
     ) -> dict[str, float]:
-        """
-        Aggregates error matrix into scalar performance metrics.
-        """
-        # 1. Best Shot (Min error per target) -> Mean across targets
         best_shots = np.min(raw_errors, axis=1)
         mean_best_shot = float(np.mean(best_shots))
 
-        # 2. Reliability (Median error per target) -> Mean across targets
         reliabilities = np.median(raw_errors, axis=1)
         mean_reliability = float(np.mean(reliabilities))
 
-        # 3. Diversity (Std Dev of candidates per target) -> Mean across targets
-        # std along sample axis (axis=1), then mean over dimensions (axis=2)
         diversities = np.std(candidates_3d, axis=1).mean(axis=1)
         mean_diversity = float(np.mean(diversities))
+
+        # 4. Sharpness: Width of the 90% Prediction Interval
+        # Average (95th percentile - 5th percentile) across samples and dimensions
+        q95 = np.percentile(candidates_3d, 95, axis=1)
+        q05 = np.percentile(candidates_3d, 5, axis=1)
+        sharpness = float(np.mean(q95 - q05))
 
         return {
             "best_shot_error": mean_best_shot,
             "average_median_error": mean_reliability,
             "diversity_score": mean_diversity,
+            "sharpness": sharpness,
         }
 
     def _compute_calibration_data(
         self, candidates_3d: np.ndarray, test_decisions: np.ndarray
     ) -> dict[str, Any]:
-        """
-        Computes PIT (Probability Integral Transform) for calibration plotting
-        and calculates the Calibration Error (Expected Calibration Error).
-        """
         n_test, n_samples, x_dim = candidates_3d.shape
         pit_values = []
+        crps_per_dim = []
 
-        # Calculate PIT for each dimension of each test sample
         for i in range(n_test):
             for d in range(x_dim):
                 true_val = test_decisions[i, d]
                 model_samples = candidates_3d[i, :, d]
+
+                # PIT Calculation
                 pit = np.mean(model_samples <= true_val)
                 pit_values.append(pit)
 
+                # 5. CRPS (Sample-based approximation)
+                # Formula: E|X - y| - 0.5 * E|X - X'|
+                mae_to_true = np.mean(np.abs(model_samples - true_val))
+
+                # Pairwise absolute difference between all samples
+                # Note: For very large n_samples, consider a more optimized version
+                diff_matrix = np.abs(model_samples[:, None] - model_samples)
+                expected_dist = np.mean(diff_matrix)
+
+                crps_val = mae_to_true - 0.5 * expected_dist
+                crps_per_dim.append(crps_val)
+
         pit_values = np.sort(pit_values)
-
-        # Calculate empirical CDF values for PIT values
-        # This is simply the rank divided by total number of values
         cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
-
-        # Calculate Calibration Error (Expected Calibration Error)
-        # Average Absolute Deviation from the Diagonal
         calibration_error = float(np.mean(np.abs(pit_values - cdf_y)))
+        mean_crps = float(np.mean(crps_per_dim))
 
         return {
             "pit_values": pit_values,
             "cdf_y": cdf_y,
             "calibration_error": calibration_error,
+            "crps": mean_crps,
         }
