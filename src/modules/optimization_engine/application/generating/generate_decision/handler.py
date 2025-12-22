@@ -3,12 +3,12 @@ from typing import Any, Tuple, cast
 import numpy as np
 
 from ....domain.common.interfaces.base_logger import BaseLogger
+from ....domain.common.interfaces.base_visualizer import BaseVisualizer
 from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 from ....workflows.decision_generation_workflow import DecisionGenerationWorkflow
 from .command import GenerateDecisionCommand
 

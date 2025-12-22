@@ -2,7 +2,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from ....domain.common.interfaces.base_visualizer import BaseVisualizer
 from .layout_config import (
     DEFAULT_PLOT_HEIGHT,
     DEFAULT_WIDTH,

@@ -1,8 +1,8 @@
+from ....domain.common.interfaces.base_visualizer import BaseVisualizer
 from ....domain.datasets.entities.dataset import Dataset
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
 from .command import VisualizeModelPerformanceCommand
 
 

@@ -5,7 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ....domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from ....domain.common.interfaces.base_visualizer import BaseVisualizer
 from .panels.pdf_1d import add_pdf1d
 from .panels.pdf_2d import add_pdf2d
 from .panels.scatter_2d import add_scatter_base, add_scatter_overlay, set_xy_limits

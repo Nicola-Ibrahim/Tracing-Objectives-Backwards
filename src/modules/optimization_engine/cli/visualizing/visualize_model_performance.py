@@ -26,13 +26,6 @@ from ...infrastructure.visualization.diagnostics.vis_2d.visualizer import (
     help="Estimator type to visualize (matches stored artifact type)",
 )
 @click.option(
-    "--dataset",
-    "dataset_name",
-    default="dataset",
-    show_default=True,
-    help="Processed dataset identifier to load",
-)
-@click.option(
     "--mapping-direction",
     type=click.Choice(["inverse", "forward"]),
     default="inverse",
@@ -47,7 +40,6 @@ from ...infrastructure.visualization.diagnostics.vis_2d.visualizer import (
 )
 def main(
     estimator_name: str,
-    dataset_name: str,
     mapping_direction: str,
     model_number: int | None,
 ) -> None:
@@ -58,8 +50,6 @@ def main(
     )
     command = VisualizeModelPerformanceCommand(
         estimator_type=EstimatorTypeEnum(estimator_name),
-        processed_file_name=dataset_name,
-        data_file_name=dataset_name,
         mapping_direction=mapping_direction,
         model_number=model_number,
     )

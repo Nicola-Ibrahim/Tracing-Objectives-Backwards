@@ -7,14 +7,20 @@ from ...application.visualizing.visualize_dataset.handler import (
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...infrastructure.visualization.datasets.dataset import PlotlyDatasetVisualizer
+from ...infrastructure.visualization.datasets.visualizer import PlotlyDatasetVisualizer
 
-command = VisualizeDatasetCommand(
-    data_file_name="dataset", processed_file_name="dataset"
-)
-handler = VisualizeDatasetCommandHandler(
-    dataset_repo=FileSystemDatasetRepository(),
-    visualizer=PlotlyDatasetVisualizer(),
-)
 
-handler.execute(command)
+def main():
+    command = VisualizeDatasetCommand(
+        data_file_name="dataset", processed_file_name="dataset"
+    )
+    handler = VisualizeDatasetCommandHandler(
+        dataset_repo=FileSystemDatasetRepository(),
+        visualizer=PlotlyDatasetVisualizer(),
+    )
+
+    handler.execute(command)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,7 @@
 import numpy as np
 from plotly.subplots import make_subplots
 
-from .....domain.visualization.interfaces.base_visualizer import BaseVisualizer
+from .....domain.common.interfaces.base_visualizer import BaseVisualizer
 from ..common.diagnostics import (
     add_estimator_summary,
     add_loss_curves,
