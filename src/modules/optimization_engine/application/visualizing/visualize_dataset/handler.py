@@ -22,9 +22,6 @@ class VisualizeDatasetCommandHandler:
 
     def execute(self, command: VisualizeDatasetCommand) -> None:
         # 1) Load dataset aggregate
-        # We assume command.data_file_name or processed_file_name refers to the dataset name now.
-        # Ideally the command should have a single dataset_name.
-        # Historically it had two, let's assume one is sufficient or they match.
         dataset_name = command.data_file_name  # or processed_file_name
 
         dataset: Dataset = self._dataset_repo.load(name=dataset_name)
@@ -34,7 +31,7 @@ class VisualizeDatasetCommandHandler:
             )
         processed = dataset.processed
 
-        # 3) Package payload (arrays only)
+        # 2) Package payload (arrays only)
         payload = {
             "X_train": processed.decisions_train,
             "y_train": processed.objectives_train,
@@ -46,5 +43,5 @@ class VisualizeDatasetCommandHandler:
             "historical_objectives": dataset.objectives,
         }
 
-        # 7) Plot
+        # 4) Plot
         self._visualizer.plot(data=payload)
