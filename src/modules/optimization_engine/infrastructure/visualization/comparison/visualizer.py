@@ -4,10 +4,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ....domain.common.interfaces.base_visualizer import BaseVisualizer
-from .calibration_plot import add_calibration_plot
 from .color_utils import get_model_colors
-from .error_boxplot import add_error_boxplot
-from .metrics_bar_plot import add_metrics_bar_plots
+from .panels.calibration_plot import add_calibration_plot
+from .panels.error_boxplot import add_error_boxplot
+from .panels.metrics_bar_plot import add_metrics_bar_plots
 
 
 class InverseComparisonVisualizer(BaseVisualizer):

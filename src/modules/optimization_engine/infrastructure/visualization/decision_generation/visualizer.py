@@ -2,14 +2,14 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ....domain.common.interfaces.base_visualizer import BaseVisualizer
-from .layout_config import (
+from .panels.layout_config import (
     DEFAULT_PLOT_HEIGHT,
     DEFAULT_WIDTH,
     MAX_COLS,
     select_palette,
 )
-from .payload_handler import prepare_payload
-from .traces import add_pareto_front_trace, add_prediction_trace, add_target_trace
+from .panels.payload_handler import prepare_payload
+from .panels.traces import add_pareto_front_trace, add_prediction_trace, add_target_trace
 
 
 class DecisionGenerationComparisonVisualizer(BaseVisualizer):

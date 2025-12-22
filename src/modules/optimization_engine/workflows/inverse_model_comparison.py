@@ -17,6 +17,7 @@ class InverseModelComparator:
     - Min Simulation Error: Lowest error achievable among samples.
     - Consistency: Median error (reliability).
     - Diversity: Spread of suggested solutions.
+    - Calibration: PIT analysis against true decisions.
 
     Optimized with vectorized operations for batch processing.
     """
@@ -170,6 +171,9 @@ class InverseModelComparator:
                 pit_values.append(pit)
 
         pit_values = np.sort(pit_values)
+
+        # Calculate empirical CDF values for PIT values
+        # This is simply the rank divided by total number of values
         cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
 
         # Calculate Calibration Error (Expected Calibration Error)
