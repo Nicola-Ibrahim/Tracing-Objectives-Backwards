@@ -20,6 +20,7 @@ dependencies = [
     "pykrige>=1.7.2",
     "pymoo>=0.6.1.3",
     "requests>=2.32.3",
+    "safetensors>=0.7.0",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
     "sklearn-som>=1.1.0",

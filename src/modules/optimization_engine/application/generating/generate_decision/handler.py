@@ -43,7 +43,7 @@ class GenerateDecisionCommandHandler:
         """
         # 1) Load dataset + processed artifacts (normalizers, train/test splits, pareto front).
         dataset_name = next(
-            iter({c.dataset_name or "dataset" for c in command.invser_estimators})
+            iter({c.dataset_name or "dataset" for c in command.inverse_estimators})
         )
 
         dataset: Dataset = self._data_repository.load(dataset_name)
@@ -66,9 +66,8 @@ class GenerateDecisionCommandHandler:
         #    Version lookup and artifact reading are repository responsibilities.
         inverse_estimators = self._model_repository.get_estimators(
             mapping_direction="inverse",
-            requested=[(c.type.value, c.version) for c in command.invser_estimators],
+            requested=[(c.type.value, c.version) for c in command.inverse_estimators],
             dataset_name=dataset_name,
-            on_missing="skip",
         )
 
         # 4) Resolve the forward estimator used for:

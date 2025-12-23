@@ -5,7 +5,7 @@ from ...assuring.compare_inverse_models.command import InverseEstimatorCandidate
 
 
 class GenerateDecisionCommand(BaseModel):
-    invser_estimators: list[InverseEstimatorCandidate] = Field(
+    inverse_estimators: list[InverseEstimatorCandidate] = Field(
         ...,
         description="list of inverse model candidates (type + version) to use for generation",
     )
@@ -24,11 +24,9 @@ class GenerateDecisionCommand(BaseModel):
 
     @model_validator(mode="after")
     def _validate_single_dataset(self) -> "GenerateDecisionCommand":
-        if not self.invser_estimators:
+        if not self.inverse_estimators:
             raise ValueError("At least one inverse estimator must be provided.")
-        dataset_names = {
-            c.dataset_name or "dataset" for c in self.invser_estimators
-        }
+        dataset_names = {c.dataset_name or "dataset" for c in self.inverse_estimators}
         if len(dataset_names) > 1:
             raise ValueError("Decision generation supports only one dataset at a time.")
         return self

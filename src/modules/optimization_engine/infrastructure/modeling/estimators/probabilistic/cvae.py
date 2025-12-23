@@ -556,21 +556,29 @@ class CVAEEstimator(ProbabilisticEstimator):
         if self._decoder is None or self._encoder is None or self._prior_net is None:
             raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
 
-        # Convert all network state_dicts to JSON-safe format
-        encoder_state = {
-            k: v.cpu().numpy().tolist() for k, v in self._encoder.state_dict().items()
-        }
-        decoder_state = {
-            k: v.cpu().numpy().tolist() for k, v in self._decoder.state_dict().items()
-        }
-        prior_state = {
-            k: v.cpu().numpy().tolist() for k, v in self._prior_net.state_dict().items()
-        }
+        # Keep tensors for safetensors serialization (namespaced keys)
+        model_state = {}
+        model_state.update(
+            {
+                f"encoder.{k}": v.detach().cpu()
+                for k, v in self._encoder.state_dict().items()
+            }
+        )
+        model_state.update(
+            {
+                f"decoder.{k}": v.detach().cpu()
+                for k, v in self._decoder.state_dict().items()
+            }
+        )
+        model_state.update(
+            {
+                f"prior.{k}": v.detach().cpu()
+                for k, v in self._prior_net.state_dict().items()
+            }
+        )
 
         checkpoint = {
-            "encoder_state": encoder_state,
-            "decoder_state": decoder_state,
-            "prior_state": prior_state,
+            "model_state": model_state,
             "cond_dim": int(self._cond_dim) if self._cond_dim is not None else None,
             "y_dim": int(self._y_dim) if self._y_dim is not None else None,
             "training_history": self._training_history.as_dict(),
@@ -591,9 +599,7 @@ class CVAEEstimator(ProbabilisticEstimator):
         """
         # Filter out checkpoint fields and metadata
         checkpoint_fields = {
-            "encoder_state",
-            "decoder_state",
-            "prior_state",
+            "model_state",
             "cond_dim",
             "y_dim",
             "training_history",
@@ -642,18 +648,28 @@ class CVAEEstimator(ProbabilisticEstimator):
             ).to(estimator.device)
 
             # Load weights from checkpoint
-            encoder_state = {
-                k: torch.tensor(v, device=estimator.device)
-                for k, v in parameters["encoder_state"].items()
-            }
-            decoder_state = {
-                k: torch.tensor(v, device=estimator.device)
-                for k, v in parameters["decoder_state"].items()
-            }
-            prior_state = {
-                k: torch.tensor(v, device=estimator.device)
-                for k, v in parameters["prior_state"].items()
-            }
+            encoder_state = {}
+            decoder_state = {}
+            prior_state = {}
+            for key, value in parameters["model_state"].items():
+                if key.startswith("encoder."):
+                    encoder_state[key[len("encoder.") :]] = (
+                        value.to(estimator.device)
+                        if torch.is_tensor(value)
+                        else torch.tensor(value, device=estimator.device)
+                    )
+                elif key.startswith("decoder."):
+                    decoder_state[key[len("decoder.") :]] = (
+                        value.to(estimator.device)
+                        if torch.is_tensor(value)
+                        else torch.tensor(value, device=estimator.device)
+                    )
+                elif key.startswith("prior."):
+                    prior_state[key[len("prior.") :]] = (
+                        value.to(estimator.device)
+                        if torch.is_tensor(value)
+                        else torch.tensor(value, device=estimator.device)
+                    )
 
             estimator._encoder.load_state_dict(encoder_state)
             estimator._decoder.load_state_dict(decoder_state)

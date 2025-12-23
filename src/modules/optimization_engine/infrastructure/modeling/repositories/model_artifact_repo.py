@@ -10,6 +10,7 @@ from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
 from ...processing.files.json import JsonFileHandler
+from ...processing.files.safetensors import SafeTensorsFileHandler
 from ..estimators.deterministic.coco_biobj_function import COCOEstimator
 
 # Import estimators for registry
@@ -59,6 +60,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
     def __init__(self):
         self._base_model_storage_path = ROOT_PATH / "models"
         self._json_file_handler = JsonFileHandler()
+        self._safetensors_handler = SafeTensorsFileHandler()
         self._version_manager = VersionManager(self._json_file_handler)
         self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -151,15 +153,19 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         # Merge hyperparameters and checkpoint into parameters (flattened structure)
         # BUT extract training_history to ensure it's removed from checkpoint if it was there
         checkpoint.pop("training_history", None)
+        model_state = checkpoint.pop("model_state", None)
         merged_parameters = {**serialized_hyperparams, **checkpoint}
         merged_parameters["type"] = model_artifact.parameters.get("type")
         merged_parameters["mapping_direction"] = mapping_direction
-        merged_parameters["dataset_name"] = dataset_name
 
         # Build metadata without estimator and old redundant fields
         metadata = model_artifact.model_dump(exclude={"estimator", "parameters"})
         metadata["parameters"] = merged_parameters  # Use merged params
         metadata["dataset_name"] = dataset_name
+        if model_state:
+            state_path = model_artifact_version_directory / "model_state.safetensors"
+            self._safetensors_handler.save(model_state, state_path)
+            metadata["state_file"] = state_path.name
 
         # Save only metadata.json
         metadata_path = model_artifact_version_directory / "metadata.json"
@@ -183,13 +189,21 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         metadata_path = model_artifact_version_directory / "metadata.json"
         metadata = self._json_file_handler.load(metadata_path)
 
-        parameters = metadata["parameters"]
+        parameters = dict(metadata["parameters"])
+        parameters.pop("dataset_name", None)
 
         # Check if this is new format (checkpoint merged into parameters)
         # or old format (separate checkpoint field)
         if "checkpoint" in metadata:
             # Old format - merge checkpoint into parameters for compatibility
             parameters.update(metadata["checkpoint"])
+
+        # Add state dicts from safetensors if not already present
+        if "model_state" not in parameters:
+            state_file = metadata.get("state_file", "model_state.safetensors")
+            state_path = model_artifact_version_directory / state_file
+            if state_path.exists():
+                parameters["model_state"] = self._safetensors_handler.load(state_path)
 
         # Add training_history from root level if present
         if "training_history" in metadata:
@@ -349,7 +363,6 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         mapping_direction: str,
         requested: list[tuple[str, int | None]],
         dataset_name: str | None = None,
-        on_missing: str = "skip",
     ) -> list[tuple[str, BaseEstimator]]:
         """Resolve estimators by (type, version) pairs.
 
@@ -366,32 +379,24 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         """
         resolved: list[tuple[str, BaseEstimator]] = []
 
-        if on_missing not in {"skip", "raise"}:
-            raise ValueError("on_missing must be 'skip' or 'raise'")
-
         for estimator_type, version in requested:
-            try:
-                if version is None:
-                    artifact = self.get_latest_version(
-                        estimator_type=estimator_type,
-                        mapping_direction=mapping_direction,
-                        dataset_name=dataset_name,
-                    )
-                    display_name = f"{estimator_type} (Latest)"
+            if version is None:
+                artifact = self.get_latest_version(
+                    estimator_type=estimator_type,
+                    mapping_direction=mapping_direction,
+                    dataset_name=dataset_name,
+                )
+                display_name = f"{estimator_type} (Latest)"
 
-                else:
-                    artifact = self.get_version_by_number(
-                        estimator_type=estimator_type,
-                        version=version,
-                        mapping_direction=mapping_direction,
-                        dataset_name=dataset_name,
-                    )
-                    display_name = f"{estimator_type} (v{version})"
+            else:
+                artifact = self.get_version_by_number(
+                    estimator_type=estimator_type,
+                    version=version,
+                    mapping_direction=mapping_direction,
+                    dataset_name=dataset_name,
+                )
+                display_name = f"{estimator_type} (v{version})"
 
-                resolved.append((display_name, artifact.estimator))
-            except Exception:
-                if on_missing == "raise":
-                    raise
-                continue
+            resolved.append((display_name, artifact.estimator))
 
         return resolved

@@ -662,13 +662,14 @@ class INNEstimator(ProbabilisticEstimator):
         if self._flow is None:
             raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
 
-        # Convert flow state_dict to JSON-safe format
+        # Keep tensors for safetensors serialization (namespaced keys)
         flow_state = {
-            k: v.cpu().numpy().tolist() for k, v in self._flow.state_dict().items()
+            f"flow.{k}": v.detach().cpu()
+            for k, v in self._flow.state_dict().items()
         }
 
         checkpoint = {
-            "flow_state": flow_state,
+            "model_state": flow_state,
             "input_dim": int(self._flow.input_dim),
             "cond_dim": int(self._flow.cond_dim),
             "training_history": self._training_history.as_dict(),
@@ -688,13 +689,17 @@ class INNEstimator(ProbabilisticEstimator):
             INNEstimator: Fully initialized trained estimator
         """
         # Parse enum parameters from strings
+        checkpoint_fields = {"model_state", "input_dim", "cond_dim", "training_history"}
         parsed_params = {}
         for key, value in parameters.items():
             if key == "optimizer_name":
                 parsed_params[key] = (
                     OptimizerEnum(value) if isinstance(value, str) else value
                 )
-            elif key not in ["type", "mapping_direction"]:  # Skip metadata fields
+            elif key not in checkpoint_fields and key not in [
+                "type",
+                "mapping_direction",
+            ]:  # Skip metadata fields
                 parsed_params[key] = value
 
         # Create estimator instance
@@ -716,10 +721,14 @@ class INNEstimator(ProbabilisticEstimator):
         ).to(estimator._device)
 
         # Load weights from checkpoint
-        flow_state = {
-            k: torch.tensor(v, device=estimator._device)
-            for k, v in parameters["flow_state"].items()
-        }
+        flow_state = {}
+        for key, value in parameters["model_state"].items():
+            if key.startswith("flow."):
+                flow_state[key[len("flow.") :]] = (
+                    value.to(estimator._device)
+                    if torch.is_tensor(value)
+                    else torch.tensor(value, device=estimator._device)
+                )
 
         estimator._flow.load_state_dict(flow_state)
         estimator._flow.eval()

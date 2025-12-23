@@ -667,10 +667,11 @@ class MDNEstimator(ProbabilisticEstimator):
         if self._model is None:
             raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
 
-        # Convert PyTorch state_dict to JSON-safe format
-        model_state = {}
-        for key, tensor in self._model.state_dict().items():
-            model_state[key] = tensor.cpu().numpy().tolist()
+        # Keep tensors for safetensors serialization
+        model_state = {
+            key: tensor.detach().cpu()
+            for key, tensor in self._model.state_dict().items()
+        }
 
         # Serialize GMM clusterer if used
         clusterer_state = None
@@ -778,7 +779,10 @@ class MDNEstimator(ProbabilisticEstimator):
             # Load model weights from checkpoint
             model_state = {}
             for key, value_list in parameters["model_state"].items():
-                model_state[key] = torch.tensor(value_list, device=estimator._device)
+                if torch.is_tensor(value_list):
+                    model_state[key] = value_list.to(estimator._device)
+                else:
+                    model_state[key] = torch.tensor(value_list, device=estimator._device)
 
             estimator._model.load_state_dict(model_state)
             estimator._model.eval()
