@@ -10,7 +10,7 @@ from ...application.assuring.calibrate_decision_validation.command import (
 from ...application.assuring.calibrate_decision_validation.handler import (
     CalibrateDecisionValidationCommandHandler,
 )
-from ...application.dtos import (
+from ...application.training.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParams,

@@ -11,6 +11,7 @@ from ....domain.modeling.interfaces.base_repository import (
 )
 from ...processing.files.json import JsonFileHandler
 from ...processing.files.safetensors import SafeTensorsFileHandler
+from ...processing.files.toml import TomlFileHandler
 from ..estimators.deterministic.coco_biobj_function import COCOEstimator
 
 # Import estimators for registry
@@ -28,8 +29,8 @@ ESTIMATOR_REGISTRY = {
 
 
 class VersionManager:
-    def __init__(self, file_handler: JsonFileHandler):
-        self._file_handler = file_handler
+    def __init__(self, toml_handler: TomlFileHandler):
+        self._toml_handler = toml_handler
 
     def get_next_version(self, model_directory: Path) -> int:
         """
@@ -40,10 +41,10 @@ class VersionManager:
             for entry in model_directory.iterdir():
                 if entry.is_dir():
                     try:
-                        metadata_path = entry / "metadata.json"
-                        if metadata_path.exists():
-                            meta = self._file_handler.load(metadata_path)
-                            vn = meta.get("version")
+                        metadata_toml = entry / "metadata.toml"
+                        if metadata_toml.exists():
+                            meta = self._toml_handler.load(metadata_toml)
+                            vn = meta.get("metadata", {}).get("version")
                             if isinstance(vn, int):
                                 existing_versions.append(vn)
                     except Exception:
@@ -60,8 +61,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
     def __init__(self):
         self._base_model_storage_path = ROOT_PATH / "models"
         self._json_file_handler = JsonFileHandler()
+        self._toml_file_handler = TomlFileHandler()
         self._safetensors_handler = SafeTensorsFileHandler()
-        self._version_manager = VersionManager(self._json_file_handler)
+        self._version_manager = VersionManager(self._toml_file_handler)
         self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
 
     def _compute_models_directory(
@@ -158,18 +160,27 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         merged_parameters["type"] = model_artifact.parameters.get("type")
         merged_parameters["mapping_direction"] = mapping_direction
 
-        # Build metadata without estimator and old redundant fields
-        metadata = model_artifact.model_dump(exclude={"estimator", "parameters"})
-        metadata["parameters"] = merged_parameters  # Use merged params
+        # Build metadata without estimator/params/training history
+        metadata = model_artifact.model_dump(
+            exclude={"estimator", "parameters", "training_history", "metrics"}
+        )
         metadata["dataset_name"] = dataset_name
+        metadata_toml = {
+            "metadata": metadata,
+            "parameters": merged_parameters,
+        }
+        training_history_path = (
+            model_artifact_version_directory / "training_history.json"
+        )
+        training_payload = dict(model_artifact.training_history)
+        training_payload["metrics"] = model_artifact.metrics.model_dump()
+        self._json_file_handler.save(training_payload, training_history_path)
+
         if model_state:
             state_path = model_artifact_version_directory / "model_state.safetensors"
             self._safetensors_handler.save(model_state, state_path)
-            metadata["state_file"] = state_path.name
-
-        # Save only metadata.json
-        metadata_path = model_artifact_version_directory / "metadata.json"
-        self._json_file_handler.save(metadata, metadata_path)
+        metadata_path = model_artifact_version_directory / "metadata.toml"
+        self._toml_file_handler.save(metadata_toml, metadata_path)
 
     def load(
         self,
@@ -185,11 +196,30 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         if not model_artifact_version_directory.exists():
             raise FileNotFoundError(f"Model version '{version_id}' not found.")
 
-        # Load metadata.json
-        metadata_path = model_artifact_version_directory / "metadata.json"
-        metadata = self._json_file_handler.load(metadata_path)
-
-        parameters = dict(metadata["parameters"])
+        metadata_toml_path = model_artifact_version_directory / "metadata.toml"
+        loaded_training_history = None
+        loaded_metrics = None
+        if metadata_toml_path.exists():
+            payload = self._toml_file_handler.load(metadata_toml_path)
+            metadata = payload.get("metadata", {})
+            parameters = payload.get("parameters", {})
+        else:
+            metadata_path = model_artifact_version_directory / "metadata.json"
+            metadata = self._json_file_handler.load(metadata_path)
+            parameters = {}
+            params_file = metadata.get("parameters_file")
+            if params_file:
+                params_path = model_artifact_version_directory / params_file
+                parameters.update(self._toml_file_handler.load(params_path))
+            elif "parameters" in metadata:
+                parameters.update(metadata["parameters"])
+            loaded_training_history = None
+            history_file = metadata.get("training_history_file")
+            if history_file:
+                history_path = model_artifact_version_directory / history_file
+                if history_path.exists():
+                    loaded_training_history = self._json_file_handler.load(history_path)
+        parameters = dict(parameters)
         parameters.pop("dataset_name", None)
 
         # Check if this is new format (checkpoint merged into parameters)
@@ -198,16 +228,24 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             # Old format - merge checkpoint into parameters for compatibility
             parameters.update(metadata["checkpoint"])
 
-        # Add state dicts from safetensors if not already present
+        # Add state dict from safetensors if not already present
         if "model_state" not in parameters:
             state_file = metadata.get("state_file", "model_state.safetensors")
             state_path = model_artifact_version_directory / state_file
             if state_path.exists():
                 parameters["model_state"] = self._safetensors_handler.load(state_path)
 
-        # Add training_history from root level if present
-        if "training_history" in metadata:
-            parameters["training_history"] = metadata["training_history"]
+        # Add training_history from file or root level if present
+        if loaded_training_history is None:
+            history_path = model_artifact_version_directory / "training_history.json"
+            if history_path.exists():
+                history_payload = self._json_file_handler.load(history_path)
+                loaded_metrics = history_payload.pop("metrics", None)
+                loaded_training_history = history_payload
+        if loaded_training_history is None and "training_history" in metadata:
+            loaded_training_history = metadata["training_history"]
+        if loaded_training_history is not None:
+            parameters["training_history"] = loaded_training_history
 
         # Look up estimator class from registry
         estimator_class = ESTIMATOR_REGISTRY.get(parameters.get("type"))
@@ -221,7 +259,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         estimator = estimator_class.from_checkpoint(parameters)
 
         # Reconstruct the Pydantic model
-        metrics_payload = metadata.get("metrics")
+        metrics_payload = loaded_metrics or metadata.get("metrics")
         if metrics_payload is None:
             metrics_payload = {
                 "train_mertics": metadata.get("train_mertics", []),
@@ -230,7 +268,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             }
 
         # Unified training_history from root level
-        training_history = metadata.get("training_history")
+        training_history = loaded_training_history
         # Fallback for old loss_history if training_history is missing
         if training_history is None:
             old_loss = metadata.get("loss_history", {})
@@ -242,7 +280,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
 
         return ModelArtifact.from_data(
             id=metadata.get("id"),
-            parameters=metadata["parameters"],
+            parameters=parameters,
             estimator=estimator,
             metrics=metrics_payload,
             training_history=training_history,

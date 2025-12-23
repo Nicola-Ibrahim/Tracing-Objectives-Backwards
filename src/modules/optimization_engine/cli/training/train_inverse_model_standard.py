@@ -1,6 +1,6 @@
 import click
 
-from ...application.dtos import (
+from ...application.training.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParams,

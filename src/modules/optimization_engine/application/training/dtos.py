@@ -2,11 +2,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from ..domain.modeling.enums.estimator_type import (
+from ...domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
 )
-from ..domain.modeling.enums.metric_type import MetricTypeEnum
-from ..domain.modeling.enums.normalizer_type import NormalizerTypeEnum
+from ...domain.modeling.enums.metric_type import MetricTypeEnum
+from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 
 
 class EstimatorParams(BaseModel):
@@ -144,7 +144,7 @@ class MDNEstimatorParams(EstimatorParams):
         15, gt=0, description="The number of Gaussian mixture components for the MDN."
     )
     learning_rate: float = Field(
-        1e-3, gt=0, description="Learning rate for the Adam optimizer."
+        0.001, gt=0, description="Learning rate for the Adam optimizer."
     )
     epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
@@ -187,10 +187,10 @@ class CVAEEstimatorParams(EstimatorParams):
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
     latent_dim: int = Field(
-        8, gt=0, description="Dimensionality of the latent space in the CVAE."
+        16, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
     learning_rate: float = Field(
-        1e-4, gt=0, description="Learning rate for the Adam optimizer."
+        0.001, gt=0, description="Learning rate for the Adam optimizer."
     )
     beta: float = Field(0.1, ge=0.0, description="Final KL divergence weight.")
     kl_warmup: int = Field(

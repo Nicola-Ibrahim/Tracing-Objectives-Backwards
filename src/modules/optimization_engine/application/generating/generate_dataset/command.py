@@ -3,7 +3,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from ....domain.modeling.enums.normalizer_type import NormalizerTypeEnum
-from ...dtos import NormalizerConfig
+from ...training.dtos import NormalizerConfig
 
 
 class ProblemType(str, Enum):

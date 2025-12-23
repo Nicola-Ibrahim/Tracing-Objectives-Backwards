@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from ...dtos import EstimatorParams, ValidationMetricConfig
+from ..dtos import EstimatorParams, ValidationMetricConfig
 
 
 class TrainForwardModelCommand(BaseModel):

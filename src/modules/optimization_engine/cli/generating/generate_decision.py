@@ -33,10 +33,34 @@ def main():
     command = GenerateDecisionCommand(
         inverse_estimators=[
             InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=11, dataset_name="cocoex_f5"
+                type=EstimatorTypeEnum.MDN, version=1, dataset_name="cocoex_f5"
             ),
             InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.CVAE, version=6, dataset_name="cocoex_f5"
+                type=EstimatorTypeEnum.MDN, version=2, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=3, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=4, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=5, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=6, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.CVAE, version=2, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.CVAE, version=3, dataset_name="cocoex_f5"
             ),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
