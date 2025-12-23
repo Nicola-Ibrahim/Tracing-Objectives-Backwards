@@ -86,7 +86,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         if preferred.exists():
             return preferred
 
-        legacy_mapping = self._base_model_storage_path / mapping_direction / estimator_type
+        legacy_mapping = (
+            self._base_model_storage_path / mapping_direction / estimator_type
+        )
         if legacy_mapping.exists():
             return legacy_mapping
 
@@ -96,6 +98,16 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 return legacy
 
         return preferred
+
+    @staticmethod
+    def _find_version_dir(models_directory: Path, version: int) -> Path | None:
+        if not models_directory.exists():
+            return None
+        prefix = f"v{version}-"
+        for entry in models_directory.iterdir():
+            if entry.is_dir() and entry.name.startswith(prefix):
+                return entry
+        return None
 
     def save(self, model_artifact: ModelArtifact) -> None:
         if not model_artifact.id:
@@ -308,6 +320,29 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         # The list is already sorted by 'trained_at' in descending order, so the first element is the latest.
         return found_model_versions[0]
 
+    def get_version_by_number(
+        self,
+        estimator_type: str,
+        version: int,
+        mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
+    ) -> ModelArtifact:
+        models_directory = self._resolve_models_directory_for_read(
+            estimator_type, mapping_direction, dataset_name
+        )
+        version_dir = self._find_version_dir(models_directory, version)
+        if not version_dir:
+            raise FileNotFoundError(
+                f"Version {version} not found for type: '{estimator_type}' "
+                f"and mapping_direction: '{mapping_direction}'"
+            )
+        return self.load(
+            estimator_type=estimator_type,
+            version_id=version_dir.name,
+            mapping_direction=mapping_direction,
+            dataset_name=dataset_name,
+        )
+
     def get_estimators(
         self,
         *,
@@ -343,19 +378,14 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                         dataset_name=dataset_name,
                     )
                     display_name = f"{estimator_type} (Latest)"
+
                 else:
-                    all_versions = self.get_all_versions(
+                    artifact = self.get_version_by_number(
                         estimator_type=estimator_type,
+                        version=version,
                         mapping_direction=mapping_direction,
                         dataset_name=dataset_name,
                     )
-                    artifact = next(
-                        (a for a in all_versions if a.version == version), None
-                    )
-                    if artifact is None:
-                        raise FileNotFoundError(
-                            f"Version {version} not found for estimator_type='{estimator_type}'."
-                        )
                     display_name = f"{estimator_type} (v{version})"
 
                 resolved.append((display_name, artifact.estimator))

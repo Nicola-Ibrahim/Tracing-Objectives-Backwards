@@ -77,9 +77,6 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         candidates = [
             raw_dir / "dataset",
             raw_dir / name,
-            self._legacy_raw_dir / name,
-            # Legacy location fallback if needed, but we mostly look in raw
-            self._legacy_raw_dir / f"{name}.pkl",
         ]
 
         for candidate in candidates:
@@ -147,13 +144,9 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
     def _load_processed_part(self, name: str) -> ProcessedData:
         directory = self._processed_dir(name)
         if not directory.exists():
-            legacy_dir = self._legacy_processed_dir / name
-            if legacy_dir.exists():
-                directory = legacy_dir
-            else:
-                raise FileNotFoundError(
-                    f"Processed data directory for '{name}' not found."
-                )
+            raise FileNotFoundError(
+                f"Processed data directory for '{name}' not found."
+            )
 
         dataset_pkl = directory / "dataset"
         decisions_norm_pkl = directory / "decisions_normalizer"

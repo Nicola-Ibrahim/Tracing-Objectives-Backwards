@@ -84,6 +84,23 @@ class BaseModelArtifactRepository(ABC):
         pass
 
     @abstractmethod
+    def get_version_by_number(
+        self,
+        estimator_type: str,
+        version: int,
+        mapping_direction: str = "inverse",
+        dataset_name: str | None = None,
+    ) -> ModelArtifact:
+        """
+        Retrieves a specific model version by its numeric version field.
+
+        Args:
+             estimator_type: The type of interpolation model
+             version: The numeric version to load.
+        """
+        pass
+
+    @abstractmethod
     def get_estimators(
         self,
         *,

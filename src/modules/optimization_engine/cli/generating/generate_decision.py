@@ -1,6 +1,8 @@
 import click
 
-from ...application.assuring.compare_inverse_models.command import ModelCandidate
+from ...application.assuring.compare_inverse_models.command import (
+    InverseEstimatorCandidate,
+)
 from ...application.generating.generate_decision.command import (
     GenerateDecisionCommand,
 )
@@ -22,30 +24,41 @@ from ...workflows.decision_generation_workflow import DecisionGenerationWorkflow
 
 
 @click.command(help="Generate decision candidates for a target objective.")
-@click.option(
-    "--dataset-name",
-    default="dataset",
-    show_default=True,
-    help="Dataset identifier to load for decision generation.",
-)
-def main(dataset_name: str):
+def main():
     """
     Main function to generate a decision using parameters.
     """
 
     # Create the command object using the provided estimator and hardcoded target
     command = GenerateDecisionCommand(
-        dataset_name=dataset_name,
-        inverse_candidates=[
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="1"),
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="2"),
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="3"),
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="4"),
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="5"),
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="6"),
-            ModelCandidate(type=EstimatorTypeEnum.MDN, version="7"),
-            ModelCandidate(type=EstimatorTypeEnum.CVAE, version="0"),
-            ModelCandidate(type=EstimatorTypeEnum.CVAE, version="1"),
+        invser_estimators=[
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=1, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=2, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=3, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=4, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=5, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=6, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.CVAE, version=0, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"
+            ),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
         target_objective=[410, 1400],

@@ -3,7 +3,7 @@ import click
 from ...application.assuring.compare_inverse_models import (
     CompareInverseModelsCommand,
     CompareInverseModelsHandler,
-    ModelCandidate,
+    InverseEstimatorCandidate,
 )
 from ...application.factories.estimator import EstimatorFactory
 from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
@@ -20,13 +20,7 @@ from ...infrastructure.visualization.comparison.visualizer import (
 
 
 @click.command(help="Compare inverse model candidates against a forward simulator")
-@click.option(
-    "--dataset-name",
-    default="dataset",
-    show_default=True,
-    help="Dataset identifier to load for comparison.",
-)
-def cli(dataset_name: str):
+def cli():
     handler = CompareInverseModelsHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
@@ -35,22 +29,37 @@ def cli(dataset_name: str):
         visualizer=InverseComparisonVisualizer(),
     )
 
-    # Define candidates (types and optional versions)
-    # Example: Compare latest MDN vs latest CVAE
     candidates = [
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="1"),
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="2"),
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="3"),
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="4"),
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="5"),
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="6"),
-        ModelCandidate(type=EstimatorTypeEnum.MDN, version="7"),
-        ModelCandidate(type=EstimatorTypeEnum.CVAE, version="0"),
-        ModelCandidate(type=EstimatorTypeEnum.CVAE, version="1"),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=1, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=2, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=3, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=4, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=5, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=6, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.CVAE, version=0, dataset_name="cocoex_f5"
+        ),
+        InverseEstimatorCandidate(
+            type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"
+        ),
     ]
 
     command = CompareInverseModelsCommand(
-        dataset_name=dataset_name,
         candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
     )

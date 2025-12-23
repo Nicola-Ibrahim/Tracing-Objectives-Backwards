@@ -126,13 +126,13 @@ model-train-forward:  # Train a forward model (decisions -> objectives) using a 
 .PHONY: model-generate-decision
 model-generate-decision:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision --dataset-name $(DATASET_NAME)
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
 .PHONY: model-compare-inverse
 model-compare-inverse:  # Compare multiple inverse models
 	@echo "$(BLUE)Comparing inverse models...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.compare_inverse_models --dataset-name $(DATASET_NAME)
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.compare_inverse_models
 	@echo "$(GREEN)Inverse model comparison complete.$(RESET)"
 
 .PHONY: assurance-calibrate-validation

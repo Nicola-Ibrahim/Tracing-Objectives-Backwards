@@ -42,7 +42,11 @@ class GenerateDecisionCommandHandler:
         Returns dictionary with results for each model.
         """
         # 1) Load dataset + processed artifacts (normalizers, train/test splits, pareto front).
-        dataset: Dataset = self._data_repository.load(command.dataset_name)
+        dataset_name = next(
+            iter({c.dataset_name or "dataset" for c in command.invser_estimators})
+        )
+
+        dataset: Dataset = self._data_repository.load(dataset_name)
         processed_data = dataset.processed
         if not processed_data:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
@@ -62,8 +66,8 @@ class GenerateDecisionCommandHandler:
         #    Version lookup and artifact reading are repository responsibilities.
         inverse_estimators = self._model_repository.get_estimators(
             mapping_direction="inverse",
-            requested=[(c.type.value, c.version) for c in command.inverse_candidates],
-            dataset_name=command.dataset_name,
+            requested=[(c.type.value, c.version) for c in command.invser_estimators],
+            dataset_name=dataset_name,
             on_missing="skip",
         )
 
@@ -76,7 +80,7 @@ class GenerateDecisionCommandHandler:
         forward_artifact = self._model_repository.get_latest_version(
             estimator_type=command.forward_estimator_type.value,
             mapping_direction="forward",
-            dataset_name=command.dataset_name,
+            dataset_name=dataset_name,
         )
         forward_estimator: BaseEstimator = forward_artifact.estimator
 
@@ -102,6 +106,7 @@ class GenerateDecisionCommandHandler:
             list[dict[str, object]], workflow_output["generator_runs"]
         )
         visualization_data = {
+            "dataset_name": dataset.name,
             "pareto_front": dataset.pareto.front,
             "target_objective": target_objective_raw,
             "generators": generator_runs,

@@ -15,24 +15,9 @@ from .panels.traces import add_pareto_front_trace, add_prediction_trace, add_tar
 class DecisionGenerationComparisonVisualizer(BaseVisualizer):
     """Grid-based visualization comparing generated objectives across inverse models."""
 
-    def plot(self, data: object) -> go.Figure:
-        """Execute the comparison plot generation."""
-        payload = prepare_payload(data)
-        generators = payload["generators"]
-
-        if not generators:
-            raise ValueError("No generator results provided for visualization.")
-
-        n_models = len(generators)
-        n_cols = min(MAX_COLS, n_models)
-        n_rows = (n_models + n_cols - 1) // n_cols
-
-        fig = self._initialize_figure(n_rows, n_cols, generators)
-        self._populate_subplots(fig, payload, n_cols)
-        self._finalize_layout(fig, n_rows)
-
-        fig.show()
-        return fig
+    def __init__(self):
+        super().__init__()
+        self._current_dataset_name: str | None = None
 
     def _initialize_figure(
         self, n_rows: int, n_cols: int, generators: list[dict]
@@ -74,9 +59,34 @@ class DecisionGenerationComparisonVisualizer(BaseVisualizer):
 
     def _finalize_layout(self, fig: go.Figure, n_rows: int) -> None:
         """Apply final layout styling."""
+        dataset_name = self._current_dataset_name
         fig.update_layout(
-            title="Decision Generation Comparison",
+            title=self._format_title(dataset_name),
             template="plotly_white",
             width=DEFAULT_WIDTH,
             height=DEFAULT_PLOT_HEIGHT * n_rows,
         )
+
+    def _format_title(self, dataset_name: str | None) -> str:
+        base = "Decision Generation Comparison"
+        return f"{base} — {dataset_name}" if dataset_name else base
+
+    def plot(self, data: object) -> go.Figure:
+        """Execute the comparison plot generation."""
+        payload = prepare_payload(data)
+        self._current_dataset_name = payload.get("dataset_name")
+        generators = payload["generators"]
+
+        if not generators:
+            raise ValueError("No generator results provided for visualization.")
+
+        n_models = len(generators)
+        n_cols = min(MAX_COLS, n_models)
+        n_rows = (n_models + n_cols - 1) // n_cols
+
+        fig = self._initialize_figure(n_rows, n_cols, generators)
+        self._populate_subplots(fig, payload, n_cols)
+        self._finalize_layout(fig, n_rows)
+
+        fig.show()
+        return fig

@@ -1,15 +1,11 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ...assuring.compare_inverse_models.command import ModelCandidate
+from ...assuring.compare_inverse_models.command import InverseEstimatorCandidate
 
 
 class GenerateDecisionCommand(BaseModel):
-    dataset_name: str = Field(
-        default="dataset",
-        description="Identifier of the processed dataset to use for decision generation.",
-    )
-    inverse_candidates: list[ModelCandidate] = Field(
+    invser_estimators: list[InverseEstimatorCandidate] = Field(
         ...,
         description="list of inverse model candidates (type + version) to use for generation",
     )
@@ -25,3 +21,14 @@ class GenerateDecisionCommand(BaseModel):
     suggestion_noise_scale: float = 0.05
     validation_enabled: bool = True
     feasibility_enabled: bool = True
+
+    @model_validator(mode="after")
+    def _validate_single_dataset(self) -> "GenerateDecisionCommand":
+        if not self.invser_estimators:
+            raise ValueError("At least one inverse estimator must be provided.")
+        dataset_names = {
+            c.dataset_name or "dataset" for c in self.invser_estimators
+        }
+        if len(dataset_names) > 1:
+            raise ValueError("Decision generation supports only one dataset at a time.")
+        return self
