@@ -52,7 +52,7 @@ def cli():
             type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
         ),
         InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=11, dataset_name="cocoex_f5"
+            type=EstimatorTypeEnum.INN, version=1, dataset_name="cocoex_f5"
         ),
         InverseEstimatorCandidate(
             type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"

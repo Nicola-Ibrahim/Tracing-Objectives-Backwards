@@ -265,7 +265,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 "val_loss": old_loss.get("val_loss", []),
             }
 
-        params_model = ESTIMATOR_PARAM_REGISTRY.get(parameters.get("type"))
+        params_model = ESTIMATOR_PARAM_REGISTRY.get(estimator_type)
         if params_model is None:
             raise ValueError(
                 f"Unsupported estimator params type: {parameters.get('type')!r}"

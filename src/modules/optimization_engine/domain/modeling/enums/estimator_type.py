@@ -21,3 +21,4 @@ class EstimatorTypeEnum(Enum):
     MDN = "mdn"
     CVAE_MDN = "cvae_mdn"
     COCO = "coco"
+    INN = "inn"

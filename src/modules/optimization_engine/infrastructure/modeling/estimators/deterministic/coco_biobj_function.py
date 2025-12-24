@@ -14,17 +14,18 @@ class COCOEstimator(DeterministicEstimator):
     """
 
     def __init__(self, params: COCOEstimatorParams) -> None:
-        problem_name = params.problem_name
-        function_indices = params.function_indices
-        instance_indices = params.instance_indices
-        dimensions = params.dimensions
         super().__init__()
+        self.params = params
+        self.problem_name = params.problem_name
+        self.function_indices = params.function_indices
+        self.instance_indices = params.instance_indices
+        self.dimensions = params.dimensions
 
         self._problem = self._build_problem(
-            problem_name,
-            function_indices,
-            instance_indices,
-            dimensions,
+            self.problem_name,
+            self.function_indices,
+            self.instance_indices,
+            self.dimensions,
         )
 
     @property

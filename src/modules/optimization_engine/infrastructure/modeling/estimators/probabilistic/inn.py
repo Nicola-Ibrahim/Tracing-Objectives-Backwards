@@ -15,8 +15,6 @@ Reference:
     Dinh et al. "Density estimation using Real NVP" (2017)
 """
 
-from enum import Enum
-
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -26,6 +24,10 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
+from .....domain.modeling.value_objects.estimator_params import (
+    INNEstimatorParams,
+    INNOptimizerEnum,
+)
 
 # ======================================================================
 # Coupling Layer Components
@@ -298,12 +300,6 @@ class ConditionalNormalizingFlow(nn.Module):
 # ======================================================================
 
 
-class OptimizerEnum(Enum):
-    ADAM = "adam"
-    ADAMW = "adamw"
-    SGD = "sgd"
-
-
 class INNEstimator(ProbabilisticEstimator):
     """
     Invertible Neural Network (Normalizing Flow) estimator for inverse problems.
@@ -317,69 +313,33 @@ class INNEstimator(ProbabilisticEstimator):
         - get_loss_history(): Return training metrics
     """
 
-    def __init__(
-        self,
-        num_coupling_layers: int = 6,
-        hidden_dim: int = 128,
-        use_batch_norm: bool = True,
-        learning_rate: float = 1e-3,
-        optimizer_name: OptimizerEnum = OptimizerEnum.ADAM,
-        weight_decay: float = 1e-5,
-        epochs: int = 100,
-        batch_size: int = 128,
-        val_size: float = 0.2,
-        clip_grad_norm: float | None = 5.0,
-        lr_scheduler: bool = True,
-        lr_decay_factor: float = 0.5,
-        lr_patience: int = 10,
-        early_stopping_patience: int = 20,
-        verbose: bool = True,
-        seed: int = 42,
-    ):
-        """
-        Args:
-            num_coupling_layers: Number of coupling transformations
-            hidden_dim: Hidden layer size in coupling networks
-            use_batch_norm: Use batch normalization between layers
-            learning_rate: Initial learning rate
-            optimizer_name: Optimizer choice (adam, adamw, sgd)
-            weight_decay: L2 regularization strength
-            epochs: Maximum training epochs
-            batch_size: Batch size for training
-            val_size: Validation set fraction
-            clip_grad_norm: Gradient clipping threshold (None to disable)
-            lr_scheduler: Use learning rate scheduler
-            lr_decay_factor: LR reduction factor for scheduler
-            lr_patience: Patience for LR scheduler
-            early_stopping_patience: Patience for early stopping
-            verbose: Print training progress
-            seed: Random seed for reproducibility
-        """
+    def __init__(self, params: INNEstimatorParams):
         super().__init__()
+        self.params = params
 
         # Architecture
-        self._num_coupling_layers = num_coupling_layers
-        self._hidden_dim = hidden_dim
-        self._use_batch_norm = use_batch_norm
+        self._num_coupling_layers = params.num_coupling_layers
+        self._hidden_dim = params.hidden_dim
+        self._use_batch_norm = params.use_batch_norm
 
         # Optimization
-        self._learning_rate = learning_rate
-        self._optimizer_name = optimizer_name
-        self._weight_decay = weight_decay
-        self.clip_grad_norm = clip_grad_norm
+        self._learning_rate = params.learning_rate
+        self._optimizer_name = params.optimizer_name
+        self._weight_decay = params.weight_decay
+        self.clip_grad_norm = params.clip_grad_norm
 
         # Training
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.val_size = val_size
-        self.seed = seed
-        self._verbose = verbose
+        self.epochs = params.epochs
+        self.batch_size = params.batch_size
+        self.val_size = params.val_size
+        self.seed = params.seed
+        self._verbose = params.verbose
 
         # Scheduling & early stopping
-        self.lr_scheduler = lr_scheduler
-        self.lr_decay_factor = lr_decay_factor
-        self.lr_patience = lr_patience
-        self.early_stopping_patience = early_stopping_patience
+        self.lr_scheduler = params.lr_scheduler
+        self.lr_decay_factor = params.lr_decay_factor
+        self.lr_patience = params.lr_patience
+        self.early_stopping_patience = params.early_stopping_patience
 
         # Model components (initialized in fit)
         self._flow: ConditionalNormalizingFlow | None = None
@@ -628,19 +588,19 @@ class INNEstimator(ProbabilisticEstimator):
 
     def _get_optimizer(self) -> torch.optim.Optimizer:
         """Create optimizer based on configuration."""
-        if self._optimizer_name == OptimizerEnum.ADAM:
+        if self._optimizer_name == INNOptimizerEnum.ADAM:
             return torch.optim.Adam(
                 self._flow.parameters(),
                 lr=self._learning_rate,
                 weight_decay=self._weight_decay,
             )
-        elif self._optimizer_name == OptimizerEnum.ADAMW:
+        elif self._optimizer_name == INNOptimizerEnum.ADAMW:
             return torch.optim.AdamW(
                 self._flow.parameters(),
                 lr=self._learning_rate,
                 weight_decay=self._weight_decay,
             )
-        elif self._optimizer_name == OptimizerEnum.SGD:
+        elif self._optimizer_name == INNOptimizerEnum.SGD:
             return torch.optim.SGD(
                 self._flow.parameters(),
                 lr=self._learning_rate,
@@ -664,8 +624,7 @@ class INNEstimator(ProbabilisticEstimator):
 
         # Keep tensors for safetensors serialization (namespaced keys)
         flow_state = {
-            f"flow.{k}": v.detach().cpu()
-            for k, v in self._flow.state_dict().items()
+            f"flow.{k}": v.detach().cpu() for k, v in self._flow.state_dict().items()
         }
 
         checkpoint = {
@@ -694,7 +653,7 @@ class INNEstimator(ProbabilisticEstimator):
         for key, value in parameters.items():
             if key == "optimizer_name":
                 parsed_params[key] = (
-                    OptimizerEnum(value) if isinstance(value, str) else value
+                    INNOptimizerEnum(value) if isinstance(value, str) else value
                 )
             elif key not in checkpoint_fields and key not in [
                 "type",
@@ -702,8 +661,8 @@ class INNEstimator(ProbabilisticEstimator):
             ]:  # Skip metadata fields
                 parsed_params[key] = value
 
-        # Create estimator instance
-        estimator = cls(**parsed_params)
+        estimator_params = INNEstimatorParams(**parsed_params)
+        estimator = cls(estimator_params)
 
         # Restore dimensions
         input_dim = parameters["input_dim"]

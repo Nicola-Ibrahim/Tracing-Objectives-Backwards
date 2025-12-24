@@ -33,6 +33,12 @@ class OptimizerFunctionEnum(Enum):
     GRADIENT_DESCENT = "gradient_descent"
 
 
+class INNOptimizerEnum(Enum):
+    ADAM = "adam"
+    ADAMW = "adamw"
+    SGD = "sgd"
+
+
 class COCOEstimatorParams(EstimatorParamsBase):
     type: Literal["coco"] = Field(
         EstimatorTypeEnum.COCO.value,
@@ -288,6 +294,60 @@ class CVAEEstimatorParams(EstimatorParamsBase):
         use_enum_values = True
 
 
+class INNEstimatorParams(EstimatorParamsBase):
+    type: Literal["inn"] = Field(
+        EstimatorTypeEnum.INN.value,
+        description="Type of the invertible neural network estimator.",
+    )
+    num_coupling_layers: int = Field(
+        6, ge=1, description="Number of coupling transformations."
+    )
+    hidden_dim: int = Field(
+        128, gt=0, description="Hidden layer size in coupling networks."
+    )
+    use_batch_norm: bool = Field(
+        True, description="Use batch normalization between layers."
+    )
+    learning_rate: float = Field(
+        1e-3, gt=0, description="Initial learning rate."
+    )
+    optimizer_name: INNOptimizerEnum = Field(
+        INNOptimizerEnum.ADAM, description="Optimizer choice."
+    )
+    weight_decay: float = Field(
+        1e-5, ge=0, description="L2 regularization strength."
+    )
+    epochs: int = Field(100, gt=0, description="Maximum training epochs.")
+    batch_size: int = Field(128, gt=0, description="Batch size for training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation set fraction.",
+    )
+    clip_grad_norm: float | None = Field(
+        5.0, ge=0.0, description="Gradient clipping threshold."
+    )
+    lr_scheduler: bool = Field(
+        True, description="Use learning rate scheduler."
+    )
+    lr_decay_factor: float = Field(
+        0.5, gt=0.0, description="LR reduction factor for scheduler."
+    )
+    lr_patience: int = Field(
+        10, ge=1, description="Patience for LR scheduler."
+    )
+    early_stopping_patience: int = Field(
+        20, ge=1, description="Patience for early stopping."
+    )
+    verbose: bool = Field(True, description="Print training progress.")
+    seed: int = Field(42, description="Random seed for reproducibility.")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
+
 class NormalizerConfig(BaseModel):
     """
     Configuration for a normalizer.
@@ -329,6 +389,7 @@ EstimatorParams = Annotated[
         GaussianProcessEstimatorParams,
         MDNEstimatorParams,
         CVAEEstimatorParams,
+        INNEstimatorParams,
     ],
     Field(discriminator="type"),
 ]

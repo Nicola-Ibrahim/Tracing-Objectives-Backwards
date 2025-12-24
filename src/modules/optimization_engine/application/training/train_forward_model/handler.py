@@ -57,7 +57,6 @@ class TrainForwardModelCommandHandler:
         ]
         random_state = command.random_state
         learning_curve_steps = command.learning_curve_steps
-        epochs = command.epochs
 
         estimator = self._estimator_factory.create(params=estimator_params)
         validation_metrics = self._metric_factory.create_multiple(

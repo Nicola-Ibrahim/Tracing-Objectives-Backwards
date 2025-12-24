@@ -54,6 +54,9 @@ def main():
                 type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
             ),
             InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.INN, version=1, dataset_name="cocoex_f5"
+            ),
+            InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"
             ),
             InverseEstimatorCandidate(

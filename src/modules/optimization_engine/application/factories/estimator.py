@@ -1,13 +1,16 @@
 from typing import Any, Callable, Dict
 
+from ...application.training.registry import ESTIMATOR_PARAM_REGISTRY
 from ...domain.modeling.enums.estimator_type import (
     EstimatorTypeEnum,
 )
 from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
-from ...application.training.registry import ESTIMATOR_PARAM_REGISTRY
-from ...domain.modeling.value_objects.estimator_params import EstimatorParamsBase
+from ...domain.modeling.value_objects.estimator_params import (
+    COCOEstimatorParams,
+    EstimatorParamsBase,
+)
 from ...infrastructure.modeling.estimators.deterministic import (
     GaussianProcessEstimator,
     NearestNDEstimator,
@@ -17,9 +20,9 @@ from ...infrastructure.modeling.estimators.deterministic import (
 from ...infrastructure.modeling.estimators.deterministic.coco_biobj_function import (
     COCOEstimator,
 )
-from ...domain.modeling.value_objects.estimator_params import COCOEstimatorParams
 from ...infrastructure.modeling.estimators.probabilistic import (
     CVAEEstimator,
+    INNEstimator,
     MDNEstimator,
 )
 
@@ -39,6 +42,7 @@ class EstimatorFactory:
         EstimatorTypeEnum.CVAE.value: CVAEEstimator,
         EstimatorTypeEnum.MDN.value: MDNEstimator,
         EstimatorTypeEnum.COCO.value: COCOEstimator,
+        EstimatorTypeEnum.INN.value: INNEstimator,
     }
 
     def create(self, params: EstimatorParamsBase | dict[str, Any]) -> BaseEstimator:
