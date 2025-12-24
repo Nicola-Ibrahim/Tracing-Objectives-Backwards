@@ -6,10 +6,8 @@ from ...domain.modeling.enums.estimator_type import (
 from ...domain.modeling.interfaces.base_estimator import (
     BaseEstimator,
 )
-from ...domain.modeling.value_objects.estimator_params import (
-    ESTIMATOR_PARAMS_BY_TYPE,
-    EstimatorParamsBase,
-)
+from ...application.training.registry import ESTIMATOR_PARAM_REGISTRY
+from ...domain.modeling.value_objects.estimator_params import EstimatorParamsBase
 from ...infrastructure.modeling.estimators.deterministic import (
     GaussianProcessEstimator,
     NearestNDEstimator,
@@ -66,7 +64,7 @@ class EstimatorFactory:
             mapper_class_type = estimator_params.type
         else:
             mapper_class_type = params.get("type")
-            params_model = ESTIMATOR_PARAMS_BY_TYPE.get(mapper_class_type)
+            params_model = ESTIMATOR_PARAM_REGISTRY.get(mapper_class_type)
             if params_model is None:
                 raise ValueError(
                     f"Unsupported estimator params type: {mapper_class_type!r}"

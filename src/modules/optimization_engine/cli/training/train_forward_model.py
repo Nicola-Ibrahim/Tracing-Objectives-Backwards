@@ -12,7 +12,7 @@ from ...application.training.train_forward_model.command import (
 from ...application.training.train_forward_model.handler import (
     TrainForwardModelCommandHandler,
 )
-from ...domain.modeling.enums.estimator_key import EstimatorKeyEnum
+from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...infrastructure.datasets.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
@@ -21,9 +21,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 
-FORWARD_ESTIMATOR_KEYS: tuple[EstimatorKeyEnum, ...] = tuple(
-    ESTIMATOR_PARAM_REGISTRY.keys()
-)
+FORWARD_ESTIMATOR_KEYS: tuple[EstimatorTypeEnum, ...] = tuple()
 
 
 @click.group(help="Train a forward model (single train/test split workflow)")
@@ -34,8 +32,8 @@ def cli() -> None:
 @cli.command(name="standard", help="Single train/test split training")
 @click.option(
     "--estimator",
-    type=click.Choice(sorted([k.value for k in FORWARD_ESTIMATOR_KEYS])),
-    default=EstimatorKeyEnum.MDN.value,
+    type=click.Choice([k.value for k in ESTIMATOR_PARAM_REGISTRY.keys()]),
+    default=EstimatorTypeEnum.MDN.value,
     show_default=True,
     help="Which estimator configuration to use.",
 )
@@ -53,8 +51,7 @@ def command_standard(estimator: str, dataset_name: str) -> None:
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
     )
-    estimator_key = EstimatorKeyEnum(estimator)
-    estimator_params = ESTIMATOR_PARAM_REGISTRY[estimator_key]()
+    estimator_params = ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator)]()
     command = TrainForwardModelCommand(
         dataset_name=dataset_name,
         estimator_params=estimator_params,

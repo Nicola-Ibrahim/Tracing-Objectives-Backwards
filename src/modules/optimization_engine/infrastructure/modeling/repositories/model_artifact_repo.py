@@ -3,32 +3,18 @@ from datetime import datetime
 from pathlib import Path
 
 from .....shared.config import ROOT_PATH
+from ....application.factories.estimator import EstimatorFactory
+from ....application.training.registry import ESTIMATOR_PARAM_REGISTRY
 from ....domain.modeling.entities.model_artifact import ModelArtifact
+from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
-from ....domain.modeling.value_objects.estimator_params import (
-    ESTIMATOR_PARAMS_BY_TYPE,
-    EstimatorParamsBase,
-)
+from ....domain.modeling.value_objects.estimator_params import EstimatorParamsBase
 from ...processing.files.json import JsonFileHandler
 from ...processing.files.safetensors import SafeTensorsFileHandler
 from ...processing.files.toml import TomlFileHandler
-from ..estimators.deterministic.coco_biobj_function import COCOEstimator
-
-# Import estimators for registry
-from ..estimators.probabilistic.cvae import CVAEEstimator
-from ..estimators.probabilistic.inn import INNEstimator
-from ..estimators.probabilistic.mdn import MDNEstimator
-
-# Estimator registry for loading from checkpoint
-ESTIMATOR_REGISTRY = {
-    "mdn": MDNEstimator,
-    "cvae": CVAEEstimator,
-    "inn": INNEstimator,
-    "coco": COCOEstimator,
-}
 
 
 class VersionManager:
@@ -242,11 +228,18 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             parameters["training_history"] = loaded_training_history
 
         # Look up estimator class from registry
-        estimator_class = ESTIMATOR_REGISTRY.get(parameters.get("type"))
+        try:
+            estimator_type = EstimatorTypeEnum(parameters.get("type"))
+        except ValueError as exc:
+            raise ValueError(
+                f"Unknown estimator type: {parameters.get('type')}. "
+                f"Available types: {[e.value for e in EstimatorTypeEnum]}"
+            ) from exc
+        estimator_class = EstimatorFactory._registry.get(estimator_type.value)
         if not estimator_class:
             raise ValueError(
                 f"Unknown estimator type: {parameters.get('type')}. "
-                f"Available types: {list(ESTIMATOR_REGISTRY.keys())}"
+                f"Available types: {list(EstimatorFactory._registry.keys())}"
             )
 
         # Rebuild estimator from parameters (which now contains checkpoint data)
@@ -272,7 +265,7 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 "val_loss": old_loss.get("val_loss", []),
             }
 
-        params_model = ESTIMATOR_PARAMS_BY_TYPE.get(parameters.get("type"))
+        params_model = ESTIMATOR_PARAM_REGISTRY.get(parameters.get("type"))
         if params_model is None:
             raise ValueError(
                 f"Unsupported estimator params type: {parameters.get('type')!r}"

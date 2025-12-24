@@ -34,7 +34,7 @@ class OptimizerFunctionEnum(Enum):
 
 
 class COCOEstimatorParams(EstimatorParamsBase):
-    type: Literal[EstimatorTypeEnum.COCO.value] = Field(
+    type: Literal["coco"] = Field(
         EstimatorTypeEnum.COCO.value,
         description="Type of the COCO interpolation method.",
     )
@@ -48,12 +48,8 @@ class COCOEstimatorParams(EstimatorParamsBase):
         le=55,
         description="COCO function index (1-55 for bbob-biobj).",
     )
-    instance_indices: int = Field(
-        1, ge=1, description="COCO instance index."
-    )
-    dimensions: int = Field(
-        2, ge=1, description="Problem dimensionality."
-    )
+    instance_indices: int = Field(1, ge=1, description="COCO instance index.")
+    dimensions: int = Field(2, ge=1, description="Problem dimensionality.")
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
@@ -61,7 +57,7 @@ class COCOEstimatorParams(EstimatorParamsBase):
 
 
 class NeuralNetworkEstimatorParams(EstimatorParamsBase):
-    type: Literal[EstimatorTypeEnum.NEURAL_NETWORK_ND.value] = Field(
+    type: Literal["neural_network_nd"] = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
@@ -82,7 +78,7 @@ class NeuralNetworkEstimatorParams(EstimatorParamsBase):
 
 
 class NearestNeighborsEstimatorParams(EstimatorParamsBase):
-    type: Literal[EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value] = Field(
+    type: Literal["nearest_neighbors_nd"] = Field(
         EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,
         description="Type of the nearest-neighbors interpolation method.",
     )
@@ -98,7 +94,7 @@ class RBFEstimatorParams(EstimatorParamsBase):
     RBFEstimator.
     """
 
-    type: Literal[EstimatorTypeEnum.RBF.value] = Field(
+    type: Literal["rbf"] = Field(
         EstimatorTypeEnum.RBF.value,
         description="Type of the radial basis function interpolation method.",
     )
@@ -141,7 +137,7 @@ class GaussianProcessEstimatorParams(EstimatorParamsBase):
     GaussianProcessEstimator.
     """
 
-    type: Literal[EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value] = Field(
+    type: Literal["gaussian_process_nd"] = Field(
         EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value,
         description="Type of the gaussian process interpolation method.",
     )
@@ -183,7 +179,7 @@ class MDNEstimatorParams(EstimatorParamsBase):
     MDNEstimator.
     """
 
-    type: Literal[EstimatorTypeEnum.MDN.value] = Field(
+    type: Literal["mdn"] = Field(
         EstimatorTypeEnum.MDN.value,
         description="Type of the Mixture Density Network interpolation method.",
     )
@@ -243,7 +239,7 @@ class CVAEEstimatorParams(EstimatorParamsBase):
     CVAEEstimator.
     """
 
-    type: Literal[EstimatorTypeEnum.CVAE.value] = Field(
+    type: Literal["cvae"] = Field(
         EstimatorTypeEnum.CVAE.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
@@ -336,14 +332,3 @@ EstimatorParams = Annotated[
     ],
     Field(discriminator="type"),
 ]
-
-
-ESTIMATOR_PARAMS_BY_TYPE: dict[str, type[EstimatorParamsBase]] = {
-    EstimatorTypeEnum.COCO.value: COCOEstimatorParams,
-    EstimatorTypeEnum.NEURAL_NETWORK_ND.value: NeuralNetworkEstimatorParams,
-    EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value: NearestNeighborsEstimatorParams,
-    EstimatorTypeEnum.RBF.value: RBFEstimatorParams,
-    EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value: GaussianProcessEstimatorParams,
-    EstimatorTypeEnum.MDN.value: MDNEstimatorParams,
-    EstimatorTypeEnum.CVAE.value: CVAEEstimatorParams,
-}

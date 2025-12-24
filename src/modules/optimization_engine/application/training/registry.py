@@ -1,4 +1,4 @@
-from ...domain.modeling.enums.estimator_key import EstimatorKeyEnum
+from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...domain.modeling.enums.metric_key import DefaultValidationMetricEnum
 from ...domain.modeling.value_objects.estimator_params import (
     COCOEstimatorParams,
@@ -17,13 +17,13 @@ DEFAULT_VALIDATION_METRICS: tuple[DefaultValidationMetricEnum, ...] = (
     DefaultValidationMetricEnum.R2,
 )
 
-ESTIMATOR_PARAM_REGISTRY: dict[EstimatorKeyEnum, type[EstimatorParamsBase]] = {
-    EstimatorKeyEnum.COCO: COCOEstimatorParams,
-    EstimatorKeyEnum.CVAE: CVAEEstimatorParams,
-    EstimatorKeyEnum.GAUSSIAN_PROCESS: GaussianProcessEstimatorParams,
-    EstimatorKeyEnum.MDN: MDNEstimatorParams,
-    EstimatorKeyEnum.NEURAL_NETWORK: NeuralNetworkEstimatorParams,
-    EstimatorKeyEnum.RBF: RBFEstimatorParams,
+ESTIMATOR_PARAM_REGISTRY: dict[EstimatorTypeEnum, type[EstimatorParamsBase]] = {
+    EstimatorTypeEnum.COCO: COCOEstimatorParams,
+    EstimatorTypeEnum.CVAE: CVAEEstimatorParams,
+    EstimatorTypeEnum.GAUSSIAN_PROCESS_ND: GaussianProcessEstimatorParams,
+    EstimatorTypeEnum.MDN: MDNEstimatorParams,
+    EstimatorTypeEnum.NEURAL_NETWORK_ND: NeuralNetworkEstimatorParams,
+    EstimatorTypeEnum.RBF: RBFEstimatorParams,
 }
 
 

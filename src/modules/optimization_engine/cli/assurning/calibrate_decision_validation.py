@@ -9,7 +9,7 @@ from ...application.assuring.calibrate_decision_validation.handler import (
     CalibrateDecisionValidationCommandHandler,
 )
 from ...application.training.registry import ESTIMATOR_PARAM_REGISTRY
-from ...domain.modeling.enums.estimator_key import EstimatorKeyEnum
+from ...domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from ...domain.modeling.value_objects.estimator_params import EstimatorParams
 from ...application.factories.assurance import (
     ConformalValidatorFactory,
@@ -24,7 +24,7 @@ from ...infrastructure.datasets.repositories.dataset_repository import (
 )
 from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 
-INVERSE_ESTIMATOR_KEYS: tuple[EstimatorKeyEnum, ...] = tuple(
+INVERSE_ESTIMATOR_KEYS: tuple[EstimatorTypeEnum, ...] = tuple(
     ESTIMATOR_PARAM_REGISTRY.keys()
 )
 
@@ -33,7 +33,7 @@ def _create_estimator_params(
     estimator_key: str,
 ) -> EstimatorParams:
     try:
-        params_cls = ESTIMATOR_PARAM_REGISTRY[EstimatorKeyEnum(estimator_key)]
+        params_cls = ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator_key)]
     except KeyError as exc:
         raise ValueError(f"Unsupported estimator '{estimator_key}'") from exc
     return params_cls()
@@ -43,7 +43,7 @@ def _create_estimator_params(
 @click.option(
     "--estimator",
     type=click.Choice(sorted([k.value for k in INVERSE_ESTIMATOR_KEYS])),
-    default=EstimatorKeyEnum.COCO.value,
+    default=EstimatorTypeEnum.COCO.value,
     show_default=True,
     help="Estimator configuration used for calibration",
 )
