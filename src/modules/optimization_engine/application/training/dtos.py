@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -9,11 +9,11 @@ from ...domain.modeling.enums.metric_type import MetricTypeEnum
 from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 
 
-class EstimatorParams(BaseModel):
+class EstimatorParamsBase(BaseModel):
     pass
 
 
-class COCOEstimatorParams(EstimatorParams):
+class COCOEstimatorParams(EstimatorParamsBase):
     type: str = Field(
         EstimatorTypeEnum.COCO.value,
         description="Type of the COCO interpolation method.",
@@ -24,7 +24,7 @@ class COCOEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class NeuralNetworkEstimatorParams(EstimatorParams):
+class NeuralNetworkEstimatorParams(EstimatorParamsBase):
     type: str = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
@@ -45,7 +45,7 @@ class NeuralNetworkEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class RBFEstimatorParams(EstimatorParams):
+class RBFEstimatorParams(EstimatorParamsBase):
     """
     Pydantic model to define and validate parameters for an
     RBFEstimator.
@@ -88,7 +88,7 @@ class RBFEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class GaussianProcessEstimatorParams(EstimatorParams):
+class GaussianProcessEstimatorParams(EstimatorParamsBase):
     """
     Pydantic model to define and validate parameters for a
     GaussianProcessEstimator.
@@ -130,7 +130,7 @@ class GaussianProcessEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class MDNEstimatorParams(EstimatorParams):
+class MDNEstimatorParams(EstimatorParamsBase):
     """
     Pydantic model to define and validate parameters for an
     MDNEstimator.
@@ -176,7 +176,7 @@ class MDNEstimatorParams(EstimatorParams):
         use_enum_values = True
 
 
-class CVAEEstimatorParams(EstimatorParams):
+class CVAEEstimatorParams(EstimatorParamsBase):
     """
     Pydantic model to define and validate parameters for a
     CVAEEstimator.
@@ -246,3 +246,16 @@ class ValidationMetricConfig(BaseModel):
 
     class Config:
         use_enum_values = True
+
+
+EstimatorParams = Annotated[
+    Union[
+        COCOEstimatorParams,
+        NeuralNetworkEstimatorParams,
+        RBFEstimatorParams,
+        GaussianProcessEstimatorParams,
+        MDNEstimatorParams,
+        CVAEEstimatorParams,
+    ],
+    Field(discriminator="type"),
+]

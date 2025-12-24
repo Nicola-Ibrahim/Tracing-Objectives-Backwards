@@ -1,5 +1,3 @@
-from typing import Type
-
 import click
 
 from ...application.assuring.calibrate_decision_validation.command import (
@@ -14,6 +12,7 @@ from ...application.training.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParams,
+    EstimatorParamsBase,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
     NeuralNetworkEstimatorParams,
@@ -32,7 +31,7 @@ from ...infrastructure.datasets.repositories.dataset_repository import (
 )
 from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 
-INVERSE_ESTIMATOR_REGISTRY: dict[str, Type[EstimatorParams]] = {
+INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParamsBase]] = {
     "cvae": CVAEEstimatorParams,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,

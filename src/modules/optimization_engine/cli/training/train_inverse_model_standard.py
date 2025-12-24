@@ -3,7 +3,7 @@ import click
 from ...application.training.dtos import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
-    EstimatorParams,
+    EstimatorParamsBase,
     GaussianProcessEstimatorParams,
     MDNEstimatorParams,
     NeuralNetworkEstimatorParams,
@@ -27,7 +27,7 @@ from ...infrastructure.modeling.repositories.model_artifact_repo import (
 )
 
 DEFAULT_VALIDATION_METRICS: tuple[str, ...] = ("MSE", "MAE", "R2")
-INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParams]] = {
+INVERSE_ESTIMATOR_REGISTRY: dict[str, type[EstimatorParamsBase]] = {
     "cvae": CVAEEstimatorParams,
     "gaussian_process": GaussianProcessEstimatorParams,
     "mdn": MDNEstimatorParams,
