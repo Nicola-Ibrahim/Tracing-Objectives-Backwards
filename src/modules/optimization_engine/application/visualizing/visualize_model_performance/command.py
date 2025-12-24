@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
@@ -21,6 +21,12 @@ class VisualizeModelPerformanceCommand(BaseModel):
         ge=1,
         description="Nth most recent model to visualize (1 = latest). Defaults to latest.",
     )
+
+    @model_validator(mode="after")
+    def _set_dataset_name(self) -> "VisualizeModelPerformanceCommand":
+        if self.dataset_name is None:
+            self.dataset_name = self.processed_file_name or self.data_file_name
+        return self
 
     class Config:
         use_enum_values = True

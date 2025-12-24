@@ -19,7 +19,7 @@ class VisualizeModelPerformanceCommandHandler:
 
     def execute(self, command: VisualizeModelPerformanceCommand) -> None:
         # 1) Load raw data and model artifact from repository
-        dataset_name = command.dataset_name or command.processed_file_name
+        dataset_name = command.dataset_name
         if command.model_number:
             all_versions = self._model_artificat_repo.get_all_versions(
                 estimator_type=command.estimator_type,

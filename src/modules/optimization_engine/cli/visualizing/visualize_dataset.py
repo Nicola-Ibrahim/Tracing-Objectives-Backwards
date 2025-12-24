@@ -20,11 +20,7 @@ from ...infrastructure.visualization.datasets.visualizer import PlotlyDatasetVis
     help="Dataset identifier to visualize.",
 )
 def main(dataset_name: str):
-    command = VisualizeDatasetCommand(
-        dataset_name=dataset_name,
-        data_file_name=dataset_name,
-        processed_file_name=dataset_name,
-    )
+    command = VisualizeDatasetCommand(dataset_name=dataset_name)
     handler = VisualizeDatasetCommandHandler(
         dataset_repo=FileSystemDatasetRepository(),
         visualizer=PlotlyDatasetVisualizer(),

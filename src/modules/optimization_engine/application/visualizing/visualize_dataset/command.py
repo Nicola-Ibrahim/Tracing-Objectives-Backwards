@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class VisualizeDatasetCommand(BaseModel):
-    dataset_name: str | None = None
-    data_file_name: str = "dataset"
-    processed_file_name: str = "dataset"
+    dataset_name: str = Field(
+        ...,
+        description="Dataset identifier to visualize.",
+    )

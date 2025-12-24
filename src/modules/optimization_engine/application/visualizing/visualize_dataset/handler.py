@@ -22,7 +22,7 @@ class VisualizeDatasetCommandHandler:
 
     def execute(self, command: VisualizeDatasetCommand) -> None:
         # 1) Load dataset aggregate
-        dataset_name = command.dataset_name or command.data_file_name
+        dataset_name = command.dataset_name
 
         dataset: Dataset = self._dataset_repo.load(name=dataset_name)
         if not dataset.processed:
