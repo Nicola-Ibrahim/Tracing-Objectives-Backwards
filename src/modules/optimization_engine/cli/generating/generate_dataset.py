@@ -13,6 +13,8 @@ from ...application.generating.generate_dataset.command import (
     OptimizerType,
     ProblemType,
 )
+from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
+from ...domain.modeling.value_objects.estimator_params import NormalizerConfig
 from ...application.generating.generate_dataset.handler import (
     GenerateDatasetCommandHandler,
 )
@@ -41,10 +43,8 @@ def generate_data(function_id: int):
     optimizer_config = ApplicationOptimizerConfig(
         type=OptimizerType.minimizer,
         generations=16,
-        seed=42,
         save_history=True,
         verbose=False,
-        pf=False,
     )
 
     # Build command from CLI arguments
@@ -53,6 +53,11 @@ def generate_data(function_id: int):
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
         dataset_name=f"cocoex_f{function_id}",
+        normalizer_config=NormalizerConfig(
+            type=NormalizerTypeEnum.HYPERCUBE, params={}
+        ),
+        test_size=0.2,
+        random_state=42,
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)

@@ -6,14 +6,19 @@ from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 class InverseEstimatorCandidate(BaseModel):
     """Represents a specific inverse estimator candidate (type, optional version, and dataset)."""
 
-    type: EstimatorTypeEnum
+    type: EstimatorTypeEnum = Field(
+        ...,
+        examples=[EstimatorTypeEnum.MDN.value],
+    )
     version: int | None = Field(
-        None,
+        ...,
         description="Specific integer version number (e.g., 1). If None, latest is used.",
+        examples=[1],
     )
     dataset_name: str | None = Field(
-        None,
+        ...,
         description="Dataset identifier associated with this estimator.",
+        examples=["dataset"],
     )
 
 
@@ -23,19 +28,30 @@ class CompareInverseModelsCommand(BaseModel):
     candidates: list[InverseEstimatorCandidate] = Field(
         ...,
         description="List of model candidates to compare.",
+        examples=[
+            [
+                {"type": EstimatorTypeEnum.MDN.value, "version": 1, "dataset_name": "dataset"}
+            ]
+        ],
     )
 
     forward_estimator_type: EstimatorTypeEnum = Field(
         ...,
         description="Type of the forward estimator (simulator) to use for validation.",
+        examples=[EstimatorTypeEnum.MDN.value],
     )
 
     num_samples: int = Field(
-        250,
+        ...,
         description="Number of samples to draw from the inverse model for each target.",
+        examples=[250],
     )
 
-    random_state: int = Field(42, description="Random seed for reproducibility.")
+    random_state: int = Field(
+        ...,
+        description="Random seed for reproducibility.",
+        examples=[42],
+    )
 
     @model_validator(mode="after")
     def _validate_datasets(self) -> "CompareInverseModelsCommand":

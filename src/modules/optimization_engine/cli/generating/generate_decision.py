@@ -67,6 +67,10 @@ def main():
         target_objective=[410, 1400],
         distance_tolerance=0.02,
         n_samples=10,
+        diversity_method="euclidean",
+        suggestion_noise_scale=0.05,
+        validation_enabled=True,
+        feasibility_enabled=True,
     )
 
     # Initialize the handler with pre-built services

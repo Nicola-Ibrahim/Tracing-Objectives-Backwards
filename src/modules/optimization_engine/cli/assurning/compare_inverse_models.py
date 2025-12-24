@@ -62,6 +62,8 @@ def cli():
     command = CompareInverseModelsCommand(
         candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
+        num_samples=250,
+        random_state=42,
     )
 
     handler.execute(command)

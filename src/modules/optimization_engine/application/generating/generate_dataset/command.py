@@ -24,12 +24,12 @@ class ApplicationProblemConfig(BaseModel):
         ge=1,
         le=56,
         description="The problem ID used within the COCO framework.",
-        example=5,
+        examples=[5],
     )
     type: ProblemType = Field(
         ...,
         description="The type of optimization problem to solve.",
-        example="biobj",
+        examples=["biobj"],
     )
 
 
@@ -37,10 +37,13 @@ class ApplicationAlgorithmConfig(BaseModel):
     type: AlgorithmType = Field(
         ...,
         description="The optimization algorithm to be used for solving the problem.",
-        example="nsga2",
+        examples=["nsga2"],
     )
     population_size: int = Field(
-        ..., gt=0, description="Size of the population in each generation.", example=200
+        ...,
+        gt=0,
+        description="Size of the population in each generation.",
+        examples=[200],
     )
 
 
@@ -48,54 +51,68 @@ class ApplicationOptimizerConfig(BaseModel):
     type: OptimizerType = Field(
         ...,
         description="The optimizer runner strategy.",
-        example="minimizer",
+        examples=["minimizer"],
     )
 
     generations: int = Field(
         ...,
         gt=1,
         description="Number of generations for the optimization process.",
-        example=16,
+        examples=[16],
     )
 
     save_history: bool = Field(
         ...,
         description="Whether to save the optimization history.",
-        example=True,
+        examples=[True],
     )
     verbose: bool = Field(
         ...,
         description="Whether to print verbose output during optimization.",
-        example=True,
+        examples=[True],
     )
 
 
 class GenerateDatasetCommand(BaseModel):
     problem_config: ApplicationProblemConfig = Field(
-        ..., description="Configuration of the optimization problem."
+        ...,
+        description="Configuration of the optimization problem.",
+        examples=[{"problem_id": 5, "type": "biobj"}],
     )
     algorithm_config: ApplicationAlgorithmConfig = Field(
-        ..., description="Configuration of the optimization algorithm."
+        ...,
+        description="Configuration of the optimization algorithm.",
+        examples=[{"type": "nsga2", "population_size": 200}],
     )
     optimizer_config: ApplicationOptimizerConfig = Field(
-        ..., description="Configuration of the optimizer execution."
+        ...,
+        description="Configuration of the optimizer execution.",
+        examples=[
+            {
+                "type": "minimizer",
+                "generations": 16,
+                "save_history": True,
+                "verbose": True,
+            }
+        ],
     )
     dataset_name: str = Field(
-        default="dataset",
+        ...,
         description="Identifier used when persisting dataset artifacts.",
+        examples=["dataset"],
     )
     normalizer_config: NormalizerConfig = Field(
-        default_factory=lambda: NormalizerConfig(
-            type=NormalizerTypeEnum.HYPERCUBE, params={}
-        ),
+        ...,
         description="Normalizer applied to train/test splits during post-processing.",
+        examples=[{"type": NormalizerTypeEnum.HYPERCUBE.value, "params": {}}],
     )
     test_size: float = Field(
-        0.2,
+        ...,
         gt=0.0,
         lt=1.0,
         description="Proportion of samples reserved for evaluation (post-processing).",
+        examples=[0.2],
     )
     random_state: int = Field(
-        42, description="Random seed used for the train/test partition."
+        ..., description="Random seed used for the train/test partition.", examples=[42]
     )
