@@ -1,22 +1,58 @@
+from enum import Enum
 from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
-from ...domain.modeling.enums.estimator_type import (
-    EstimatorTypeEnum,
-)
-from ...domain.modeling.enums.metric_type import MetricTypeEnum
-from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
+from ..enums.estimator_type import EstimatorTypeEnum
+from ..enums.metric_type import MetricTypeEnum
+from ..enums.normalizer_type import NormalizerTypeEnum
 
 
 class EstimatorParamsBase(BaseModel):
     pass
 
 
+class ActivationFunctionEnum(Enum):
+    RELU = "relu"
+    TANH = "tanh"
+    SIGMOID = "sigmoid"
+    SOFTPLUS = "softplus"
+    IDENTITY = "identity"
+
+
+class DistributionFamilyEnum(Enum):
+    NORMAL = "normal"
+    LAPLACE = "laplace"
+    LOGNORMAL = "lognormal"
+
+
+class OptimizerFunctionEnum(Enum):
+    SGD = "sgd"
+    ADAM = "adam"
+    RMSPROP = "rmsprop"
+    GRADIENT_DESCENT = "gradient_descent"
+
+
 class COCOEstimatorParams(EstimatorParamsBase):
-    type: str = Field(
+    type: Literal[EstimatorTypeEnum.COCO.value] = Field(
         EstimatorTypeEnum.COCO.value,
         description="Type of the COCO interpolation method.",
+    )
+    problem_name: str = Field(
+        "bbob-biobj",
+        description="COCO suite name for bi-objective problems.",
+    )
+    function_indices: int = Field(
+        5,
+        ge=1,
+        le=55,
+        description="COCO function index (1-55 for bbob-biobj).",
+    )
+    instance_indices: int = Field(
+        1, ge=1, description="COCO instance index."
+    )
+    dimensions: int = Field(
+        2, ge=1, description="Problem dimensionality."
     )
 
     class Config:
@@ -25,7 +61,7 @@ class COCOEstimatorParams(EstimatorParamsBase):
 
 
 class NeuralNetworkEstimatorParams(EstimatorParamsBase):
-    type: str = Field(
+    type: Literal[EstimatorTypeEnum.NEURAL_NETWORK_ND.value] = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
     )
@@ -37,11 +73,22 @@ class NeuralNetworkEstimatorParams(EstimatorParamsBase):
         1000, gt=0, description="Number of epochs for training the neural network."
     )
     learning_rate: float = Field(
-        1e-4, gt=0, description="Learning rate for the neural network optimizer."
+        1e-3, gt=0, description="Learning rate for the neural network optimizer."
     )
 
     class Config:
         extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
+
+
+class NearestNeighborsEstimatorParams(EstimatorParamsBase):
+    type: Literal[EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value] = Field(
+        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,
+        description="Type of the nearest-neighbors interpolation method.",
+    )
+
+    class Config:
+        extra = "forbid"
         use_enum_values = True
 
 
@@ -51,7 +98,7 @@ class RBFEstimatorParams(EstimatorParamsBase):
     RBFEstimator.
     """
 
-    type: str = Field(
+    type: Literal[EstimatorTypeEnum.RBF.value] = Field(
         EstimatorTypeEnum.RBF.value,
         description="Type of the radial basis function interpolation method.",
     )
@@ -94,7 +141,7 @@ class GaussianProcessEstimatorParams(EstimatorParamsBase):
     GaussianProcessEstimator.
     """
 
-    type: str = Field(
+    type: Literal[EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value] = Field(
         EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value,
         description="Type of the gaussian process interpolation method.",
     )
@@ -136,25 +183,39 @@ class MDNEstimatorParams(EstimatorParamsBase):
     MDNEstimator.
     """
 
-    type: str = Field(
+    type: Literal[EstimatorTypeEnum.MDN.value] = Field(
         EstimatorTypeEnum.MDN.value,
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
-        15, gt=0, description="The number of Gaussian mixture components for the MDN."
+        -1,
+        description="Number of mixture components (-1 triggers BIC-based selection).",
     )
     learning_rate: float = Field(
-        0.001, gt=0, description="Learning rate for the Adam optimizer."
+        1e-4, gt=0, description="Learning rate for the optimizer."
     )
-    epochs: int = Field(100, gt=0, description="Number of training epochs.")
-    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
-    hidden_layers: list[int] = Field(
-        [256, 256, 128, 128],
-        description="List defining the number of units in each hidden layer of the MDN.",
+    distribution_family: DistributionFamilyEnum = Field(
+        DistributionFamilyEnum.NORMAL,
+        description="Distribution family used for mixture components.",
     )
     gmm_boost: bool = Field(
-        False, description="Whether to apply GMM boosting to the MDN."
+        False, description="Whether to apply GMM-based initialization."
     )
+    hidden_layers: list[int] = Field(
+        [256, 128, 128],
+        description="List defining the number of units in each hidden layer of the MDN.",
+    )
+    hidden_activation_fn_name: ActivationFunctionEnum = Field(
+        ActivationFunctionEnum.RELU,
+        description="Activation function for hidden layers.",
+    )
+    optimizer_fn_name: OptimizerFunctionEnum = Field(
+        OptimizerFunctionEnum.ADAM,
+        description="Optimizer used for training.",
+    )
+    verbose: bool = Field(False, description="Enable verbose training logs.")
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(32, gt=0, description="Mini-batch size used in training.")
     val_size: float = Field(
         0.2,
         gt=0.0,
@@ -162,14 +223,14 @@ class MDNEstimatorParams(EstimatorParamsBase):
         description="Validation split fraction used during training.",
     )
     weight_decay: float = Field(
-        1e-4, ge=0.0, description="L2 weight decay applied during optimization."
+        0.0, ge=0.0, description="L2 weight decay applied during optimization."
     )
     clip_grad_norm: float | None = Field(
         None,
         ge=0.0,
         description="Optional gradient norm clipping threshold.",
     )
-    seed: int = Field(42, description="Random seed for reproducible MDN training.")
+    seed: int = Field(44, description="Random seed for reproducible MDN training.")
 
     class Config:
         extra = "forbid"
@@ -182,12 +243,12 @@ class CVAEEstimatorParams(EstimatorParamsBase):
     CVAEEstimator.
     """
 
-    type: str = Field(
+    type: Literal[EstimatorTypeEnum.CVAE.value] = Field(
         EstimatorTypeEnum.CVAE.value,
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
     latent_dim: int = Field(
-        16, gt=0, description="Dimensionality of the latent space in the CVAE."
+        8, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
     learning_rate: float = Field(
         0.001, gt=0, description="Learning rate for the Adam optimizer."
@@ -203,7 +264,20 @@ class CVAEEstimatorParams(EstimatorParamsBase):
         ge=0.0,
         description="Free nats threshold applied to KL divergence per dimension.",
     )
-    epochs: int = Field(100, gt=0, description="Number of training epochs.")
+    hidden: int = Field(128, gt=0, description="Hidden layer width for CVAE nets.")
+    decoder_min_logvar: float = Field(
+        -6.0, description="Lower clamp for decoder log-variance."
+    )
+    decoder_max_logvar: float = Field(
+        4.0, description="Upper clamp for decoder log-variance."
+    )
+    prior_min_logvar: float = Field(
+        -4.0, description="Lower clamp for prior log-variance."
+    )
+    prior_max_logvar: float = Field(
+        2.0, description="Upper clamp for prior log-variance."
+    )
+    epochs: int = Field(200, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     val_size: float = Field(
         0.2,
@@ -227,7 +301,8 @@ class NormalizerConfig(BaseModel):
         ..., description="The type of the normalizer to use."
     )
     params: dict[str, Any] = Field(
-        {}, description="Parameters specific to the normalizer type."
+        default_factory=dict,
+        description="Parameters specific to the normalizer type.",
     )
 
     class Config:
@@ -241,7 +316,8 @@ class ValidationMetricConfig(BaseModel):
 
     type: MetricTypeEnum = Field(..., description="The type of the metric to use.")
     params: dict[str, Any] = Field(
-        {}, description="Parameters specific to the metric type."
+        default_factory=dict,
+        description="Parameters specific to the metric type.",
     )
 
     class Config:
@@ -252,6 +328,7 @@ EstimatorParams = Annotated[
     Union[
         COCOEstimatorParams,
         NeuralNetworkEstimatorParams,
+        NearestNeighborsEstimatorParams,
         RBFEstimatorParams,
         GaussianProcessEstimatorParams,
         MDNEstimatorParams,
@@ -259,3 +336,14 @@ EstimatorParams = Annotated[
     ],
     Field(discriminator="type"),
 ]
+
+
+ESTIMATOR_PARAMS_BY_TYPE: dict[str, type[EstimatorParamsBase]] = {
+    EstimatorTypeEnum.COCO.value: COCOEstimatorParams,
+    EstimatorTypeEnum.NEURAL_NETWORK_ND.value: NeuralNetworkEstimatorParams,
+    EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value: NearestNeighborsEstimatorParams,
+    EstimatorTypeEnum.RBF.value: RBFEstimatorParams,
+    EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value: GaussianProcessEstimatorParams,
+    EstimatorTypeEnum.MDN.value: MDNEstimatorParams,
+    EstimatorTypeEnum.CVAE.value: CVAEEstimatorParams,
+}

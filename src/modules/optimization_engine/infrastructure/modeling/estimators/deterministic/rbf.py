@@ -6,14 +6,16 @@ from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
+from .....domain.modeling.value_objects.estimator_params import RBFEstimatorParams
 
 
 class RBFEstimator(DeterministicEstimator):
-    def __init__(
-        self, kernel: str = "thin_plate_spline", n_neighbors: int = 10
-    ) -> None:
+    def __init__(self, params: RBFEstimatorParams) -> None:
         """Initialize the RBF Inverse Decision Mapper."""
+        kernel = params.kernel
+        n_neighbors = params.n_neighbors
         super().__init__()
+        self.params = params
         self._model: RBFInterpolator = None
         self.neighbors = n_neighbors
         self.kernel = kernel

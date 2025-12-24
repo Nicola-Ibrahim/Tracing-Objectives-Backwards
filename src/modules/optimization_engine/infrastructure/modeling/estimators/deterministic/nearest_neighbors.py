@@ -5,10 +5,17 @@ from scipy.interpolate import NearestNDInterpolator
 from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
+from .....domain.modeling.value_objects.estimator_params import (
+    NearestNeighborsEstimatorParams,
+)
 
 
 class NearestNDEstimator(DeterministicEstimator):
     _interp_func: NearestNDInterpolator | None = None
+
+    def __init__(self, params: NearestNeighborsEstimatorParams) -> None:
+        super().__init__()
+        self.params = params
 
     def fit(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> None:
         # Ensure X is 2D (n_samples, n_features)

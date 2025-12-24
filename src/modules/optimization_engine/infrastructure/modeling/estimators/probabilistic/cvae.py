@@ -39,6 +39,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
+from .....domain.modeling.value_objects.estimator_params import CVAEEstimatorParams
 
 LOG2PI = float(np.log(2.0 * np.pi))
 
@@ -196,35 +197,19 @@ class CVAEEstimator(ProbabilisticEstimator):
     ───────────────────────────────────────────────────────────────────
     """
 
-    def __init__(
-        self,
-        latent_dim: int = 8,
-        learning_rate: float = 1e-3,
-        beta: float = 0.1,
-        kl_warmup: int = 100,
-        free_nats: float = 0.0,
-        hidden: int = 128,
-        decoder_min_logvar: float = -6.0,
-        decoder_max_logvar: float = 4.0,
-        prior_min_logvar: float = -4.0,
-        prior_max_logvar: float = 2.0,
-        epochs: int = 200,
-        batch_size: int = 128,
-        val_size: float = 0.2,
-        random_state: int = 42,
-    ):
+    def __init__(self, params: CVAEEstimatorParams):
         super().__init__()
-        self._latent_dim = latent_dim
-        self._learning_rate = learning_rate
-        self.beta = beta
-        self.beta_final = float(beta)
-        self.kl_warmup = kl_warmup
-        self.free_nats = free_nats
-        self._hidden = hidden
-        self._dec_min_lv = decoder_min_logvar
-        self._dec_max_lv = decoder_max_logvar
-        self._prior_min_lv = prior_min_logvar
-        self._prior_max_lv = prior_max_logvar
+        self._latent_dim = params.latent_dim
+        self._learning_rate = params.learning_rate
+        self.beta = params.beta
+        self.beta_final = float(params.beta)
+        self.kl_warmup = params.kl_warmup
+        self.free_nats = params.free_nats
+        self._hidden = params.hidden
+        self._dec_min_lv = params.decoder_min_logvar
+        self._dec_max_lv = params.decoder_max_logvar
+        self._prior_min_lv = params.prior_min_logvar
+        self._prior_max_lv = params.prior_max_logvar
 
         self._encoder: CVAEEncoder
         self._decoder: CVAEDecoderGaussian
@@ -235,10 +220,10 @@ class CVAEEstimator(ProbabilisticEstimator):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.val_size = val_size
-        self.random_state = random_state
+        self.epochs = params.epochs
+        self.batch_size = params.batch_size
+        self.val_size = params.val_size
+        self.random_state = params.random_state
 
     @property
     def type(self) -> str:
@@ -610,8 +595,8 @@ class CVAEEstimator(ProbabilisticEstimator):
             if k not in checkpoint_fields and k not in ["type", "mapping_direction"]
         }
 
-        # Create estimator instance
-        estimator = cls(**parsed_params)
+        estimator_params = CVAEEstimatorParams(**parsed_params)
+        estimator = cls(params=estimator_params)
 
         # Restore dimensions
         estimator._cond_dim = parameters.get("cond_dim")

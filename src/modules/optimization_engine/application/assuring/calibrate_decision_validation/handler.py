@@ -59,9 +59,7 @@ class CalibrateDecisionValidationCommandHandler:
         decisions = processed_data.decisions_train
         objectives = processed_data.objectives_train
 
-        estimator = self._estimator_factory.create(
-            command.estimator_params.model_dump()
-        )
+        estimator = self._estimator_factory.create(command.estimator_params)
 
         ood_validator = self._ood_validator_factory.create(
             command.ood_validator_params.model_dump()

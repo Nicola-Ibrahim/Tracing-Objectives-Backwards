@@ -5,6 +5,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from ..interfaces.base_estimator import BaseEstimator
+from ..value_objects.estimator_params import EstimatorParams
 from ..value_objects.metrics import Metrics
 
 
@@ -24,9 +25,21 @@ class ModelArtifact(BaseModel):
         description="Unique identifier for this specific training run/model version.",
     )
 
-    parameters: dict[str, Any] = Field(
+    parameters: EstimatorParams = Field(
         ...,
-        description="The parameters used to initialize or configure this specific model instance/run.",
+        description="The estimator configuration used to initialize this model instance/run.",
+    )
+    mapping_direction: str = Field(
+        default="inverse",
+        description="Mapping direction used for training (inverse or forward).",
+    )
+    dataset_name: str = Field(
+        default="dataset",
+        description="Dataset identifier associated with this model run.",
+    )
+    run_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional training metadata (cv splits, grid search summary, etc.).",
     )
     estimator: BaseEstimator = Field(
         ...,
@@ -62,10 +75,13 @@ class ModelArtifact(BaseModel):
     def from_data(
         cls,
         id: str,
-        parameters: dict[str, Any],
+        parameters: EstimatorParams,
         estimator: BaseEstimator,
         metrics: Metrics,
         training_history: dict[str, list[float]],
+        mapping_direction: str = "inverse",
+        dataset_name: str = "dataset",
+        run_metadata: dict[str, Any] | None = None,
         trained_at: datetime | None = None,
         version: int | None = None,
     ) -> Self:
@@ -79,6 +95,9 @@ class ModelArtifact(BaseModel):
             parameters=parameters,
             metrics=metrics,
             training_history=training_history,
+            mapping_direction=mapping_direction,
+            dataset_name=dataset_name,
+            run_metadata=run_metadata or {},
             trained_at=trained_at,
             version=version,
         )
@@ -86,10 +105,13 @@ class ModelArtifact(BaseModel):
     @classmethod
     def create(
         cls,
-        parameters: dict[str, Any],
+        parameters: EstimatorParams,
         estimator: BaseEstimator,
         metrics: Metrics,
         training_history: dict[str, list[float]],
+        mapping_direction: str = "inverse",
+        dataset_name: str = "dataset",
+        run_metadata: dict[str, Any] | None = None,
     ) -> Self:
         """
         Convenience factory that fills sensible defaults; pass only what you have.
@@ -100,4 +122,7 @@ class ModelArtifact(BaseModel):
             parameters=parameters,
             metrics=metrics,
             training_history=training_history,
+            mapping_direction=mapping_direction,
+            dataset_name=dataset_name,
+            run_metadata=run_metadata or {},
         )

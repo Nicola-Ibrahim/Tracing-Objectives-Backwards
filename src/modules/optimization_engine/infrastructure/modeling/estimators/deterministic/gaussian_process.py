@@ -11,6 +11,9 @@ from sklearn.gaussian_process.kernels import (
 from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
+from .....domain.modeling.value_objects.estimator_params import (
+    GaussianProcessEstimatorParams,
+)
 
 
 class GaussianProcessEstimator(DeterministicEstimator):
@@ -20,13 +23,7 @@ class GaussianProcessEstimator(DeterministicEstimator):
     uncertainty estimates.
     """
 
-    def __init__(
-        self,
-        kernel: Kernel | str = "Matern",
-        alpha: float = 1e-10,
-        n_restarts_optimizer: int = 10,
-        random_state: int = 42,
-    ) -> None:
+    def __init__(self, params: GaussianProcessEstimatorParams) -> None:
         """
         Initializes the Gaussian Process Regressor mapper.
 
@@ -38,11 +35,13 @@ class GaussianProcessEstimator(DeterministicEstimator):
             n_restarts_optimizer (int): Number of restarts of the optimizer for the kernel's hyperparameters.
             random_state (int): Seed for reproducibility.
         """
+        kernel = params.kernel
         super().__init__()
+        self.params = params
         self._model = None
-        self._alpha = alpha
-        self._n_restarts_optimizer = n_restarts_optimizer
-        self._random_state = random_state
+        self._alpha = params.alpha
+        self._n_restarts_optimizer = params.n_restarts_optimizer
+        self._random_state = params.random_state
 
         # Handle string input for common kernels
         if isinstance(kernel, str):

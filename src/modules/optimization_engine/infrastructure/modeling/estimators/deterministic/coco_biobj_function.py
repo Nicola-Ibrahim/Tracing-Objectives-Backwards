@@ -4,6 +4,7 @@ from cocoex import Problem as COCOProblem
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import DeterministicEstimator
+from .....domain.modeling.value_objects.estimator_params import COCOEstimatorParams
 
 
 class COCOEstimator(DeterministicEstimator):
@@ -12,25 +13,12 @@ class COCOEstimator(DeterministicEstimator):
     Maps decisions X -> objectives F using the configured COCO problem.
     """
 
-    def __init__(
-        self,
-        *,
-        problem_name: str = "bbob-biobj",
-        function_indices: int = 5,
-        instance_indices: int = 1,
-        dimensions: int = 2,
-    ) -> None:
-        super().__init__(
-            problem_name=problem_name,
-            function_indices=function_indices,
-            instance_indices=instance_indices,
-            dimensions=dimensions,
-        )
-        # Persist configuration so the estimator can be reconstructed after serialization
-        self.problem_name = problem_name
-        self.function_indices = function_indices
-        self.instance_indices = instance_indices
-        self.dimensions = dimensions
+    def __init__(self, params: COCOEstimatorParams) -> None:
+        problem_name = params.problem_name
+        function_indices = params.function_indices
+        instance_indices = params.instance_indices
+        dimensions = params.dimensions
+        super().__init__()
 
         self._problem = self._build_problem(
             problem_name,
@@ -142,4 +130,4 @@ class COCOEstimator(DeterministicEstimator):
             in ["problem_name", "function_indices", "instance_indices", "dimensions"]
         }
 
-        return cls(**config)
+        return cls(params=COCOEstimatorParams(**config))

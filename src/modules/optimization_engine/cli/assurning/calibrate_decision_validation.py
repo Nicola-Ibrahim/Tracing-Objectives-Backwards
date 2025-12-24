@@ -8,7 +8,7 @@ from ...application.assuring.calibrate_decision_validation.command import (
 from ...application.assuring.calibrate_decision_validation.handler import (
     CalibrateDecisionValidationCommandHandler,
 )
-from ...application.training.dtos import (
+from ...domain.modeling.value_objects.estimator_params import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParams,

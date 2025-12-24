@@ -47,7 +47,7 @@ class TrainInverseModelCommandHandler:
         y_test = processed_data.decisions_test
         mapping_direction = "inverse"
 
-        estimator_params = command.estimator_params.model_dump()
+        estimator_params = command.estimator_params
         metric_configs = [
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
@@ -60,13 +60,6 @@ class TrainInverseModelCommandHandler:
             configs=metric_configs
         )
         validation_metrics = {metric.name: metric for metric in validation_metrics}
-
-        parameters = {
-            **estimator.to_dict(),
-            "type": estimator.type,
-            "mapping_direction": mapping_direction,
-            "dataset_name": command.dataset_name,
-        }
 
         self._logger.log_info("Starting single train/test split workflow.")
         if isinstance(estimator, ProbabilisticEstimator):
@@ -97,9 +90,11 @@ class TrainInverseModelCommandHandler:
         self._logger.log_info("Model training (single split) completed.")
 
         artifact = ModelArtifact.create(
-            parameters=parameters,
+            parameters=command.estimator_params,
             estimator=fitted_estimator,
             metrics=metrics,
             training_history=training_history,
+            mapping_direction=mapping_direction,
+            dataset_name=command.dataset_name,
         )
         self._model_repository.save(artifact)

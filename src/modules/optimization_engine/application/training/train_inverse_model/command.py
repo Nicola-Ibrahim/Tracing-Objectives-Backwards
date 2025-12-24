@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
 
-from ..dtos import EstimatorParams, ValidationMetricConfig
+from ....domain.modeling.value_objects.estimator_params import (
+    EstimatorParams,
+    ValidationMetricConfig,
+)
 
 
 class TrainInverseModelCommand(BaseModel):

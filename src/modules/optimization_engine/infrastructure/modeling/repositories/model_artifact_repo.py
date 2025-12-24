@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 
 from .....shared.config import ROOT_PATH
@@ -8,6 +7,10 @@ from ....domain.modeling.entities.model_artifact import ModelArtifact
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import (
     BaseModelArtifactRepository,
+)
+from ....domain.modeling.value_objects.estimator_params import (
+    ESTIMATOR_PARAMS_BY_TYPE,
+    EstimatorParamsBase,
 )
 from ...processing.files.json import JsonFileHandler
 from ...processing.files.safetensors import SafeTensorsFileHandler
@@ -117,11 +120,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         if not model_artifact.id:
             raise ValueError("ModelArtifact entity must have a unique 'id' for saving.")
 
-        estimator_type = model_artifact.parameters.get("type", "unknown")
-        mapping_direction = model_artifact.parameters.get(
-            "mapping_direction", "inverse"
-        )
-        dataset_name = model_artifact.parameters.get("dataset_name", "dataset")
+        estimator_type = model_artifact.parameters.type
+        mapping_direction = model_artifact.mapping_direction
+        dataset_name = model_artifact.dataset_name
         models_directory = self._compute_models_directory(
             estimator_type, mapping_direction, dataset_name
         )
@@ -141,30 +142,21 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
         # Get checkpoint from estimator (contains model_state, dimensions, etc.)
         checkpoint = model_artifact.estimator.to_checkpoint()
 
-        # Get ALL init hyperparameters (including private ones like _hidden_layers)
-        hyperparams = model_artifact.estimator._collect_init_params_from_instance()
-
-        # Serialize enums to strings
-        serialized_hyperparams = {}
-        for k, v in hyperparams.items():
-            if isinstance(v, Enum):
-                serialized_hyperparams[k] = v.value
-            else:
-                serialized_hyperparams[k] = v
+        # Use command-provided estimator parameters for hyperparameter persistence
+        serialized_hyperparams = model_artifact.parameters.model_dump(mode="json")
 
         # Merge hyperparameters and checkpoint into parameters (flattened structure)
         # BUT extract training_history to ensure it's removed from checkpoint if it was there
         checkpoint.pop("training_history", None)
         model_state = checkpoint.pop("model_state", None)
         merged_parameters = {**serialized_hyperparams, **checkpoint}
-        merged_parameters["type"] = model_artifact.parameters.get("type")
+        merged_parameters.setdefault("type", model_artifact.parameters.type)
         merged_parameters["mapping_direction"] = mapping_direction
 
         # Build metadata without estimator/params/training history
         metadata = model_artifact.model_dump(
             exclude={"estimator", "parameters", "training_history", "metrics"}
         )
-        metadata["dataset_name"] = dataset_name
         metadata_toml = {
             "metadata": metadata,
             "parameters": merged_parameters,
@@ -220,7 +212,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 if history_path.exists():
                     loaded_training_history = self._json_file_handler.load(history_path)
         parameters = dict(parameters)
-        parameters.pop("dataset_name", None)
+        dataset_from_params = parameters.pop("dataset_name", None)
+        if "type" not in parameters and estimator_type:
+            parameters["type"] = estimator_type
 
         # Check if this is new format (checkpoint merged into parameters)
         # or old format (separate checkpoint field)
@@ -278,9 +272,25 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
                 "val_loss": old_loss.get("val_loss", []),
             }
 
+        params_model = ESTIMATOR_PARAMS_BY_TYPE.get(parameters.get("type"))
+        if params_model is None:
+            raise ValueError(
+                f"Unsupported estimator params type: {parameters.get('type')!r}"
+            )
+        allowed = set(params_model.model_fields.keys())
+        filtered = {k: v for k, v in parameters.items() if k in allowed}
+        estimator_params: EstimatorParamsBase = params_model.model_validate(filtered)
+        resolved_mapping_direction = metadata.get(
+            "mapping_direction", parameters.get("mapping_direction", "inverse")
+        )
+        resolved_dataset_name = metadata.get(
+            "dataset_name", dataset_from_params or "dataset"
+        )
+        run_metadata = metadata.get("run_metadata", {})
+
         return ModelArtifact.from_data(
             id=metadata.get("id"),
-            parameters=parameters,
+            parameters=estimator_params,
             estimator=estimator,
             metrics=metrics_payload,
             training_history=training_history,
@@ -288,6 +298,9 @@ class FileSystemModelArtifactRepository(BaseModelArtifactRepository):
             if isinstance(metadata.get("trained_at"), str)
             else metadata.get("trained_at"),
             version=metadata.get("version"),
+            mapping_direction=resolved_mapping_direction,
+            dataset_name=resolved_dataset_name,
+            run_metadata=run_metadata,
         )
 
     def get_all_versions(

@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from ....domain.modeling.value_objects.estimator_params import EstimatorParams
+
 
 class OODValidatorParams(BaseModel):
     method: str = Field(
@@ -36,6 +38,10 @@ class CalibrateDecisionValidationCommand(BaseModel):
     dataset_name: str = Field(
         default="dataset",
         description="Identifier of the processed dataset to use for calibration.",
+    )
+    estimator_params: EstimatorParams = Field(
+        ...,
+        description="Estimator configuration used for calibration.",
     )
 
     ood_validator_params: OODValidatorParams = Field(

@@ -9,6 +9,9 @@ from numpy.typing import NDArray
 from .....domain.modeling.interfaces.base_estimator import (
     DeterministicEstimator,
 )
+from .....domain.modeling.value_objects.estimator_params import (
+    NeuralNetworkEstimatorParams,
+)
 
 
 class Decoder(nn.Module):
@@ -74,14 +77,13 @@ class NNEstimator(DeterministicEstimator):
     an objective space to a decision space.
     """
 
-    def __init__(
-        self,
-        objective_dim: int = 2,
-        decision_dim: int = 2,
-        epochs: int = 1000,
-        learning_rate: float = 0.001,
-    ) -> None:
+    def __init__(self, params: NeuralNetworkEstimatorParams) -> None:
+        objective_dim = params.objective_dim
+        decision_dim = params.decision_dim
+        epochs = params.epochs
+        learning_rate = params.learning_rate
         # The decoder is part of this class's state
+        self.params = params
         self.decoder = Decoder(objective_dim=objective_dim, decision_dim=decision_dim)
         self.epochs = epochs
         self.learning_rate = learning_rate

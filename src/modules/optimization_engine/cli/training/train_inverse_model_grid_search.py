@@ -2,7 +2,7 @@ import click
 
 from ...application.factories.estimator import EstimatorFactory
 from ...application.factories.metrics import MetricFactory
-from ...application.training.dtos import (
+from ...domain.modeling.value_objects.estimator_params import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParams,

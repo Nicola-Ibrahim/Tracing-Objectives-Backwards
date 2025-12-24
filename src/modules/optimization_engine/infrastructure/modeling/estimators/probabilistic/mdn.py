@@ -21,7 +21,6 @@ Reference:
     Bishop, C. "Mixture Density Networks" (1994)
 """
 
-from enum import Enum
 from typing import Sequence
 
 import numpy as np
@@ -47,32 +46,12 @@ from umap import UMAP
 
 from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
-
-# ======================================================================
-# Data containers & Enums
-# ======================================================================
-
-
-class ActivationFunctionEnum(Enum):
-    RELU = "relu"
-    TANH = "tanh"
-    SIGMOID = "sigmoid"
-    SOFTPLUS = "softplus"
-    IDENTITY = "identity"
-
-
-class DistributionFamilyEnum(Enum):
-    NORMAL = "normal"
-    LAPLACE = "laplace"
-    LOGNORMAL = "lognormal"  # interpret mu, sigma as log-space params
-
-
-class OptimizerFunctionEnum(Enum):
-    SGD = "sgd"
-    ADAM = "adam"
-    RMSPROP = "rmsprop"
-    GRADIENT_DESCENT = "gradient_descent"  # alias to SGD
-
+from .....domain.modeling.value_objects.estimator_params import (
+    ActivationFunctionEnum,
+    DistributionFamilyEnum,
+    MDNEstimatorParams,
+    OptimizerFunctionEnum,
+)
 
 # ======================================================================
 # MDN module
@@ -269,32 +248,28 @@ class MDNEstimator(ProbabilisticEstimator):
       - get_mixture_parameters(X) -> (pi, mu, sigma) as numpy arrays
     """
 
-    def __init__(
-        self,
-        num_mixtures: int = -1,
-        learning_rate: float = 1e-4,
-        distribution_family: DistributionFamilyEnum = DistributionFamilyEnum.NORMAL,
-        gmm_boost: bool = False,
-        hidden_layers: list[int] = [256, 128, 128],
-        hidden_activation_fn_name: ActivationFunctionEnum = ActivationFunctionEnum.RELU,
-        optimizer_fn_name: OptimizerFunctionEnum = OptimizerFunctionEnum.ADAM,
-        verbose: bool = False,
-        epochs: int = 100,
-        batch_size: int = 32,
-        val_size: float = 0.2,
-        weight_decay: float = 0.0,
-        clip_grad_norm: float | None = None,
-        seed: int = 44,
-    ):
+    def __init__(self, params: MDNEstimatorParams):
         super().__init__()
-        self._num_mixtures = num_mixtures
-        self._learning_rate = learning_rate
-        self._distribution_family = distribution_family
-        self._gmm_boost = gmm_boost
-        self._hidden_layers = hidden_layers
-        self._hidden_activation_fn_name = hidden_activation_fn_name
-        self._optimizer_fn_name = optimizer_fn_name
-        self._verbose = verbose
+        self._num_mixtures = params.num_mixtures
+        self._learning_rate = params.learning_rate
+        self._distribution_family = (
+            DistributionFamilyEnum(params.distribution_family)
+            if isinstance(params.distribution_family, str)
+            else params.distribution_family
+        )
+        self._gmm_boost = params.gmm_boost
+        self._hidden_layers = params.hidden_layers
+        self._hidden_activation_fn_name = (
+            ActivationFunctionEnum(params.hidden_activation_fn_name)
+            if isinstance(params.hidden_activation_fn_name, str)
+            else params.hidden_activation_fn_name
+        )
+        self._optimizer_fn_name = (
+            OptimizerFunctionEnum(params.optimizer_fn_name)
+            if isinstance(params.optimizer_fn_name, str)
+            else params.optimizer_fn_name
+        )
+        self._verbose = params.verbose
 
         self._model: MDN | None = None
         self._clusterer: GaussianMixture = None
@@ -302,12 +277,12 @@ class MDNEstimator(ProbabilisticEstimator):
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.val_size = val_size
-        self.weight_decay = weight_decay
-        self.clip_grad_norm = clip_grad_norm
-        self.seed = seed
+        self.epochs = params.epochs
+        self.batch_size = params.batch_size
+        self.val_size = params.val_size
+        self.weight_decay = params.weight_decay
+        self.clip_grad_norm = params.clip_grad_norm
+        self.seed = params.seed
 
     @property
     def type(self) -> str:
@@ -735,8 +710,8 @@ class MDNEstimator(ProbabilisticEstimator):
             else:
                 parsed_params[key] = value
 
-        # Create estimator instance
-        estimator = cls(**parsed_params)
+        estimator_params = MDNEstimatorParams(**parsed_params)
+        estimator = cls(params=estimator_params)
 
         # Restore dimensions from parameters
         estimator._X_dim = parameters.get("X_dim")
@@ -782,7 +757,9 @@ class MDNEstimator(ProbabilisticEstimator):
                 if torch.is_tensor(value_list):
                     model_state[key] = value_list.to(estimator._device)
                 else:
-                    model_state[key] = torch.tensor(value_list, device=estimator._device)
+                    model_state[key] = torch.tensor(
+                        value_list, device=estimator._device
+                    )
 
             estimator._model.load_state_dict(model_state)
             estimator._model.eval()

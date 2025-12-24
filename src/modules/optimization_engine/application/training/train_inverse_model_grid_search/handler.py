@@ -46,7 +46,7 @@ class TrainInverseModelGridSearchCommandHandler:
         y_test = processed_data.decisions_test
         mapping_direction = "inverse"
 
-        estimator_params = command.estimator_params.model_dump()
+        estimator_params = command.estimator_params
         metric_configs = [
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
@@ -63,14 +63,7 @@ class TrainInverseModelGridSearchCommandHandler:
         )
         validation_metrics = {metric.name: metric for metric in validation_metrics}
 
-        parameters = {
-            **estimator.to_dict(),
-            "type": estimator.type,
-            "mapping_direction": mapping_direction,
-            "cv_splits": cv_splits,
-            "grid_searched_param": tune_param_name,
-            "dataset_name": command.dataset_name,
-        }
+        parameters_for_search = command.estimator_params.model_dump()
 
         (
             fitted_estimator,
@@ -86,7 +79,7 @@ class TrainInverseModelGridSearchCommandHandler:
             param_name=tune_param_name,
             param_range=tune_param_range,
             validation_metrics=validation_metrics,
-            parameters=parameters,
+            parameters=parameters_for_search,
             random_state=random_state,
             cv=cv_splits,
             epochs=epochs,
@@ -95,10 +88,17 @@ class TrainInverseModelGridSearchCommandHandler:
         self._logger.log_info("Grid search workflow completed.")
 
         artifact = ModelArtifact.create(
-            parameters={**parameters, "grid_search_summary": search_summary},
+            parameters=command.estimator_params,
             estimator=fitted_estimator,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=loss_history,
+            mapping_direction=mapping_direction,
+            dataset_name=command.dataset_name,
+            run_metadata={
+                "cv_splits": cv_splits,
+                "grid_searched_param": tune_param_name,
+                "grid_search_summary": search_summary,
+            },
         )
 
         self._model_repository.save(artifact)

@@ -46,7 +46,7 @@ class TrainInverseModelCrossValidationCommandHandler:
         y_test = processed_data.decisions_test
         mapping_direction = "inverse"
 
-        estimator_params = command.estimator_params.model_dump()
+        estimator_params = command.estimator_params
         metric_configs = [
             cfg.model_dump() for cfg in command.estimator_performance_metric_configs
         ]
@@ -60,14 +60,6 @@ class TrainInverseModelCrossValidationCommandHandler:
             configs=metric_configs
         )
         validation_metrics = {metric.name: metric for metric in validation_metrics}
-
-        parameters = {
-            **estimator.to_dict(),
-            "type": estimator.type,
-            "mapping_direction": mapping_direction,
-            "cv_splits": cv_splits,
-            "dataset_name": command.dataset_name,
-        }
 
         fitted_estimator, loss_history, metrics = CrossValidationTrainer().validate(
             estimator=estimator,
@@ -84,10 +76,13 @@ class TrainInverseModelCrossValidationCommandHandler:
         self._logger.log_info("Cross-validation workflow completed.")
 
         artifact = ModelArtifact.create(
-            parameters=parameters,
+            parameters=command.estimator_params,
             estimator=fitted_estimator,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=loss_history,
+            mapping_direction=mapping_direction,
+            dataset_name=command.dataset_name,
+            run_metadata={"cv_splits": cv_splits},
         )
 
         self._model_repository.save(artifact)

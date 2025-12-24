@@ -1,6 +1,6 @@
 import click
 
-from ...application.training.dtos import (
+from ...domain.modeling.value_objects.estimator_params import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParams,
