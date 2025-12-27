@@ -4,7 +4,10 @@
 
 \chapter{Introduction}
 
-Many design problems in signal processing and related systems are posed in reverse. Practitioners often begin with a desired performance pattern and then ask which controllable settings will produce it. This viewpoint appears across familiar tasks: one may prescribe a frequency-response template and seek filter parameters, specify beam-shape constraints and seek array weights, target an operating point defined by fidelity and resource budgets and seek encoder settings, or work backward from desired detection characteristics to system parameters. In all of these cases, forward evaluation is routine, while inverse design is the bottleneck.
+Across science and engineering, we often specify or observe effects and then ask what causes or controllable settings could have produced them. Inverse problems formalise this reversal: the forward direction from parameters to outcomes may be clear through modelling or simulation, yet the reverse direction from outcomes back to plausible parameters can be ambiguous, unstable, or computationally demanding. This tension motivates a large body of work on regularisation and probabilistic formulations that restore robustness and represent uncertainty when direct inversion is not available or not meaningful.
+
+This inverse viewpoint shows up across engineered systems wherever performance is easier to measure than to prescribe directly in terms of underlying parameters. In signal-processing workflows, for example, designers commonly start from a performance template and work backward: one may prescribe a frequency-response shape and seek filter coefficients, specify a spatial beam pattern and seek array weights, target a rate--distortion operating point and seek encoder parameters, or work from desired detection behaviour back to system settings. In these cases, forward evaluation is straightforward, while inverse design becomes the practical bottleneck.
+
 
 To make this setting precise, let $\calX$ denote the space of controllable decisions $\vect{x}$ and let $\calY$ denote the space of measurable or computable performance descriptors $\vect{y}$. A forward model provides a mapping
 \begin{equation}
@@ -13,7 +16,7 @@ To make this setting precise, let $\calX$ denote the space of controllable decis
 implemented by analysis, simulation, or experiment. Inverse design asks the complementary question: given a target pattern $\vect{y}^{\star}\in\calY$, identify decisions $\vect{x}\in\calX$ whose forward outcomes match $\vect{y}^{\star}$ closely enough for the application.
 
 
-This inverse relationship is rarely a straightforward inversion. Hadamard characterises a problem as well posed when a solution exists, is unique, and depends continuously on the data; inverse problems frequently violate one or more of these conditions~\cite{KabanikhinSurvey}. Instability is especially common: small errors in measured or simulated outcomes, or small specification changes in $\vect{y}^{\star}$, can correspond to large changes in inferred decisions. Practical inverse design therefore requires additional structure to restore robustness, typically through regularisation that encodes preferences and stabilises inference, or through statistical formulations that represent uncertainty and non-uniqueness directly~\cite{BenningBurger2018,Stuart2010}.
+This inverse relationship is rarely a straightforward inversion. Hadamard characterises a problem as well posed when a solution exists, is unique, and depends continuously on the data; inverse problems frequently violate one or more of these conditions~\cite{KabanikhinSurvey}. Instability is especially common: small errors in measured or simulated outcomes, or small specification changes in $\vect{y}^{\star}$, can correspond to large changes in inferred decisions. Practical inverse design therefore requires additional structure to restore robustness, typically through regularisation that encodes preferences and stabilises inference, or through statistical formulations that represent uncertainty and non-uniqueness directly~\cite{Stuart2010}.
 
 
 Forward-only workflows address inverse questions indirectly by iteratively perturbing $\vect{x}$, re-evaluating the forward model, and repeating until the observed outcomes satisfy the specification. While effective in low-dimensional and cheap-to-evaluate settings, this strategy becomes expensive when forward evaluations are costly and provides limited insight into the inverse relationship itself. In particular, it does not naturally reveal when a target is unattainable, when multiple distinct designs satisfy essentially the same target, or how sensitive a design is to small changes in the specification.
@@ -22,7 +25,7 @@ This thesis studies an alternative approach that uses data to make inverse explo
 \begin{equation}
   \hat{g}:\calY \to \calX,
 \end{equation}
-that can be queried with a target $\vect{y}^{\star}$ to produce candidate decisions intended to realise that target. Modern machine learning models, including neural networks, are well suited to this role because they can approximate complex, high-dimensional nonlinear relationships from data and provide fast proposals at query time. When the inverse relationship is inherently multi-valued, probabilistic and generative modelling ideas provide a natural way to represent families of plausible decisions and to express ambiguity arising from noise, modelling mismatch, or limited data, rather than collapsing the problem to a single design point~\cite{Stuart2010,Ongie2020}.
+that can be queried with a target $\vect{y}^{\star}$ to produce candidate decisions intended to realise that target. Modern machine learning models, including neural networks, are well suited to this role because they can approximate complex, high-dimensional nonlinear relationships from data and provide fast proposals at query time. When the inverse relationship is inherently multi-valued, probabilistic and generative modelling ideas provide a natural way to represent families of plausible decisions and to express ambiguity arising from noise, modelling mismatch, or limited data, rather than collapsing the problem to a single design point.
 
 
 
@@ -56,6 +59,7 @@ The purpose of this thesis is to develop and assess a principled approach for in
 
 
 \section{Assumptions, limitations, and delimitations}
+\label{sec:assumptions-limitations-and-delimitaions}
 
 We assume access to a finite, publicly available collection of representative pairs
 $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^N$ generated by a forward process
@@ -72,80 +76,34 @@ The study uses publicly available decision--outcome examples to train a model th
 Candidate quality is established through forward verification. For each proposal, we compute or approximate $\vect{f}(\widehat{\vect{x}}^{(k)})$ and measure discrepancy to the target using a task-relevant outcome-space distance $d_{\calY}(\vect{f}(\widehat{\vect{x}}^{(k)}),\vect{y}^{\star})$. The method returns one or more candidates according to an explicit selection rule (for example, the lowest-discrepancy proposal), and evaluation on held-out targets reports both discrepancy and tolerance-based success. Because the output is a set, primary performance summaries are reported in set form, such as the best-achieved discrepancy over $K$ candidates per target, together with statistics that show how performance varies with $K$ and with target location relative to the outcome region covered by the data.
 
 
-% ------------------------------------------------------------------
-% \section{Contributions}
 
-% \begin{itemize}
-%   \item \textbf{Problem formulation.} We formalise inverse decision mapping in multi-objective
-%   settings, treating the inverse as an ill-posed inference task in the sense of Hadamard
-%   (non-uniqueness, instability, possible non-existence). This framing clarifies when targets
-%   may be unattainable or ambiguous and motivates regularisation/statistical treatments for
-%   meaningful reconstruction of decisions from desired outcomes. \cite{KabanikhinSurvey}
+%-------------------------------------------------------------------------------
+% Significance and contributions (suggested addition)
+% Place after "Problem statement and purpose" (or after "Research questions")
+%-------------------------------------------------------------------------------
+\section{Significance and contributions}
+Inverse design turns a familiar engineering workflow inside out: instead of asking what a given decision produces, we ask which decisions can realise a desired outcome. In signal-processing systems, that ``reverse'' question often dominates the real cost of design because it forces repeated forward evaluations, manual tuning, and ad hoc compromises when objectives conflict. The result is not only computational expense but also reduced transparency: it becomes difficult to tell whether a target is feasible, how many qualitatively different designs meet it, and how sensitive any proposed design is to small specification changes. A methodology that makes inverse exploration faster and more explicit therefore matters for both practical iteration and scientific understanding of the design space.
 
-%   \item \textbf{Comprehensive background.} We survey core concepts in multi-objective
-%   optimisation (problem structures, algorithmic families, and performance assessment)
-%   and review inverse-problem perspectives that inform stable learning of inverse maps.
-%   The survey integrates established MOO tutorials and modern views on regularisation and
-%   Bayesian inference for inverse problems. \cite{BenningBurger2018,Stuart2010}
+This thesis argues that data-driven inverse decision mapping can support that goal when it is paired with forward-model verification and evaluation protocols that respect non-uniqueness. Rather than treating the inverse map as a single ``answer,'' we treat it as a mechanism for proposing sets of candidate decisions, and we judge those candidates using the same forward process that defines the task. Concretely, the thesis makes the following contributions within the scope described in Section~\ref{sec:assumptions-limitations-and-delimitaions}:
+\begin{itemize}
+  \item A clear formulation of inverse decision mapping for multi-criteria targets.
+  We cast inverse design as learning a mapping from outcome space to decision space under ill-posedness, making feasibility, ambiguity, and sensitivity first-class concerns rather than afterthoughts.
 
-%   \item \textbf{General modelling approach.} We propose a data-driven approach to inverse
-%   exploration that learns a mapping $\hat{g}\colon\mathcal{Y}\!\to\!\mathcal{X}$ from representative
-%   examples (e.g., prior designs, historical runs, or exploratory evaluations). At query time,
-%   the method returns candidate decisions aligned with a user-specified objective pattern,
-%   with optional forward evaluation for verification/refinement. The approach is agnostic to
-%   how examples are obtained and does not rely on a specific optimisation paradigm.
+  \item A reproducible inverse-querying workflow grounded in forward verification.
+  We separate offline model fitting from online querying, generate multiple candidate decisions for a single target, and verify candidate quality through forward evaluation using explicit discrepancy measures in outcome space.
 
-%   \item \textbf{Deterministic and probabilistic models.} We develop and compare deterministic
-%   and probabilistic strategies for inverse exploration. Deterministic models emphasise
-%   parsimony and speed, using regularisation to counteract ill-posedness; probabilistic models
-%   represent distributions over decisions to expose uncertainty and multi-valued relationships.
-%   We highlight when each perspective is advantageous and how they can be combined in practice.
+  \item Set-based evaluation principles for one-to-many inverse mappings.
+  Because inverse solutions are typically not unique, we report performance in forms that reflect what a user actually receives (a candidate set), including best-achieved discrepancy over $K$ proposals and tolerance-based success rates as functions of $K$ and target location relative to data coverage.
 
-%   \item \textbf{Empirical evaluation.} Experiments on synthetic benchmarks and a real-world
-%   case study show that learned inverse mappings can recover decision candidates that match
-%   desired objective patterns while substantially reducing the number of forward evaluations
-%   compared with repeated forward search. We analyse accuracy–effort trade-offs and compare
-%   models across training-set sizes.
-% \end{itemize}
+  \item An empirical study of modelling choices and generalisation behaviour.
+  We compare modelling strategies for learning outcome-to-decision relationships and identify practical conditions under which they generalise reliably to unseen targets, highlighting failure modes tied to coverage and distribution shift.
+\end{itemize}
+Together, these contributions aim to make inverse design more interactive and more falsifiable: the model proposes, the forward process verifies, and the evaluation makes clear what worked, what failed, and why that matters for deploying inverse querying in practice.
 
-% ------------------------------------------------------------------
-\section{Structure of the Thesis}
+%-------------------------------------------------------------------------------
+% Dissertation structure (suggested addition)
+% Place at the end of Chapter 1
+%-------------------------------------------------------------------------------
+\section{Thesis structure}
+The remainder of this dissertation is organised as follows. Chapter~2 reviews background on inverse problems, ill-posedness, and data-driven approaches to inverse design, with emphasis on methods that represent non-uniqueness and uncertainty. Chapter~3 describes the proposed inverse-querying pipeline, including data preparation, model training, candidate generation, and the forward-verification protocol used for assessment. Chapter~4 presents experimental results on the selected benchmarks, reporting both discrepancy-based and tolerance-based metrics and analysing how performance varies with the number of generated candidates and with target location relative to the observed outcome region. Chapter~5 discusses the implications of these findings, including limitations, practical guidance for model selection, and open challenges for extending inverse querying beyond the controlled settings studied here. Chapter~6 concludes by summarising the main contributions and outlining directions for future work.
 
-The remainder of this thesis is organised as follows.
-
-Chapter~\ref{chap:motivation} provides background on multi-objective
-optimisation and inverse problems: it introduces core MOO concepts and
-performance assessment at a high level, reviews Hadamard’s well-posedness
-criteria and why inverse mappings are often ill-posed, and motivates a
-data-driven inverse viewpoint for design.
-
-Chapter~\ref{chap:related} surveys related work on learning inverse mappings
-from examples, including modelling strategies,
-surrogate-assisted and model-based approaches, and interactive decision support
-systems. Emphasis is placed on methods that are agnostic to data sources and
-optimisation paradigms.
-
-Chapter~\ref{chap:problem} formalises the inverse decision-mapping problem,
-clarifies assumptions (identifiability, stability), and states the research
-questions and evaluation criteria used throughout the thesis.
-
-Chapter~\ref{chap:method} presents the proposed approach for inverse
-exploration. We describe how representative \((\vect{x},\vect{y})\) examples
-can be collected from historical runs, simulations, or exploratory evaluations;
-how a mapping \(\hat{g}\colon \mathcal{Y}\!\to\!\mathcal{X}\) is learned; and how
-query-time proposals are generated and optionally verified by forward
-evaluation—without committing to a specific optimisation family.
-
-Chapter~\ref{chap:implementation} outlines practical aspects of the reference
-implementation used for experiments (data handling, model training/selection,
-querying, and visual diagnostics), with an emphasis on modular components.
-
-Chapter~\ref{chap:experiments} reports results on synthetic benchmarks and a
-real-world case study, comparing deterministic and probabilistic inverse
-models, analysing accuracy–effort trade-offs, and quantifying reductions in
-forward evaluations relative to repeated forward search.
-
-Chapter~\ref{chap:discussion} synthesises the empirical findings, discusses
-limitations and threats to validity, and reflects on when each modelling
-perspective is advantageous. Finally, Chapter~\ref{chap:conclusion} concludes
-and outlines avenues for future work.

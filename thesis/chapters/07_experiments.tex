@@ -8,6 +8,28 @@ This chapter presents the empirical findings for two experiments. Results are or
 
 \section{Experiment 1: COCO/bbob-biobj benchmarks}\label{sec:exp_coco}
 
+
+\subsection*{Multi-Objective Optimisation}
+
+A multi-objective optimisation problem (MOP) is defined by a vector of decision variables \(\vect{x}=(x_1,\dots,x_n)\in\calX\subset \R^n\) and a vector of objective functions \(\vect{f}=(f_1,\dots,f_m)\colon \calX\to \calY\subset \R^m\). Without loss of generality we consider all objectives to be minimised. A MOP can be written compactly as
+
+\begin{align} 
+\min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\ \text{s.t.}\; g_j(\vect{x}) &\le 0,\quad j=1,\dots,J,\\ h_k(\vect{x}) &= 0,\quad k=1,\dots,K, 
+\label{eq:mop}
+\end{align}
+
+
+where \(g_j\) and \(h_k\) denote inequality and equality constraints, respectively. The feasible region \(\calX\) is assumed to be a compact, connected subset of \(\R^n\). Each objective \(f_i\) may be non-convex, nonlinear and expensive to evaluate. Because objectives typically conflict, the goal is a \emph{set of trade-off
+designs} rather than a single optimum. A standard partial order uses
+\emph{Pareto dominance}: for \(\vect{u},\vect{v}\in\R^m\),
+\(\vect{u}\preceq\vect{v}\) iff \(u_i\le v_i\ \forall i\) and \(u_j<v_j\) for
+some \(j\). A feasible \(\vect{x}^\star\) is Pareto-optimal if no other
+\(\vect{x}\) satisfies \(\vect{f}(\vect{x})\preceq \vect{f}(\vect{x}^\star)\).
+See the references above for a concise survey of algorithmic families and
+assessment practices.
+MOPs arise in a broad spectrum of application domains, including engineering, economics, logistics, manufacturing and science~\cite{Tan2023}. In practice, objective functions often conflict: improving one performance metric deteriorates another. 
+
+
 \subsection*{Problem and data}
 We evaluate inverse mapping on the COCO \emph{bbob-biobj} test suite using the \texttt{cocoex} Python API. We select representative bi-objective problems that include the Linear Slope component from the single-objective suite (bbob $f_5$), such as F61 Ellipsoid/Linear Slope, and additional separable and multimodal combinations (e.g., F62 Rastrigin/B{\"u}che-Rastrigin, F63 Rastrigin/Linear Slope). For each chosen instance, we construct $\mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}$ by running a reference multi-objective optimiser (NSGA-II or MOEA/D) and logging decision–outcome pairs from the approximation set. Data are split into train/validation/test (80/10/10). To quantify data-size effects, we repeat training with $\{100,200,500\}$ training pairs. A forward surrogate $\widehat{\mathbf{f}}$ is trained on the same training split and used only where explicitly stated. Targets for inverse querying are drawn per problem by uniform sampling of 200 points inside the convex hull of training outcomes.
 

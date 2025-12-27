@@ -4,34 +4,16 @@
 
 \chapter{Background and Motivation}\label{chap:motivation}
 
-Inverse decision mapping builds on ideas from multi-objective optimisation (MOO)
-and inverse problems. This chapter introduces (i) a compact view of MOO and
-trade-off sets, (ii) the forward–inverse perspective and why inverse problems
-are often ill-posed, and (iii) practical ways to obtain representative
-\((\vect{x},\vect{y})\) pairs for learning an inverse map. We keep the
-discussion agnostic to any specific optimiser; Pareto-based tools are one
-useful option among several. For broad MOO fundamentals and assessment, see
-Deb~\cite{Deb2011Intro} and the tutorial by Emmerich \& Deutz~\cite{Emmerich2018Tutorial}.
+Inverse decision mapping begins with a basic asymmetry: generating outcomes from decisions is often straightforward, but recovering decisions from outcomes is typically ill-posed. Forward models can be evaluated by analysis, simulation, or experiment; the reverse direction must contend with non-uniqueness, instability, and sometimes infeasibility. Classical inverse-problems theory treats these difficulties as structural and addresses them by injecting additional information---for example through regularisation or Bayesian modelling---so that solutions remain stable under noise and modelling mismatch~\cite{Stuart2010}. The central point is that inverse design is rarely a clean algebraic inversion; it is an inference problem whose answers are shaped by the assumptions one is willing to encode.
 
-\section{Multi-Objective Optimisation}
+Recent work changes how those assumptions are represented. Instead of specifying all structure through handcrafted analytic penalties, learning-based approaches use data to capture recurring patterns in feasible solutions and to accelerate inverse querying at deployment. Surveys of data-driven inversion repeatedly highlight hybrid designs as the most dependable: learned components provide speed or expressive priors, while a trusted forward operator---when available---anchors fidelity by enforcing data consistency and enabling post-hoc verification~\cite{Liu2025Review}. Practically, the forward model also supplies a task-aligned scoring mechanism: it lets one rank candidate decisions by evaluating (or approximating) $f(\cdot)$ and measuring discrepancy in outcome space, even when the inverse model is imperfect away from the training distribution.
 
-A multi-objective optimisation problem (MOP) is defined by a vector of decision variables \(\vect{x}=(x_1,\dots,x_n)\in\calX\subset \R^n\) and a vector of objective functions \(\vect{f}=(f_1,\dots,f_m)\colon \calX\to \calY\subset \R^m\). Without loss of generality we consider all objectives to be minimised. A MOP can be written compactly as
+This hybrid viewpoint is especially natural when the inverse relationship is one-to-many. In such settings, forcing a single estimate can conceal meaningful ambiguity: multiple distinct decisions may satisfy the same specification, or satisfy it approximately with different trade-offs. Generative modelling instead treats the inverse map as a conditional mechanism that produces \emph{sets} of candidate decisions, often by restricting solutions to a learned low-dimensional range or manifold~\cite{Liu2025Review}. The implication is operational: inverse querying becomes the task of proposing diverse candidates and letting forward verification determine which ones meet the target under the chosen discrepancy measure.
 
-\begin{align} 
-\min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\ \text{s.t.}\; g_j(\vect{x}) &\le 0,\quad j=1,\dots,J,\\ h_k(\vect{x}) &= 0,\quad k=1,\dots,K, 
-\label{eq:mop}
-\end{align}
+These considerations place unusual pressure on the data used for learning. Paired examples $(\vect{x},\vect{y})$ must cover the outcome region where queries will be posed; otherwise, inverse models extrapolate and may express misleading confidence. In many engineering settings, such pairs arise from simulation sweeps, experimental campaigns, or design traces that intentionally explore trade-offs across objectives; these sources act as data generators rather than commitments to any single optimisation philosophy. Methodologically, successful inverse decision mapping therefore depends as much on coverage-aware data collection and forward-grounded evaluation as it does on model class and training loss.
 
 
-where \(g_j\) and \(h_k\) denote inequality and equality constraints, respectively. The feasible region \(\calX\) is assumed to be a compact, connected subset of \(\R^n\). Each objective \(f_i\) may be non-convex, nonlinear and expensive to evaluate. Because objectives typically conflict, the goal is a \emph{set of trade-off
-designs} rather than a single optimum. A standard partial order uses
-\emph{Pareto dominance}: for \(\vect{u},\vect{v}\in\R^m\),
-\(\vect{u}\preceq\vect{v}\) iff \(u_i\le v_i\ \forall i\) and \(u_j<v_j\) for
-some \(j\). A feasible \(\vect{x}^\star\) is Pareto-optimal if no other
-\(\vect{x}\) satisfies \(\vect{f}(\vect{x})\preceq \vect{f}(\vect{x}^\star)\).
-See the references above for a concise survey of algorithmic families and
-assessment practices.
-MOPs arise in a broad spectrum of application domains, including engineering, economics, logistics, manufacturing and science~\cite{Tan2023}. In practice, objective functions often conflict: improving one performance metric deteriorates another. 
+
 
 
 
