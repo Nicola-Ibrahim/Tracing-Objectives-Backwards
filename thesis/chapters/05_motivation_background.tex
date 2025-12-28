@@ -239,81 +239,89 @@ and then ranks or filters them using a task discrepancy that reflects the design
 Uncertainty is therefore not an auxiliary statistic but a functional part of the inverse pipeline. The spread of $p_{\widehat{\theta}}(\vect{x}\mid\vect{y}^{\star})$ reflects how concentrated the evidence is around particular decisions for the specified target, and it provides a natural basis for deciding how many candidates to generate and how conservative selection should be. Likelihood-based training and evaluation also align with this role, because they reward distributions that are calibrated as well as informative.
 
 
-\subsection{MDN, CVAE, INN}
-Write abou these estimators in details and how each one define the problem and what we are optimising, loss function, modelling distribution.
+\subsection{Mixture Density Networks}\label{sec:mdn}
 
+Mixture density networks model a conditional distribution by representing it as a finite mixture whose parameters depend on the conditioning variable. For a $K$-component Gaussian mixture, the conditional density is
+\begin{equation}
+  q_\theta(\vect{x}\mid\vect{y})
+  \;=\;
+  \sum_{k=1}^{K}\pi_k(\vect{y};\theta)\,
+  \mathcal{N}\!\big(\vect{x}\,;\,\boldsymbol{\mu}_k(\vect{y};\theta),\boldsymbol{\Sigma}_k(\vect{y};\theta)\big),
+  \label{eq:mdn_conditional}
+\end{equation}
+where $\pi_k(\vect{y};\theta)\ge 0$ and $\sum_{k=1}^{K}\pi_k(\vect{y};\theta)=1$. A neural network outputs the mixture weights, means, and covariance parameters as functions of $\vect{y}$, using standard constraints such as a softmax for $\pi_k$ and positive-definite parameterisations for $\boldsymbol{\Sigma}_k$. The parameters are learned by maximising the conditional log-likelihood, equivalently minimising the negative log-likelihood
+\begin{equation}
+  \mathcal{L}_{\mathrm{MDN}}(\theta)
+  \;=\;
+  -\sum_{i=1}^{N}
+  \log
+  \Bigg(
+    \sum_{k=1}^{K}\pi_k(\vect{y}_i;\theta)\,
+    \mathcal{N}\!\big(\vect{x}_i\,;\,\boldsymbol{\mu}_k(\vect{y}_i;\theta),\boldsymbol{\Sigma}_k(\vect{y}_i;\theta)\big)
+  \Bigg).
+  \label{eq:mdn_nll}
+\end{equation}
+Candidate generation is obtained directly from the mixture representation. For a query $\vect{y}^\star$, one samples a component index
+$k \sim \mathrm{Categorical}(\pi_1(\vect{y}^\star),\dots,\pi_K(\vect{y}^\star))$
+and then samples
+$\vect{x}\sim\mathcal{N}(\boldsymbol{\mu}_k(\vect{y}^\star),\boldsymbol{\Sigma}_k(\vect{y}^\star))$.
+Repeating this procedure produces a candidate set whose diversity is controlled by the learned mixture weights and component spreads. MDNs therefore provide an explicit, likelihood-trained mechanism for modelling multimodality in conditional candidate generation. \cite{bishop1994mixture}
 
+\subsection{Conditional Variational Autoencoders}\label{sec:cvae}
 
+Conditional variational autoencoders represent conditional variability through a latent variable $\vect{z}\in\mathbb{R}^d$ and define a conditional latent-variable model in which the conditional density is obtained by marginalising $\vect{z}$:
+\begin{equation}
+  p_\theta(\vect{x}\mid\vect{y})
+  \;=\;
+  \int p_\theta(\vect{x}\mid\vect{y},\vect{z})\,p_\theta(\vect{z}\mid\vect{y})\,\mathrm{d}\vect{z}.
+  \label{eq:cvae_marginal}
+\end{equation}
+Because the marginal likelihood is generally intractable, training proceeds by maximising an evidence lower bound using an approximate posterior (encoder) $q_\phi(\vect{z}\mid\vect{x},\vect{y})$:
+\begin{equation}
+  \log p_\theta(\vect{x}\mid\vect{y})
+  \;\ge\;
+  \mathbb{E}_{q_\phi(\vect{z}\mid\vect{x},\vect{y})}\!\big[\log p_\theta(\vect{x}\mid\vect{y},\vect{z})\big]
+  \;-\;
+  \mathrm{KL}\!\big(q_\phi(\vect{z}\mid\vect{x},\vect{y})\ \|\ p_\theta(\vect{z}\mid\vect{y})\big),
+  \label{eq:cvae_elbo}
+\end{equation}
+so the optimisation target is the negative of the right-hand side summed over the dataset. The reconstruction term encourages $\vect{x}$ to be well explained given $(\vect{y},\vect{z})$, while the KL term regularises the encoder distribution toward the conditional prior so that sampling remains meaningful. Candidate generation follows directly from the generative structure: for a query $\vect{y}^\star$, sample $\vect{z}\sim p_\theta(\vect{z}\mid\vect{y}^\star)$ and then sample or decode $\vect{x}\sim p_\theta(\vect{x}\mid\vect{y}^\star,\vect{z})$, repeating to obtain multiple candidates. Conditioning fixes the target context, while variation in $\vect{z}$ induces diversity in $\vect{x}$ under a fixed $\vect{y}^\star$. \cite{Sohn2015CVAE}
 
-% \subsection{Deterministic Modelling}\label{sec:deterministic_modelling}
+\subsection{Invertible Neural Networks (INN)}\label{sec:inn}
 
-% In the deterministic setting, the inverse model $g:\mathcal{Y}\!\to\!\mathcal{X}$ returns a single design $\hat{\vect{x}}=g(\vect{y}^{\star})$ for any target $\vect{y}^{\star}$. Training uses data $\mathcal{D}=\{(\vect{y}_i,\vect{x}_i)\}_{i=1}^{N}$ and a regularised objective to promote stability and generalisation. A basic formulation treats inverse learning as empirical risk minimisation in decision space,
-% \begin{equation}
-%   \widehat{g}
-%   \;\in\;
-%   \arg\min_{g\in\mathcal{G}}
-%   \frac{1}{N}\sum_{i=1}^{N}\ell_{\mathcal{X}}\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
-%   \;+\; \lambda\,\Omega(g),
-%   \label{eq:det_inv}
-% \end{equation}
-% where $\ell_{\mathcal{X}}$ penalises deviation from reference designs (e.g., $\|\hat{\vect{x}}-\vect{x}\|_2^2$ for continuous variables), $\Omega$ encodes inductive bias (e.g., weight decay, Jacobian control, early stopping), and $\lambda\!\ge\!0$ trades fit for complexity. This objective is effective when the mapping from $\vect{y}$ to a preferred $\vect{x}$ is essentially single-valued or when reproducing known recipes is desirable.
+Invertible neural networks enforce an exact bijection by augmenting the target with latent variables that capture the information not determined by the conditioning signal. A common construction defines an invertible map between $\vect{x}$ and the pair $(\vect{y},\vect{z})$,
+\begin{equation}
+  (\widehat{\vect{y}},\vect{z}) \;=\; f_\theta(\vect{x}),
+  \qquad
+  \vect{x} \;=\; f_\theta^{-1}(\vect{y},\vect{z}),
+  \label{eq:inn_bijection}
+\end{equation}
+where $\vect{z}$ is assigned a simple reference distribution, typically $\mathcal{N}(\vect{0},\mathbf{I})$. Training couples a supervised term that forces the forward pass to match the observed $\vect{y}$ with a distribution-matching term that shapes the latent variables. One representative objective is
+\begin{equation}
+  \min_\theta\;
+  \mathcal{L}_{\mathrm{INN}}(\theta)
+  \;=\;
+  \mathbb{E}\!\left[\,
+    \|\vect{y}-f_{\theta,y}(\vect{x})\|_2^2
+  \right]
+  \;+\;
+  \lambda_z\,
+  \mathrm{MMD}\!\Big(q_\theta(\vect{y},\vect{z}),\; p(\vect{y})\,p(\vect{z})\Big),
+  \label{eq:inn_loss}
+\end{equation}
+where $q_\theta(\vect{y},\vect{z})$ denotes the joint distribution induced by pushing data through the forward direction of the network and $\mathrm{MMD}$ is a kernel-based discrepancy between distributions. A standard definition is
+\begin{equation}
+  \mathrm{MMD}^2(P,Q)
+  \;=\;
+  \mathbb{E}_{u,u'\sim P}[k(u,u')]
+  \;+\;
+  \mathbb{E}_{v,v'\sim Q}[k(v,v')]
+  \;-\;
+  2\,\mathbb{E}_{u\sim P,\ v\sim Q}[k(u,v)],
+  \label{eq:mmd_def}
+\end{equation}
+for a characteristic kernel $k$. Candidate generation is explicit and does not require approximate inference: for a query $\vect{y}^\star$, sample $\vect{z}\sim \mathcal{N}(\vect{0},\mathbf{I})$ and compute $\vect{x}=f_\theta^{-1}(\vect{y}^\star,\vect{z})$, repeating to obtain a diverse candidate set. The invertibility constraint makes the mapping from latent variation to candidate diversity transparent and supports stable sampling for fixed conditioning. \cite{Ardizzone2019INN}
 
-% Inverse problems are often one-to-many, however, so it is natural to measure success in outcome space using a forward model $\vect{f}:\mathcal{X}\!\to\!\mathcal{Y}$ (a simulator or a frozen surrogate). A forward-validated or “tandem” objective trains $g$ so that its proposals \emph{produce} the targets:
-% \begin{equation}
-%   \widehat{g}
-%   \;\in\;
-%   \arg\min_{g\in\mathcal{G}}
-%   \frac{1}{N}\sum_{i=1}^{N}
-%   \ell_{\mathcal{Y}}\!\big(\,\vect{f}(g(\vect{y}_i))\,,\,\vect{y}_i\big)
-%   \;+\; \lambda\,\Omega(g),
-%   \label{eq:det_tandem}
-% \end{equation}
-% with $\ell_{\mathcal{Y}}$ an application-appropriate discrepancy in $\mathcal{Y}$ (e.g., scaled $\ell_2$, Mahalanobis, or a task metric). This objective naturally accommodates non-uniqueness by accepting any design whose forward response matches the target.
-
-% When one wishes to retain some preference for observed designs while enforcing outcome fidelity, a simple interpolation combines the two losses:
-% \begin{equation}
-%   \widehat{g}
-%   \;\in\;
-%   \arg\min_{g\in\mathcal{G}}
-%   \frac{1}{N}\sum_{i=1}^{N}
-%   \Big[
-%     \alpha\,\ell_{\mathcal{X}}\!\big(g(\vect{y}_i),\,\vect{x}_i\big)
-%     \;+\;
-%     (1-\alpha)\,\ell_{\mathcal{Y}}\!\big(\vect{f}(g(\vect{y}_i)),\,\vect{y}_i\big)
-%   \Big]
-%   \;+\; \lambda\,\Omega(g),
-%   \qquad \alpha\in[0,1].
-%   \label{eq:det_hybrid}
-% \end{equation}
-% Small $\alpha$ emphasises “any valid preimage” (useful under strong non-uniqueness); larger $\alpha$ softly anchors solutions near known designs (useful for manufacturability or established process windows). Hyperparameters (architecture, $\lambda$, and, if used, $\alpha$) are selected on validation data. At inference, a single forward pass yields $\hat{\vect{x}}=g(\vect{y}^{\star})$, which can be verified by evaluating $\vect{f}(\hat{\vect{x}})$ against $\vect{y}^{\star}$.
-
-% Deterministic training yields fast, reproducible proposals but collapses potentially multi-valued inverse relations to a point and does not natively quantify uncertainty or support diversity of candidates. In the broader framework of this thesis, these objectives are complemented by probabilistic models that learn conditional distributions (e.g., $p(\vect{x}\mid\vect{y})$ or $p(\vect{y}\mid\vect{x})$), enabling uncertainty estimates, calibrated scoring, and sampling-based exploration when multiple designs can realise the same target.
-
-
-
-
-% \subsection{Inverse-centric evaluation metrics}
-
-% Evaluation reflects the inverse goal: \emph{propose decisions that realise a desired outcome $\vect{y}^{\star}$}. In this thesis, each method returns a single decision per target (e.g., any probabilistic output is collapsed to a point estimate such as a mean, median, or MAP), and we therefore assess the quality of that proposed decision, irrespective of how it was generated.
-
-% We first quantify how close a proposed decision $\widehat{\vect{x}}$ comes to the target by measuring a discrepancy in the outcome space with a task-appropriate distance $d$:
-% \begin{equation}
-%   \mathcal{E}_{\mathcal{Y}}(\widehat{\vect{x}},\vect{y}^{\star})
-%   \;=\;
-%   d\!\left(\,\vect{f}(\widehat{\vect{x}})\,,\,\vect{y}^{\star}\right),
-%   \label{eq:target_error_clean}
-% \end{equation}
-% where $\vect{f}$ denotes the forward map from decision to outcome. The choice of $d$ should match the semantics and scales of the outcomes. In many settings, the Euclidean distance (the $\ell_2$ norm) is a natural default, especially after standardising outcome dimensions; see, for example, \cite{BoydVandenberghe2004}. When correlations between outcome components matter, the Mahalanobis distance provides a principled alternative by incorporating the outcome covariance; see the original development in \cite{Mahalanobis1936} and a modern tutorial in \cite{DeMaesschalck2000}. In application-driven contexts, $d$ may be defined by an accepted domain metric; in all cases, the definition of $d$ and any normalisation or weighting should be stated to support interpretability and reproducibility.
-
-% To complement the continuous error, we also report a tolerance-based success measure. For each target, we record a binary success indicator that answers the question “did the single proposed decision meet the specification?”:
-% \begin{equation}
-%   \mathrm{succ}^{(m)}_\epsilon
-%   \;=\;
-%   \mathbb{I}\!\left[\,d\!\left(\vect{f}\!\big(\widehat{\vect{x}}^{(m)}\big),\,\vect{y}^{\star (m)}\right)\le \epsilon\,\right],
-%   \label{eq:succ_eps_single}
-% \end{equation}
-
-% The tolerance $\epsilon$ should reflect domain limits (e.g., engineering tolerances or user-acceptable error). When such limits differ by component, it is helpful to define $d$ using per-component scaling or to report $\mathrm{Succ}_\epsilon$ at several tolerances (e.g., tight and relaxed bands) for a more complete picture. Alongside aggregate success, summary statistics of $\mathcal{E}_{\mathcal{Y}}$ across targets (e.g., median and interquartile range) convey both typical performance and variability.
 
 
 % In sum, $\mathcal{E}_{\mathcal{Y}}$ captures \emph{how close} we get to the target, while $\mathrm{Succ}_\epsilon$ captures \emph{whether} we satisfy a practically meaningful tolerance. Together they provide a concise, implementation-agnostic summary of decision quality that is easy to interpret and straightforward to reproduce.
