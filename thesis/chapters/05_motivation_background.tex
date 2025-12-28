@@ -13,76 +13,6 @@ This hybrid viewpoint is especially natural when the inverse relationship is one
 These considerations place unusual pressure on the data used for learning. Paired examples $(\vect{x},\vect{y})$ must cover the outcome region where queries will be posed; otherwise, inverse models extrapolate and may express misleading confidence. In many engineering settings, such pairs arise from simulation sweeps, experimental campaigns, or design traces that intentionally explore trade-offs across objectives; these sources act as data generators rather than commitments to any single optimisation philosophy. Methodologically, successful inverse decision mapping therefore depends as much on coverage-aware data collection and forward-grounded evaluation as it does on model class and training loss.
 
 
-
-\section{Learning-Based Inverse Decision Mapping}\label{sec:learning_inverse}
-
-Machine learning motivates inverse decision mapping as amortised inference: a neural network is trained offline on paired examples so that inverse queries can be answered quickly at deployment. Speed, however, does not eliminate the structural difficulty of inversion. The inverse relation may be multi-valued and unstable, which means that any method must decide how to represent ambiguity and how to reject candidates that do not satisfy the task definition. \cite{Arridge2019,Ongie2020,Stuart2010}
-
-We formalise the task with a forward model that maps a decision to an outcome,
-\begin{equation}
-  \vect{y} \;=\; \vect{f}(\vect{x}) \;+\; \boldsymbol{\varepsilon},
-  \qquad \vect{x}\in\calX,\ \vect{y}\in\calY,
-  \label{eq:forward}
-\end{equation}
-
-An inverse query specifies a target outcome $\vect{y}^\star$ and asks for decisions that achieve it approximately,
-\begin{equation}
-  \text{find }\vect{x}\in\calX \text{ such that } \mathcal{L}\!\big(\vect{f}(\vect{x}),\vect{y}^\star\big)\ \text{is small}.
-  \label{eq:inverse_query}
-\end{equation}
-This reverse problem is commonly ill-posed: solutions may not exist for some targets, may not be unique, and may be sensitive to small perturbations in $\vect{y}^\star$ or in $\boldsymbol{\varepsilon}$. In decision mapping this is not incidental; many distinct decisions can produce outcomes that are indistinguishable at the resolution implied by $\mathcal{L}$ and the noise level. 
-
-These properties separate inverse estimators into two roles. Point estimators output a single proposal. This includes deterministic neural predictors and classical regularised formulations that pick one representative from a set of plausible solutions:
-\begin{equation}
-  \widehat{\vect{x}}\in\arg\min_{\vect{x}\in\calX}\ \mathcal{L}\!\big(\vect{f}(\vect{x}),\vect{y}^\star\big)\;+\;\lambda R(\vect{x}).
-  \label{eq:point_estimator}
-\end{equation}
-Point estimates are appropriate when deployment requires a single design, but they can hide meaningful ambiguity by collapsing many compatible decisions into one selection rule. \cite{Ongie2020}
-
-Distributional estimators treat ambiguity as a modelling target by representing the inverse as a conditional distribution over decisions. In Bayesian inverse problems, this appears as a posterior
-\begin{equation}
-  p(\vect{x}\mid\vect{y}^\star)\ \propto\ p(\vect{y}^\star\mid\vect{x})\,p(\vect{x}),
-  \label{eq:bayes_inverse}
-\end{equation}
-which makes uncertainty explicit and supports generating multiple plausible candidates. This perspective also clarifies the link between regularisation and probabilistic modelling: many regularised objectives correspond to posterior maximisation under an implicit prior and likelihood.
-
-Learning operationalises this idea by fitting a conditional model $q_\theta(\vect{x}\mid\vect{y})$ from paired data, viewed as samples from an unknown joint distribution over decisions and outcomes. A common training objective is conditional maximum likelihood,
-\begin{equation}
-  \theta^\star \in \arg\min_\theta\ \sum_{i=1}^N -\log q_\theta(\vect{x}_i\mid\vect{y}_i),
-  \label{eq:cond_mle}
-\end{equation}
-which aims to match the data-supported conditional relationship rather than forcing a single inverse function. This data-centric view is also standard in simulation-based inference, where samples are generated through forward models and inference targets conditionals rather than closed-form inverses. \cite{Cranmer2020,Papamakarios2021}
-
-At deployment, the probabilistic inverse supports the thesis workflow of candidate generation with forward verification:
-\begin{equation}
-  \widehat{\vect{x}}^{(k)} \sim q_\theta(\vect{x}\mid\vect{y}^\star),\qquad k=1,\dots,K,
-  \label{eq:candidate_sampling}
-\end{equation}
-followed by ranking or filtering using $\mathcal{L}(\vect{f}(\widehat{\vect{x}}^{(k)}),\vect{y}^\star)$. The specific choice of generative family can vary, but modern density estimators and generative models provide practical mechanisms for sampling diverse candidates from learned conditionals. 
-
-This framing also highlights a key limitation that informs later evaluation: the quality of $q_\theta(\vect{x}\mid\vect{y})$ depends on coverage of the training joint distribution in the region of outcome space where queries will be posed. When $\vect{y}^\star$ falls outside the data-supported region, a learned inverse can produce plausible-looking proposals that fail forward verification, which motivates explicit coverage-aware data handling and forward-grounded selection. 
-
-
-\section{Data Sources}\label{sec:database}
-
-A learning-based inverse model relies on paired examples
-\(\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}\), where outcomes arise from the forward process
-\begin{equation}
-  \vect{y}_i \;=\; \vect{f}(\vect{x}_i) \;+\; \boldsymbol{\varepsilon}_i,
-  \qquad \vect{x}_i\in\calX,\ \vect{y}_i\in\calY .
-  \label{eq:database_forward}
-\end{equation}
-We treat \(\mathcal{D}\) as an empirical sample of the joint behaviour of decisions and outcomes, without committing to a single data-generation philosophy. 
-
-In practice, suitable pairs can come from two broad channels:
-\begin{itemize}
-  \item Curated and measured datasets: historical logs, experimental archives, or precomputed simulation sets, including design-of-experiments sweeps aimed at broad coverage of \(\calX\) and the induced outcome region in \(\calY\).
-  \item Optimisation traces: decision--outcome pairs produced as a by-product of exploratory search, such as multiobjective optimisation runs, surrogate-assisted procedures, or Bayesian optimisation loops, which naturally collect diverse trade-offs across objectives and constraints. 
-\end{itemize}
-
-Because inverse decision mapping is often one-to-many, diversity in \(\mathcal{D}\) is valuable, but reliability is local in outcome space: if targets \(\vect{y}^\star\) lie outside the data-supported region, the learned inverse may propose plausible decisions that fail forward verification.
-
-
 \section{Towards Inverse Design}\label{sec:inverse_data_eval}
 
 This thesis treats inverse design as a decision-making problem in the inverse direction: the target $\vect{y}^\star$ specifies what should be achieved, and the goal is to identify admissible decisions that meet it. Since the inverse relation is typically one-to-many, the central modelling question is not how to compute a single inverse, but how to represent and exploit the set of plausible designs implied by the available evidence.
@@ -113,7 +43,7 @@ Finally, this inverse-design stance clarifies how modelling and data interact wi
 
 \subsection{Inverse-design strategies}
 
-Inverse design starts from a target response and searches the (typically vast and constrained) space of compositions, structures, and processes for feasible solutions. Compared with forward modeling, inverse problems are often ill-posed (one-to-many mappings) and data-limited, amplifying concerns around generalization, uncertainty, and reproducibility in machine-learning (ML) workflows~\cite{Butler2018_Nature,Wei2019_InfoMat,Draxl2019_JPhysMater}. In practice, three complementary strategy families are prevalent: \textbf{exploration-based} (agent- or heuristic-driven search with minimal labels), \textbf{model-based} (learning bidirectional or generative structure–property surrogates), and \textbf{optimization-based} (treating inverse design as an explicit optimization over design variables). Below we outline their core ideas, typical algorithms, representative materials applications, and practical trade-offs.
+Inverse design starts from a target response and searches the (typically vast and constrained) space of compositions, structures, and processes for feasible solutions. Compared with forward modeling, inverse problems are often ill-posed (one-to-many mappings) and data-limited, amplifying concerns around generalization, uncertainty, and reproducibility in machine-learning (ML) workflows~\cite{KabanikhinSurvey}. In practice, three complementary strategy families are prevalent: exploration-based (agent- or heuristic-driven search with minimal labels), model-based (learning bidirectional or generative structure–property surrogates), and optimization-based (treating inverse design as an explicit optimization over design variables) \cite{Liu2025Review, Melati2025_InverseDesignPIC_Tutorial}. Below we outline their core ideas, typical algorithms, representative materials applications, and practical trade-offs.
 
 \subsubsection{Exploration-based inverse design:}
 Exploration-first approaches iteratively probe unknown design regions to discover candidates that satisfy performance constraints under sparse supervision. Reinforcement learning (RL) agents optimize sequences of design decisions by interacting with a simulator or learned environment; Monte Carlo Tree Search (MCTS) supplies strong look-ahead priors; and particle-swarm methods provide robust heuristic global search. For photonic device geometry, Hwang \emph{et~al.} combined an Advantage Actor–Critic (A2C) agent (IDEA) with a critic-value branch tree (CVBT) to diversify high-scoring candidate designs~\cite{Hwang2022_ASOC}. CASTING extends MCTS to continuous actions for materials discovery, improving exploration efficiency in high-dimensional spaces~\cite{Banik2023_NPJCM}, while MCTS has also accelerated polymer sequence design under astronomical combinatorics~\cite{Patra2020_Nanoscale}. When physics solvers are expensive or gradients are unavailable, population heuristics such as Particle Swarm Optimization (PSO) remain effective global explorers; notably, PSO coupled with self-consistent field theory (SCFT) has realized bulk copolymer morphologies meeting target patterns~\cite{Khadilkar2017_Macromolecules,Wang2018_SoftComput}. RL has likewise guided combinatorial chemistry to reach molecules with extreme property targets that confound distribution-learning models~\cite{Kim2024_ChemSci}. Strengths of exploration methods include label frugality, no need for bijective mappings, and natural diversity; typical limitations are high compute budgets (many simulator calls), reward shaping sensitivity, and difficulty enforcing hard constraints without additional mechanism design.
@@ -163,11 +93,80 @@ In practice, hybrid pipelines perform best: exploration agents query model-based
 \end{table}
 
 
+\section{Data Sources}\label{sec:database}
+
+A learning-based inverse model relies on paired examples
+\(\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}\), where outcomes arise from the forward process
+\begin{equation}
+  \vect{y}_i \;=\; \vect{f}(\vect{x}_i) \;+\; \boldsymbol{\varepsilon}_i,
+  \qquad \vect{x}_i\in\calX,\ \vect{y}_i\in\calY .
+  \label{eq:database_forward}
+\end{equation}
+We treat \(\mathcal{D}\) as an empirical sample of the joint behaviour of decisions and outcomes, without committing to a single data-generation philosophy. 
+
+In practice, suitable pairs can come from two broad channels:
+\begin{itemize}
+  \item Curated and measured datasets: historical logs, experimental archives, or precomputed simulation sets, including design-of-experiments sweeps aimed at broad coverage of \(\calX\) and the induced outcome region in \(\calY\).
+  \item Optimisation traces: decision--outcome pairs produced as a by-product of exploratory search, such as multiobjective optimisation runs, surrogate-assisted procedures, or Bayesian optimisation loops, which naturally collect diverse trade-offs across objectives and constraints. 
+\end{itemize}
+
+Because inverse decision mapping is often one-to-many, diversity in \(\mathcal{D}\) is valuable, but reliability is local in outcome space: if targets \(\vect{y}^\star\) lie outside the data-supported region, the learned inverse may propose plausible decisions that fail forward verification.
+
+
+
+\section{Learning-Based Inverse Decision Mapping}\label{sec:learning_inverse}
+
+Machine learning motivates inverse decision mapping as amortised inference: a neural network is trained offline on paired examples so that inverse queries can be answered quickly at deployment. Speed, however, does not eliminate the structural difficulty of inversion. The inverse relation may be multi-valued and unstable, which means that any method must decide how to represent ambiguity and how to reject candidates that do not satisfy the task definition. \cite{Ongie2020}
+
+We formalise the task with a forward model that maps a decision to an outcome,
+\begin{equation}
+  \vect{y} \;=\; \vect{f}(\vect{x}) \;+\; \boldsymbol{\varepsilon},
+  \qquad \vect{x}\in\calX,\ \vect{y}\in\calY,
+  \label{eq:forward}
+\end{equation}
+
+An inverse query specifies a target outcome $\vect{y}^\star$ and asks for decisions that achieve it approximately,
+\begin{equation}
+  \text{find }\vect{x}\in\calX \text{ such that } \mathcal{L}\!\big(\vect{f}(\vect{x}),\vect{y}^\star\big)\ \text{is small}.
+  \label{eq:inverse_query}
+\end{equation}
+This reverse problem is commonly ill-posed: solutions may not exist for some targets, may not be unique, and may be sensitive to small perturbations in $\vect{y}^\star$ or in $\boldsymbol{\varepsilon}$. In decision mapping this is not incidental; many distinct decisions can produce outcomes that are indistinguishable at the resolution implied by $\mathcal{L}$ and the noise level. 
+
+These properties separate inverse estimators into two roles. Point estimators output a single proposal. This includes deterministic neural predictors and classical regularised formulations that pick one representative from a set of plausible solutions:
+\begin{equation}
+  \widehat{\vect{x}}\in\arg\min_{\vect{x}\in\calX}\ \mathcal{L}\!\big(\vect{f}(\vect{x}),\vect{y}^\star\big)\;+\;\lambda R(\vect{x}).
+  \label{eq:point_estimator}
+\end{equation}
+Point estimates are appropriate when deployment requires a single design, but they can hide meaningful ambiguity by collapsing many compatible decisions into one selection rule. \cite{Ongie2020}
+
+Distributional estimators treat ambiguity as a modelling target by representing the inverse as a conditional distribution over decisions. In Bayesian inverse problems, this appears as a posterior
+\begin{equation}
+  p(\vect{x}\mid\vect{y}^\star)\ \propto\ p(\vect{y}^\star\mid\vect{x})\,p(\vect{x}),
+  \label{eq:bayes_inverse}
+\end{equation}
+which makes uncertainty explicit and supports generating multiple plausible candidates. This perspective also clarifies the link between regularisation and probabilistic modelling: many regularised objectives correspond to posterior maximisation under an implicit prior and likelihood.
+
+Learning operationalises this idea by fitting a conditional model $q_\theta(\vect{x}\mid\vect{y})$ from paired data, viewed as samples from an unknown joint distribution over decisions and outcomes. A common training objective is conditional maximum likelihood,
+\begin{equation}
+  \theta^\star \in \arg\min_\theta\ \sum_{i=1}^N -\log q_\theta(\vect{x}_i\mid\vect{y}_i),
+  \label{eq:cond_mle}
+\end{equation}
+which aims to match the data-supported conditional relationship rather than forcing a single inverse function. This data-centric view is also standard in simulation-based inference, where samples are generated through forward models and inference targets conditionals rather than closed-form inverses. \cite{Cranmer2020,Papamakarios2021}
+
+At deployment, the probabilistic inverse supports the thesis workflow of candidate generation with forward verification:
+\begin{equation}
+  \widehat{\vect{x}}^{(k)} \sim q_\theta(\vect{x}\mid\vect{y}^\star),\qquad k=1,\dots,K,
+  \label{eq:candidate_sampling}
+\end{equation}
+followed by ranking or filtering using $\mathcal{L}(\vect{f}(\widehat{\vect{x}}^{(k)}),\vect{y}^\star)$. The specific choice of generative family can vary, but modern density estimators and generative models provide practical mechanisms for sampling diverse candidates from learned conditionals. 
+
+This framing also highlights a key limitation that informs later evaluation: the quality of $q_\theta(\vect{x}\mid\vect{y})$ depends on coverage of the training joint distribution in the region of outcome space where queries will be posed. When $\vect{y}^\star$ falls outside the data-supported region, a learned inverse can produce plausible-looking proposals that fail forward verification, which motivates explicit coverage-aware data handling and forward-grounded selection. 
+
 
 
 \section{Modeling Background}\label{sec:modelling_background}
 
-Inverse exploration relies on models as its inner loop: given candidate decisions $\vect{x}$, we must anticipate outcomes $\vect{y}$, and—crucially for design—quantify how confident we are in those predictions. Two complementary perspectives are standard. A \emph{deterministic} view learns a single mapping $f:\mathcal{X}\!\to\!\mathcal{Y}$ that returns point estimates (useful for speed and direct optimization). A \emph{probabilistic} view learns conditional distributions $p(\vect{y}\mid\vect{x})$ (and, when needed, posteriors over parameters or designs), making uncertainty an explicit object of reasoning. Both sit naturally within risk-minimization and decision-theoretic principles and will be used throughout our inverse workflows~\cite{Vapnik1998,Bishop2006,Murphy2012,HTF2009,Berger1985}.
+Inverse exploration relies on models as its inner loop: given candidate decisions $\vect{x}$, we must anticipate outcomes $\vect{y}$, and—crucially for design—quantify how confident we are in those predictions. Two complementary perspectives are standard. A \emph{deterministic} view learns a single mapping $f:\mathcal{X}\!\to\!\mathcal{Y}$ that returns point estimates (useful for speed and direct optimization). A \emph{probabilistic} view learns conditional distributions $p(\vect{y}\mid\vect{x})$ (and, when needed, posteriors over parameters or designs), making uncertainty an explicit object of reasoning. Both sit naturally within risk-minimization and decision-theoretic principles and will be used throughout our inverse workflows~\cite{RasmussenWilliams2006,Bishop2006PRML,HTF2009,Berger1985}.
 
 
 \subsection{Learning as Risk Minimization}
@@ -277,7 +276,7 @@ Write abou these estimators in details and how each one define the problem and w
 
 \subsection{Probabilistic Modelling}
 
-The probabilistic view treats predictions as \emph{distributions} rather than single points, which makes uncertainty explicit and accommodates one-to-many inverse relationships. Inverse design can model either the forward conditional $p_\theta(\vect{y}\mid\vect{x})$ (often paired with a decision rule over $\vect{x}$) or the inverse conditional $p_\theta(\vect{x}\mid\vect{y})$ (directly proposing distributions over designs for a target). In both cases, parameters $\theta$ are learned by likelihood-based training with appropriate regularisation.
+The probabilistic view treats predictions as \emph{distributions} rather than single points, which makes uncertainty explicit and accommodates one-to-many inverse relationships. Inverse design can model either the forward conditional $p_\theta(\vect{y}\mid\vect{x})$ (often paired with a decision rule over $\vect{x}$) or the inverse conditional $p_\theta(\vect{x}\mid\vect{y})$ (directly proposing distributions over designs for a target). In both cases, parameters $\theta$ are learned by likelihood-based training with appropriate regularisation \cite{Murphy2022PML1}.
 
 A forward conditional is fit by maximising the regularised conditional log-likelihood
 \begin{equation}
