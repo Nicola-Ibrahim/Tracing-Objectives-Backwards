@@ -4,74 +4,64 @@
 
 \chapter{Methodology}\label{chap:method}
 
+Real-time inverse querying only becomes useful when it behaves like a reliable design instrument: a user specifies a target outcome $\vect{y}^{\star}$, and the method returns decision(s) $\widehat{\vect{x}}\in\calX$ expected to satisfy the design intent under the best available representation of the system behaviour. The Introduction framed this as inverse decision mapping under ambiguity and potential infeasibility; the research questions then ask for (i) a practical outcome $\!\to\!$ decision mechanism, (ii) a clear and reproducible notion of attainment in outcome space, and (iii) evidence about which modelling choices generalise to unseen targets. The methodology below turns these requirements into an executable, comparable protocol.
 
-This chapter develops and defends the research design for learning an inverse map that takes a target outcome $\vect{y}^{\star}$ and proposes decision(s) $\widehat{\vect{x}}$ expected to realise it under the forward process $\vect{f}$. The approach is modular and agnostic to the eventual dataset: representative pairs $(\vect{x},\vect{y})$ may come from archives, curated sweeps, or standard benchmarks.
+The core stance is to use machine-learning models as fast proposal mechanisms, while grounding checking and assessment in a forward description of the system when it is available, or in a learned surrogate that approximates it when it is not. This mirrors a common pattern in learned inverse problems: the inverse network accelerates querying, and a forward-consistency check anchors correctness to the task definition rather than to the internal calibration of the inverse model itself.  The protocol is modular with respect to data sources: it assumes only paired examples $(\vect{x},\vect{y})$ that are representative of the deployment regime, without prescribing how those pairs were generated.
 
+Three design principles shape the chapter and the experiments that follow:
+\begin{itemize}
+  \item Forward alignment: training objectives encourage proposals whose predicted outcomes track the conditioning target, using forward-consistency ideas that remain applicable whether the forward behaviour is given explicitly or approximated by a surrogate trained from data. 
+  \item Output uniformity: all models, including distributional predictors, are reduced to a single reported decision via a fixed selection rule so that comparisons reflect modelling differences rather than interface differences.
+  \item Separation of concerns: modelling choices (architectures, priors, loss terms, sampling) are specified independently from evaluation choices (discrepancies, tolerances, success criteria), supporting transparent reporting and reproducible comparison.
+\end{itemize}
 
-We pursue an inverse–mapping approach: learn a function that takes a target outcome $\vect{y}^{\star}$ and returns a single decision $\widehat{\vect{x}}$ expected to realise it under the forward process $\vect{f}$. The emphasis is on a transparent, reproducible recipe that turns representative examples $(\vect{x},\vect{y})$ into a model usable for real-time inverse queries, without prescribing a specific data shape in advance.
-
-Our methodological stance is guided by three principles. First, we treat inverse design as learning an outcome$\rightarrow$decision map that is \emph{explicitly aligned} with the forward behaviour of the system: training encourages forward consistency so that $\vect{f}(\widehat{\vect{x}})$ tracks the target\footnote{Forward-consistency or tandem training helps mitigate non-uniqueness in inverse problems by validating inverse proposals through a forward model.}. Second, we keep outputs uniform across models by reducing any distributional predictions to one representative decision (e.g., mean or median) for evaluation and use. Third, we separate model-specific choices (architectures, priors, loss terms) from evaluation choices (distances and tolerances), so each can be justified on its own merits.
-
-Concretely, the chapter develops: (i) the learning objective for the inverse map, including outcome normalisation and a forward-consistency term that couples inverse predictions to $\vect{f}$; (ii) model classes considered (deterministic regressors and probabilistic generators with point selection), together with selection rules that yield a single $\widehat{\vect{x}}$ per query; (iii) mechanisms for handling constraints in $\mathcal{X}$ (e.g., feasibility penalties or projections); (iv) the query-time procedure that turns $\vect{y}^{\star}$ into $\widehat{\vect{x}}$ and optionally performs a lightweight forward check for verification or refinement; and (v) the evaluation protocol that reports outcome-space discrepancy and a tolerance-based success indicator, matching the inverse goal of attaining $\vect{y}^{\star}$ while remaining simple to interpret and reproduce.
-
-The result is a modular, data-shape-agnostic workflow: learn an inverse map from representative pairs, align it with the forward process during training, produce one decision per target at query time, and evaluate performance with task-appropriate outcome distances and tolerances.
-
-\section{Problem setup and formal statement}\label{sec:setup}
-
-Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the set of feasible decisions with vectors $\mathbf{x}\in\mathcal{X}$, and let $\mathcal{Y}\subset\mathbb{R}^{m}$ denote the space of observable outcomes. A forward process $\mathbf{f}:\mathcal{X}\to\mathcal{Y}$ maps any decision to its outcome, $\mathbf{y}=\mathbf{f}(\mathbf{x})$. We assume access to a dataset
-\[
-  \mathcal{D}=\{(\mathbf{x}_i,\mathbf{y}_i)\}_{i=1}^{N},\qquad
-  \mathbf{x}_i\in\mathcal{X},\ \ \mathbf{y}_i=\mathbf{f}(\mathbf{x}_i),
-\]
-assembled from historical runs, simulation sweeps, or exploratory optimisation.
-
-Given a user-specified target outcome $\mathbf{y}^{\ast}\in\mathcal{Y}$, the goal is to infer a decision $\widehat{\mathbf{x}}\in\mathcal{X}$ that realises the target under the forward process:
-\[
-  \mathbf{f}(\widehat{\mathbf{x}})\ \approx\ \mathbf{y}^{\ast}.
-\]
-We focus on single-decision outputs for each query, meaning that for every $\mathbf{y}^{\ast}$ the method returns one representative $\widehat{\mathbf{x}}$. When exact equality is unattainable, the aim is to produce a best-effort decision relative to the task at hand. This formulation accommodates both data-driven and physics-based forward maps and allows for standard extensions such as constraints, regularisation, or prior knowledge within $\mathcal{X}$, without committing to a particular modelling choice here.
-
-
-\section{Research questions and design principles}\label{sec:rq_design}
-We address three questions: (i) how to learn an outcome$\!\to\!$decision map aligned with the forward behaviour of the system; (ii) how to return either one decision or a small set of proposals on demand; and (iii) how to evaluate attainment of $\vect{y}^{\star}$ in outcome space in a simple, reproducible way. The design follows three principles: \emph{forward consistency} (validate inverse predictions through $\vect{f}$), \emph{output uniformity} (define a clear selection policy for single or multiple proposals), and \emph{clean separation} between modelling choices (architectures, priors, loss terms) and evaluation choices (distances and tolerances).
+The following sections formalise the learning objective for the inverse map (including outcome normalisation and an alignment term that couples inverse proposals to predicted outcomes), specify the model families considered (deterministic regressors and probabilistic generators together with a point-selection policy), describe how feasibility in $\calX$ is handled, and define the query-time procedure that maps $\vect{y}^{\star}$ to $\widehat{\vect{x}}$ with an optional consistency check using either the available forward model or its surrogate approximation. The chapter closes by fixing an evaluation protocol in outcome space so every reported result answers the same operational question: how often does a returned decision attain the user’s target under a clearly stated checking rule?
 
 
 %-------------------------------------------------------------------------------
-\section{Theoretical framework and model}\label{sec:theory_model}
+\section{Theoretical framework}\label{sec:theory_model}
 %-------------------------------------------------------------------------------
 
-We formalise inverse design as learning $g_\theta:\mathcal{Y}\!\to\!\mathcal{X}$ with a
-hybrid objective that balances decision-space supervision and forward outcome
-fidelity:
+The methodology treats inverse design as learning a conditional model over decisions given outcomes. Rather than approximating a single inverse function, we learn a probabilistic inverse
+$q_\theta(\vect{x}\mid\vect{y})$ that can represent multi-modality and generate multiple candidates for the same target. This conditional-density viewpoint is standard in amortised inference: training uses paired examples to fit a reusable inverse mechanism, and query-time inference becomes fast sampling from the learned conditional. \cite{Papamakarios2021}
+
+Given a representative dataset $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$, the inverse model parameters are fit by conditional likelihood:
 \begin{equation}
-\widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}\Big[
-  \ell_{\mathcal{X}}(g_\theta(\vect{y}_i),\vect{x}_i)
-  + \alpha\, d\!\big(\vect{f}(g_\theta(\vect{y}_i)),\vect{y}_i\big)^2
-\Big] + \lambda\,\Omega(\theta),
-\label{eq:hybrid_inverse}
+\widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}
+\Big[-\log q_\theta(\vect{x}_i\mid\vect{y}_i)\Big] + \lambda\,\Omega(\theta),
+\label{eq:cond_mle_inverse}
 \end{equation}
-with $d$ an outcome-space metric and $\alpha\!\ge\!0$ controlling forward
-consistency (the ``tandem'' idea). For distributional models, we fit
-$p_\theta(\vect{x}\mid\vect{y})$ by conditional likelihood and apply a selection
-policy to return a single $\widehat{\vect{x}}$ at query time; conformal calibration
-(\S\ref{sec:calibration}) uses split residuals in outcome space to provide
-distribution-free coverage.
+where $\Omega(\theta)$ denotes model regularisation. This objective makes the training stage independent of any explicit forward operator: it learns the inverse relationship directly from paired examples, while leaving all checking and attainment claims to a separate evaluation layer.
+
+At query time, the inverse model produces a small candidate set by sampling:
+\begin{equation}
+  \widehat{\vect{x}}^{(k)} \sim q_\theta(\vect{x}\mid\vect{y}^\star),\qquad k=1,\dots,K.
+  \label{eq:candidate_generation}
+\end{equation}
+To keep outputs uniform across experiments and model families, we fix a common candidate budget $K$ and treat inverse querying as candidate generation followed by outcome-space scoring. Each sampled candidate is assigned a discrepancy score using a task-defined metric $d(\cdot,\cdot)$ and an outcome evaluator $\mathcal{E}:\calX\to\calY$ that represents the best available mechanism for assessing outcomes. Depending on the setting, $\mathcal{E}$ may be a simulator, a learned surrogate, a measurement routine, or an offline mapping available only for evaluation. For a target $\vect{y}^\star$, we compute
+\begin{equation}
+  r^{(k)}(\vect{y}^\star) \;=\; d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^\star\big),
+  \qquad k=1,\dots,K,
+  \label{eq:candidate_scores}
+\end{equation}
+and use these scores to rank candidates or to identify a subset that best aligns with the target. When an application requires a single deployed decision, this becomes a special case that selects the top-ranked candidate; otherwise, the ranked set itself is the primary output for exploration.
+
+
 
 %-------------------------------------------------------------------------------
 \section{Methodology selection and defence}\label{sec:method_defence}
 %-------------------------------------------------------------------------------
 
-We adopt an \emph{inverse–mapping} methodology (rather than running a
-black-box optimiser at query-time) to enable amortised, real-time proposals from
-diverse archives while aligning predictions with the forward map. Forward
-consistency mitigates non-uniqueness; outcome-side evaluation matches the design
-goal; and conformal calibration adds simple, finite-sample guarantees without
-restrictive distributional assumptions. Optimisation-at-query-time (e.g., BO)
-is complementary but incurs additional search and simulator calls; we therefore
-treat it as an optional refinement stage rather than the default.
+The research questions require an inverse querying mechanism that supports ambiguity, yields a consistent output interface, and admits simple, reproducible assessment. These requirements motivate an inverse-mapping methodology built around probabilistic candidate generation: most computation occurs offline by fitting $q_\theta(\vect{x}\mid\vect{y})$, and each new query is answered by sampling a small candidate set followed by a fixed selection rule. This amortised design follows established practice in learned inverse problems and simulation-based inference, where conditional density estimation is used to make repeated inverse queries efficient. \cite{Arridge2019,Ongie2020,Cranmer2020SBI}
+
+A second design choice is to decouple learning from checking. The inverse model is trained solely from paired examples via \eqref{eq:cond_mle_inverse}, while the best available forward description is used after training to check and rank candidates in outcome space. This reflects a pragmatic deployment reality: some settings provide an explicit simulator or forward operator, while others require a surrogate evaluator trained for checking. In both cases, the checking rule is stated explicitly through $d(\widetilde{\vect{f}}(\widehat{\vect{x}}),\vect{y}^\star)$, so conclusions are tied to a declared notion of attainment rather than to informal inspection.
+
+Optimisation-at-query-time remains complementary. Methods such as Bayesian optimisation can refine candidates when evaluations are affordable, but they introduce query-time search cost and additional tuning choices. The default methodology therefore prioritises amortised inverse querying, with optional refinement as a separate stage when deployment constraints permit. \cite{Shahriari2016BayesOpt}
 
 
+%-------------------------------------------------------------------------------
 \section{Methodological framework}\label{sec:framework}
+%-------------------------------------------------------------------------------
 
 We consider two complementary inverse families for $\mathcal{Y}\!\to\!\mathcal{X}$.
 \begin{enumerate}
@@ -86,9 +76,29 @@ We consider two complementary inverse families for $\mathcal{Y}\!\to\!\mathcal{X
   time. For diversity-aware sets, we optionally use a determinantal point
   process (DPP) subset selector over candidates.
 \end{enumerate}
+
+
+
+\begin{figure}[h]
+  \centering
+  \begin{adjustbox}{width=\linewidth}
+      \input{figures/framework}
+  \end{adjustbox}
+  \caption{Overview of the modular propose--check workflow used throughout the thesis: learning an inverse proposal model from paired examples, selecting a single decision per target with a fixed policy, and assessing attainment via a task-defined consistency check in outcome space.}
+  \label{fig:framework}
+\end{figure}
+
+
+
+
 To reduce one-to-many ambiguity, both families may include a
 \emph{forward-consistency} term that encourages
 $\vect{f}(g_{\theta}(\vect{y}))\!\approx\!\vect{y}$ during training.
+
+
+
+
+
 \section{Inverse-model training}\label{sec:training}
 
 \subsection{Deterministic inverse ERM}\label{sec:det_inverse}

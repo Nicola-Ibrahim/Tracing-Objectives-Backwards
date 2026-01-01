@@ -1,0 +1,97 @@
+\begin{tikzpicture}[node distance=1.2cm and 1.5cm, >=Stealth, thick]
+
+% --- 1. Enhanced Color Palette ---
+\definecolor{colorTraining}{HTML}{455a64}   % Slate Grey
+\definecolor{colorInverse}{HTML}{0077b6}    % Science Blue
+\definecolor{colorForward}{HTML}{d00000}    % Alert Red
+\definecolor{colorSelection}{HTML}{f77f00}  % Orange
+\definecolor{colorResult}{HTML}{2b9348}     % Success Green
+
+% --- 2. Optimized Styles ---
+\tikzset{
+    base/.style={
+        font=\sffamily\small, align=center, minimum height=0.9cm, 
+        draw, line width=0.8pt, rounded corners=3pt
+    },
+    data/.style={
+        base, fill=colorTraining!10, draw=colorTraining, text=colorTraining,
+        dashed, minimum width=3cm
+    },
+    inverse/.style={
+        base, fill=colorInverse!10, draw=colorInverse, text=colorInverse,
+        minimum width=3.5cm, font=\sffamily\bfseries\small
+    },
+    forward/.style={
+        base, fill=colorForward!10, draw=colorForward, text=colorForward,
+        minimum width=3.5cm
+    },
+    policy/.style={
+        base, shape=trapezium, trapezium left angle=75, trapezium right angle=75,
+        fill=colorSelection!15, draw=colorSelection, text=colorSelection!80!black,
+        minimum width=3cm
+    },
+    check/.style={
+        base, shape=diamond, aspect=1.8, inner sep=0pt,
+        fill=colorResult!10, draw=colorResult, text=colorResult!80!black,
+        minimum width=3.5cm
+    },
+    target/.style={
+        base, fill=white, draw=black, minimum width=2.5cm,
+        double, double distance=1pt
+    },
+    container/.style={
+        draw=black!30, fill=black!2, dashed, rounded corners=12pt
+    },
+    labelStyle/.style={
+        font=\sffamily\bfseries\color{black!70}, anchor=north west, xshift=5pt, yshift=-5pt
+    }
+}
+
+% --- 3. PROCEDURE A: MODEL SYNTHESIS (TRAINING) ---
+
+\node[data] (Pairs) {Paired Examples\\$(\mathbf{x}, \mathbf{y}) \in \mathcal{X} \times \mathcal{Y}$};
+\node[inverse, right=2cm of Pairs] (InverseModel) {Inverse Mapping\\$\mathbf{y} \to \widehat{\mathbf{x}}$};
+\node[forward, below=0.6cm of InverseModel] (ForwardSurr) {Forward Surrogate\\$\widehat{f}: \mathcal{X} \to \mathcal{Y}$};
+
+% Internal Training Connections
+\draw[->, colorTraining] (Pairs) -- node[above, font=\scriptsize] {Learn Mapping} (InverseModel);
+\draw[->, colorTraining] (Pairs) |- node[pos=0.75, right, font=\scriptsize] {Learn Physics/Logic} (ForwardSurr);
+\draw[<->, colorForward, line width=1.2pt] (InverseModel) -- node[right, font=\scriptsize\itshape] {Forward Alignment} (ForwardSurr);
+
+% --- 4. PROCEDURE B: INFERENCE & VALIDATION (QUERYING) ---
+
+\node[target, below=3.5cm of Pairs] (Target) {Target Outcome\\$\mathbf{y}^\star$};
+\node[inverse, right=2cm of Target] (Propose) {Proposal Mechanism\\(Uses Inverse Model)};
+\node[policy, right=1.2cm of Propose] (Selection) {Selection Rule\\(Uniformity)};
+\node[check, below=1.2cm of Selection] (Check) {Consistency Check\\$\widehat{f}(\widehat{\mathbf{x}}) \approx \mathbf{y}^\star$};
+\node[base, fill=colorResult, text=white, font=\sffamily\bfseries, left=1.5cm of Check] (Decision) {Validated Decision $\widehat{\mathbf{x}}$};
+
+% Querying Connections
+\draw[->] (Target) -- (Propose);
+\draw[->] (Propose) -- (Selection);
+\draw[->] (Selection) -- (Check);
+\draw[->] (Check) -- node[above] {Success} (Decision);
+
+% --- 5. CROSS-PROCEDURE INTEGRATION (Deployment) ---
+
+% Inverse Model being used as the Proposal Mechanism
+\draw[->, colorInverse, dotted, line width=1pt] (InverseModel) -- (Propose);
+\node[colorInverse, font=\scriptsize, rotate=-90, anchor=south] at ($(InverseModel)!0.5!(Propose)$) {Deployed for Inference};
+
+% Forward Surrogate being used for Grounding
+\draw[->, colorForward, dashed] (ForwardSurr.south) -- ++(0,-1.5) -| (Check.north);
+\node[colorForward, font=\scriptsize, anchor=west, xshift=5pt] at ($(ForwardSurr.south) + (0,-1)$) {Grounding Reference};
+
+% --- 6. CONTAINERS & LABELS ---
+
+\begin{scope}[on background layer]
+    % Training Box
+    \node[container, fit=(Pairs) (InverseModel) (ForwardSurr)] (BoxTraining) {};
+    \node[labelStyle] at (BoxTraining.north west) {PROCEDURE I: MODEL SYNTHESIS (Training)};
+    
+    % Querying Box
+    \node[container, fit=(Target) (Propose) (Selection) (Check) (Decision)] (BoxQuerying) {};
+    \node[labelStyle] at (BoxQuerying.north west) {PROCEDURE II: INFERENCE \& VALIDATION (Querying)};
+\end{scope}
+
+\end{tikzpicture}

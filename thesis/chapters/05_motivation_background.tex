@@ -58,7 +58,7 @@ The distributional form of $q_\theta$ is intentionally left open at the thesis l
 Finally, this inverse-design stance clarifies how modelling and data interact without re-litigating data collection. The learned conditional captures regularities present in the observed joint behaviour of decisions and outcomes, and forward verification prevents the inverse model from becoming the sole authority on validity. As a result, inverse design becomes guided exploration in $\calX$ driven by learned proposals and disciplined by forward consistency in $\calY$, which sets up the strategy families introduced next.
 
 
-\subsection{Challenges for learning-enabled inverse design}\label{sec:inverse_challenges}
+\subsection{Challenges}\label{sec:inverse_challenges}
 
 As inverse design has matured across scientific and engineering domains, the practical question has shifted from whether inverse querying is possible to whether it is reliable, informative, and cost-effective when embedded in real workflows. Moving from purely iterative search to learning-enabled inversion amplifies this question, because the output is no longer a single recommended decision but a distribution of plausible candidates that must be judged under limited compute and imperfect models. This thesis adopts a propose-and-verify stance precisely to make those reliability questions explicit.
 
@@ -80,7 +80,7 @@ Together, these challenges motivate organising inverse-design methods by how the
 % Most materials workflows are built for the \emph{forward} question $\,\vect{x}\!\mapsto\!\vect{y}$—given a candidate, what will it do? Design asks the converse: specify a target response $\vect{y}^{\star}$ and identify admissible decisions $\vect{x}$ that realise it under physical and process constraints. Because many $\vect{x}$ can yield similar $\vect{y}$, the inverse task is generically ill-posed. We therefore pose it explicitly as a regularised/Bayesian inverse problem (Eqs.~\ref{eq:tikhonov}–\ref{eq:posterior}), which affords (i) fast, feasible point proposals consistent with prior knowledge and constraints, and (ii) calibrated distributions over plausible designs that make non-uniqueness and uncertainty first-class citizens~\cite{BenningBurger2018,Stuart2010}.
 
 
-\subsection{Inverse-design strategies}
+\subsection{Strategies}
 
 Inverse design starts from a target response and searches the (typically vast and constrained) space of compositions, structures, and processes for feasible solutions. Compared with forward modeling, inverse problems are often ill-posed (one-to-many mappings) and data-limited, amplifying concerns around generalization, uncertainty, and reproducibility in machine-learning (ML) workflows~\cite{KabanikhinSurvey}. In practice, three complementary strategy families are prevalent: exploration-based (agent- or heuristic-driven search with minimal labels), model-based (learning bidirectional or generative structure–property surrogates), and optimization-based (treating inverse design as an explicit optimization over design variables) \cite{Liu2025Review, Melati2025_InverseDesignPIC_Tutorial}. Below we outline their core ideas, typical algorithms, representative materials applications, and practical trade-offs.
 
@@ -153,9 +153,6 @@ Because inverse decision mapping is often one-to-many, diversity in \(\mathcal{D
 
 
 \section{Modeling Background}\label{sec:modelling_background}
-
-
-\subsection{Learning-Based Mapping}\label{sec:learning_based_mapping}
 
 Learning-based mapping approaches treat inverse decision mapping as an inference problem driven by data. Rather than assuming that the inverse relation can be written as a stable function, they learn statistical relationships between decisions and outcomes and use these relationships to answer inverse queries. This viewpoint is consistent with the inverse-problems literature: the reverse direction is often ill-posed, meaning that solutions may be non-unique, sensitive to perturbations, or absent for some targets. In decision mapping this is not exceptional; many distinct decisions can induce outcomes that are indistinguishable at the resolution implied by the discrepancy measure and the noise level. \cite{Ongie2020,Stuart2010}
 
