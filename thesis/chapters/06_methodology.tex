@@ -4,157 +4,174 @@
 
 \chapter{Methodology}\label{chap:method}
 
-Real-time inverse querying only becomes useful when it behaves like a reliable design instrument: a user specifies a target outcome $\vect{y}^{\star}$, and the method returns decision(s) $\widehat{\vect{x}}\in\calX$ expected to satisfy the design intent under the best available representation of the system behaviour. The Introduction framed this as inverse decision mapping under ambiguity and potential infeasibility; the research questions then ask for (i) a practical outcome $\!\to\!$ decision mechanism, (ii) a clear and reproducible notion of attainment in outcome space, and (iii) evidence about which modelling choices generalise to unseen targets. The methodology below turns these requirements into an executable, comparable protocol.
+Inverse decision mapping becomes practically useful when it supports interactive design exploration: a user specifies a target outcome $\vect{y}^{\star}$ and the method proposes candidate decisions $\widehat{\vect{x}}\in\calX$ that plausibly realise that target. The Introduction framed this task as inherently ambiguous and sometimes infeasible, and posed research questions about (i) constructing an outcome $\!\to\!$ decision mechanism, (ii) defining attainment in a reproducible way, and (iii) understanding which modelling choices generalise to unseen targets. The methodology presented here turns those requirements into a concrete protocol centered on probabilistic candidate generation followed by explicit outcome-space evaluation.
 
-The core stance is to use machine-learning models as fast proposal mechanisms, while grounding checking and assessment in a forward description of the system when it is available, or in a learned surrogate that approximates it when it is not. This mirrors a common pattern in learned inverse problems: the inverse network accelerates querying, and a forward-consistency check anchors correctness to the task definition rather than to the internal calibration of the inverse model itself.  The protocol is modular with respect to data sources: it assumes only paired examples $(\vect{x},\vect{y})$ that are representative of the deployment regime, without prescribing how those pairs were generated.
+The core stance is to learn an amortised inverse model that represents the inverse relation as a conditional distribution rather than as a single-valued map. A probabilistic inverse supports one-to-many structure by generating multiple candidates for the same target, enabling exploration rather than forcing an arbitrary point estimate. This conditional-density viewpoint is widely used in amortised inference and simulation-based inference, where offline training yields fast query-time sampling. \cite{Papamakarios2021,Cranmer2020SBI} In this thesis, evaluation is treated as a distinct stage that scores and ranks candidates using an explicit discrepancy in outcome space, computed via the best available outcome evaluator.
 
 Three design principles shape the chapter and the experiments that follow:
 \begin{itemize}
-  \item Forward alignment: training objectives encourage proposals whose predicted outcomes track the conditioning target, using forward-consistency ideas that remain applicable whether the forward behaviour is given explicitly or approximated by a surrogate trained from data. 
-  \item Output uniformity: all models, including distributional predictors, are reduced to a single reported decision via a fixed selection rule so that comparisons reflect modelling differences rather than interface differences.
-  \item Separation of concerns: modelling choices (architectures, priors, loss terms, sampling) are specified independently from evaluation choices (discrepancies, tolerances, success criteria), supporting transparent reporting and reproducible comparison.
+  \item Candidate-based inversion: inverse querying produces a set of candidates by sampling from a learned conditional model, making ambiguity visible through diversity rather than suppressing it by construction. \cite{Cranmer2020SBI}
+  \item Decoupled evaluation: learning is performed from paired examples without requiring an explicit forward operator; attainment is assessed after training by scoring candidates with a task-defined outcome discrepancy and an outcome evaluator that may be a simulator, a surrogate, a measurement routine, or an offline mapping available only for evaluation. \cite{Arridge2019,Ongie2020}
+  \item Comparable reporting: experiments fix a common candidate budget and a common scoring rule so that comparisons reflect modelling choices rather than interface differences or ad hoc evaluation. \cite{Arridge2019,Ongie2020}
 \end{itemize}
 
-The following sections formalise the learning objective for the inverse map (including outcome normalisation and an alignment term that couples inverse proposals to predicted outcomes), specify the model families considered (deterministic regressors and probabilistic generators together with a point-selection policy), describe how feasibility in $\calX$ is handled, and define the query-time procedure that maps $\vect{y}^{\star}$ to $\widehat{\vect{x}}$ with an optional consistency check using either the available forward model or its surrogate approximation. The chapter closes by fixing an evaluation protocol in outcome space so every reported result answers the same operational question: how often does a returned decision attain the user’s target under a clearly stated checking rule?
+The following sections formalise the probabilistic inverse model and its training objective, define the query-time candidate generation procedure, and specify how candidates are scored and ranked in outcome space under an explicit discrepancy measure. Subsequent methodological components (constraints, feasibility handling, and any optional refinement procedures) are introduced only as needed for reproducible implementation and evaluation across datasets and benchmarks.
 
 
 %-------------------------------------------------------------------------------
 \section{Theoretical framework}\label{sec:theory_model}
 %-------------------------------------------------------------------------------
 
-The methodology treats inverse design as learning a conditional model over decisions given outcomes. Rather than approximating a single inverse function, we learn a probabilistic inverse
-$q_\theta(\vect{x}\mid\vect{y})$ that can represent multi-modality and generate multiple candidates for the same target. This conditional-density viewpoint is standard in amortised inference: training uses paired examples to fit a reusable inverse mechanism, and query-time inference becomes fast sampling from the learned conditional. \cite{Papamakarios2021}
+The methodology treats inverse design as learning a conditional model over decisions given outcomes. Rather than approximating a single inverse function, we learn a probabilistic inverse $q_\theta(\vect{x}\mid\vect{y})$ that can represent multi-modality and generate multiple candidates for the same target. This conditional-density framing supports amortised querying: training fits a reusable conditional model from paired examples, and inference reduces to sampling conditioned on the target. \cite{Papamakarios2021,Cranmer2020SBI}
 
-Given a representative dataset $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$, the inverse model parameters are fit by conditional likelihood:
+Given a representative dataset $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$, model parameters are fit by conditional likelihood:
 \begin{equation}
 \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}
 \Big[-\log q_\theta(\vect{x}_i\mid\vect{y}_i)\Big] + \lambda\,\Omega(\theta),
 \label{eq:cond_mle_inverse}
 \end{equation}
-where $\Omega(\theta)$ denotes model regularisation. This objective makes the training stage independent of any explicit forward operator: it learns the inverse relationship directly from paired examples, while leaving all checking and attainment claims to a separate evaluation layer.
+where $\Omega(\theta)$ denotes regularisation. This training objective depends only on paired data and does not assume access to a forward operator during learning, which keeps the inverse model applicable across settings with different levels of forward-model availability. \cite{Arridge2019,Ongie2020}
 
-At query time, the inverse model produces a small candidate set by sampling:
+At query time, the inverse model produces a candidate set by sampling:
 \begin{equation}
   \widehat{\vect{x}}^{(k)} \sim q_\theta(\vect{x}\mid\vect{y}^\star),\qquad k=1,\dots,K.
   \label{eq:candidate_generation}
 \end{equation}
-To keep outputs uniform across experiments and model families, we fix a common candidate budget $K$ and treat inverse querying as candidate generation followed by outcome-space scoring. Each sampled candidate is assigned a discrepancy score using a task-defined metric $d(\cdot,\cdot)$ and an outcome evaluator $\mathcal{E}:\calX\to\calY$ that represents the best available mechanism for assessing outcomes. Depending on the setting, $\mathcal{E}$ may be a simulator, a learned surrogate, a measurement routine, or an offline mapping available only for evaluation. For a target $\vect{y}^\star$, we compute
+Candidates are then assessed in outcome space using a task-defined discrepancy $d(\cdot,\cdot)$ together with an outcome evaluator $\mathcal{E}:\calX\to\calY$ that represents the best available mechanism for assessing outcomes. Depending on the setting, $\mathcal{E}$ may be a simulator, a learned surrogate, a measurement routine, or an offline mapping used only for evaluation. \cite{Arridge2019,Ongie2020} For a target $\vect{y}^\star$, each candidate receives a score
 \begin{equation}
   r^{(k)}(\vect{y}^\star) \;=\; d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^\star\big),
   \qquad k=1,\dots,K,
   \label{eq:candidate_scores}
 \end{equation}
-and use these scores to rank candidates or to identify a subset that best aligns with the target. When an application requires a single deployed decision, this becomes a special case that selects the top-ranked candidate; otherwise, the ranked set itself is the primary output for exploration.
-
+which induces a ranking and supports two usage modes: exploratory use returns the ranked set (or a top subset), while deployment can optionally select a single decision as the best-aligned candidate under the declared discrepancy and evaluator. Fixing $K$, $\mathcal{E}$, and $d$ at evaluation time makes attainment statements traceable to an explicit scoring rule rather than to implicit model behaviour. \cite{Arridge2019,Ongie2020}
 
 
 %-------------------------------------------------------------------------------
 \section{Methodology selection and defence}\label{sec:method_defence}
 %-------------------------------------------------------------------------------
 
-The research questions require an inverse querying mechanism that supports ambiguity, yields a consistent output interface, and admits simple, reproducible assessment. These requirements motivate an inverse-mapping methodology built around probabilistic candidate generation: most computation occurs offline by fitting $q_\theta(\vect{x}\mid\vect{y})$, and each new query is answered by sampling a small candidate set followed by a fixed selection rule. This amortised design follows established practice in learned inverse problems and simulation-based inference, where conditional density estimation is used to make repeated inverse queries efficient. \cite{Arridge2019,Ongie2020,Cranmer2020SBI}
+The research questions call for an inverse querying mechanism that (i) respects non-uniqueness by producing meaningful alternatives, (ii) answers queries quickly enough for interactive use, and (iii) supports reproducible attainment assessment in outcome space. These requirements motivate an inverse-mapping methodology built around probabilistic candidate generation: most computation occurs offline by fitting $q_\theta(\vect{x}\mid\vect{y})$ via \eqref{eq:cond_mle_inverse}, and each new target is answered by sampling candidates via \eqref{eq:candidate_generation}. This amortised design is consistent with established practice in learned inverse problems and simulation-based inference, where conditional density estimation is used to make repeated inverse queries efficient. \cite{Arridge2019,Ongie2020,Cranmer2020SBI}
 
-A second design choice is to decouple learning from checking. The inverse model is trained solely from paired examples via \eqref{eq:cond_mle_inverse}, while the best available forward description is used after training to check and rank candidates in outcome space. This reflects a pragmatic deployment reality: some settings provide an explicit simulator or forward operator, while others require a surrogate evaluator trained for checking. In both cases, the checking rule is stated explicitly through $d(\widetilde{\vect{f}}(\widehat{\vect{x}}),\vect{y}^\star)$, so conclusions are tied to a declared notion of attainment rather than to informal inspection.
+A second choice is to separate learning from evaluation. The inverse model is trained from paired examples, while attainment is assessed after training by scoring candidates with an explicit outcome discrepancy under a stated evaluator, as in \eqref{eq:candidate_scores}. This decoupling is methodologically useful because forward-model access varies by dataset and domain: some settings provide a trusted simulator, others support only surrogate or measurement-based assessment, and some benchmarks permit evaluation through recorded outcomes alone. Stating the evaluator and discrepancy explicitly ties conclusions to a declared notion of attainment and supports comparable reporting across experiments. \cite{Arridge2019,Ongie2020}
 
-Optimisation-at-query-time remains complementary. Methods such as Bayesian optimisation can refine candidates when evaluations are affordable, but they introduce query-time search cost and additional tuning choices. The default methodology therefore prioritises amortised inverse querying, with optional refinement as a separate stage when deployment constraints permit. \cite{Shahriari2016BayesOpt}
+Finally, optimisation-at-query-time remains complementary. Black-box search procedures, including Bayesian optimisation, can refine a candidate when evaluations are affordable, but they increase query-time cost and introduce additional tuning and search design choices. The default methodology therefore prioritises amortised candidate generation with post-hoc scoring, while treating query-time optimisation as an optional refinement stage when deployment constraints permit. \cite{Shahriari2016BayesOpt}
+
 
 
 %-------------------------------------------------------------------------------
 \section{Methodological framework}\label{sec:framework}
 %-------------------------------------------------------------------------------
 
-We consider two complementary inverse families for $\mathcal{Y}\!\to\!\mathcal{X}$.
-\begin{enumerate}
-  \item Deterministic inverse models $g_{\theta}:\mathcal{Y}\!\to\!\mathcal{X}$
-  learned by empirical risk minimisation (ERM) with capacity control and
-  constraint handling (projection or penalties).
-
-  \item Probabilistic inverse models $p_{\theta}(\vect{x}\mid\vect{y})$ trained by
-  conditional maximum likelihood in expressive families (e.g., CVAEs or
-  normalising flows), equipped with a \emph{selection policy} that returns a
-  single decision (MAP/mean/median) or a small set of $k$ proposals at query
-  time. For diversity-aware sets, we optionally use a determinantal point
-  process (DPP) subset selector over candidates.
-\end{enumerate}
-
-
+From this point onward the chapter shifts from motivation to execution. The goal is to make
+inverse querying behave like a practical routine that can be run repeatedly and compared
+fairly across model families. The workflow follows a simple pattern: learn an inverse proposal
+model, generate multiple candidates for each new target, and then score those
+candidates in outcome space using an explicit discrepancy rule. In this way, ambiguity is
+handled by generation, while attainment is handled by checking under a declared evaluator
+and metric rather than by relying on implicit properties of the inverse model. 
 
 \begin{figure}[h]
   \centering
   \begin{adjustbox}{width=\linewidth}
       \input{figures/framework}
   \end{adjustbox}
-  \caption{Overview of the modular propose--check workflow used throughout the thesis: learning an inverse proposal model from paired examples, selecting a single decision per target with a fixed policy, and assessing attainment via a task-defined consistency check in outcome space.}
+  \caption{Propose--check workflow used throughout the thesis. An inverse model generates a candidate set for a target outcome, and an explicit evaluation stage scores and ranks candidates using a stated outcome evaluator and discrepancy.}
   \label{fig:framework}
 \end{figure}
 
+The starting point is a conditional distribution over decisions given outcomes,
+$q_{\theta}(\vect{x}\mid\vect{y})$. Once this model is trained, a user query $\vect{y}^{\star}$ is
+answered by drawing a fixed-size set of candidates:
+\begin{equation}
+  \widehat{\vect{x}}^{(k)} \sim q_{\widehat{\theta}}(\vect{x}\mid\vect{y}^{\star}),
+  \qquad k=1,\dots,K .
+  \label{eq:candidate_generation}
+\end{equation}
+We keep the candidate budget $K$ fixed across experiments so the user-facing interface stays
+the same regardless of the chosen model family, and so comparisons reflect modelling choices
+rather than differences in output conventions.
+
+Candidate generation alone is not sufficient, because the thesis evaluates success in outcome
+space. After sampling, each candidate is therefore checked by computing its outcome through
+the best available outcome evaluator $\mathcal{E}:\mathcal{X}\to\mathcal{Y}$ and scoring it with a
+task-defined discrepancy $d(\cdot,\cdot)$:
+\begin{equation}
+  r^{(k)}(\vect{y}^{\star}) \;=\;
+  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big),
+  \qquad k=1,\dots,K .
+  \label{eq:candidate_scoring}
+\end{equation}
+The evaluator $\mathcal{E}$ is intentionally defined broadly. Depending on the dataset and the
+deployment context, it may be an explicit simulator, a measurement routine, a learned
+surrogate trained for checking, or an offline mapping used only for evaluation. The method
+returns candidates ranked by $r^{(k)}(\vect{y}^{\star})$; when a single deployed configuration is
+required, it is taken as the best-ranked candidate under the declared scoring rule. 
 
 
 
-To reduce one-to-many ambiguity, both families may include a
-\emph{forward-consistency} term that encourages
-$\vect{f}(g_{\theta}(\vect{y}))\!\approx\!\vect{y}$ during training.
-
-
-
-
-
+%-------------------------------------------------------------------------------
 \section{Inverse-model training}\label{sec:training}
+%-------------------------------------------------------------------------------
 
-\subsection{Deterministic inverse ERM}\label{sec:det_inverse}
-We estimate $g_\theta$ by minimising a supervised loss in decision space with regularisation:
-\begin{equation}
-  \widehat{\theta}\;\in\;\arg\min_{\theta}\;
-  \frac{1}{N}\sum_{i=1}^{N}\ell_{\mathcal{X}}\!\Big(g_{\theta}(\mathbf{y}_i),\,\mathbf{x}_i\Big)
-  \;+\;\lambda\,\Omega(\theta).
-  \label{eq:erm_inverse}
-\end{equation}
-Here $\ell_{\mathcal{X}}$ measures deviation in $\mathcal{X}$ (e.g., scaled $\ell_2^2$), while $\Omega(\theta)$ (e.g., weight decay or sparsity) improves generalisation and numerical stability in ill-posed settings.
+With the propose--check interface fixed in Section~\ref{sec:framework}, implementation starts by fitting the candidate generator from paired examples
+$\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$. The goal is to learn a conditional distribution
+$q_{\theta}(\vect{x}\mid\vect{y})$ that assigns high probability to decisions that are consistent with the observed decision--outcome relationship, while remaining expressive enough to represent one-to-many structure. Chapter~3 motivates the three conditional families used in this thesis (MDN, CVAE, INN) and derives their probabilistic forms; here we restate the corresponding training objectives in the form used for experiments and implementation.
 
-\paragraph{Constraint-aware training (projection/penalties).}
-If decisions must satisfy $g_j(\vect{x})\!\le\!0$ and $h_k(\vect{x})\!=\!0$, we use projection when $\mathcal{X}$ is convex and closed, or exterior penalties otherwise:
+Across all models, parameter estimation follows the same principle: maximise conditional fit to the observed pairs while controlling capacity through regularisation. In practice, we minimise the regularised negative conditional log-likelihood,
 \begin{equation}
-  \widehat{\theta}\;\in\;\arg\min_{\theta}\;\frac{1}{N}\sum_{i=1}^{N}\!\Big[
-    \ell_{\mathcal{X}}\!\big(\,\Pi_{\mathcal{X}}\{g_{\theta}(\mathbf{y}_i)\},\,\mathbf{x}_i\big)
-    \;+\;\beta\!\sum_j [\,g_j(g_{\theta}(\mathbf{y}_i))\,]_+^{2}
-    \;+\;\beta'\!\sum_k h_k(g_{\theta}(\mathbf{y}_i))^{2}\Big]
+  \widehat{\theta}\in\arg\min_{\theta}\;
+  \frac{1}{N}\sum_{i=1}^{N}\Big[-\log q_{\theta}(\vect{x}_i\mid\vect{y}_i)\Big]
   \;+\;\lambda\,\Omega(\theta),
-  \label{eq:erm_constraints}
+  \label{eq:cond_mle_inverse}
 \end{equation}
-where $[\cdot]_+=\max\{\cdot,0\}$; squared-hinge and quadratic terms are standard, keeping optimisation unconstrained.
+where $\Omega(\theta)$ collects stabilising terms such as weight decay and any model-specific penalties. This fitting step uses only paired data; the outcome evaluator $\mathcal{E}$ and discrepancy $d$ are introduced later and only enter through the candidate scoring rule in Section~\ref{sec:framework}.
 
-\paragraph{Forward-consistency (optional).}
-To bias toward decisions whose forward responses match observed outcomes, we add an outcome-space penalty:
+The three instantiations below differ in how they parameterise $q_{\theta}(\vect{x}\mid\vect{y})$ and how the log-density in \eqref{eq:cond_mle_inverse} is computed or approximated.
+
+Mixture Density Network (MDN).
+The MDN represents the conditional density as a finite Gaussian mixture with outcome-dependent parameters (see Chapter~3, Eq.~(3.14)--(3.15)):
 \begin{equation}
-  \widehat{\theta}\;\in\;\arg\min_{\theta}\;
-  \frac{1}{N}\sum_{i=1}^{N}\!\Big[
-    \ell_{\mathcal{X}}\!\big(g_{\theta}(\mathbf{y}_i),\,\mathbf{x}_i\big)
-    \;+\;\alpha\,d\!\big(\mathbf{f}(g_{\theta}(\mathbf{y}_i)),\,\mathbf{y}_i\big)^{2}
-  \Big]\;+\;\lambda\,\Omega(\theta),
-  \qquad \alpha\!\ge\!0,
-  \label{eq:forward_consistency}
+  q_{\theta}(\vect{x}\mid\vect{y}) =
+  \sum_{j=1}^{M}\pi_{\theta,j}(\vect{y})\,
+  \mathcal{N}\!\big(\vect{x};\,\boldsymbol{\mu}_{\theta,j}(\vect{y}),\,\boldsymbol{\Sigma}_{\theta,j}(\vect{y})\big),
+  \qquad
+  \sum_{j=1}^{M}\pi_{\theta,j}(\vect{y})=1,\ \ \pi_{\theta,j}(\vect{y})\ge 0 .
+  \label{eq:mdn_density}
 \end{equation}
-with $d$ an outcome-space distance (defined in \S\ref{sec:evaluation}). This “tandem” idea reduces non-uniqueness by validating inverse predictions through $\vect{f}$.
+Training substitutes \eqref{eq:mdn_density} into \eqref{eq:cond_mle_inverse} and optimises the resulting mixture negative log-likelihood. The implementation follows standard constraints for mixture weights and covariance parameterisation, as detailed in the Modeling Background.
 
-\subsection{Probabilistic inverse training}\label{sec:prob_inverse}
-
-We model the inverse relation as a conditional distribution $p_{\theta}(\mathbf{x}\mid\mathbf{y})$ and fit it by conditional maximum likelihood:
+Conditional Variational Autoencoder (CVAE).
+The CVAE introduces latent variables to represent conditional variability and trains by maximising a variational lower bound on $\log q_{\theta}(\vect{x}\mid\vect{y})$ (see Chapter~3, Eq.~(3.16)--(3.17)). Using an encoder $q_{\phi}(\vect{z}\mid\vect{x},\vect{y})$ and a decoder $p_{\theta}(\vect{x}\mid\vect{y},\vect{z})$, the objective becomes
 \begin{equation}
-  \widehat{\theta}\in\arg\max_{\theta}\;\sum_{i=1}^{N}\log p_{\theta}(\mathbf{x}_i\mid\mathbf{y}_i)\;-\;\gamma\,\mathcal{R}(\theta),
-  \label{eq:cll_inverse}
+  \widehat{\theta},\widehat{\phi}\in\arg\min_{\theta,\phi}\;
+  -\frac{1}{N}\sum_{i=1}^{N}\Big[
+    \mathbb{E}_{q_{\phi}(\vect{z}\mid\vect{x}_i,\vect{y}_i)}\log p_{\theta}(\vect{x}_i\mid\vect{y}_i,\vect{z})
+    - \mathrm{KL}\!\big(q_{\phi}(\vect{z}\mid\vect{x}_i,\vect{y}_i)\,\|\,p(\vect{z})\big)
+  \Big]
+  +\lambda\,\Omega(\theta,\phi),
+  \label{eq:cvae_elbo}
 \end{equation}
-where $\mathcal{R}(\theta)$ regularises the density model (e.g., VAE/flow terms or weight decay). Expressive conditional families such as CVAEs and normalizing flows are standard choices for multi–modal $p(\mathbf{x}\mid\mathbf{y})$. 
+which is the negative ELBO plus regularisation. This keeps the training criterion tractable while still targeting a conditional generative model whose latent variation can produce diverse candidates for a fixed $\vect{y}^{\star}$.
 
-At inference, we expose a \emph{selection policy} $\pi$ that maps the learned conditional to either a single decision or a set of $k$ proposals, depending on user intent:
-\[
-  \widehat{\mathcal{X}}_{\pi}(\mathbf{y}^{\ast};k)\;=\;S_{\pi}\!\left(p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast}),\,k\right).
-\]
-Typical instantiations are:
-(i) \emph{MAP:} $S_{\text{MAP}}(\cdot,1)=\arg\max_{\mathbf{x}}p_{\widehat{\theta}}(\mathbf{x}\mid\mathbf{y}^{\ast})$;
-(ii) \emph{risk–optimal summaries:} $S_{\text{mean}}(\cdot,1)=\mathbb{E}[\mathbf{x}\mid\mathbf{y}^{\ast}]$ or a coordinate-wise median (squared/absolute–loss Bayes rules); \cite{Bishop2006PRML}
-(iii) \emph{i.i.d.\ sampling:} $S_{\text{sample}}$ draws $k$ independent $\mathbf{x}^{(r)}\!\sim p_{\widehat{\theta}}(\cdot\mid\mathbf{y}^{\ast})$;
-(iv) \emph{diversity–aware sets:} draw $L\!>\!k$ candidates then select a diverse subset, e.g., via a determinantal point process (DPP) kernel on decision space, yielding $\arg\max_{|\mathcal{S}|=k}\det K(\mathcal{S})$. \cite{KuleszaTaskar2012DPP}
-Policies (iii)–(iv) support multi-solution exploration when the inverse is intrinsically one-to-many; (i)–(ii) provide single, reproducible decisions when required.
+Invertible Neural Network (INN).
+The INN implements a conditional density through an invertible transformation between a simple reference latent and the decision, conditioned on the outcome target. Using a conditional invertible map $T_{\theta}(\cdot;\vect{y})$,
+\begin{equation}
+  \vect{x} = T_{\theta}(\vect{z};\vect{y}),\qquad \vect{z}\sim \mathcal{N}(\mathbf{0},\mathbf{I}),
+  \label{eq:inn_forward_map}
+\end{equation}
+the conditional log-density follows from a change-of-variables construction (see the Modeling Background for the invertibility setup; the implementation uses the standard log-determinant form):
+\begin{equation}
+  \log q_{\theta}(\vect{x}\mid\vect{y}) =
+  \log p(\vect{z}) +
+  \log\left|\det \frac{\partial T_{\theta}^{-1}(\vect{x};\vect{y})}{\partial \vect{x}}\right|,
+  \qquad
+  \vect{z}=T_{\theta}^{-1}(\vect{x};\vect{y}).
+  \label{eq:inn_change_of_vars}
+\end{equation}
+Substituting \eqref{eq:inn_change_of_vars} into \eqref{eq:cond_mle_inverse} yields a direct likelihood-based training objective. This preserves an explicit density model while maintaining a sampling mechanism that is compatible with the fixed candidate budget $K$ used throughout the experiments.
+
+In summary, MDN, CVAE, and INN all realise the same training goal---a conditional generator $q_{\theta}(\vect{x}\mid\vect{y})$ fitted from paired data---but they differ in how multimodality is represented (mixture components, latent-variable decoding, or invertible latent transport). Downstream evaluation then treats their sampled candidates uniformly via the shared scoring rule in \eqref{eq:candidate_scoring}, so empirical comparisons reflect differences in the learned conditional model rather than differences in the evaluation interface.
+
 
 
 \section{Evaluation plan}\label{sec:evaluation}
@@ -208,11 +225,6 @@ We use benchmarked or archival pairs $(\vect{x},\vect{y})$ originating from simu
 
 \section{Methods conclusion}\label{sec:methods_conclusion}
 In sum, the methodology learns an outcome$\!\to\!$decision mapping aligned with forward behaviour, supports either a single decision or a small set of proposals at query time, and evaluates attainment of $\vect{y}^{\star}$ with transparent outcome-space criteria. Calibration procedures provide specification-level guarantees for forward-validated outcomes.
-
-
-
-
-
 
 
 
