@@ -1,97 +1,71 @@
-\begin{tikzpicture}[node distance=1.2cm and 1.5cm, >=Stealth, thick]
-
-% --- 1. Enhanced Color Palette ---
-\definecolor{colorTraining}{HTML}{455a64}   % Slate Grey
-\definecolor{colorInverse}{HTML}{0077b6}    % Science Blue
-\definecolor{colorForward}{HTML}{d00000}    % Alert Red
-\definecolor{colorSelection}{HTML}{f77f00}  % Orange
-\definecolor{colorResult}{HTML}{2b9348}     % Success Green
-
-% --- 2. Optimized Styles ---
-\tikzset{
-    base/.style={
-        font=\sffamily\small, align=center, minimum height=0.9cm, 
-        draw, line width=0.8pt, rounded corners=3pt
+\begin{tikzpicture}[
+    % --- Color Definitions ---
+    execute at begin picture={
+        \definecolor{colInv}{RGB}{0, 119, 182}
+        \definecolor{colFwd}{RGB}{208, 0, 0}
+        \definecolor{colSelect}{RGB}{247, 127, 0}
+        \definecolor{colSuccess}{RGB}{43, 147, 72}
+        \definecolor{colTrain}{RGB}{100, 100, 100}
     },
-    data/.style={
-        base, fill=colorTraining!10, draw=colorTraining, text=colorTraining,
-        dashed, minimum width=3cm
-    },
-    inverse/.style={
-        base, fill=colorInverse!10, draw=colorInverse, text=colorInverse,
-        minimum width=3.5cm, font=\sffamily\bfseries\small
-    },
-    forward/.style={
-        base, fill=colorForward!10, draw=colorForward, text=colorForward,
-        minimum width=3.5cm
-    },
-    policy/.style={
-        base, shape=trapezium, trapezium left angle=75, trapezium right angle=75,
-        fill=colorSelection!15, draw=colorSelection, text=colorSelection!80!black,
-        minimum width=3cm
-    },
-    check/.style={
-        base, shape=diamond, aspect=1.8, inner sep=0pt,
-        fill=colorResult!10, draw=colorResult, text=colorResult!80!black,
-        minimum width=3.5cm
-    },
-    target/.style={
-        base, fill=white, draw=black, minimum width=2.5cm,
-        double, double distance=1pt
-    },
-    container/.style={
-        draw=black!30, fill=black!2, dashed, rounded corners=12pt
-    },
-    labelStyle/.style={
-        font=\sffamily\bfseries\color{black!70}, anchor=north west, xshift=5pt, yshift=-5pt
-    }
-}
+    % --- Refined Styles ---
+    >=Stealth, thick,
+    node distance=1cm and 0.6cm, % Reduced spacing for smaller nodes
+    base/.style={font=\sffamily\footnotesize, align=center, minimum height=0.75cm, draw, line width=0.7pt, rounded corners=3pt},
+    data/.style={base, draw=colTrain, fill=colTrain!5, dashed, minimum width=2.6cm},
+    inverse/.style={base, draw=colInv, fill=colInv!10, text=colInv, font=\sffamily\bfseries\footnotesize, minimum width=3.2cm},
+    forward/.style={base, draw=colFwd, fill=colFwd!10, text=colFwd, minimum width=3.2cm},
+    target/.style={base, fill=white, draw=black, minimum width=2.5cm, double, double distance=1pt},
+    policy/.style={base, shape=trapezium, trapezium left angle=75, trapezium right angle=75, draw=colSelect, fill=colSelect!10, text=colSelect!80!black, minimum width=2.8cm},
+    check/.style={base, shape=diamond, aspect=1.8, inner sep=0pt, draw=colSuccess, fill=colSuccess!10, text=colSuccess!80!black, minimum width=3.4cm},
+    result/.style={base, fill=colSuccess, draw=colSuccess!70!black, text=white, font=\sffamily\bfseries\footnotesize, minimum width=3.2cm},
+    labelStyle/.style={font=\sffamily\bfseries\small\color{black!60}, anchor=north, yshift=12pt}
+]
 
-% --- 3. PROCEDURE A: MODEL SYNTHESIS (TRAINING) ---
-
-\node[data] (Pairs) {Paired Examples\\$(\mathbf{x}, \mathbf{y}) \in \mathcal{X} \times \mathcal{Y}$};
-\node[inverse, right=2cm of Pairs] (InverseModel) {Inverse Mapping\\$\mathbf{y} \to \widehat{\mathbf{x}}$};
-\node[forward, below=0.6cm of InverseModel] (ForwardSurr) {Forward Surrogate\\$\widehat{f}: \mathcal{X} \to \mathcal{Y}$};
-
-% Internal Training Connections
-\draw[->, colorTraining] (Pairs) -- node[above, font=\scriptsize] {Learn Mapping} (InverseModel);
-\draw[->, colorTraining] (Pairs) |- node[pos=0.75, right, font=\scriptsize] {Learn Physics/Logic} (ForwardSurr);
-\draw[<->, colorForward, line width=1.2pt] (InverseModel) -- node[right, font=\scriptsize\itshape] {Forward Alignment} (ForwardSurr);
-
-% --- 4. PROCEDURE B: INFERENCE & VALIDATION (QUERYING) ---
-
-\node[target, below=3.5cm of Pairs] (Target) {Target Outcome\\$\mathbf{y}^\star$};
-\node[inverse, right=2cm of Target] (Propose) {Proposal Mechanism\\(Uses Inverse Model)};
-\node[policy, right=1.2cm of Propose] (Selection) {Selection Rule\\(Uniformity)};
-\node[check, below=1.2cm of Selection] (Check) {Consistency Check\\$\widehat{f}(\widehat{\mathbf{x}}) \approx \mathbf{y}^\star$};
-\node[base, fill=colorResult, text=white, font=\sffamily\bfseries, left=1.5cm of Check] (Decision) {Validated Decision $\widehat{\mathbf{x}}$};
-
-% Querying Connections
-\draw[->] (Target) -- (Propose);
-\draw[->] (Propose) -- (Selection);
-\draw[->] (Selection) -- (Check);
-\draw[->] (Check) -- node[above] {Success} (Decision);
-
-% --- 5. CROSS-PROCEDURE INTEGRATION (Deployment) ---
-
-% Inverse Model being used as the Proposal Mechanism
-\draw[->, colorInverse, dotted, line width=1pt] (InverseModel) -- (Propose);
-\node[colorInverse, font=\scriptsize, rotate=-90, anchor=south] at ($(InverseModel)!0.5!(Propose)$) {Deployed for Inference};
-
-% Forward Surrogate being used for Grounding
-\draw[->, colorForward, dashed] (ForwardSurr.south) -- ++(0,-1.5) -| (Check.north);
-\node[colorForward, font=\scriptsize, anchor=west, xshift=5pt] at ($(ForwardSurr.south) + (0,-1)$) {Grounding Reference};
-
-% --- 6. CONTAINERS & LABELS ---
-
-\begin{scope}[on background layer]
-    % Training Box
-    \node[container, fit=(Pairs) (InverseModel) (ForwardSurr)] (BoxTraining) {};
-    \node[labelStyle] at (BoxTraining.north west) {PROCEDURE I: MODEL SYNTHESIS (Training)};
+    % === LEFT COLUMN: OFFLINE PHASE (Model Synthesis) ===
+    \node[data] (Pairs) {Paired Examples $\mathcal{D}$\\$\{(x_i, y_i)\}_{i=1}^N$};
     
-    % Querying Box
-    \node[container, fit=(Target) (Propose) (Selection) (Check) (Decision)] (BoxQuerying) {};
-    \node[labelStyle] at (BoxQuerying.north west) {PROCEDURE II: INFERENCE \& VALIDATION (Querying)};
-\end{scope}
+    \node[inverse, below=of Pairs] (InverseModel) {Inverse Model\\$q_\theta(x|y)$};
+    \node[forward, below=of InverseModel] (ForwardSurr) {Forward Surrogate\\$\hat{f}(x)$};
+
+    \draw[->, colTrain] (Pairs) -- node[right, font=\tiny] {Fit Generator} (InverseModel);
+    \draw[->, colTrain] (Pairs.west) -- ++(-0.4,0) |- (ForwardSurr.west) 
+        node[pos=0.75, left, font=\tiny] {Learn Physics/Logic};
+    \draw[<->, colFwd, line width=1pt] (InverseModel) -- node[right, font=\tiny\itshape] {Alignment} (ForwardSurr);
+
+    % === RIGHT COLUMN: ONLINE PHASE (Interactive Exploration) ===
+    \node[target, right=2.8cm of Pairs] (Target) {Target Outcome\\$y^\star \in \mathcal{Y}$};
+    
+    \node[inverse, below=of Target] (Propose) {Proposal Mechanism\\Generate $\{\hat{x}^{(k)}\}_{k=1}^K$};
+    
+    \node[policy, below=of Propose] (Selection) {Selection Rule\\Filter \& Rank Candidates};
+    
+    \node[check, below=of Selection] (Check) {Consistency Check\\$\hat{f}(\hat{x}^{(k)}) \approx y^\star$};
+    
+    \node[result, below=0.7cm of Check] (Decision) {Validated Decision $\hat{x}$};
+
+    \draw[->] (Target) -- (Propose);
+    \draw[->] (Propose) -- (Selection);
+    \draw[->] (Selection) -- (Check);
+    \draw[->] (Check) -- node[right, font=\scriptsize\bfseries, colSuccess] {Success} (Decision);
+
+    % === CROSS-PHASE DEPLOYMENT ===
+    
+    % Deploying Inverse Model
+    \draw[->, colInv, dotted, line width=1.2pt] (InverseModel.east) -- (Propose.west) 
+        node[midway, above, font=\tiny\bfseries] {Deployed for Inference};
+
+    % Grounding Reference (Forward Surrogate used for checking)
+    \draw[->, colFwd, dashed, line width=0.8pt] (ForwardSurr.east) -- ++(0.8,0) |- (Check.west)
+        node[pos=0.25, right, font=\tiny\bfseries] {Grounding Reference};
+
+    % === CONTAINERS WITH PADDING ===
+    \begin{scope}[on background layer]
+        % Added 'inner sep' for padding between nodes and container edges
+        \node[draw=black!10, fill=black!2, dashed, rounded corners=10pt, inner sep=18pt, fit=(Pairs) (ForwardSurr)] (Box1) {};
+        \node[labelStyle] at (Box1.north) {MODEL SYNTHESIS};
+
+        \node[draw=black!10, fill=black!2, dashed, rounded corners=10pt, inner sep=18pt, fit=(Target) (Decision)] (Box2) {};
+        \node[labelStyle] at (Box2.north) {INTERACTIVE EXPLORATION};
+    \end{scope}
 
 \end{tikzpicture}

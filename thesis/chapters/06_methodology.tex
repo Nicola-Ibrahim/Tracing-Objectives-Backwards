@@ -70,7 +70,7 @@ candidates in outcome space using an explicit discrepancy rule. In this way, amb
 handled by generation, while attainment is handled by checking under a declared evaluator
 and metric rather than by relying on implicit properties of the inverse model. 
 
-\begin{figure}[h]
+\begin{figure}[t]
   \centering
   \begin{adjustbox}{width=\linewidth}
       \input{figures/framework}
@@ -173,59 +173,86 @@ Substituting \eqref{eq:inn_change_of_vars} into \eqref{eq:cond_mle_inverse} yiel
 In summary, MDN, CVAE, and INN all realise the same training goal---a conditional generator $q_{\theta}(\vect{x}\mid\vect{y})$ fitted from paired data---but they differ in how multimodality is represented (mixture components, latent-variable decoding, or invertible latent transport). Downstream evaluation then treats their sampled candidates uniformly via the shared scoring rule in \eqref{eq:candidate_scoring}, so empirical comparisons reflect differences in the learned conditional model rather than differences in the evaluation interface.
 
 
-
+%-------------------------------------------------------------------------------
 \section{Evaluation plan}\label{sec:evaluation}
-We evaluate the decision quality with outcome-space discrepancy and a specification-level success indicator. Unless otherwise noted, when multiple proposals are returned ($k\!>\!1$) for exploration, we report metrics on the \emph{top-ranked} candidate under the chosen policy to keep comparisons consistent.
+%-------------------------------------------------------------------------------
 
-\subsection{forward estimator evaluation}
-Write about the use of the forward estimator
+The inverse models in this thesis return a candidate set for each target rather than a single point estimate. Evaluation therefore answers a concrete question: given a target $\vect{y}^{\star}$ and candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$, which candidates most closely satisfy the objective under a stated checking mechanism, and how often does at least one candidate meet a specification-level requirement. This section fixes that checking mechanism so that results remain comparable across model families and datasets.
 
-\subsection{Outcome-space error}
+Evaluation is performed through an outcome evaluator $\mathcal{E}:\mathcal{X}\to\mathcal{Y}$, which represents the best available way to assess outcomes for proposed decisions. Depending on the setting, $\mathcal{E}$ may be a trusted forward simulator, an experimental measurement routine, or a surrogate model used purely for checking when an explicit forward model is not available. 
+
+\subsection{Outcome-space checking and ranking}\label{sec:eval_checking}
+
+For each candidate, we compute an outcome-space discrepancy score relative to the user target:
 \begin{equation}
-  \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+  r^{(k)}(\vect{y}^{\star})
   \;=\;
-  d\!\big(\,\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big),
-  \qquad
-  d\in\{\ \|\cdot\|_2\,,\ \text{Mahalanobis}\ \}.
-  \label{eq:target_error}
+  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big),
+  \qquad k=1,\dots,K,
+  \label{eq:candidate_scoring}
 \end{equation}
-Euclidean distance is a natural default after standardising outcome scales; Mahalanobis distance incorporates outcome covariance and is preferable when dimensions have different units or correlations.
+and rank candidates by increasing $r^{(k)}(\vect{y}^{\star})$. This score is the main evaluation primitive: it is the mechanism by which the forward model or surrogate contributes to validation, and it is the basis for all reported attainment metrics.
 
-\subsection{Tolerance-based success}
-For a binary, specification-level view we report
+To summarise performance in a way that respects the one-to-many nature of the inverse mapping, we report the best-achieved discrepancy within the candidate set:
 \begin{equation}
-  \mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+  \mathcal{E}_{\mathcal{Y}}^{(K)}(\vect{y}^{\star})
   \;=\;
-  \mathbb{I}\!\left[\, d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\, \mathbf{y}^{\ast}\big) \le \epsilon \right],
-  \label{eq:succ_eps_single}
+  \min_{k\in\{1,\dots,K\}}
+  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big).
+  \label{eq:best_of_k_error}
 \end{equation}
-with $\epsilon$ set by domain tolerances. Together, $\mathcal{E}_{\mathcal{Y}}$ (closeness) and $\mathrm{Succ}_\epsilon$ (meets spec) offer a concise, reproducible summary.
+When qualitative exploration is the goal, the ranked list itself is retained; when a single deployed decision is required, it is chosen as the top-ranked candidate under \eqref{eq:candidate_scoring}. Using $\min_k$ as the reporting convention keeps comparisons consistent while still crediting methods that generate useful diversity.
 
-\section{Calibration procedures}\label{sec:calibration}
-To attach coverage-style guarantees to the forward-validated outcomes, we use split conformal calibration on a held-out calibration set.
-
-\paragraph{SplitConformalL2.}
-Define residuals $r_i=\|\mathbf{f}(g_{\widehat{\theta}}(\mathbf{y}_i))-\mathbf{y}_i\|_2$ on calibration data and form
+The discrepancy $d$ is selected to match the outcome semantics and scaling. After standardising outcomes, Euclidean distance provides a transparent default. When outcome dimensions are correlated or have heterogeneous noise, a Mahalanobis discrepancy incorporates covariance structure:
 \begin{equation}
-  \mathcal{C}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \|\mathbf{y}-\mathbf{y}^{\ast}\|_2\le q_{1-\alpha}\},
-  \label{eq:split_conformal_l2}
+  d_{\mathrm{Mah}}(\vect{u},\vect{v})
+  \;=\;
+  \sqrt{(\vect{u}-\vect{v})^{\top}\boldsymbol{\Sigma}^{-1}(\vect{u}-\vect{v})},
+  \label{eq:mahalanobis_distance}
 \end{equation}
-where $q_{1-\alpha}$ is the $(1-\alpha)$ empirical quantile of $\{r_i\}$.
+with $\boldsymbol{\Sigma}$ estimated from a reference split of outcomes. \cite{Bishop2006PRML}
 
-\paragraph{SplitConformal–Mahalanobis.}
-With covariance $\mathbf{\Sigma}$ estimated from calibration outcomes and $\Delta(\mathbf{y},\mathbf{y}^{\ast})=\sqrt{(\mathbf{y}-\mathbf{y}^{\ast})^{\top}\mathbf{\Sigma}^{-1}(\mathbf{y}-\mathbf{y}^{\ast})}$,
+\subsection{Tolerance-based attainment}\label{sec:eval_tolerance}
+
+Outcome-space distances are informative, but many applications ultimately require a specification-level statement: whether the method can produce at least one candidate within an acceptable tolerance. Using the same discrepancy as in \eqref{eq:candidate_scoring}, we report
 \begin{equation}
-  \mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})=\{\mathbf{y}:\ \Delta(\mathbf{y},\mathbf{y}^{\ast})\le q^{\mathrm{Mah}}_{1-\alpha}\}.
-  \label{eq:mahalanobis_conformal}
+  \mathrm{Succ}^{(K)}_{\epsilon}(\vect{y}^{\star})
+  \;=\;
+  \mathbb{I}\!\left[\,
+    \min_{k\in\{1,\dots,K\}}
+    d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big)
+    \le \epsilon
+  \right],
+  \label{eq:succ_eps_bestofk}
 \end{equation}
-We test whether $\mathbf{f}(\widehat{\mathbf{x}})\in\mathcal{C}_{\alpha}(\mathbf{y}^{\ast})$ or $\mathcal{C}^{\mathrm{Mah}}_{\alpha}(\mathbf{y}^{\ast})$; by construction, these sets deliver finite-sample marginal coverage under exchangeability.
+where $\epsilon$ is set by domain tolerances or by a declared experimental specification. Reporting both $\mathcal{E}_{\mathcal{Y}}^{(K)}$ and $\mathrm{Succ}^{(K)}_{\epsilon}$ separates continuous closeness from compliance with a target specification.
 
-\section{Data sources and ethics}\label{sec:data_ethics}
+\subsection{Operational-domain validator (ODD) for constraint-aware evaluation}\label{sec:eval_odd}
+
+Discrepancy alone does not capture all evaluation needs. In practice, users often impose additional constraints beyond matching $\vect{y}^{\star}$, such as admissible operating regions, safety limits, or validity requirements tied to the training distribution. To make these requirements explicit, we include an operational-domain validator, denoted ODD, that acts as an additional evaluation mechanism.
+
+The ODD produces an in-domain score or acceptance decision for a candidate outcome (and, if needed, for a candidate decision):
+\begin{equation}
+  s_{\psi}^{(k)} \;=\; \mathrm{ODD}_{\psi}\!\big(\widehat{\vect{x}}^{(k)},\,\mathcal{E}(\widehat{\vect{x}}^{(k)})\big),
+  \qquad k=1,\dots,K,
+  \label{eq:odd_score}
+\end{equation}
+where larger $s_{\psi}^{(k)}$ indicates better conformity to the operational domain. In machine-learning terms, this corresponds to out-of-distribution or novelty detection: the validator is trained beforehand to capture the data distribution (and any user-declared admissibility structure), so that candidates outside the supported regime can be flagged or rejected. \cite{Lu2025OODSurvey}
+
+In evaluation, we combine target attainment and operational-domain validity by filtering or re-ranking. A simple filtering rule keeps only candidates that satisfy a validator threshold $\tau$ and any explicit user constraints encoded as a predicate $c(\cdot)\le 0$ in outcome space:
+\begin{equation}
+  \mathcal{K}_{\mathrm{valid}}(\vect{y}^{\star})
+  \;=\;
+  \Big\{\,k:\ s_{\psi}^{(k)}\ge\tau\ \ \text{and}\ \ c\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)})\big)\le 0 \Big\}.
+  \label{eq:valid_set}
+\end{equation}
+Ranking is then applied within $\mathcal{K}_{\mathrm{valid}}(\vect{y}^{\star})$ using the same discrepancy score \eqref{eq:candidate_scoring}. If no candidate passes the validator, the method reports this explicitly and the query is treated as not attained under the declared operational constraints. This makes failure modes interpretable: the method may fail because candidates do not match the target, because they violate user constraints, or because they fall outside the learned operational domain.
+
+The threshold $\tau$ is selected in advance on held-out data to control the strictness of the validator under the training regime. This keeps ODD decisions reproducible and prevents post hoc threshold tuning that would compromise comparability across experiments. The exact ODD model class used (e.g., one-class classification, energy-based scoring, or density-based scoring) is treated as part of the evaluation configuration and is reported alongside the discrepancy definition. \cite{Liu2020EnergyOOD}
+
+
+\section{Data sources}\label{sec:data_ethics}
 We use benchmarked or archival pairs $(\vect{x},\vect{y})$ originating from simulators or standard suites (e.g., COCO/BBOB for black-box optimisation) as well as domain archives when available. For each source, we document provenance, licensing, storage, and disposal. No personally identifiable or sensitive data are involved.
-
-\section{Methods conclusion}\label{sec:methods_conclusion}
-In sum, the methodology learns an outcome$\!\to\!$decision mapping aligned with forward behaviour, supports either a single decision or a small set of proposals at query time, and evaluates attainment of $\vect{y}^{\star}$ with transparent outcome-space criteria. Calibration procedures provide specification-level guarantees for forward-validated outcomes.
-
 
 
 
@@ -255,26 +282,7 @@ the regressors.  Outliers are removed using interquartile range
 thresholding.  The processed dataset is then randomly split into
 training, validation and test sets.
 
-\subsection{Inverse Model Training}
 
-We consider several modelling strategies for the inverse mapping
-\(\hat{g}\colon\calY\to\calX\):
-
-
-\paragraph{Feed‑Forward Neural Networks (FFNN).}  A multi‑layer perceptron
-with fully connected layers and ReLU activations can approximate complex
-nonlinear mappings.  We select the network architecture using
-hyperparameter search and train using Adam optimisation with early
-stopping.  Data augmentation and regularisation (dropout and weight
-decay) improve generalisation.
-
-\paragraph{Transfer Learning and Multi‑Source Data.}  When the available
-dataset is small, transfer learning can leverage data from related tasks.
-Tan et~al. propose learning across common objective spaces to mitigate
-data scarcity and demonstrate that combining multiple Pareto fronts can
-  improve inverse model generalisation~\cite{Tan2023}.  We adopt
-this idea by pooling Pareto samples from benchmark problems with similar
-objective definitions during training.
 
 \subsection{Model Selection and Validation}
 
