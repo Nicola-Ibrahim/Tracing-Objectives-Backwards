@@ -1,0 +1,43 @@
+\begin{tikzpicture}[
+    % --- Global Definitions ---
+    execute at begin picture={
+        \definecolor{colMain}{RGB}{0, 119, 182}
+        \definecolor{colParam}{RGB}{72, 149, 239}
+        \definecolor{colLatent}{RGB}{114, 9, 183}
+        \definecolor{colResult}{RGB}{43, 147, 72}
+    },
+    >=Stealth, thick, node distance=1.2cm,
+    font=\sffamily\footnotesize,
+    % --- Styles ---
+    io/.style={draw, fill=white, minimum width=1.6cm, minimum height=0.7cm, rounded corners=2pt},
+    block/.style={draw, fill=colMain!10, text=colMain, minimum width=2.8cm, minimum height=1cm, font=\sffamily\bfseries\footnotesize, rounded corners=4pt},
+    param/.style={draw=colParam, fill=colParam!10, text=colParam!80!black, minimum width=1.3cm, minimum height=0.6cm, rounded corners=2pt, font=\sffamily\scriptsize\bfseries},
+    dist/.style={draw=colLatent, fill=colLatent!10, text=colLatent, minimum width=3.2cm, minimum height=0.9cm, rounded corners=12pt}
+]
+
+    % Nodes
+    \node[io] (input) {Outcome $\mathbf{y}$};
+    \node[block, below=1cm of input] (nn) {MDN Backbone\\(Neural Network)};
+    
+    % Parameter Heads (Spaced out)
+    \node[param, below=1.2cm of nn] (mu) {Means $\boldsymbol{\mu}_k(\mathbf{y})$};
+    \node[param, left=0.6cm of mu] (pi) {Weights $\pi_k(\mathbf{y})$};
+    \node[param, right=0.6cm of mu] (sigma) {Covars $\boldsymbol{\Sigma}_k(\mathbf{y})$};
+    
+    % Sampling Logic
+    \node[dist, below=1.2cm of mu] (mix) {GMM Distribution\\$q_\theta(\mathbf{x}|\mathbf{y}) = \sum \pi_k \mathcal{N}(\boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)$};
+    \node[io, below=1cm of mix, fill=colResult, text=white, font=\sffamily\bfseries\footnotesize] (output) {Sampled Decision $\hat{\mathbf{x}}$};
+
+    % Connections
+    \draw[->] (input) -- (nn);
+    \draw[->] (nn.south) -- ++(0,-0.5) -| (pi.north);
+    \draw[->] (nn.south) -- (mu.north);
+    \draw[->] (nn.south) -- ++(0,-0.5) -| (sigma.north);
+    
+    \draw[->] (pi.south) -- ++(0,-0.3) -| ([xshift=-1.1cm]mix.north);
+    \draw[->] (mu.south) -- (mix.north);
+    \draw[->] (sigma.south) -- ++(0,-0.3) -| ([xshift=1.1cm]mix.north);
+    
+    \draw[->, dashed] (mix) -- node[right, font=\tiny\itshape] {Sampling} (output);
+
+\end{tikzpicture}

@@ -1,28 +1,29 @@
 \begin{tikzpicture}[
-    % --- Local configuration for this picture only ---
+    % --- Shared Color Palette ---
     execute at begin picture={
-        % Local colour definitions
-        \definecolor{colDecision}{RGB}{65,117,252}  % Blue
-        \definecolor{colObjective}{RGB}{255,88,93}  % Red
-        \definecolor{colModel}{RGB}{100,100,110}   % Grey
-        \definecolor{bgFill}{RGB}{255,255,255}     % Light Background
+        \definecolor{colInv}{RGB}{0, 119, 182}    % Blue
+        \definecolor{colFwd}{RGB}{208, 0, 0}      % Red
+        \definecolor{colSelect}{RGB}{247, 127, 0} % Orange
+        \definecolor{colResult}{RGB}{43, 147, 72} % Green
+        \definecolor{colTrain}{RGB}{100, 100, 100}% Grey
     },
     % --- Global Styles ---
     font=\sffamily,
-    >=Latex,
+    >=Stealth,
+    thick,
     spaceBlob/.style={
-        fill=white, draw=#1, line width=1pt, densely dashed,
+        fill=white, draw=#1, line width=1.2pt, densely dashed,
         rounded corners=15pt, opacity=0.8
     },
     point/.style={
         circle, inner sep=0pt, minimum size=5pt, fill=#1, draw=white, line width=0.5pt
     },
     modelBox/.style={
-        rectangle, draw=colModel, line width=1pt, rounded corners=4pt, 
-        fill=white, inner sep=8pt, align=center, drop shadow={opacity=0.1}
+        rectangle, draw=#1, line width=1pt, rounded corners=4pt, 
+        fill=#1!5, inner sep=8pt, align=center
     },
-    arrowMain/.style={->, line width=1.2pt, draw=colModel},
-    arrowCheck/.style={->, line width=0.8pt, dashed, draw=colModel!80},
+    arrowMain/.style={->, line width=1.2pt, draw=colTrain!70},
+    arrowCheck/.style={->, line width=0.8pt, dashed, draw=colFwd!60},
     labelSpace/.style={font=\bfseries\small, text=#1}
 ]
 
@@ -32,110 +33,100 @@
 
 \begin{scope}[yshift=4cm]
 
-% Bounding box for panel (more padding inside)
-\node[draw=none, fill=bgFill, rounded corners=10pt,
-      minimum width=10cm, minimum height=7.2cm] (PanelL) at (0,0) {};
-\node[anchor=north west, font=\large\bfseries, text=colModel]
-      at ([xshift=4pt,yshift=-4pt]PanelL.north west) {Forward Problem};
-% \node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
-%       at (PanelL.north west) {Evaluation / Simulation};
+% Background Panel
+\node[draw=black!5, fill=black!2, rounded corners=10pt,
+      minimum width=10.5cm, minimum height=6.5cm] (PanelL) at (0,0) {};
+\node[anchor=north west, font=\large\bfseries, text=colTrain]
+      at ([xshift=8pt,yshift=-8pt]PanelL.north west) {FORWARD PROBLEM};
 
-% Decision Space X (Left) – pushed further left & down
-\draw[spaceBlob=colDecision] (-3.0,-0.4) ellipse (1.8cm and 2.3cm);
-\node[labelSpace=colDecision] at (-3.0, 2.1) {Decision Space $\mathcal{X}$};
-\node[font=\scriptsize, text=colDecision] at (-3.0, -3.4) {Parameters / Design};
+% Decision Space X (Left)
+\draw[spaceBlob=colInv] (-3.2,-0.4) ellipse (1.6cm and 2.1cm);
+\node[labelSpace=colInv] at (-3.2, 2.0) {Decision Space $\mathcal{X}$};
 
-% Objective Space Y (Right) – pushed further right & down
-\draw[spaceBlob=colObjective] (3.0,-0.4) ellipse (1.8cm and 2.3cm);
-\node[labelSpace=colObjective] at (3.0, 2.1) {Objective Space $\mathcal{Y}$};
-\node[font=\scriptsize, text=colObjective] at (3.0, -3.4) {Performance / Metrics};
+% Objective Space Y (Right)
+\draw[spaceBlob=colFwd] (3.2,-0.4) ellipse (1.6cm and 2.1cm);
+\node[labelSpace=colFwd] at (3.2, 2.0) {Objective Space $\mathcal{Y}$};
 
-% Mapping points – keep nice gap to box
-\node[point=colDecision, label={left:\small $x$}] (x_fwd) at (-3.0, 0.4) {};
-\node[point=colObjective, label={right:\small $y$}] (y_fwd) at (3.0, 0.4) {};
+% Mapping points
+\node[point=colInv, label={left:\small $x$}] (x_fwd) at (-3.2, 0.4) {};
+\node[point=colFwd, label={right:\small $y$}] (y_fwd) at (3.2, 0.4) {};
 
-% Function Box – centred with more space around
-\node[modelBox, font=\small, minimum width=2.5cm] (f_func) at (0, 0.4)
-      {$f(\mathbf{x})$\\{\scriptsize Simulator}};
+% Function Box
+\node[modelBox=colTrain, font=\small, minimum width=2.5cm] (f_func) at (0, 0.4)
+      {$f(\mathbf{x})$\\{\scriptsize Simulator / Physics}};
 
 % Arrows
 \draw[arrowMain] (x_fwd) -- (f_func);
 \draw[arrowMain] (f_func) -- (y_fwd);
 
-% Annotation – further below
-\node[align=center, font=\scriptsize, text=colModel, anchor=north]
-      at (0, -2.6) {Well-posed\\(Unique Outcome)};
+\node[align=center, font=\scriptsize, text=colTrain, anchor=north]
+      at (0, -2.4) {Well-posed Mapping\\(Unique Outcome)};
 
 \end{scope}
 
 % =================================================================================
 % BOTTOM PANEL: INVERSE PROBLEM
-% (same yshift as before -> same gap between panels)
 % =================================================================================
 
 \begin{scope}[yshift=-4cm]
 
-% Bounding box for panel (more padding inside)
-\node[draw=none, fill=bgFill, rounded corners=10pt,
-      minimum width=11cm, minimum height=7.2cm] (PanelR) at (0,0) {};
-\node[anchor=north west, font=\large\bfseries, text=colModel]
-      at ([xshift=4pt,yshift=-4pt]PanelR.north west) {Inverse Design};
-% \node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
-%       at (PanelR.north west) {Exploration / Reconstruction};
+% Background Panel
+\node[draw=black!5, fill=black!2, rounded corners=10pt,
+      minimum width=10.5cm, minimum height=8cm] (PanelR) at (0,0) {};
+\node[anchor=north west, font=\large\bfseries, text=colTrain]
+      at ([xshift=8pt,yshift=-8pt]PanelR.north west) {INVERSE PROBLEM};
 
-% Objective/Target Space Y (Left) – more left & a bit up
-\draw[spaceBlob=colObjective] (-3.2,-0.4) ellipse (1.8cm and 2.3cm);
-\node[labelSpace=colObjective] at (-3.2, 2.1) {Objective Space $\mathcal{Y}$};
+% Objective/Target Space Y (Left)
+\draw[spaceBlob=colFwd] (-3.2,-0.4) ellipse (1.6cm and 2.1cm);
+\node[labelSpace=colFwd] at (-3.2, 2.0) {Objective Space $\mathcal{Y}$};
 
-% Decision/Candidate Space X (Right) – more right & a bit up
-\draw[spaceBlob=colDecision] (3.2,-0.4) ellipse (1.8cm and 2.3cm);
-\node[labelSpace=colDecision] at (3.2, 2.1) {Decision Space $\mathcal{X}$};
+% Decision/Candidate Space X (Right)
+\draw[spaceBlob=colInv] (3.2,-0.4) ellipse (1.6cm and 2.1cm);
+\node[labelSpace=colInv] at (3.2, 2.0) {Decision Space $\mathcal{X}$};
 
-% Target point – with more room above box
-\node[point=colObjective, label={left:\small $y^\star$}] (target) at (-3.2, 0.9) {};
+% Target point
+\node[point=colFwd, label={left:\small $y^\star$}] (target) at (-3.2, 0.8) {};
 
-% Inverse Model – slightly higher to clear feedback loop
-\node[modelBox, minimum width=3.0cm] (inv_model) at (0, 0.9)
+% Inverse Model
+\node[modelBox=colInv, minimum width=3.0cm] (inv_model) at (0, 0.8)
       {$\hat{g}(\mathbf{y})$\\{\scriptsize Inverse Model}};
 
-% Data Input – higher
-\node[cylinder, shape border rotate=90, draw=gray, fill=white,
-      aspect=0.25, minimum height=1.0cm, minimum width=1.0cm,
-      font=\scriptsize] (db) at (0, 2.6) {$\mathcal{D}$};
-\draw[->, dotted, thick] (db) -- (inv_model)
-      node[midway, right, font=\tiny] {Training};
+% Data Input
+\node[cylinder, shape border rotate=90, draw=colTrain, fill=white,
+      aspect=0.25, minimum height=0.8cm, minimum width=0.8cm,
+      font=\tiny] (db) at (0, 2.4) {$\mathcal{D}$};
+\draw[->, colTrain, dotted] (db) -- (inv_model)
+      node[midway, right, font=\tiny] {Learning};
 
-% One-to-many outputs – spread horizontally and vertically
-\node[point=colDecision, label={right:\scriptsize $x^{(1)}$}] (c1) at (3.0, 1.2) {};
-\node[point=colDecision, label={right:\scriptsize $x^{(2)}$}] (c2) at (3.4, 0.2) {};
+% One-to-many outputs
+\node[point=colInv, label={right:\scriptsize $x^{(1)}$}] (c1) at (3.0, 1.2) {};
+\node[point=colInv, label={right:\scriptsize $x^{(2)}$}] (c2) at (3.4, 0.1) {};
 
 % Arrows Forward
 \draw[arrowMain] (target) -- (inv_model);
 \draw[arrowMain] (inv_model.east) -- (c1.west);
 \draw[arrowMain] (inv_model.east) -- (c2.west);
 
-% The Feedback Loop (Forward Consistency) – clearly separated
-\node[modelBox, scale=0.8, fill=bgFill!90!gray, minimum width=3.3cm]
-      (f_check) at (0, -1.9)
-      {Forward Check $\hat{f}(\mathbf{x})$};
+% Feedback Loop (Forward Consistency)
+\node[modelBox=colFwd, scale=0.8, fill=white, minimum width=3.3cm]
+      (f_check) at (0, -1.8)
+      {Forward Surrogate $\hat{f}(\mathbf{x})$};
 
-% Paths for feedback – longer, smoother curves
+% Paths for feedback
 \draw[arrowCheck] (c1.south) to[out=250,in=5] (f_check.east);
 \draw[arrowCheck] (c2.south) to[out=260,in=5] (f_check.east);
 
-% Result of check – more left
-\node[point=colObjective, fill=white, draw=colObjective,
-      label={left:\scriptsize $\hat{y}$}] (y_hat) at (-3.0, -1.9) {};
+% Result of check
+\node[point=colResult, label={left:\scriptsize $\hat{y}$}] (y_hat) at (-3.0, -1.8) {};
 \draw[arrowCheck] (f_check) -- (y_hat);
 
-% Comparison Line – longer
-\draw[<->, densely dotted, thick, orange] (target) -- (y_hat)
-  node[midway, left, font=\tiny, align=right] {Error\\Minimize $\mathcal{L}$};
+% Comparison Line
+\draw[<->, densely dotted, line width=1.5pt, colSelect] (target) -- (y_hat)
+  node[midway, left, font=\tiny\bfseries, align=right, xshift=-2pt] {Consistency\\Error};
 
-% Annotation – pushed further down but still inside panel
-\node[align=center, font=\scriptsize, text=colModel, anchor=north]
-      at (0, -3.3)
-      {Ill-posed (One-to-Many)\\Requires \textbf{Forward Consistency}};
+\node[align=center, font=\scriptsize, text=colTrain, anchor=north]
+      at (0, -3.2)
+      {Ill-posed (One-to-Many)\\Requires \textbf{Forward Consistency Check}};
 
 \end{scope}
 

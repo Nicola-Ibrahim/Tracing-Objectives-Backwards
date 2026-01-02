@@ -1,0 +1,63 @@
+\begin{tikzpicture}[
+    % --- Global Definitions (Shared Palette) ---
+    execute at begin picture={
+        \definecolor{colMain}{RGB}{0, 119, 182}
+        \definecolor{colLatent}{RGB}{114, 9, 183}
+        \definecolor{colResult}{RGB}{43, 147, 72}
+        \definecolor{colGray}{RGB}{240, 240, 240}
+    },
+    >=Stealth, thick, node distance=1.5cm,
+    font=\sffamily\footnotesize,
+    % --- Styles ---
+    io/.style={draw, fill=white, minimum width=2cm, minimum height=0.8cm, rounded corners=2pt},
+    block/.style={draw, fill=colMain!10, text=colMain, minimum width=3.5cm, minimum height=1.2cm, font=\sffamily\bfseries\footnotesize, rounded corners=4pt},
+    latent/.style={draw=colLatent, fill=colLatent!10, text=colLatent, circle, inner sep=3pt, font=\sffamily\bfseries\small},
+    side/.style={draw, fill=colGray, minimum width=1.8cm, minimum height=0.6cm, font=\tiny, rounded corners=2pt},
+    container/.style={draw=black!10, fill=black!2, dashed, rounded corners=12pt, inner sep=20pt}
+]
+
+    % --- Nodes ---
+    % Data Space
+    \node[io] (x) {Decision Space $\mathbf{x}$};
+    
+    % The Invertible Core
+    \node[block, right=2.5cm of x] (inn) {Invertible Transformation\\$f_\theta(\mathbf{x}; \mathbf{y})$};
+    
+    % Latent Space
+    \node[latent, right=2.5cm of inn] (z) {$\mathbf{z}$};
+    
+    % Conditioning Variable (Outcome)
+    \node[io, above=1.2cm of inn] (y) {Outcome $\mathbf{y}$ (Condition)};
+    
+    % Training specific term (Jacobian)
+    \node[side, below=0.8cm of inn] (jac) {Log-det Jacobian\\$\log |\det \mathbf{J}_f|$};
+
+    % --- Connections ---
+    
+    % Bi-directional arrow between x and z through the INN
+    \draw[<->, line width=1.5pt, colMain] (x) -- (inn);
+    \draw[<->, line width=1.5pt, colMain] (inn) -- (z);
+    
+    % Labels for directions
+    \node[above, colMain, font=\tiny\bfseries] at ($(x.east)!0.4!(inn.west)$) {Forward};
+    \node[below, colMain, font=\tiny\bfseries] at ($(x.east)!0.4!(inn.west)$) {Inverse};
+
+    % Conditioning link
+    \draw[->, dashed] (y) -- (inn);
+    \node[right=0.1cm of y, font=\tiny, text=black!50] {Fixed context};
+
+    % Jacobian link for training
+    \draw[->, black!30, dotted] (inn) -- (jac);
+
+    % --- Background Annotations ---
+    \begin{scope}[on background layer]
+        \node[container, fit=(x) (z) (y) (jac)] (bg) {};
+        \node[anchor=north west, font=\sffamily\bfseries\small, text=black!40] at (bg.north west) {cINN ARCHITECTURE};
+    \end{scope}
+
+    % Descriptions
+    \node[below=0.2cm of x, font=\tiny, text=black!60] {Encoding: $\mathbf{z} = f_\theta(\mathbf{x}; \mathbf{y})$};
+    \node[below=0.2cm of z, font=\tiny, text=black!60] {Generation: $\hat{\mathbf{x}} = f_\theta^{-1}(\mathbf{z}; \mathbf{y})$};
+    \node[right=0.5cm of z, font=\tiny, align=left, text=black!60] {Latent Prior:\\$\mathbf{z} \sim \mathcal{N}(0, \mathbf{I})$};
+
+\end{tikzpicture}
