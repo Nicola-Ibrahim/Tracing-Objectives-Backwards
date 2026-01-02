@@ -6,7 +6,7 @@
 
 This chapter presents the empirical findings for two experiments. Results are organised by experiment, reported with descriptive statistics and pre-specified indicators, and shown without interpretation.
 
-\section{Experiment 1: COCO/bbob-biobj benchmarks}\label{sec:exp_coco}
+\section{bi-objective benchmarks case}\label{sec:exp_coco}
 
 
 \subsection*{Multi-Objective Optimisation}
@@ -159,7 +159,7 @@ with $p\in\{1,2\}$.
 \label{fig:coco_cd}
 
 
-\section{Experiment 2: Real-world signal-processing case}\label{sec:exp_real}
+\section{Real-world signal-processing case}\label{sec:exp_real}
 
 \subsection*{Protocol}
 A two-objective signal-processing dataset with domain constraints was prepared analogously to Experiment~\ref{sec:exp_coco}. Representative decision–outcome pairs $\mathcal{D}$ were assembled from historical configurations and measurements. Data were split into train/validation/test (80/10/10). Targets were sampled within the observed outcome hull; each inverse model produced one decision per target under its selection policy. Models (CVAE, MDN, RBF) were tuned by cross-validation on the training partition. Primary indicators ($\mathcal{E}_{\mathcal{Y}}$, $\mathrm{Succ}_\epsilon$) and secondary indicators (RMSE, GD/IGD) followed the same definitions and reporting conventions.

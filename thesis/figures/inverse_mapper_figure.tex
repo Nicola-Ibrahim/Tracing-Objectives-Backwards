@@ -36,9 +36,9 @@
 \node[draw=none, fill=bgFill, rounded corners=10pt,
       minimum width=10cm, minimum height=7.2cm] (PanelL) at (0,0) {};
 \node[anchor=north west, font=\large\bfseries, text=colModel]
-      at ([xshift=4pt,yshift=-4pt]PanelL.north west) {A. Forward Problem};
-\node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
-      at (PanelL.north west) {Evaluation / Simulation};
+      at ([xshift=4pt,yshift=-4pt]PanelL.north west) {Forward Problem};
+% \node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
+%       at (PanelL.north west) {Evaluation / Simulation};
 
 % Decision Space X (Left) – pushed further left & down
 \draw[spaceBlob=colDecision] (-3.0,-0.4) ellipse (1.8cm and 2.3cm);
@@ -79,17 +79,17 @@
 \node[draw=none, fill=bgFill, rounded corners=10pt,
       minimum width=11cm, minimum height=7.2cm] (PanelR) at (0,0) {};
 \node[anchor=north west, font=\large\bfseries, text=colModel]
-      at ([xshift=4pt,yshift=-4pt]PanelR.north west) {B. Inverse Design};
-\node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
-      at (PanelR.north west) {Exploration / Reconstruction};
+      at ([xshift=4pt,yshift=-4pt]PanelR.north west) {Inverse Design};
+% \node[anchor=north west, font=\footnotesize\itshape, text=colModel, yshift=-6mm]
+%       at (PanelR.north west) {Exploration / Reconstruction};
 
 % Objective/Target Space Y (Left) – more left & a bit up
 \draw[spaceBlob=colObjective] (-3.2,-0.4) ellipse (1.8cm and 2.3cm);
-\node[labelSpace=colObjective] at (-3.2, 2.1) {Target Space $\mathcal{Y}$};
+\node[labelSpace=colObjective] at (-3.2, 2.1) {Objective Space $\mathcal{Y}$};
 
 % Decision/Candidate Space X (Right) – more right & a bit up
 \draw[spaceBlob=colDecision] (3.2,-0.4) ellipse (1.8cm and 2.3cm);
-\node[labelSpace=colDecision] at (3.2, 2.1) {Candidate Space $\mathcal{X}$};
+\node[labelSpace=colDecision] at (3.2, 2.1) {Decision Space $\mathcal{X}$};
 
 % Target point – with more room above box
 \node[point=colObjective, label={left:\small $y^\star$}] (target) at (-3.2, 0.9) {};

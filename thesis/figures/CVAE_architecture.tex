@@ -1,0 +1,55 @@
+\begin{tikzpicture}[
+    % --- Local Setup ---
+    execute at begin picture={
+        \definecolor{colEnc}{RGB}{67, 97, 238}
+        \definecolor{colDec}{RGB}{76, 201, 240}
+        \definecolor{colLatent}{RGB}{181, 23, 158}
+    },
+    >=Stealth, thick, node distance=1.2cm,
+    font=\sffamily\footnotesize,
+    % --- Styles ---
+    layer/.style={draw, fill=white, minimum width=2.2cm, minimum height=0.7cm, rounded corners=3pt},
+    netBox/.style={draw=none, fill=#1!5, rounded corners=8pt, inner sep=10pt},
+    latent/.style={draw=colLatent, fill=colLatent!10, text=colLatent, circle, inner sep=2pt, font=\sffamily\bfseries\small}
+]
+
+    % --- ENCODER (Offline Training Only) ---
+    \node[layer] (x_in) {Decision $\mathbf{x}$};
+    \node[layer, right=0.5cm of x_in] (y_in) {Outcome $\mathbf{y}$};
+    \node[draw, fill=gray!20, below=0.6cm of $(x_in.south)!0.5!(y_in.south)$, minimum width=0.8cm] (cat1) {Concat};
+    
+    \node[layer, fill=colEnc!10, text=colEnc, font=\bfseries, below=0.7cm of cat1] (enc) {Encoder $q_\phi(\mathbf{z}|\mathbf{x}, \mathbf{y})$};
+    
+    % --- LATENT SPACE ---
+    \node[latent, below=1cm of enc] (z) {$\mathbf{z}$};
+    \node[right=0.5cm of z, font=\tiny, text=gray, align=left] (prior) {Train: $q_\phi \to p_\theta$\\Inference: $\mathbf{z} \sim \mathcal{N}(0, I)$};
+
+    % --- DECODER (Online Inference) ---
+    \node[layer, fill=colDec!10, text=colDec, font=\bfseries, below=1cm of z] (dec) {Decoder $p_\theta(\hat{\mathbf{x}}|\mathbf{z}, \mathbf{y})$};
+    
+    \node[layer, left=1.2cm of dec] (y_query) {Query $\mathbf{y}^\star$};
+    \node[draw, fill=gray!20, right=0.4cm of y_query, minimum width=0.6cm, inner sep=2pt] (cat2) {+};
+
+    \node[layer, below=0.8cm of dec, fill=black, text=white, font=\bfseries] (x_out) {Candidate $\hat{\mathbf{x}}$};
+
+    % Background Containers
+    \begin{scope}[on background layer]
+        \node[netBox=colEnc, fit=(x_in) (y_in) (enc), label={[colEnc, font=\tiny\bfseries]north:ENCODER (Recognition)}] {};
+        \node[netBox=colDec, fit=(y_query) (dec) (x_out), label={[colDec, font=\tiny\bfseries]south:DECODER (Generative)}] {};
+    \end{scope}
+
+    % Arrows
+    \draw[->] (x_in) -- (cat1);
+    \draw[->] (y_in) -- (cat1);
+    \draw[->] (cat1) -- (enc);
+    \draw[->] (enc) -- node[right, font=\tiny] {Reparameterize} (z);
+    \draw[->] (z) -- (dec);
+    \draw[->] (y_query) -- (cat2);
+    \draw[->] (cat2) -- (dec);
+    \draw[->] (dec) -- (x_out);
+
+    % Inference Path Highlight
+    \draw[->, colDec, dashed, line width=1pt] (y_query.north) -- ++(0, 1.5) -| (y_in.south);
+    \node[anchor=west, font=\tiny, text=colDec] at ($(y_query.north)+(0,1)$) {Conditioning Context};
+
+\end{tikzpicture}

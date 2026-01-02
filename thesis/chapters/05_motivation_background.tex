@@ -264,6 +264,15 @@ and then samples
 $\vect{x}\sim\mathcal{N}(\boldsymbol{\mu}_k(\vect{y}^\star),\boldsymbol{\Sigma}_k(\vect{y}^\star))$.
 Repeating this procedure produces a candidate set whose diversity is controlled by the learned mixture weights and component spreads. MDNs therefore provide an explicit, likelihood-trained mechanism for modelling multimodality in conditional candidate generation. \cite{bishop1994mixture}
 
+
+\begin{figure}[h]
+  \centering
+  \input{figures/MDN-architecture}
+  \caption{}
+  \label{fig:mdn_architecture}
+\end{figure}
+
+
 \subsection{Conditional Variational Autoencoders}\label{sec:cvae}
 
 Conditional variational autoencoders represent conditional variability through a latent variable $\vect{z}\in\mathbb{R}^d$ and define a conditional latent-variable model in which the conditional density is obtained by marginalising $\vect{z}$:
@@ -283,6 +292,16 @@ Because the marginal likelihood is generally intractable, training proceeds by m
   \label{eq:cvae_elbo}
 \end{equation}
 so the optimisation target is the negative of the right-hand side summed over the dataset. The reconstruction term encourages $\vect{x}$ to be well explained given $(\vect{y},\vect{z})$, while the KL term regularises the encoder distribution toward the conditional prior so that sampling remains meaningful. Candidate generation follows directly from the generative structure: for a query $\vect{y}^\star$, sample $\vect{z}\sim p_\theta(\vect{z}\mid\vect{y}^\star)$ and then sample or decode $\vect{x}\sim p_\theta(\vect{x}\mid\vect{y}^\star,\vect{z})$, repeating to obtain multiple candidates. Conditioning fixes the target context, while variation in $\vect{z}$ induces diversity in $\vect{x}$ under a fixed $\vect{y}^\star$. \cite{Sohn2015CVAE}
+
+
+
+\begin{figure}[h]
+  \centering
+  \input{figures/CVAE_architecture}
+  \caption{}
+  \label{fig:cvae_architecture}
+\end{figure}
+
 
 \subsection{Invertible Neural Networks (INN)}\label{sec:inn}
 

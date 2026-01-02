@@ -70,7 +70,7 @@ candidates in outcome space using an explicit discrepancy rule. In this way, amb
 handled by generation, while attainment is handled by checking under a declared evaluator
 and metric rather than by relying on implicit properties of the inverse model. 
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
   \centering
   \begin{adjustbox}{width=\linewidth}
       \input{figures/framework}
@@ -251,180 +251,75 @@ Ranking is then applied within $\mathcal{K}_{\mathrm{valid}}(\vect{y}^{\star})$ 
 The threshold $\tau$ is selected in advance on held-out data to control the strictness of the validator under the training regime. This keeps ODD decisions reproducible and prevents post hoc threshold tuning that would compromise comparability across experiments. The exact ODD model class used (e.g., one-class classification, energy-based scoring, or density-based scoring) is treated as part of the evaluation configuration and is reported alongside the discrepancy definition. \cite{Liu2020EnergyOOD}
 
 
-\section{Data sources}\label{sec:data_ethics}
-We use benchmarked or archival pairs $(\vect{x},\vect{y})$ originating from simulators or standard suites (e.g., COCO/BBOB for black-box optimisation) as well as domain archives when available. For each source, we document provenance, licensing, storage, and disposal. No personally identifiable or sensitive data are involved.
+%-------------------------------------------------------------------------------
+\section{Pipelines}\label{sec:pipelines}
+%-------------------------------------------------------------------------------
 
+\subsection{Training pipeline}\label{sec:train_pipeline}
 
+Model training follows a repeatable routine that keeps preprocessing and model selection consistent
+across problems. Algorithm~\ref{alg:train_pipeline} provides a compact description. In short, we
+compute fixed normalisation transforms, split the data for validation-based selection, and fit the
+chosen inverse model by minimising its training loss. Hyperparameters are selected under a fixed
+search budget using a validation criterion. The trained model and preprocessing transforms are then
+frozen and used unchanged in the candidate-generation and assessment steps described next.
 
-\section{Offline Phase: Data Generation and Model Training}
-
-\subsection{Generation of Pareto Samples}
-
-The first step is to obtain a representative set of Pareto‑optimal or
-near‑optimal solutions.  Any suitable multi‑objective optimisation
-algorithm can be employed; in our experiments we use the Non‑dominated
-Sorting Genetic Algorithm II (NSGA‑II) and the Multi‑Objective
-Evolutionary Algorithm based on Decomposition (MOEA/D) as baselines.  The
-resulting archive \(\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^N\)
-contains decision vectors \(\vect{x}_i\in\calX\) and their objective
-values \(\vect{y}_i=\vect{f}(\vect{x}_i)\).  To ensure diversity and
-coverage of the Pareto front the optimisation is run with standard
-population sizes and termination criteria, and the union of final
-non‑dominated solutions over multiple runs is stored.
-
-\subsection{Data Preprocessing}
-
-Prior to model training we normalise the objective vectors to lie in
-\([0,1]^m\) using min–max scaling.  This step ensures that objectives
-with different units or ranges contribute equally to the inverse model.
-Similarly, decision variables are scaled to \([0,1]^n\) to avoid biasing
-the regressors.  Outliers are removed using interquartile range
-thresholding.  The processed dataset is then randomly split into
-training, validation and test sets.
-
-
-
-\subsection{Model Selection and Validation}
-
-For each modelling strategy we perform hyperparameter tuning via
-k‑fold cross‑validation on the training set.  The loss function combines
-the mean squared error between predicted and true decision variables and a
-penalty on predicted values outside the feasible range.  Models are
-compared using performance metrics such as root mean squared error
-(RMSE), coefficient of determination \(R^2\) and the generational
-distance between the reconstructed Pareto front and the true front.  We
-select the model with the best validation performance and retain it for
-the online phase.
-
-\subsection{Forward Surrogate Model}
-
-In addition to the inverse model we train a surrogate forward model
-\(\hat{f}\colon\calX\to\calY\) on the same data.  This model is used
-during the online phase to rapidly evaluate candidate decisions without
-incurring the cost of running the underlying simulation or experiment.  A
-Gaussian process is employed due to its good performance on small data;
-alternatively, a neural network or polynomial regression can be used.
-
-\section{Online Phase: Interactive Exploration}
-
-During the online phase the trained inverse and forward models are used
-to support interactive design exploration.  The process comprises the
-following steps:
-
-\paragraph{Target specification.}  The user specifies a desired objective
-vector \(\vect{y}^\star\) either numerically or by selecting a point in a
-visualisation of the objective space.  Input widgets allow users to
-adjust individual objectives and observe how the target moves relative
-to the sampled Pareto front.
-
-\paragraph{Plausibility check.}  The system computes the distance
-\(d(\vect{y}^\star, \mathcal{D})\) to the nearest sample in the objective
-space and derives a plausibility score.  If the score is below a
-user‑defined threshold, a warning is displayed indicating that the
-desired trade‑off may not be achievable.
-
-\paragraph{Inverse prediction.}  The inverse model \(\hat{g}\) is queried
-with \(\vect{y}^\star\) to produce a set of candidate decisions
-\(\{\hat{\vect{x}}^{(k)}\}_{k=1}^K\).  For probabilistic models such as
-GPR we draw multiple samples from the posterior distribution; for
-deterministic models such as RBFs and FFNNs we sample by adding small
-Gaussian noise to the input.
-
-\paragraph{Forward evaluation.}  Each candidate is evaluated using the
-forward surrogate \(\hat{f}\) to compute the predicted objective vector
-\(\hat{\vect{y}}^{(k)}=\hat{f}(\hat{\vect{x}}^{(k)})\).  The forward
-error \(e_f^{(k)}=\|\hat{\vect{y}}^{(k)}-\vect{y}^\star\|\) and distance
-to the sampled Pareto front are computed.
-
-\paragraph{Ranking and selection.}  Candidates are ranked according to a
-multi‑criteria score combining forward error, diversity and plausibility.
-The top‑\(M\) candidates are presented to the user along with their
-predicted objective values and a visual indication of their proximity to
-the Pareto front.
-
-\paragraph{User feedback.}  The user can select a candidate and, if
-desired, refine the target or adjust weights in the ranking.  Selected
-candidates can be saved for further simulation or fabrication.  User
-interactions can be logged to adapt the inverse model over time.
-
-
-\section{Training Pipeline}
-
-Given a dataset \(\mathcal{D}\) we perform the following steps for each
-problem:
-
-\begin{enumerate}
-  \item \textbf{Normalisation.}  Compute the minimum and maximum of each
-    objective and decision dimension and scale the data to \([0,1]\).
-  \item \textbf{Train–validation split.}  Use an 80/20 split for
-    training and validation.  When data is scarce we employ a leave‑one‑out
-    scheme.
-  \item \textbf{Hyperparameter search.}  For each inverse model type
-    (GPR, RBF, RF, FFNN) perform 50 random trials over predefined
-    hyperparameter ranges.  For GPR we search over squared exponential
-    kernels with length scales in \([0.1,10]\); for RBF we vary the
-    number of centres between 10 and 200; for RF we vary the number of
-    trees (50–300) and maximum depth (3–20); for FFNN we vary the number
-    of hidden layers (1–3) and neurons (50–200).
-  \item \textbf{Model training.}  Fit each candidate model on the
-    training data and evaluate performance on the validation set using
-    RMSE and generational distance.  Select the best hyperparameter
-    configuration.
-  \item \textbf{Forward surrogate.}  Train a Gaussian process regression
-    model on the same training data to act as the forward surrogate.  A
-    Matérn kernel is used with noise estimated via maximum likelihood.
-  \item \textbf{Testing.}  Evaluate the selected inverse and forward
-    models on the held‑out test data.  Report RMSE, \(R^2\) and the
-    proportion of predictions within a tolerance of the true decision
-    values.
-\end{enumerate}
-
-
-
-\section{Algorithmic Summary}
-
-Algorithm~\ref{alg:offline} summarises the offline training procedure and
-Algorithm~\ref{alg:online} details the online exploration loop.  The
-pseudocode abstracts away implementation details to highlight the main
-steps.
-
-\begin{algorithm}[h]
-  \caption{Offline Training of Inverse and Forward Models}
-  \label{alg:offline}
+\begin{algorithm}[!htbp]
+  \caption{Training and model selection for inverse candidate generation}\label{alg:train_pipeline}
   \begin{algorithmic}[1]
-    \Require multi‑objective function \(\vect{f}\), decision space \(\calX\)
-    \Ensure trained inverse model \(\hat{g}\) and forward surrogate \(\hat{f}\)
-    \State \textbf{Generate Pareto samples} \(\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}\)
-       by running a MOO algorithm (e.g. NSGA‑II)
-    \State \textbf{Normalise} decision and objective vectors
-    \State \textbf{Split} \(\mathcal{D}\) into training/validation/test sets
-    \State \textbf{Select model type} (GP, RBF, RF, FFNN)
-    \State \textbf{Tune hyperparameters} via cross‑validation
-    \State \textbf{Train inverse model} \(\hat{g}\) on training set
-    \State \textbf{Train forward model} \(\hat{f}\) on training set
-    \State \textbf{Validate} on test set; select best model
-    \State \Return \(\hat{g},\hat{f}\)
+    \Require Paired data $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$
+    \Require Hyperparameter search space $\mathcal{H}$ and search budget $B$
+    \Ensure Best fitted inverse model $\widehat{q}$ and preprocessing transforms $\mathcal{T}$
+
+    \State $\mathcal{T} \leftarrow \text{compute\_transforms}(\mathcal{D})$ \Comment{Scaling for $\vect{x}$ and $\vect{y}$}
+    \State $\mathcal{D}_{T}, \mathcal{D}_{V} \leftarrow \text{split}(\mathcal{T}(\mathcal{D}))$ \Comment{Train and validation splits}
+    \State $S_{\mathrm{best}} \leftarrow +\infty$
+    
+    \For{$b=1$ to $B$}
+      \State Sample configuration $h_b \in \mathcal{H}$ 
+      \State Initialize parameters $\theta_b$ according to $h_b$
+      \While{stopping criterion not met}
+        \State $\theta_b \leftarrow \text{minimize } \mathcal{L}(\theta_b; \mathcal{D}_{T})$
+        \State Monitor validation score $S_b$ on $\mathcal{D}_{V}$
+      \EndWhile
+      \If{$S_b < S_{\mathrm{best}}$}
+        \State $S_{\mathrm{best}} \leftarrow S_b$
+        \State $(h_{\mathrm{best}}, \theta_{\mathrm{best}}) \leftarrow (h_b, \theta_b)$
+      \EndIf
+    \EndFor
+    
+    \State $\widehat{q} \leftarrow \text{refit}(h_{\mathrm{best}}, \mathcal{D}_{T} \cup \mathcal{D}_{V})$ \Comment{Optional: final fit on all data}
+    \State \Return $\widehat{q}, \mathcal{T}$
   \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[h]
-  \caption{Online Inverse Decision Exploration}
-  \label{alg:online}
+
+\subsection{Querying pipeline}\label{sec:query_pipeline}
+
+Given a target outcome $\vect{y}^{\star}$, the inverse model generates a fixed-size candidate set and
+the assessment suite assigns scores used to rank (and, if configured, filter) candidates.
+Algorithm~\ref{alg:query_pipeline} summarises this target-driven loop. The same routine is used for
+experimental evaluation on held-out targets and for interactive exploration, ensuring that reported
+performance reflects a consistent candidate-generation and assessment interface.
+
+\begin{algorithm}[!htbp]
+  \caption{Target-driven querying and candidate assessment}\label{alg:query_pipeline}
   \begin{algorithmic}[1]
-    \Require trained models \(\hat{g},\hat{f}\), dataset \(\mathcal{D}\)
+    \Require Trained inverse model $\widehat{q}$, target outcome $\vect{y}^{\star}$, candidate budget $K$
+    \Require Assessment Suite $\mathcal{A}$ (includes Evaluators, ODD, and constraints)
+    \Ensure Ranked candidate list $\mathcal{R}$
+
     \Repeat
-      \State \textbf{Get target} objectives \(\vect{y}^\star\) from user
-      \State \textbf{Compute plausibility score} using distance to \(\mathcal{D}\)
-      \If{score $<\tau$}
-        \State display warning and optionally project \(\vect{y}^\star\) onto front
-      \EndIf
-      \State \textbf{Generate candidates} \(\{\hat{\vect{x}}^{(k)}\}\) via \(\hat{g}\)
-      \For{each candidate \(k\)}
-        \State evaluate \(\hat{\vect{y}}^{(k)}=\hat{f}(\hat{\vect{x}}^{(k)})\)
-        \State compute forward error and distance metrics
+      \State Obtain target outcome $\vect{y}^{\star}$
+      \State Generate candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K} \sim \widehat{q}(\vect{x}\mid\vect{y}^{\star})$
+      
+      \For{$k=1$ to $K$}
+        \State $\widehat{\vect{y}}^{(k)} \leftarrow \text{Evaluate}(\widehat{\vect{x}}^{(k)})$ \Comment{Using surrogate or ground truth}
+        \State $S^{(k)} \leftarrow \text{Assess}(\widehat{\vect{x}}^{(k)}, \widehat{\vect{y}}^{(k)}, \vect{y}^{\star})$ \Comment{Discrepancy, ODD, and validity}
       \EndFor
-      \State \textbf{Rank} candidates by error, diversity and plausibility
-      \State \textbf{Display} top candidates and solicit user feedback
-    \Until{user terminates}
+      
+      \State $\mathcal{R} \leftarrow \text{RankCandidates}(\{\widehat{\vect{x}}^{(k)}\}, \{S^{(k)}\})$ 
+      \State \Return top subset of $\mathcal{R}$
+    \Until{the exploration session terminates}
   \end{algorithmic}
 \end{algorithm}
