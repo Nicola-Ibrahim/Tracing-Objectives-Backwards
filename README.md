@@ -31,22 +31,21 @@ Forward simulation answers **X -> Y**. In practice, engineers often need the inv
 
 ## System framework
 
-Diagram source: `docs/processes/system-framework.md`.
+[See System Framework](docs/processes/system-framework.md)
 
 ## Where to start
 
-- System overview: `docs/processes/system-framework.md`
-- Inverse design pipeline: `docs/processes/inverse-design-pipeline.md`
-- Model training & validation: `docs/processes/model-training-validation.md`
-- MDN-based inverse mapping flow: `docs/modeling/mdn-inverse-mapping-process.md`
-- Additional modeling notes: `docs/modeling/vae.md`, `docs/modeling/nsga2-optimization.md`
+### Table of contents
+
+- [Inverse design pipeline](docs/processes/inverse-design-pipeline.md)
+- [Model training and validation](docs/processes/model-training-validation.md)
+- [MDN inverse mapping flow](docs/modeling/mdn-inverse-mapping-process.md)
+- [VAE modeling notes](docs/modeling/vae.md)
+- [NSGA-II optimization notes](docs/modeling/nsga2-optimization.md)
 
 ## Project structure (high level)
 
-- `src/`: core inverse mapping system (DDD-style domain/app/infra layers)
-- `docs/`: process diagrams, modeling notes, and system specifications
-- `notebooks/`: exploratory analysis, training, and visualization notebooks
-- `models/`, `reports/`: artifacts and outputs (when generated)
+- [System design overview](docs/specs/design.md)
 
 ## Thesis alignment
 
