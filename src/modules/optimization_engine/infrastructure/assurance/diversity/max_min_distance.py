@@ -3,10 +3,10 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from ....domain.assurance.interfaces.diversity import DiversityStrategy
+from ....domain.assurance.feasibility.interfaces.diversity import BaseDiversityStrategy
 
 
-class MaxMinDistanceDiversityStrategy(DiversityStrategy):
+class MaxMinDistanceDiversityStrategy(BaseDiversityStrategy):
     def select_diverse_points(
         self,
         *,

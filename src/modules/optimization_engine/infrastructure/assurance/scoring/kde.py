@@ -3,10 +3,12 @@
 import numpy as np
 from scipy.stats import gaussian_kde
 
-from ....domain.assurance.interfaces.scoring import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    BaseFeasibilityScoringStrategy,
+)
 
 
-class KDEScoreStrategy(FeasibilityScoringStrategy):
+class KDEScoreStrategy(BaseFeasibilityScoringStrategy):
     def __init__(self, bandwidth: float = 0.1):
         if bandwidth <= 0:
             raise ValueError("bandwidth must be positive")

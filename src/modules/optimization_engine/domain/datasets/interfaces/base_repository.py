@@ -2,22 +2,23 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from .....shared.config import ROOT_PATH
-from ..entities.generated_dataset import GeneratedDataset
+from ..entities.dataset import Dataset
 
 
 class BaseDatasetRepository(ABC):
-    def __init__(self, file_path: str | Path = "data/raw"):
+    def __init__(self, file_path: str | Path = "data"):
         """
-        Initialize Pareto data manager.
+        Initialize repository with a base directory anchored at the project root.
 
         Args:
-            file_path: Base directory for data operations
-            default_normalization_fn: Default normalization function
+            file_path: Relative directory where dataset bundles are stored.
         """
         self.base_path = ROOT_PATH / file_path
 
     @abstractmethod
-    def save(self, data: GeneratedDataset) -> Path: ...
+    def save(self, dataset: Dataset) -> Path:
+        """Persist the dataset aggregate."""
 
     @abstractmethod
-    def load(self, filename: str) -> GeneratedDataset: ...
+    def load(self, name: str) -> Dataset:
+        """Retrieve the dataset aggregate."""

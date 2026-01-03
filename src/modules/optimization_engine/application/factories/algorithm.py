@@ -1,5 +1,5 @@
 from ...domain.datasets.interfaces.base_algorithm import BaseAlgorithm
-from ...infrastructure.generation.algorithms.nsga2 import NSGAII, NSGA2Config
+from ...infrastructure.datasets.algorithms.nsga2 import NSGAII, NSGA2Config
 
 
 class AlgorithmFactory:

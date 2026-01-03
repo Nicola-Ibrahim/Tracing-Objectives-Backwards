@@ -3,10 +3,12 @@
 import numpy as np
 from scipy.spatial import ConvexHull
 
-from ....domain.assurance.interfaces.scoring import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    BaseFeasibilityScoringStrategy,
+)
 
 
-class ConvexHullScoreStrategy(FeasibilityScoringStrategy):
+class ConvexHullScoreStrategy(BaseFeasibilityScoringStrategy):
     def compute_score(self, target: np.ndarray, pareto_points: np.ndarray) -> float:
         hull = ConvexHull(pareto_points)
         inequalities = hull.equations

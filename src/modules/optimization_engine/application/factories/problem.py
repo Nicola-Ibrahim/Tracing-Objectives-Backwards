@@ -1,5 +1,5 @@
 from ...domain.datasets.interfaces.base_problem import BaseProblem
-from ...infrastructure.generation.problems.biobj import (
+from ...infrastructure.datasets.problems.biobj import (
     BiObjProblemConfig,
     COCOBiObjectiveProblem,
 )
@@ -14,7 +14,6 @@ class ProblemFactory:
 
     def create(self, config: dict) -> BaseProblem:
         problem_type = config.get("type")
-
         try:
             problem_ctor = self._registry[problem_type]
 

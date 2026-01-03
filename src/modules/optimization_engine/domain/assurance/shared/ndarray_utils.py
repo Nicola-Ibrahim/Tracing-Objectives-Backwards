@@ -1,5 +1,3 @@
-"""Utility helpers for working with ndarrays inside the assurance domain."""
-
 import numpy as np
 
 
@@ -17,6 +15,3 @@ def clip01(values: np.ndarray) -> np.ndarray:
     """Clip values to the inclusive [0, 1] range without copying when possible."""
 
     return np.clip(values, 0.0, 1.0, out=values)
-
-
-__all__ = ["ensure_2d", "clip01"]

@@ -2,10 +2,12 @@
 
 import numpy as np
 
-from ....domain.assurance.interfaces.scoring import FeasibilityScoringStrategy
+from ....domain.assurance.feasibility.interfaces.scoring import (
+    BaseFeasibilityScoringStrategy,
+)
 
 
-class MinDistanceScoreStrategy(FeasibilityScoringStrategy):
+class MinDistanceScoreStrategy(BaseFeasibilityScoringStrategy):
     def __init__(self, delta: float = 1.0):
         if delta <= 0:
             raise ValueError("delta must be positive")

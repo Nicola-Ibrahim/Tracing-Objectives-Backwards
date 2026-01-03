@@ -5,14 +5,14 @@ from dataclasses import dataclass
 import numpy as np
 
 from ....shared.reasons import FeasibilityFailureReason
-from ...interfaces.scoring import FeasibilityScoringStrategy
+from ...interfaces.scoring import BaseFeasibilityScoringStrategy
 from .base import BaseFeasibilityValidator, ValidationResult
 
 
 @dataclass(slots=True)
 class ParetoProximityValidator(BaseFeasibilityValidator):
     target_normalized: np.ndarray
-    scorer: FeasibilityScoringStrategy
+    scorer: BaseFeasibilityScoringStrategy
     tolerance: float
     pareto_front_normalized: np.ndarray
 
