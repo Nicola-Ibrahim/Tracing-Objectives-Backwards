@@ -23,84 +23,51 @@
 }}%%
 
 flowchart TD
- subgraph Offline["<b>🧰 Offline: Mapper Training</b>"]
+  subgraph MODEL["Model Synthesis"]
     direction TB
-        acceptData["📥<br><b>Accept Pareto Points</b><br>(experiments or simulation)"]
-        dataPreparation["🧹<br><b>Data Preparation</b>"]
-        trainInverseMapper["🧠<br><b>Train Inverse Mapper</b><br>(Y → X̂)"]
-        inverseMapperModel(["📦<br><b>Validated Inverse Mapper</b>"])
+    pairedExamples["Paired Examples D<br/>{(x_i, y_i)}_{i=1..N}"]
+    inverseModel["Inverse Model<br/>q_theta(x|y)"]
+    forwardSurrogate["Forward Surrogate<br/>f_hat(x)"]
+
+    pairedExamples -->|Fit Generator| inverseModel
+    pairedExamples -->|Learn Physics| forwardSurrogate
+    inverseModel <-->|Alignment| forwardSurrogate
   end
 
- subgraph Online["<b>💡 Online: User Interaction</b>"]
+  subgraph INTERACTIVE["Interactive Exploration"]
     direction TB
-        defineTargetObjective("🎯<br><b>Define Target Objective (Y*)</b>")
-        paretoGuidance{"📊<br><b>Pareto Region Guidance</b><br>How close is Y* to Pareto Front?"}
-        nearPareto(["🟢<br><b>Y* is Near Pareto Front</b>"])
-        farPareto(["🔵<br><b>Y* is Far Preto <br>Suggest Refinement or Proceed</b>"])
-        generateCandidates["🔁<br><b>Generate Candidate(s) X̂"]
-        forwardCheck{"🔎<br><b>Forward Check:<br>Does X̂ → Ŷ ≈ Y*?</b>"}
-        rankCandidates["📊<br><b>Rank / Select Best Candidate(s)</b>"]
-        userFeedback[["👤🔄<br><b>User Feedback &amp; Refinement</b>"]]
+    targetOutcome["Target Outcome<br/>y* in Y"]
+    proposalMechanism["Proposal Mechanism<br/>Generate {x^(k)}_{k=1..K}"]
+    selectionRule["Selection Rule<br/>Filter and Rank Candidates"]
+    consistencyCheck{"Consistency Check<br/>f_hat(x^(k)) ~= y*"}
+    validatedDecision["Validated Decision x_hat"]
+
+    targetOutcome --> proposalMechanism
+    proposalMechanism --> selectionRule
+    selectionRule --> consistencyCheck
+    consistencyCheck -->|Success| validatedDecision
   end
 
- subgraph SYS["<b>🧠 AI-Based Inverse Mapping System</b>"]
-    direction TB
-        Offline
-        forwardMapperModel["🧮<br><b>Forward Mapper<br>(X → Y)</b>"]
-        Online
-  end
+  inverseModel -.->|Deployed| proposalMechanism
+  forwardSurrogate -.->|Grounding Reference| consistencyCheck
 
-    %% Edges with labels
-    acceptData -->|Preprocessing| dataPreparation
-    dataPreparation -->|Clean Data| trainInverseMapper
-    trainInverseMapper -->|Validate & Export| inverseMapperModel
+  classDef data fill:#F5F5F5,stroke:#9E9E9E,stroke-width:2px,color:#555
+  classDef inverse fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px,color:#1565C0
+  classDef forward fill:#FFEBEE,stroke:#E53935,stroke-width:2px,color:#C62828
+  classDef proposal fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px,color:#1565C0
+  classDef selection fill:#FFE0B2,stroke:#FB8C00,stroke-width:2px,color:#EF6C00
+  classDef consistency fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:#2E7D32
+  classDef validated fill:#43A047,stroke:#2E7D32,stroke-width:2px,color:#FFFFFF
 
-    defineTargetObjective -->|Target Defined| paretoGuidance
-    paretoGuidance -- Yes --> nearPareto
-    paretoGuidance -- No --> farPareto
+  class pairedExamples data
+  class inverseModel inverse
+  class forwardSurrogate forward
+  class proposalMechanism proposal
+  class selectionRule selection
+  class consistencyCheck consistency
+  class validatedDecision validated
 
-    inverseMapperModel -->|Inference Model Loaded| generateCandidates
-    nearPareto -->|Use Target| generateCandidates
-    farPareto -->|Proceed Anyway| generateCandidates
-    farPareto -->|Refine Target| defineTargetObjective
-
-    generateCandidates -->|"Candidate(s) X̂"| forwardCheck
-    forwardCheck -->|Validated Candidates & Metrics| rankCandidates
-    rankCandidates --> userFeedback
-    userFeedback -.->|Adjust Y*| defineTargetObjective
-
-    forwardMapperModel -->|Validate against| forwardCheck
-
-    %% Class Styles
-    classDef objective fill:#FFFBE5,stroke:#FFC107,stroke-width:3px,color:#333
-    classDef inputdata fill:#E0E0E0,stroke:#757575,stroke-width:2px,color:#333
-    classDef training fill:#C8E6C9,stroke:#4CAF50,stroke-width:3px,color:#2E7D32
-    classDef decision fill:#BBDEFB,stroke:#2196F3,stroke-width:3px,color:#1976D2
-    classDef feasible fill:#E8F5E9,stroke:#43A047,stroke-width:2.5px,color:#2E7D32
-    classDef farregion fill:#E3F2FD,stroke:#64B5F6,stroke-width:2.5px,color:#1976D2
-    classDef processrun fill:#E0F2F7,stroke:#00BCD4,stroke-width:2px,color:#0097A7
-    classDef validation fill:#FCE4EC,stroke:#E91E63,stroke-width:2.5px,color:#AD1457
-    classDef forwardmodel fill:#CFD8DC,stroke:#607D8B,stroke-width:2px,color:#424242
-    classDef feedback fill:#FFEBEE,stroke:#F44336,stroke-width:2.2px,color:#C62828
-    classDef preprocessing fill:#E3F2FD,stroke:#42A5F5,stroke-width:2px,color:#1E88E5
-    classDef model_ready fill:#EDE7F6,stroke:#7B1FA2,stroke-width:3px,color:#311B92
-
-    class defineTargetObjective objective;
-    class acceptData inputdata;
-    class dataPreparation preprocessing;
-    class trainInverseMapper training;
-    class inverseMapperModel model_ready;
-    class paretoGuidance decision;
-    class nearPareto feasible;
-    class farPareto farregion;
-    class generateCandidates processrun;
-    class rankCandidates processrun;
-    class forwardCheck validation;
-    class userFeedback feedback;
-    class forwardMapperModel forwardmodel;
-
-    style Offline fill:#EEF8EE,stroke:#2E7D32,stroke-width:2px
-    style Online fill:#E1F5FE,stroke:#039BE5,stroke-width:2px
-    style SYS fill:#F5FAFF,stroke:#14B4F4,stroke-width:3px
+  style MODEL fill:#FAFAFA,stroke:#BDBDBD,stroke-width:2px,stroke-dasharray: 6 6
+  style INTERACTIVE fill:#FAFAFA,stroke:#BDBDBD,stroke-width:2px,stroke-dasharray: 6 6
     
 ```
