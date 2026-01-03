@@ -39,7 +39,9 @@ Forward simulation answers **X -> Y**. In practice, engineers often need the inv
 
 - [Inverse design pipeline](docs/processes/inverse-design-pipeline.md)
 - [Model training and validation](docs/processes/model-training-validation.md)
-- [MDN inverse mapping flow](docs/modeling/mdn-inverse-mapping-process.md)
+- [MDN estimator](docs/modeling/mdn.md)
+- [Conditional VAE estimator](docs/modeling/conditional-vae.md)
+- [INN estimator](docs/modeling/inn.md)
 - [VAE modeling notes](docs/modeling/vae.md)
 - [NSGA-II optimization notes](docs/modeling/nsga2-optimization.md)
 

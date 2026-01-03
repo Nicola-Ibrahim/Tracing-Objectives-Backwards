@@ -25,8 +25,8 @@
 flowchart TD
   subgraph MODEL["Model Synthesis"]
     direction TB
-    pairedExamples["Paired Examples D<br/>{(x_i, y_i)}_{i=1..N}"]
-    inverseModel["Inverse Model<br/>q_theta(x|y)"]
+    pairedExamples["Paired Examples D<br/>{(x<sub>i</sub>, y<sub>i</sub>)}<sub>i=1..N</sub>"]
+    inverseModel["Inverse Model<br/>q<sub>theta</sub>(x|y)"]
     forwardSurrogate["Forward Surrogate<br/>f_hat(x)"]
 
     pairedExamples -->|Fit Generator| inverseModel
@@ -37,9 +37,9 @@ flowchart TD
   subgraph INTERACTIVE["Interactive Exploration"]
     direction TB
     targetOutcome["Target Outcome<br/>y* in Y"]
-    proposalMechanism["Proposal Mechanism<br/>Generate {x^(k)}_{k=1..K}"]
+    proposalMechanism["Proposal Mechanism<br/>Generate {x<sup>(k)</sup>}<sub>k=1..K</sub>"]
     selectionRule["Selection Rule<br/>Filter and Rank Candidates"]
-    consistencyCheck{"Consistency Check<br/>f_hat(x^(k)) ~= y*"}
+    consistencyCheck{"Consistency Check<br/>f_hat(x<sup>(k)</sup>) ~= y*"}
     validatedDecision["Validated Decision x_hat"]
 
     targetOutcome --> proposalMechanism
