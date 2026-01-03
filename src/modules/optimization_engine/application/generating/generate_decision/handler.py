@@ -1,4 +1,4 @@
-from typing import Any, Tuple, cast
+from typing import Any
 
 import numpy as np
 
@@ -100,10 +100,9 @@ class GenerateDecisionCommandHandler:
 
         # 6) Collect results and build a visualization payload in the handler.
         #    The visualizer expects a plain dict with pareto_front/target/generators.
-        results_map = cast(dict[str, dict], workflow_output["results_map"])
-        generator_runs = cast(
-            list[dict[str, object]], workflow_output["generator_runs"]
-        )
+        results_map = workflow_output["results_map"]
+        generator_runs = workflow_output["generator_runs"]
+
         visualization_data = {
             "dataset_name": dataset.name,
             "pareto_front": dataset.pareto.front,
@@ -115,19 +114,14 @@ class GenerateDecisionCommandHandler:
         #    where the target lies relative to the pareto front.
         if results_map and self._visualizer:
             self._logger.log_info("Generating comparison visualization...")
-            try:
-                self._visualizer.plot(visualization_data)
-            except Exception as e:
-                self._logger.log_warning(f"Could not display plot: {e}")
-        elif results_map:
-            self._logger.log_info("Visualization skipped (no visualizer provided).")
+            self._visualizer.plot(visualization_data)
 
         # 6. Return Results
         return results_map
 
     def _prepare_target(
         self, target_objective: list, processed_data: ProcessedData
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Prepares raw and normalized target objectives."""
         target_objective_raw = np.array(target_objective, dtype=float).reshape(1, -1)
         target_objective_norm = processed_data.objectives_normalizer.transform(

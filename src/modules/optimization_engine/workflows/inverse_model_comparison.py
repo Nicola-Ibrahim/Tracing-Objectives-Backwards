@@ -58,8 +58,8 @@ class InverseModelComparator:
             "metrics": {
                 "best_shot_error": metrics["best_shot_error"],
                 "calibration_error": calibration["calibration_error"],
-                "sharpness": metrics["sharpness"],  # New Metric
-                "crps": calibration["crps"],  # New Metric
+                "sharpness": metrics["sharpness"],
+                "crps": calibration["crps"],
                 "diversity_score": metrics["diversity_score"],
             },
             "raw_errors": raw_errors,
