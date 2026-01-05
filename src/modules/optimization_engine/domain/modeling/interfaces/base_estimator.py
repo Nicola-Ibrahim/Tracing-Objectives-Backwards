@@ -2,7 +2,7 @@ import enum
 import inspect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Literal, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -113,10 +113,63 @@ class BaseEstimator(ABC):
             params[name] = val
         return params
 
-    def to_dict(self) -> dict[str, object]:
-        """Serialize the *actual* initialization (current) values of the estimator."""
-        params = self._collect_init_params_from_instance()
-        return {k: self._serialize(v) for k, v in params.items()}
+    def to_dict(self) -> dict:
+        """
+        Converts the estimator's initialization parameters to a dictionary.
+
+        Returns:
+            dict: A dictionary containing all the estimator's initialization parameters.
+        """
+        params = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                continue
+            if isinstance(value, enum.Enum):
+                params[key] = value.value
+            else:
+                params[key] = value
+        return params
+
+    @abstractmethod
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize model state to a JSON-serializable dictionary.
+
+        Returns a checkpoint containing all necessary state to reconstruct
+        this trained/configured estimator, including:
+        - Model architecture parameters
+        - Trained weights (if applicable, converted from tensors to lists)
+        - Training history (if applicable)
+        - Any other stateful components
+
+        Returns:
+            dict: JSON-serializable checkpoint data
+
+        Raises:
+            RuntimeError: If model is not fitted (for estimators requiring training)
+        """
+        raise NotImplementedError("Subclasses must implement the to_checkpoint method.")
+
+    @classmethod
+    @abstractmethod
+    def from_checkpoint(cls, parameters: dict) -> "BaseEstimator":
+        """
+        Reconstruct an estimator from parameters containing all state.
+
+        Args:
+            parameters: Full parameters dict containing both hyperparameters
+                       and checkpoint data (model_state, training_history, etc.)
+                       Enum values may be strings that need parsing.
+
+        Returns:
+            BaseEstimator: Fully initialized estimator (trained if applicable)
+
+        Raises:
+            ValueError: If parameters are invalid or incomplete
+        """
+        raise NotImplementedError(
+            "Subclasses must implement the from_checkpoint method."
+        )
 
     @classmethod
     def _serialize(cls, v):
@@ -165,19 +218,17 @@ class DeterministicEstimator(BaseEstimator):
     """
 
     @abstractmethod
-    def predict(
-        self,
-        X: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:
+    def predict(self, X: np.typing.NDArray[np.float64]):
         """
-        Predicts corresponding 'dependent' values for given feature points.
+        Make predictions for the input data.
 
         Args:
-            X (NDArray[np.float64]): The feature points for which to predict targets.
+            X (NDArray[np.float64]): Input data points.
         Returns:
-            NDArray[np.float64]: Predicted target values.
+            NDArray[np.float64]: Predicted outputs.
         """
-        raise NotImplementedError("Predict method not implemented")
+
+        raise NotImplementedError("Subclasses must implement the predict method.")
 
 
 @dataclass
@@ -235,54 +286,10 @@ class ProbabilisticEstimator(BaseEstimator):
     def sample(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 1,
-        seed: int | None = None,
+        n_samples: int = 50,
+        seed: int = 42,
         **kwargs,
     ) -> npt.NDArray[np.float64]:
         """Draw samples from the predictive distribution p(y|X)."""
 
-    @abstractmethod
-    def predict(
-        self,
-        X: npt.NDArray[np.float64],
-        *,
-        seed: int | None = None,
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Return a single draw or summary prediction for each input."""
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def predict_mean(
-        self,
-        X: npt.NDArray[np.float64],
-        n_samples: int = 256,
-        seed: int | None = None,
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Compute the posterior mean E[y|X]."""
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def predict_median(
-        self,
-        X: npt.NDArray[np.float64],
-        n_samples: int = 501,
-        seed: int | None = None,
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Compute the posterior median for each input."""
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def predict_map(
-        self,
-        X: npt.NDArray[np.float64],
-        **kwargs,
-    ) -> npt.NDArray[np.float64]:
-        """Compute the posterior mode or MAP estimate for each input."""
-
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement the sample method.")

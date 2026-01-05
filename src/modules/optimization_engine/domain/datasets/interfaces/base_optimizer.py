@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    # Import for type checking only to avoid runtime circular imports
-    from ....infrastructure.generation.optimizers.result import OptimizationResult
+from typing import Any
 
 
 class BaseOptimizer(ABC):
@@ -11,12 +7,8 @@ class BaseOptimizer(ABC):
         self.config = config
 
     @abstractmethod
-    def run(self) -> OptimizationResult:
-        """Run the optimizer and return an OptimizationResult.
-
-        The return type is a forward reference to avoid importing the concrete
-        `OptimizationResult` at runtime and creating circular dependencies.
-        """
+    def run(self) -> Any:
+        """Run the optimizer and return optimizer-specific run data."""
 
 
 class ConfigOnlyOptimizer(BaseOptimizer):

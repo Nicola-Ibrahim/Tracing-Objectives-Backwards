@@ -16,11 +16,39 @@ RESET  := \033[0m
 # 'uv run' executes a script, while 'uvx' runs an arbitrary command.
 PYTHON := uv run python
 
-# Default estimator (uppercase internal, lowercase user-facing)
-ESTIMATOR ?= mdn
-ifdef estimator
-ESTIMATOR := $(estimator)
+# Default estimators for inverse (objective->decision) and forward (decision->objective) training
+INVERSE_ESTIMATOR ?= mdn
+FORWARD_ESTIMATOR ?= mdn
+FUNCTION_ID ?= 5
+DATASET_NAME ?= cocoex_f$(FUNCTION_ID)
+
+ifdef function-id
+FUNCTION_ID := $(function-id)
 endif
+ifdef function_id
+FUNCTION_ID := $(function_id)
+endif
+ifdef dataset-name
+DATASET_NAME := $(dataset-name)
+endif
+ifdef dataset_name
+DATASET_NAME := $(dataset_name)
+endif
+
+ifdef estimator
+INVERSE_ESTIMATOR := $(estimator)
+FORWARD_ESTIMATOR := $(estimator)
+endif
+ifdef inverse_estimator
+INVERSE_ESTIMATOR := $(inverse_estimator)
+endif
+ifdef forward_estimator
+FORWARD_ESTIMATOR := $(forward_estimator)
+endif
+
+# Resolve the estimator passed to CLI targets (CLI flag > direction-specific > default)
+INVERSE_TARGET_ESTIMATOR = $(if $(inverse_estimator),$(inverse_estimator),$(if $(estimator),$(estimator),$(INVERSE_ESTIMATOR)))
+FORWARD_TARGET_ESTIMATOR = $(if $(forward_estimator),$(forward_estimator),$(if $(estimator),$(estimator),$(FORWARD_ESTIMATOR)))
 
 # ====================================================================================
 # Project Management
@@ -61,73 +89,74 @@ clean:  # Remove all generated data, trained models, and cache files
 .PHONY: data-generate
 data-generate:  # Generate synthetic Pareto front data for a specified problem
 	@echo "$(BLUE)Generating synthetic data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.datasets.generate_dataset --problem-id 5
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_dataset --function-id $(FUNCTION_ID)
 	@echo "$(GREEN)Data generation complete.$(RESET)"
-
-.PHONY: data-process
-data-process:  # Generate synthetic Pareto front data for a specified problem
-	@echo "$(BLUE)Processing synthetic data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.datasets.process_dataset
-	@echo "$(GREEN)Data processing complete.$(RESET)"
 
 .PHONY: data-visualize
 data-visualize:  # Visualize the generated data
 	@echo "$(BLUE)Visualizing generated data...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_dataset
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_dataset --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Data visualization complete.$(RESET)"
 
-.PHONY: model-train-single
-model-train-single:  # Train a single inverse decision mapper using a train/test split
+.PHONY: model-train-inverse
+model-train-inverse:  # Train an inverse model (objectives -> decisions) using a train/test split
 	@echo "$(BLUE)Training a single model (standard workflow)...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model standard --estimator $(ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_standard --estimator $(INVERSE_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Model training complete.$(RESET)"
 
-.PHONY: model-train-cv
-model-train-cv:  # Train a single model using k-fold cross-validation
+.PHONY: model-train-inverse-cv
+model-train-inverse-cv:  # Train an inverse model with k-fold cross-validation
 	@echo "$(BLUE)Training a single model with cross-validation...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model cv --cv-splits 10 --estimator $(ESTIMATOR)
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_cv --estimator $(INVERSE_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Cross-validation training complete.$(RESET)"
 
-.PHONY: model-train-grid
-model-train-grid:  # Run grid search with cross-validation for a single model
+.PHONY: model-train-inverse-grid
+model-train-inverse-grid:  # Run grid search + CV for an inverse model
 	@echo "$(BLUE)Running grid search for a single model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model grid --cv-splits 10 --estimator $(ESTIMATOR) --tune-param-name n_neighbors --tune-param-value 5 --tune-param-value 10 --tune-param-value 20 --tune-param-value 40
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_inverse_model_grid_search --estimator $(INVERSE_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
 	@echo "$(GREEN)Grid search training complete.$(RESET)"
 
-.PHONY: model-train-all
-model-train-all:  # Train all inverse decision mappers defined in configuration
-	@echo "$(BLUE)Training all configured model models...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_all_models
-	@echo "$(GREEN)All models trained successfully.$(RESET)"
+.PHONY: model-train-forward
+model-train-forward:  # Train a forward model (decisions -> objectives) using a train/test split
+	@echo "$(BLUE)Training a forward model (standard workflow)...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.training.train_forward_model standard --estimator $(FORWARD_TARGET_ESTIMATOR) --dataset-name $(DATASET_NAME)
+	@echo "$(GREEN)Forward model training complete.$(RESET)"
+
 
 .PHONY: model-generate-decision
 model-generate-decision:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.generate_decision
+	$(PYTHON) -m src.modules.optimization_engine.cli.generating.generate_decision
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
-.PHONY: model-visualize-performance
-model-visualize-performance:  # Visualize the performance of trained models
-	@echo "$(BLUE)Analyzing and visualizing model performance...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(ESTIMATOR)
-	@echo "$(GREEN)Performance analysis complete.$(RESET)"
+.PHONY: model-compare-inverse
+model-compare-inverse:  # Compare multiple inverse models
+	@echo "$(BLUE)Comparing inverse models...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.compare_inverse_models
+	@echo "$(GREEN)Inverse model comparison complete.$(RESET)"
 
-.PHONY: model-train-and-visualize
-model-train-and-visualize:  # Train a single model then visualize its performance
-	@echo "$(BLUE)Training model and preparing performance report...$(RESET)"
-	$(PYTHON) -m src.modules.optimization_engine.cli.modeling.train_single_model standard --estimator $(ESTIMATOR)
-	$(PYTHON) -m src.modules.optimization_engine.cli.visualization.visualize_model_performance --estimator $(ESTIMATOR)
-	@echo "$(GREEN)Training and visualization complete.$(RESET)"
+.PHONY: assurance-calibrate-validation
+assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation
+	@echo "$(BLUE)Calibrating decision validation gates...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.assurning.calibrate_decision_validation --dataset-name $(DATASET_NAME)
+	@echo "$(GREEN)Decision validation calibration complete.$(RESET)"
+
+.PHONY: model-visualize-inverse
+model-visualize-inverse:  # Visualize diagnostics for an inverse model (objectives -> decisions)
+	@echo "$(BLUE)Visualizing inverse model performance...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(INVERSE_TARGET_ESTIMATOR) --mapping-direction inverse --dataset-name $(DATASET_NAME) $(if $(model_number),--model-number $(model_number),)
+	@echo "$(GREEN)Inverse model performance visualization complete.$(RESET)"
+
+.PHONY: model-visualize-forward
+model-visualize-forward:  # Visualize diagnostics for a forward model (decisions -> objectives)
+	@echo "$(BLUE)Visualizing forward model performance...$(RESET)"
+	$(PYTHON) -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator $(FORWARD_TARGET_ESTIMATOR) --mapping-direction forward --dataset-name $(DATASET_NAME) $(if $(model_number),--model-number $(model_number),)
+	@echo "$(GREEN)Forward model performance visualization complete.$(RESET)"
+
 
 # ====================================================================================
 # Default Targets
 # ====================================================================================
 
-.PHONY: all
-all: data-process model-train-all # Run the complete data and training workflow
-
 # Set the default goal to 'help' if no target is specified
 .DEFAULT_GOAL := help
-
-# Declare all targets as PHONY to prevent conflicts with files of the same name
-.PHONY: $(COMMANDS)

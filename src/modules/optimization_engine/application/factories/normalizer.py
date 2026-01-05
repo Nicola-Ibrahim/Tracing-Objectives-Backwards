@@ -1,6 +1,6 @@
 from ...domain.modeling.enums.normalizer_type import NormalizerTypeEnum
 from ...domain.modeling.interfaces.base_normalizer import BaseNormalizer
-from ...infrastructure.normalizers import (
+from ...infrastructure.modeling.normalizers import (
     HypercubeNormalizer,
     LogNormalizer,
     MinMaxScalerNormalizer,

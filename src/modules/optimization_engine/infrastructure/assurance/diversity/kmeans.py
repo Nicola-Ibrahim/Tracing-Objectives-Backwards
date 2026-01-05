@@ -5,10 +5,14 @@ import warnings
 import numpy as np
 from sklearn.cluster import KMeans
 
-from ....domain.assurance.interfaces.diversity import DiversityStrategy
+from ....domain.assurance.feasibility.interfaces.diversity import BaseDiversityStrategy
 
 
-class KMeansDiversityStrategy(DiversityStrategy):
+class KMeansDiversityStrategy(BaseDiversityStrategy):
+    def __init__(self, random_seed: int = 42, n_clusters: int = 5):
+        self._random_seed = random_seed
+        self._n_clusters = n_clusters
+
     def select_diverse_points(
         self,
         *,
@@ -44,6 +48,3 @@ class KMeansDiversityStrategy(DiversityStrategy):
             selected.append(pareto_front_normalized[np.argmin(distances)])
 
         return np.unique(np.vstack(selected), axis=0)
-
-
-__all__ = ["KMeansDiversityStrategy"]

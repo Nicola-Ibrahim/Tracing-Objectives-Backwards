@@ -1,20 +1,23 @@
-import pickle
 from datetime import datetime
 from typing import Any, Self
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, Field
 
 from ..interfaces.base_estimator import BaseEstimator
-from ..value_objects.loss_history import LossHistory
+from ..value_objects.estimator_params import EstimatorParams
 from ..value_objects.metrics import Metrics
 
 
 class ModelArtifact(BaseModel):
     """
-    Represents a trained model model and its associated metadata.
+    Represents a trained model and its associated metadata.
+
     This entity encapsulates the actual fitted model instance
     along with essential identifying and descriptive information for a *specific training run*.
+
+    Note: The estimator field is NOT serialized by Pydantic. Serialization is handled
+    by the repository layer using the estimator's to_checkpoint() method.
     """
 
     id: str = Field(
@@ -22,9 +25,21 @@ class ModelArtifact(BaseModel):
         description="Unique identifier for this specific training run/model version.",
     )
 
-    parameters: dict[str, Any] = Field(
+    parameters: EstimatorParams = Field(
         ...,
-        description="The parameters used to initialize or configure this specific model instance/run.",
+        description="The estimator configuration used to initialize this model instance/run.",
+    )
+    mapping_direction: str = Field(
+        default="inverse",
+        description="Mapping direction used for training (inverse or forward).",
+    )
+    dataset_name: str = Field(
+        default="dataset",
+        description="Dataset identifier associated with this model run.",
+    )
+    run_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional training metadata (cv splits, grid search summary, etc.).",
     )
     estimator: BaseEstimator = Field(
         ...,
@@ -43,27 +58,9 @@ class ModelArtifact(BaseModel):
 
     metrics: Metrics = Field(description="Metrics fo the the artifact")
 
-    loss_history: LossHistory = Field(
-        description="Training loss history for the model."
+    training_history: dict[str, list[float]] = Field(
+        description="Training and validation history for the model."
     )
-
-    # ---- (De)serialization for the estimator field only ----
-
-    @field_serializer("estimator")
-    def serialize_model(self, obj: Any) -> bytes:
-        """Serializes the object to a byte stream using pickle."""
-        return pickle.dumps(obj)
-
-    @field_validator(
-        "estimator",
-        mode="before",
-    )
-    @classmethod
-    def validate_and_deserialize_object(cls, obj: Any) -> Any:
-        """Deserializes the byte stream back into the original object."""
-        if isinstance(obj, bytes):
-            return pickle.loads(obj)
-        return obj
 
     class Config:
         arbitrary_types_allowed = True
@@ -78,10 +75,13 @@ class ModelArtifact(BaseModel):
     def from_data(
         cls,
         id: str,
-        parameters: dict[str, Any],
+        parameters: EstimatorParams,
         estimator: BaseEstimator,
         metrics: Metrics,
-        loss_history: LossHistory,
+        training_history: dict[str, list[float]],
+        mapping_direction: str = "inverse",
+        dataset_name: str = "dataset",
+        run_metadata: dict[str, Any] | None = None,
         trained_at: datetime | None = None,
         version: int | None = None,
     ) -> Self:
@@ -94,7 +94,10 @@ class ModelArtifact(BaseModel):
             estimator=estimator,
             parameters=parameters,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=training_history,
+            mapping_direction=mapping_direction,
+            dataset_name=dataset_name,
+            run_metadata=run_metadata or {},
             trained_at=trained_at,
             version=version,
         )
@@ -102,10 +105,13 @@ class ModelArtifact(BaseModel):
     @classmethod
     def create(
         cls,
-        parameters: dict[str, Any],
+        parameters: EstimatorParams,
         estimator: BaseEstimator,
         metrics: Metrics,
-        loss_history: LossHistory,
+        training_history: dict[str, list[float]],
+        mapping_direction: str = "inverse",
+        dataset_name: str = "dataset",
+        run_metadata: dict[str, Any] | None = None,
     ) -> Self:
         """
         Convenience factory that fills sensible defaults; pass only what you have.
@@ -115,5 +121,8 @@ class ModelArtifact(BaseModel):
             estimator=estimator,
             parameters=parameters,
             metrics=metrics,
-            loss_history=loss_history,
+            training_history=training_history,
+            mapping_direction=mapping_direction,
+            dataset_name=dataset_name,
+            run_metadata=run_metadata or {},
         )

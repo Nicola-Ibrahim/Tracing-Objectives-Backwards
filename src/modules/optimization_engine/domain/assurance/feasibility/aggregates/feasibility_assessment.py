@@ -1,15 +1,16 @@
-"""Aggregate root describing the output of a feasibility assessment."""
-
+import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ...shared.reasons import FeasibilityFailureReason
-from ..value_objects import ObjectiveVector, Score, Suggestions
+from ..value_objects.score import Score
+from ..value_objects.suggestions import Suggestions
 
 
 class FeasibilityAssessment(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    target: ObjectiveVector
+    target: np.typing.NDArray
+    target_normalized: np.typing.NDArray
     is_feasible: bool
     score: Score | None = None
     reason: FeasibilityFailureReason | None = None
@@ -25,6 +26,3 @@ class FeasibilityAssessment(BaseModel):
     @property
     def suggestion_count(self) -> int:
         return self.suggestions.count if self.suggestions is not None else 0
-
-
-__all__ = ["FeasibilityAssessment"]
