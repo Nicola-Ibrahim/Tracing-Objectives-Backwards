@@ -4,21 +4,25 @@
 -->
 
 <!-- .slide: class="title-slide" data-transition="zoom" -->
-<p class="eyebrow">Master Thesis</p>
-<h1>Tracing the Objectives Backwards</h1>
-<h3>Data-Driven Inverse Exploration of Multi-Objective Problems</h3>
-
-<p class="title-meta"><span class="title-name">Nicola Ibrahim</span></p>
-
-<p class="title-meta">M.Sc. Computer Engineering · Signal, Image and Speech Processing</p>
-<p class="title-meta">Department of Electrical Engineering and Information Technology</p>
-<p class="title-meta"><span class="title-accent">Paderborn University</span> · Filing date: January 5, 2026</p>
+<div class="space-y-6 font-sans">
+  <p class="eyebrow text-[0.6em] tracking-[0.2em] text-muted">Master Thesis</p>
+  <div class="space-y-2">
+    <h1 class="font-display text-[2.2em] leading-tight text-ink">Tracing the Objectives Backwards</h1>
+    <h3 class="font-display text-[0.9em] tracking-[0.08em] text-[#6f4a3a]">Data-Driven Inverse Exploration of Multi-Objective Problems</h3>
+  </div>
+  <div class="space-y-3 text-[0.6em] text-muted">
+    <p class="font-semibold text-ink">Nicola Ibrahim</p>
+    <p>M.Sc. Computer Engineering · Signal, Image and Speech Processing</p>
+    <p>Department of Electrical Engineering and Information Technology</p>
+    <p><span class="text-accent font-semibold">Paderborn University</span> · Filing date: January 5, 2026</p>
+  </div>
+</div>
 
 Note: One-line pitch: we learn an inverse map so designers can query targets directly.
 
 ---
 
-## Agenda
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Agenda</h2>
 1. Motivation & problem statement <!-- .element: class="fragment" -->
 2. Inverse-design workflow <!-- .element: class="fragment" -->
 3. Models and evaluation <!-- .element: class="fragment" -->
@@ -28,7 +32,7 @@ Note: One-line pitch: we learn an inverse map so designers can query targets dir
 ---
 
 <!-- .slide: data-auto-animate -->
-## Motivation: Inverse Design in Practice
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Motivation: Inverse Design in Practice</h2>
 - We often start with *desired outcomes*, not parameters. <!-- .element: class="fragment" -->
 - Forward simulation is easy; inverse decision-making is hard. <!-- .element: class="fragment" -->
 - Multi-objective targets add non-uniqueness and trade-offs. <!-- .element: class="fragment" -->
@@ -38,7 +42,7 @@ Note: Give a signal-processing example: filter response, beam pattern, rate-dist
 ---
 
 <!-- .slide: data-auto-animate -->
-## Problem Statement
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Problem Statement</h2>
 Given a forward map `f: X -> Y` and samples `(x_i, y_i)`:
 
 - Learn an inverse rule `g: Y -> X` that proposes **multiple candidates** for a target `y*`. <!-- .element: class="fragment" -->
@@ -48,7 +52,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 
 ---
 
-## Forward vs. Inverse View
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Forward vs. Inverse View</h2>
 <div class="grid-2">
   <div>
     <h3>Key Tension</h3>
@@ -65,7 +69,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 
 ---
 
-## Research Questions
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Research Questions</h2>
 1. How do we map a new target `y*` to candidate decisions efficiently? <!-- .element: class="fragment" -->
 2. How do we score candidates with explicit, reproducible metrics? <!-- .element: class="fragment" -->
 3. Which modeling choices generalize best to unseen targets? <!-- .element: class="fragment" -->
@@ -73,7 +77,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 ---
 
 <!-- .slide: data-auto-animate -->
-## Inverse-Querying Workflow
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Inverse-Querying Workflow</h2>
 <div class="grid-2">
   <div>
     <ol>
@@ -92,7 +96,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 ---
 
 <!-- .slide: data-auto-animate -->
-## Modeling Choices
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Modeling Choices</h2>
 <div class="grid-2">
   <div>
     <ul>
@@ -110,7 +114,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 ---
 
 <!-- .slide: data-auto-animate -->
-## Evaluation Protocol
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Evaluation Protocol</h2>
 <div class="grid-2">
   <div>
     <ul>
@@ -129,7 +133,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 ---
 
 <!-- .slide: data-auto-animate -->
-## Experimental Benchmarks
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Experimental Benchmarks</h2>
 <div class="grid-2">
   <div>
     <h3>Bi-objective COCO BBOB</h3>
@@ -145,7 +149,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 ---
 
 <!-- .slide: data-auto-animate -->
-## Results: Pareto Trade-offs
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Results: Pareto Trade-offs</h2>
 <div class="grid-2">
   <div>
     <ul>
@@ -161,7 +165,7 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 
 ---
 
-## Contributions
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Contributions</h2>
 1. Clear formulation of inverse decision mapping for multi-objective targets. <!-- .element: class="fragment" -->
 2. Reproducible propose-check workflow with forward verification. <!-- .element: class="fragment" -->
 3. Set-based evaluation protocol reflecting user-facing outputs. <!-- .element: class="fragment" -->
@@ -169,14 +173,14 @@ Note: Stress ill-posedness: one-to-many, noisy, sometimes infeasible.
 
 ---
 
-## Limitations & Future Work
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Limitations &amp; Future Work</h2>
 - Coverage-aware reliability remains critical for deployment. <!-- .element: class="fragment" -->
 - Extend to higher-dimensional outcome spaces. <!-- .element: class="fragment" -->
 - Add calibration layers for guaranteed outcome bounds. <!-- .element: class="fragment" -->
 
 ---
 
-# Thank You
+<h2 class="slide-title font-display text-[0.95em] tracking-[0.12em] uppercase text-accent mb-4">Thank You</h2>
 Questions?
 
 Note: End by restating the key takeaway: fast inverse querying + forward verification.
