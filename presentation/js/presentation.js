@@ -2,15 +2,15 @@
 
 Reveal.initialize({
   hash: true,
-  slideNumber: true,
+  slideNumber: "c/t",
   progress: true,
   controls: true,
-  center: false,
-  transition: "convex",
+  center: true,
+  transition: "fade",
   backgroundTransition: "fade",
-  transitionSpeed: "fast",
+  transitionSpeed: "normal",
   autoAnimate: true,
-  plugins: [RevealMarkdown, RevealNotes, RevealHighlight],
+  plugins: [RevealMarkdown, RevealNotes, RevealHighlight, RevealMath.KaTeX],
   markdown: {
     smartypants: true,
   },

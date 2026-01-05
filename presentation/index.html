@@ -1,56 +1,86 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pareto Optimization Thesis Presentation</title>
 
-    <link rel="stylesheet" href="node_modules/reveal.js/dist/reveal.css" />
-    <link rel="stylesheet" href="node_modules/reveal.js/dist/theme/white.css" />
-    <link rel="stylesheet" href="node_modules/reveal.js/plugin/highlight/monokai.css" />
-    <link rel="stylesheet" href="css/custom.css" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pareto Optimization Thesis Presentation</title>
 
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              ink: "#1b1a17",
-              accent: "#b85c38",
-              muted: "rgba(27, 26, 23, 0.6)",
+  <link rel="stylesheet" href="node_modules/reveal.js/dist/reveal.css" />
+  <link rel="stylesheet" href="node_modules/reveal.js/dist/theme/white.css" />
+  <link rel="stylesheet" href="node_modules/reveal.js/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href="css/custom.css" />
+
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=JetBrains+Mono:wght@400;600&display=swap" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0f172a", // Deep slate
+            paper: "#f8fafc", // Off-white/slate-50
+            accent: {
+              DEFAULT: "#d97706", // Amber-600
+              light: "#f59e0b", // Amber-500
+              dark: "#b45309", // Amber-700
             },
-            fontFamily: {
-              display: ["Fraunces", "serif"],
-              sans: ["IBM Plex Sans", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
-              mono: ["JetBrains Mono", "SFMono-Regular", "Menlo", "monospace"],
-            },
+            muted: "#64748b", // Slate-500
+            brand: "#0284c7", // Sky-600
+          },
+          fontFamily: {
+            display: ["Fraunces", "serif"],
+            sans: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"],
           },
         },
-      };
-    </script>
-  </head>
-  <body>
-    <div class="reveal">
-      <div class="slides">
-        <section
-          data-markdown="slides.md"
-          data-separator="^---$"
-          data-separator-vertical="^--$"
-          data-separator-notes="^Note:"
-          data-charset="utf-8"
-        ></section>
-      </div>
-    </div>
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --r-main-font: "Plus Jakarta Sans", sans-serif;
+      --r-heading-font: "Fraunces", serif;
+      --r-background-color: #f8fafc;
+      --r-main-color: #0f172a;
+      --r-heading-color: #0f172a;
+      --r-link-color: #d97706;
+      --r-selection-background-color: #fed7aa;
+    }
 
-    <script src="node_modules/reveal.js/dist/reveal.js"></script>
-    <script src="node_modules/reveal.js/plugin/markdown/markdown.js"></script>
-    <script src="node_modules/reveal.js/plugin/notes/notes.js"></script>
-    <script src="node_modules/reveal.js/plugin/highlight/highlight.js"></script>
-    <script src="js/presentation.js"></script>
-  </body>
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .reveal h1,
+    .reveal h2,
+    .reveal h3 {
+      text-transform: none !important;
+    }
+
+    .reveal .slides section {
+      padding: 40px !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-markdown="slides.md" data-separator="^---$" data-separator-vertical="^--$"
+        data-separator-notes="^Note:" data-charset="utf-8"></section>
+    </div>
+  </div>
+
+  <script src="node_modules/reveal.js/dist/reveal.js"></script>
+  <script src="node_modules/reveal.js/plugin/markdown/markdown.js"></script>
+  <script src="node_modules/reveal.js/plugin/notes/notes.js"></script>
+  <script src="node_modules/reveal.js/plugin/highlight/highlight.js"></script>
+  <script src="node_modules/reveal.js/plugin/math/math.js"></script>
+  <script src="js/presentation.js"></script>
+</body>
+
 </html>

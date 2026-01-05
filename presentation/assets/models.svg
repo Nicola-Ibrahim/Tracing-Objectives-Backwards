@@ -1,29 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
-  <rect width="800" height="450" rx="24" fill="#fbf6ee" />
-  <text x="60" y="60" font-family="Fraunces, serif" font-size="26" fill="#1b1a17">Model Families</text>
+  <defs>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
+      <feOffset dx="0" dy="8" result="offsetblur" />
+      <feComponentTransfer><feFuncA type="linear" slope="0.08" /></feComponentTransfer>
+      <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
 
-  <rect x="60" y="120" width="200" height="230" rx="16" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
-  <rect x="300" y="120" width="200" height="230" rx="16" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
-  <rect x="540" y="120" width="200" height="230" rx="16" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
+  <rect width="800" height="450" fill="none" />
+  <text x="50" y="50" font-family="Fraunces, serif" font-size="28" font-weight="800" fill="#0f172a">Model Families</text>
 
-  <text x="100" y="165" font-family="IBM Plex Sans, Arial" font-size="20" fill="#1b1a17">MDN</text>
-  <text x="85" y="200" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Mixture components</text>
-  <circle cx="130" cy="255" r="10" fill="#b85c38" />
-  <circle cx="165" cy="280" r="8" fill="#b85c38" />
-  <circle cx="115" cy="300" r="7" fill="#b85c38" />
+  <!-- MDN -->
+  <g filter="url(#cardShadow)">
+    <rect x="50" y="100" width="230" height="280" rx="28" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+    <text x="80" y="145" font-family="Plus Jakarta Sans, sans-serif" font-size="22" font-weight="700" fill="#0f172a">MDN</text>
+    <text x="80" y="175" font-family="Plus Jakarta Sans, sans-serif" font-size="14" fill="#64748b">Probabilistic Mix</text>
+    <circle cx="120" cy="250" r="15" fill="#d97706" opacity="0.6" />
+    <circle cx="160" cy="280" r="22" fill="#d97706" opacity="0.8" />
+    <circle cx="210" cy="240" r="12" fill="#d97706" opacity="0.4" />
+    <path d="M 120 250 Q 160 210 160 280" stroke="#d97706" stroke-width="2" fill="none" opacity="0.3" />
+  </g>
 
-  <text x="330" y="165" font-family="IBM Plex Sans, Arial" font-size="20" fill="#1b1a17">CVAE</text>
-  <text x="315" y="200" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Latent space</text>
-  <rect x="335" y="230" width="130" height="70" rx="12" fill="#f4e6d7" stroke="#1b1a17" stroke-width="1" />
-  <circle cx="360" cy="255" r="8" fill="#b85c38" />
-  <circle cx="390" cy="270" r="10" fill="#b85c38" />
-  <circle cx="420" cy="250" r="6" fill="#b85c38" />
+  <!-- CVAE -->
+  <g filter="url(#cardShadow)">
+    <rect x="300" y="100" width="230" height="280" rx="28" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+    <text x="330" y="145" font-family="Plus Jakarta Sans, sans-serif" font-size="22" font-weight="700" fill="#0f172a">CVAE</text>
+    <text x="330" y="175" font-family="Plus Jakarta Sans, sans-serif" font-size="14" fill="#64748b">Generative Latent</text>
+    <rect x="340" y="220" width="150" height="70" rx="16" fill="#f8fafc" stroke="#d97706" stroke-width="1" stroke-dasharray="4 2" />
+    <circle cx="380" cy="255" r="8" fill="#0284c7" />
+    <circle cx="415" cy="255" r="8" fill="#0284c7" />
+    <circle cx="450" cy="255" r="8" fill="#0284c7" />
+    <path d="M 360 290 Q 415 340 470 290" stroke="#0284c7" stroke-width="2" fill="none" />
+  </g>
 
-  <text x="575" y="165" font-family="IBM Plex Sans, Arial" font-size="20" fill="#1b1a17">INN</text>
-  <text x="565" y="200" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Invertible layers</text>
-  <line x1="575" y1="245" x2="705" y2="245" stroke="#b85c38" stroke-width="4" />
-  <line x1="575" y1="275" x2="705" y2="275" stroke="#b85c38" stroke-width="4" />
-  <circle cx="590" cy="310" r="6" fill="#1b1a17" />
-  <circle cx="615" cy="315" r="6" fill="#1b1a17" />
-  <circle cx="640" cy="310" r="6" fill="#1b1a17" />
+  <!-- INN -->
+  <g filter="url(#cardShadow)">
+    <rect x="550" y="100" width="230" height="280" rx="28" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+    <text x="580" y="145" font-family="Plus Jakarta Sans, sans-serif" font-size="22" font-weight="700" fill="#0f172a">INN</text>
+    <text x="580" y="175" font-family="Plus Jakarta Sans, sans-serif" font-size="14" fill="#64748b">Bijective Mapping</text>
+    <path d="M 590 230 L 740 230" stroke="#0f172a" stroke-width="4" stroke-linecap="round" />
+    <path d="M 590 280 L 740 280" stroke="#0f172a" stroke-width="4" stroke-linecap="round" />
+    <circle cx="630" cy="230" r="6" fill="#d97706" />
+    <circle cx="680" cy="280" r="6" fill="#d97706" />
+    <path d="M 630 230 Q 655 255 680 280" stroke="#d97706" stroke-width="2" fill="none" />
+  </g>
 </svg>

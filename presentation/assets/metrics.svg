@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="none" />
+  <text x="50" y="50" font-family="Fraunces, serif" font-size="28" font-weight="800" fill="#0f172a">Evaluation Metrics</text>
+
+  <!-- Tolerance Success Circle -->
+  <g transform="translate(100, 100)">
+    <circle cx="100" cy="150" r="80" fill="#f8fafc" stroke="#d97706" stroke-width="2" stroke-dasharray="8 4" />
+    <circle cx="100" cy="150" r="4" fill="#d97706" />
+    <text x="85" y="140" font-family="Plus Jakarta Sans, sans-serif" font-size="14" font-weight="700" fill="#d97706">Target y*</text>
+    
+    <circle cx="130" cy="180" r="6" fill="#0284c7" />
+    <circle cx="80" cy="120" r="6" fill="#0284c7" />
+    <circle cx="160" cy="110" r="6" fill="#cbd5e1" /> <!-- Failed candidate -->
+    
+    <text x="100" y="250" font-family="Plus Jakarta Sans, sans-serif" font-size="16" font-weight="700" fill="#0f172a" text-anchor="middle">Tolerance Success (Succ_ε)</text>
+    <text x="100" y="270" font-family="Plus Jakarta Sans, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">Is best candidate within ε?</text>
+  </g>
+
+  <!-- Outcome Discrepancy Bar -->
+  <g transform="translate(450, 100)">
+    <rect x="0" y="140" width="300" height="20" rx="10" fill="#f1f5f9" />
+    <rect x="0" y="140" width="220" height="20" rx="10" fill="url(#blueAmberGrad)" />
+    <defs>
+      <linearGradient id="blueAmberGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#0284c7" />
+        <stop offset="100%" style="stop-color:#d97706" />
+      </linearGradient>
+    </defs>
+    
+    <text x="0" y="130" font-family="Plus Jakarta Sans, sans-serif" font-size="12" font-weight="600" fill="#64748b">Worst</text>
+    <text x="260" y="130" font-family="Plus Jakarta Sans, sans-serif" font-size="12" font-weight="600" fill="#d97706">Best (y*)</text>
+    
+    <path d="M 220 135 L 220 165" stroke="#0f172a" stroke-width="2" />
+    <text x="180" y="185" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="#0f172a">E_Y Gap</text>
+
+    <text x="150" y="250" font-family="Plus Jakarta Sans, sans-serif" font-size="16" font-weight="700" fill="#0f172a" text-anchor="middle">Outcome Discrepancy</text>
+    <text x="150" y="270" font-family="Plus Jakarta Sans, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">Euclidean distance in Y</text>
+  </g>
+</svg>
