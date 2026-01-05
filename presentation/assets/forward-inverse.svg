@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fffaf2" />
+      <stop offset="100%" stop-color="#f4e6d7" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" rx="24" fill="url(#bg)" />
+
+  <rect x="60" y="70" width="280" height="140" rx="18" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
+  <rect x="460" y="70" width="280" height="140" rx="18" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
+
+  <rect x="60" y="250" width="280" height="140" rx="18" fill="#ffffff" stroke="#1b1a17" stroke-width="2" />
+  <rect x="460" y="250" width="280" height="140" rx="18" fill="#ffffff" stroke="#1b1a17" stroke-width="2" />
+
+  <text x="90" y="115" font-family="IBM Plex Sans, Arial" font-size="22" fill="#1b1a17">Decision space X</text>
+  <text x="490" y="115" font-family="IBM Plex Sans, Arial" font-size="22" fill="#1b1a17">Objective space Y</text>
+  <text x="90" y="295" font-family="IBM Plex Sans, Arial" font-size="22" fill="#1b1a17">Objective space Y*</text>
+  <text x="490" y="295" font-family="IBM Plex Sans, Arial" font-size="22" fill="#1b1a17">Decision space X</text>
+
+  <text x="90" y="150" font-family="JetBrains Mono, monospace" font-size="18" fill="#b85c38">x -> f(x)</text>
+  <text x="90" y="330" font-family="JetBrains Mono, monospace" font-size="18" fill="#1b1a17">y* -> g(y*)</text>
+
+  <line x1="340" y1="140" x2="460" y2="140" stroke="#b85c38" stroke-width="4" />
+  <polygon points="460,140 445,132 445,148" fill="#b85c38" />
+
+  <line x1="340" y1="320" x2="460" y2="320" stroke="#1b1a17" stroke-width="4" />
+  <polygon points="460,320 445,312 445,328" fill="#1b1a17" />
+
+  <text x="60" y="40" font-family="Fraunces, serif" font-size="26" fill="#1b1a17">Forward vs. Inverse</text>
+</svg>

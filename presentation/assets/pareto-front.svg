@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" rx="24" fill="#fbf6ee" />
+  <text x="60" y="60" font-family="Fraunces, serif" font-size="26" fill="#1b1a17">Pareto Front</text>
+
+  <line x1="120" y1="350" x2="700" y2="350" stroke="#1b1a17" stroke-width="2" />
+  <line x1="120" y1="100" x2="120" y2="350" stroke="#1b1a17" stroke-width="2" />
+
+  <text x="680" y="375" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Objective 1</text>
+  <text x="70" y="115" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17" transform="rotate(-90 70,115)">Objective 2</text>
+
+  <circle cx="180" cy="300" r="6" fill="#1b1a17" />
+  <circle cx="240" cy="260" r="6" fill="#1b1a17" />
+  <circle cx="320" cy="230" r="6" fill="#1b1a17" />
+  <circle cx="400" cy="210" r="6" fill="#1b1a17" />
+  <circle cx="480" cy="200" r="6" fill="#1b1a17" />
+  <circle cx="560" cy="190" r="6" fill="#1b1a17" />
+
+  <polyline points="180,300 240,260 320,230 400,210 480,200 560,190" fill="none" stroke="#b85c38" stroke-width="3" />
+
+  <circle cx="250" cy="320" r="6" fill="#b85c38" opacity="0.35" />
+  <circle cx="360" cy="290" r="6" fill="#b85c38" opacity="0.35" />
+  <circle cx="520" cy="260" r="6" fill="#b85c38" opacity="0.35" />
+</svg>

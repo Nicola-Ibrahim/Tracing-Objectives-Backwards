@@ -1,0 +1,195 @@
+:root {
+  --r-background-color: #f6f1e7;
+  --r-main-font: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --r-heading-font: "Fraunces", "Times New Roman", serif;
+  --r-code-font: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --r-main-color: #1b1a17;
+  --r-heading-color: #1b1a17;
+  --r-link-color: #b85c38;
+  --r-link-color-hover: #d37c59;
+  --r-selection-background-color: #f2c49b;
+}
+
+body {
+  background: radial-gradient(circle at 15% 10%, #ffffff 0%, #f6f1e7 45%, #efe2d3 100%);
+}
+
+.reveal {
+  font-variant-numeric: lining-nums;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+  letter-spacing: -0.01em;
+}
+
+.reveal h1 {
+  font-size: 2.7em;
+}
+
+.reveal h2 {
+  font-size: 1.9em;
+}
+
+.reveal h3 {
+  font-size: 1.15em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal section {
+  padding: 0 2.2rem;
+}
+
+.reveal .slide-number {
+  color: rgba(27, 26, 23, 0.55);
+  font-size: 0.5em;
+}
+
+.reveal pre code {
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+}
+
+.reveal .controls {
+  color: #1b1a17;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.grid-2 img {
+  width: 100%;
+  border-radius: 14px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.15);
+}
+
+.callout {
+  margin-top: 1rem;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid #b85c38;
+  background: rgba(184, 92, 56, 0.08);
+  border-radius: 10px;
+}
+
+.card {
+  padding: 1.2rem 1.4rem;
+  border-radius: 16px;
+  background: #fff7ee;
+  border: 1px solid rgba(27, 26, 23, 0.1);
+  box-shadow: 0 10px 20px rgba(27, 26, 23, 0.12);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6em;
+  color: rgba(27, 26, 23, 0.6);
+  margin-bottom: 0.6rem;
+}
+
+.muted {
+  color: rgba(27, 26, 23, 0.65);
+}
+
+.reveal p,
+.reveal li {
+  font-size: 0.95em;
+}
+
+.reveal ul,
+.reveal ol {
+  margin-left: 1.1rem;
+}
+
+.reveal strong {
+  color: #b85c38;
+}
+
+.title-slide h1 {
+  font-size: 1.2em;
+  line-height: 1.12;
+}
+
+.title-slide h3 {
+  font-size: 0.95em;
+  letter-spacing: 0.06em;
+}
+
+.title-meta {
+  font-size: 0.65em;
+  margin: 0;
+  color: rgba(27, 26, 23, 0.6);
+}
+
+.title-name {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #1b1a17;
+}
+
+.title-slide h3 {
+  color: #6f4a3a;
+}
+
+.reveal .slides > section:first-child h1 {
+  font-size: 1.1em;
+  line-height: 1.12;
+}
+
+.reveal .slides > section:first-child h3 {
+  color: #6f4a3a;
+}
+
+.reveal .slides > section:first-child .title-meta {
+  font-size: 0.65em;
+  margin: 0;
+  color: rgba(27, 26, 23, 0.6);
+}
+
+.title-slide .title-meta + .title-meta {
+  margin-top: 0.9rem;
+}
+
+.reveal .slides > section:first-child .title-meta + .title-meta {
+  margin-top: 0.9rem;
+}
+
+.reveal .slides > section:first-child .title-name {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #1b1a17;
+}
+
+.reveal .slides > section:first-child .title-accent {
+  color: #b85c38;
+  font-weight: 600;
+}
+
+.title-accent {
+  color: #b85c38;
+  font-weight: 600;
+}
+
+.reveal img {
+  border: 1px solid rgba(27, 26, 23, 0.08);
+}
+
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .reveal section {
+    padding: 0 1.2rem;
+  }
+}

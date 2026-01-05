@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" rx="24" fill="#fbf6ee" />
+  <text x="60" y="60" font-family="Fraunces, serif" font-size="26" fill="#1b1a17">Model Families</text>
+
+  <rect x="60" y="120" width="200" height="230" rx="16" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
+  <rect x="300" y="120" width="200" height="230" rx="16" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
+  <rect x="540" y="120" width="200" height="230" rx="16" fill="#ffffff" stroke="#b85c38" stroke-width="2" />
+
+  <text x="100" y="165" font-family="IBM Plex Sans, Arial" font-size="20" fill="#1b1a17">MDN</text>
+  <text x="85" y="200" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Mixture components</text>
+  <circle cx="130" cy="255" r="10" fill="#b85c38" />
+  <circle cx="165" cy="280" r="8" fill="#b85c38" />
+  <circle cx="115" cy="300" r="7" fill="#b85c38" />
+
+  <text x="330" y="165" font-family="IBM Plex Sans, Arial" font-size="20" fill="#1b1a17">CVAE</text>
+  <text x="315" y="200" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Latent space</text>
+  <rect x="335" y="230" width="130" height="70" rx="12" fill="#f4e6d7" stroke="#1b1a17" stroke-width="1" />
+  <circle cx="360" cy="255" r="8" fill="#b85c38" />
+  <circle cx="390" cy="270" r="10" fill="#b85c38" />
+  <circle cx="420" cy="250" r="6" fill="#b85c38" />
+
+  <text x="575" y="165" font-family="IBM Plex Sans, Arial" font-size="20" fill="#1b1a17">INN</text>
+  <text x="565" y="200" font-family="IBM Plex Sans, Arial" font-size="14" fill="#1b1a17">Invertible layers</text>
+  <line x1="575" y1="245" x2="705" y2="245" stroke="#b85c38" stroke-width="4" />
+  <line x1="575" y1="275" x2="705" y2="275" stroke="#b85c38" stroke-width="4" />
+  <circle cx="590" cy="310" r="6" fill="#1b1a17" />
+  <circle cx="615" cy="315" r="6" fill="#1b1a17" />
+  <circle cx="640" cy="310" r="6" fill="#1b1a17" />
+</svg>
