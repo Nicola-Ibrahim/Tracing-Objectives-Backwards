@@ -8,12 +8,12 @@ from ..domain.modeling.interfaces.base_estimator import (
 from ..domain.modeling.interfaces.base_normalizer import BaseNormalizer
 
 
-class InverseModelComparator:
+class InverseModelEvaluator:
     """
-    Domain service for comparing inverse models using a forward simulator.
+    Domain service for evaluating a single inverse model using a forward simulator.
 
-    This service validates inverse model candidates against a forward model (simulator)
-    to assess their quality based on multiple criteria:
+    This service validates an inverse model candidate against a forward model (simulator)
+    to assess its quality based on multiple criteria:
     - Min Simulation Error: Lowest error achievable among samples.
     - Consistency: Median error (reliability).
     - Diversity: Spread of suggested solutions.
@@ -22,7 +22,7 @@ class InverseModelComparator:
     Optimized with vectorized operations for batch processing.
     """
 
-    def validate(
+    def evaluate(
         self,
         inverse_estimator: BaseEstimator,
         forward_estimator: BaseEstimator,
@@ -186,3 +186,43 @@ class InverseModelComparator:
             "calibration_error": calibration_error,
             "crps": mean_crps,
         }
+
+
+class InverseModelComparator:
+    """
+    Workflow for comparing multiple inverse models.
+    """
+
+    def __init__(self, evaluator: InverseModelEvaluator | None = None) -> None:
+        self._evaluator = evaluator or InverseModelEvaluator()
+
+    def compare(
+        self,
+        forward_estimator: BaseEstimator,
+        inverse_estimators: dict[str, BaseEstimator],
+        test_objectives: np.ndarray,
+        decision_normalizer: BaseNormalizer,
+        objective_normalizer: BaseNormalizer,
+        test_decisions: np.ndarray,
+        num_samples: int = 250,
+        random_state: int = 42,
+    ) -> dict[str, dict[str, Any]]:
+        """
+        Compares multiple inverse estimators and returns a structured dictionary.
+        """
+        comparison_results = {}
+
+        for name, estimator in inverse_estimators.items():
+            results = self._evaluator.evaluate(
+                inverse_estimator=estimator,
+                forward_estimator=forward_estimator,
+                test_objectives=test_objectives,
+                decision_normalizer=decision_normalizer,
+                objective_normalizer=objective_normalizer,
+                test_decisions=test_decisions,
+                num_samples=num_samples,
+                random_state=random_state,
+            )
+            comparison_results[name] = results
+
+        return comparison_results

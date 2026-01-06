@@ -53,34 +53,34 @@ class CompareInverseModelsHandler:
                 dataset_name=dataset_name,
             ).estimator
 
-        # 2. Validate models
-        comparator = InverseModelComparator()
-        results_map = {}
-
-        dataset_names = {c.dataset_name or "dataset" for c in command.candidates}
-        dataset_cache: dict[str, Dataset] = {}
-        forward_cache: dict[str, BaseEstimator] = {}
-
+        # 1. Group candidates by dataset to avoid redundant loading
+        dataset_groups: dict[str, list[any]] = {}
         for candidate in command.candidates:
-            inverse_type = candidate.type.value
-            version_int = candidate.version
-            dataset_name = candidate.dataset_name or "dataset"
+            ds_name = candidate.dataset_name or "dataset"
+            if ds_name not in dataset_groups:
+                dataset_groups[ds_name] = []
+            dataset_groups[ds_name].append(candidate)
+
+        # 2. Iterate through datasets and compare estimators
+        results_map = {}
+        comparator = InverseModelComparator()
+
+        for dataset_name, candidates in dataset_groups.items():
+            self._logger.log_info(f"Processing comparison for dataset: {dataset_name}")
 
             try:
-                dataset = dataset_cache.get(dataset_name)
-                if dataset is None:
-                    dataset = _load_dataset(dataset_name)
-                    dataset_cache[dataset_name] = dataset
+                # Load context once per dataset
+                dataset = _load_dataset(dataset_name)
                 processed_data = dataset.processed
-                test_objectives = processed_data.objectives_test
-                test_decisions = processed_data.decisions_test
+                forward_estimator = _resolve_forward(dataset_name)
 
-                forward_estimator = forward_cache.get(dataset_name)
-                if forward_estimator is None:
-                    forward_estimator = _resolve_forward(dataset_name)
-                    forward_cache[dataset_name] = forward_estimator
+                # Initialize all inverse estimators for this dataset
+                inverse_estimators: dict[str, BaseEstimator] = {}
+                for candidate in candidates:
+                    inverse_type = candidate.type.value
+                    version_int = candidate.version
+                    display_name = f"{inverse_type} (v{version_int})"
 
-                if version_int is not None:
                     target_artifact = self._model_repository.get_version_by_number(
                         estimator_type=inverse_type,
                         version=version_int,
@@ -88,42 +88,35 @@ class CompareInverseModelsHandler:
                         dataset_name=dataset_name,
                     )
                     inverse_estimator = target_artifact.estimator
-                    display_name = f"{inverse_type} (v{version_int})"
-                else:
-                    inverse_estimator = self._model_repository.get_latest_version(
-                        estimator_type=inverse_type,
-                        mapping_direction="inverse",
-                        dataset_name=dataset_name,
-                    ).estimator
-                    display_name = f"{inverse_type} (Latest)"
 
-                if not isinstance(inverse_estimator, ProbabilisticEstimator):
-                    self._logger.log_warning(
-                        f"Inverse estimator {inverse_type} is not probabilistic. Sampling might not work as expected."
-                    )
+                    if not isinstance(inverse_estimator, ProbabilisticEstimator):
+                        self._logger.log_warning(
+                            f"Inverse estimator {inverse_type} is not probabilistic. Sampling might not work as expected."
+                        )
 
-                key = (
-                    f"{display_name}@{dataset_name}"
-                    if len(dataset_names) > 1
-                    else display_name
-                )
-                self._logger.log_info(
-                    f"Validating {display_name} on dataset '{dataset_name}'..."
-                )
-                results = comparator.validate(
-                    inverse_estimator=inverse_estimator,
+                    inverse_estimators[display_name] = inverse_estimator
+
+                # Call the comparator workflow
+                dataset_results = comparator.compare(
                     forward_estimator=forward_estimator,
-                    test_objectives=test_objectives,
+                    inverse_estimators=inverse_estimators,
+                    test_objectives=processed_data.objectives_test,
                     decision_normalizer=processed_data.decisions_normalizer,
                     objective_normalizer=processed_data.objectives_normalizer,
-                    test_decisions=test_decisions,
+                    test_decisions=processed_data.decisions_test,
                     num_samples=command.num_samples,
                     random_state=command.random_state,
                 )
-                results_map[key] = results
+
+                # Merge into global results map, prefixing keys if multiple datasets are involved
+                use_prefix = len(dataset_groups) > 1
+                for name, res in dataset_results.items():
+                    key = f"{name}@{dataset_name}" if use_prefix else name
+                    results_map[key] = res
+
             except Exception as e:
                 self._logger.log_error(
-                    f"Failed to validate {inverse_type} on dataset '{dataset_name}': {e}"
+                    f"Failed to run comparison for dataset '{dataset_name}': {e}"
                 )
 
         # 4. Generate Comparison Plots
