@@ -49,6 +49,15 @@ Forward simulation answers **X -> Y**. In practice, engineers often need the inv
 
 - [System design overview](docs/specs/design.md)
 
+## Tech stack and architecture
+
+- **Language and runtime:** Python 3.12 with a research-friendly stack in `pyproject.toml`.
+- **Notebooks:** Jupyter notebooks in `notebooks/` for exploration, experiments, and documentation.
+- **Modeling and optimization:** scikit-learn, PyTorch, pymoo, pykrige, and related scientific tooling.
+- **Data and visualization:** pandas, numpy, matplotlib, seaborn, Plotly.
+- **Architecture:** modular monolith with Domain-Driven Design layering in `src/` (domain, application, infrastructure, CLI, workflows).
+- **Engineering practices:** clean module boundaries, shared cross-cutting utilities, and replaceable adapters for datasets, models, and visualization.
+
 ## Thesis alignment
 
 This repository supports the thesis **"Tracing the Objectives Backwards: Data-Driven Inverse Exploration of Multi-Objective Problems."** The core contribution is a model-agnostic inverse exploration workflow that learns **Y -> X** mappings from forward evaluations and enables interactive, query-time design without re-running optimization for every target.
