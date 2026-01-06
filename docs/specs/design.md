@@ -1,60 +1,64 @@
-# Inverse Mapping System Design
+# 🏗️ Inverse Mapping System Design
 
-## Purpose
+This document outlines the architectural principles, design decisions, and system capabilities of the inverse mapping framework.
 
-This system supports inverse mapping from objective values (Y) back to decision variables (X). It is built to be research-friendly while keeping production-grade structure: modeling, feasibility checks, and evaluation are isolated from I/O, visualization, and orchestration.
+---
 
-## Architectural style
+## 🎯 Purpose & Vision
 
-- **Modular monolith**: the codebase is split into clear modules under `src/modules/` while remaining a single deployable project.
-- **Domain-Driven Design (DDD) layering**: `domain`, `application`, and `infrastructure` are explicit, plus `cli` and `workflows` for user-facing entry points.
-- **Ports and adapters**: domain logic depends on interfaces, while concrete implementations live in infrastructure.
+The system is designed to provide a robust bridge between **exploratory research** and **stable software engineering**. It supports the inverse mapping from objective values (Y) back to decision variables (X), prioritizing modularity so that new models and validation strategies can be tested without disrupting the core pipeline.
 
-### Layer responsibilities
+---
 
-- **Domain** (`src/modules/optimization_engine/domain`): entities, value objects, domain services, and core rules (e.g., feasibility, validation, modeling abstractions).
-- **Application** (`src/modules/optimization_engine/application`): use cases and orchestration (training, generating, assuring, visualizing).
-- **Infrastructure** (`src/modules/optimization_engine/infrastructure`): datasets, modeling adapters, visualization, repositories, processing, and shared logging/ACL.
-- **CLI** (`src/modules/optimization_engine/cli`): command entry points for generating, training, visualizing, and assurance tasks.
-- **Workflows** (`src/modules/optimization_engine/workflows`): end-to-end pipelines that compose multiple use cases.
-- **Shared** (`src/modules/shared`): cross-cutting utilities used by multiple modules.
+## 🏛️ Architectural Style
 
-## Core workflow (high level)
+### 1. Modular Monolith
+The codebase is organized into independent modules under `src/modules/`. This allows us to keep the project easy to deploy and manage while maintaining high internal cohesion.
 
-1. **Dataset generation**: produce or load Pareto-optimal data (X, Y).
-2. **Inverse modeling**: train inverse estimators that map Y to candidate X.
-3. **Feasibility and validation**: check bounds, Pareto proximity, and calibration gates.
-4. **Evaluation**: forward-evaluate candidates and score objective match quality.
-5. **Visualization**: plot datasets, diagnostics, and model comparisons.
+### 2. Domain-Driven Design (DDD)
+We use a layered approach to isolate business logic from technical details:
+- **Domain**: Pure business rules (e.g., Pareto dominance, feasibility logic).
+- **Application**: Use cases that coordinate actions (e.g., "Train a Model").
+- **Infrastructure**: Concrete implementations (e.g., PyTorch trainers, JSON storage).
 
-## Why this design
+### 3. Ports & Adapters (Hexagonal)
+The domain layer defines **Interfaces** (Ports), and the infrastructure layer provides **Implementations** (Adapters). This makes the system "pluggable" — we can swap a scikit-learn model for a PyTorch one by simply changing the adapter.
 
-- **Clear separation of concerns** keeps domain logic pure and testable.
-- **Replaceable adapters** make it easy to swap datasets, models, and plotting tools.
-- **Research to production path**: notebooks and experiments remain exploratory, while `src/` keeps a stable, modular codebase.
-- **Scalable evolution**: new models, scoring strategies, and visualization modules can be added without refactoring core logic.
+---
 
-## Capabilities and features
+## 🛠️ Layer Responsibilities
 
-- **Inverse design pipeline** with deterministic and probabilistic model families.
-- **Feasibility checks** that guard against out-of-distribution targets.
-- **Decision validation and scoring** to rank candidate solutions.
-- **Dataset generation and benchmarking** using synthetic and domain-specific problems.
-- **Diagnostics and visualization** for model performance and Pareto analysis.
-- **CLI-driven workflows** for reproducible training, evaluation, and reporting.
+| Layer | Responsibility | Key Components |
+|-------|----------------|----------------|
+| **Domain** | Core logic & abstractions | `InverseEstimator` base, `FeasibilityChecker`, `ParetoFront` |
+| **Application** | Orchestration & Use Cases | `TrainModelHandler`, `GenerateDecisionHandler` |
+| **Infrastructure** | Technical implementation | `MDNAdapter`, `NPZRepository`, `PlotlyVisualizer` |
+| **CLI** | User interaction | `click` commands for training and generation |
+| **Workflows** | End-to-end pipelines | `DecisionGenerationWorkflow` |
 
-## Strength points
+---
 
-- **Modularity**: domain, application, and infrastructure are isolated.
-- **Extensibility**: new estimators and validation strategies plug in cleanly.
-- **Reproducibility**: workflows and CLI commands enable repeatable runs.
-- **Maintainability**: predictable structure reduces coupling and debugging time.
+## 🔄 Research-to-Production Path
 
-## Technology stack
+One of the project's key strengths is its ability to handle different levels of stability:
 
-- **Language/runtime**: Python 3.12
-- **Notebooks**: Jupyter (via `ipykernel`, `nbformat`)
-- **Modeling/ML**: scikit-learn, PyTorch, pykrige, HDBSCAN, UMAP
-- **Optimization**: pymoo, COCO benchmarking tools
-- **Data/visualization**: pandas, numpy, matplotlib, seaborn, Plotly
-- **CLI and utilities**: click, tqdm, pydantic, wandb
+1.  **Notebooks (`/notebooks`)**: Used for "scratchpad" research, initial data exploration, and messy prototyping.
+2.  **Infrastructure Overrides**: Once a prototype works, it's moved into an Infrastructure adapter.
+3.  **Core Domain**: Only the most stable, mathematically verified logic resides in the Domain layer.
+
+---
+
+## 🚀 Key Capabilities
+
+- **Hybrid Modeling**: Supports both deterministic regressors and probabilistic generative models.
+- **Strict Feasibility Gates**: Implements multi-stage target validation (bounds + proximity).
+- **Automated Verification**: Forward-checks proposed designs to verify they match target objectives.
+- **Reproducible CLI**: Every research step is captures as a versionable CLI command.
+
+---
+
+## 📈 Future Evolution
+
+The design is intentionally "open-closed":
+- **Open for Extension**: New estimators can be added by implementing the `InverseEstimator` interface.
+- **Closed for Modification**: Adding a new model doesn't require changing the training orchestrator or the CLI handlers.

@@ -1,101 +1,95 @@
-# Usage Guide (Setup, Training, Visualization)
+# 🛠️ Usage Guide
 
-This guide covers running the pipeline with `uv` and the included Makefile targets.
+This guide explains how to interact with the project's systems, from environment setup to running complex inverse design workflows.
 
-## Prerequisites
+---
 
-- Python 3.12+
-- `uv` installed (`pipx install uv` or `brew install uv`)
-- Optional: `make` (for shortcuts)
+## 🏗️ Environment Setup
 
-## Environment setup with `uv`
+We use `uv` for lightning-fast, reproducible dependency management.
 
-```bash
-uv sync
-```
+### Installation
+1.  Ensure you have `uv` installed ([Instruction](https://github.com/astral-sh/uv)).
+2.  Install dependencies and set up the virtual environment:
+    ```bash
+    uv sync
+    ```
 
-This creates a local environment and installs dependencies from `pyproject.toml` and `uv.lock`.
+> [!TIP]
+> Always run project commands via `uv run <command>` or activate the environment with `source .venv/bin/activate`.
 
-Run any module via:
+---
 
-```bash
-uv run python -m <module>
-```
+## 🚁 Running via Makefile
 
-## Makefile shortcuts
+The `Makefile` provides a high-level interface for the most common research tasks. It wraps complex Python module calls into simple, memorable commands.
 
-List all available commands:
-
+### Viewing Available Options
+To see the full list of shortcuts and their default parameters:
 ```bash
 make help
 ```
 
-Common defaults:
+### The Standard Research Loop
 
-- `FUNCTION_ID=5`
-- `DATASET_NAME=cocoex_f5`
-- `INVERSE_ESTIMATOR=mdn`
-- `FORWARD_ESTIMATOR=mdn`
+| Step | Command | Why run this? |
+|------|---------|---------------|
+| **1. Data** | `make data-generate` | Creates the ground-truth Pareto front datasets used for training. |
+| **2. Train** | `make model-train-inverse` | Trains an inverse estimator to learn the **Y -> X** mapping. |
+| **3. Validate**| `make model-visualize-inverse`| Generates diagnostic plots to check if the model actually learned the mapping. |
+| **4. Query** | `make model-generate-decision`| The "End Goal": Propose new designs (X) for a specific target (Y). |
 
-Override them per command:
+---
 
+## 🔧 Overriding Parameters
+
+Most `make` commands support parameter overrides. This is critical for experimenting with different models and functions.
+
+### Example: Different Functions & Estimators
 ```bash
+# Generate data for COCO function 2
 make data-generate function-id=2
-make model-train-inverse estimator=rbf dataset-name=cocoex_f2
+
+# Train a Conditional VAE on that data
+make model-train-inverse estimator=cvae dataset-name=cocoex_f2
+
+# Run Cross-Validation to get a more robust performance estimate
+make model-train-inverse-cv estimator=cvae dataset-name=cocoex_f2
 ```
 
-### Data generation and visualization
+---
 
+## ⌨️ Direct CLI Interface (Developer Mode)
+
+For advanced scenarios, you can skip the Makefile and call the modules directly. This gives you access to every available flag (use `--help` on any module).
+
+### Data Generation
 ```bash
-make data-generate
-make data-visualize
+uv run python -m src.modules.optimization_engine.cli.generating.generate_dataset --function-id 5 --n-samples 500
 ```
 
-### Inverse model training
-
+### Training
 ```bash
-make model-train-inverse
-make model-train-inverse-cv
-make model-train-inverse-grid
-```
-
-### Forward model training
-
-```bash
-make model-train-forward
-```
-
-### Decision generation and comparison
-
-```bash
-make model-generate-decision
-make model-compare-inverse
-```
-
-### Assurance calibration
-
-```bash
-make assurance-calibrate-validation
+uv run python -m src.modules.optimization_engine.cli.training.train_inverse_model_standard \
+    --estimator mdn \
+    --dataset-name cocoex_f5 \
+    --epochs 100
 ```
 
 ### Visualization
-
 ```bash
-make model-visualize-inverse
-make model-visualize-forward
+uv run python -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance \
+    --estimator mdn \
+    --mapping-direction inverse \
+    --dataset-name cocoex_f5
 ```
 
-## Direct CLI entry points
+---
 
-If you prefer explicit module calls (useful for notebooks and scripting):
+## 📈 Understanding Outputs
 
-```bash
-uv run python -m src.modules.optimization_engine.cli.generating.generate_dataset --function-id 5
-uv run python -m src.modules.optimization_engine.cli.training.train_inverse_model_standard --estimator mdn --dataset-name cocoex_f5
-uv run python -m src.modules.optimization_engine.cli.visualizing.visualize_model_performance --estimator mdn --mapping-direction inverse --dataset-name cocoex_f5
-```
+- **Artifacts**: Models and metadata are saved to `/models/`.
+- **Data**: Generated datasets are saved to `/data/`.
+- **Visuals**: Plots and reports are generated in `/reports/`.
 
-## Notes
-
-- Artifacts and reports are written by the configured repositories in `src/` (see `src/modules/optimization_engine/infrastructure/`).
-- For pipeline concepts and diagrams, start with `docs/processes/inverse-design-pipeline.md`.
+For a deep dive into *how* these modules work internally, see the **[Inverse Design Pipeline](../processes/inverse-design-pipeline.md)**.

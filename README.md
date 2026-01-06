@@ -1,63 +1,116 @@
-# Tracing Objectives Backwards
+# 🎯 Tracing Objectives Backwards
 
-This project implements a data-driven inverse design framework: learn a mapping from objective space **Y** back to decision space **X**, then use it to propose candidate designs that match a user-specified target objective **Y\***. The focus is **inverse decision mapping** in multi-objective settings, where multiple designs can satisfy the same objective pattern and feasibility must be assessed explicitly.
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![DDD](https://img.shields.io/badge/Architecture-DDD-green.svg)](docs/concepts/ddd-architecture-guide.md)
+[![Modular Monolith](https://img.shields.io/badge/Style-Modular%20Monolith-orange.svg)](docs/specs/design.md)
 
-## Why this exists
+**Data-Driven Inverse Exploration for Multi-Objective Problems.**
 
-Forward simulation answers **X -> Y**. In practice, engineers often need the inverse: **given a target outcome Y\***, what **X** could produce it? This inverse problem is typically ill-posed (one-to-many, unstable, or infeasible). The thesis and codebase formalize a practical workflow that:
+This project implements a sophisticated inverse design framework: learning a mapping from **Objective Space (Y)** back to **Decision Space (X)**. It enables engineers to propose candidate designs that precisely match user-specified performance targets without the cost of repeated full optimizations.
 
-- Learns a fast inverse mapper **g: Y -> X** from historical Pareto-optimal data.
-- Provides feasibility guidance when targets fall outside the observed Pareto region.
-- Supports deterministic and probabilistic inverse models to handle one-to-many mappings.
-- Validates candidate decisions via forward checks and ranking in objective space.
+---
 
-## What this project delivers
+## 🌟 Key Features
 
-- **Inverse exploration workflow** for multi-objective problems, with offline training and online querying.
-- **Model zoo** spanning deterministic regressors and probabilistic/generative models (e.g., MDN, CVAE, INN).
-- **Feasibility and decision validation** (e.g., Pareto proximity, distance-based feasibility, calibration gates).
-- **Data generation and evaluation** using synthetic benchmarks (COCO) and domain-specific case studies.
-- **Visualization tooling** for datasets, diagnostics, and model comparisons.
+- **🚀 Inverse Exploration Workflow**: Formalized pipeline for multi-objective problems with offline training and online interactive querying.
+- **🧠 Model Zoo**: Suite of estimators including Deterministic Regressors, Mixture Density Networks (MDN), Conditional VAEs (CVAE), and Invertible Neural Networks (INN).
+- **🛡️ Feasibility & Validation**: Multi-layer validation (Pareto proximity, distance-based feasibility, and calibration gates) to ensure trustworthy design proposals.
+- **📊 Visualization Suite**: High-impact diagnostics for datasets, model performance, and Pareto analysis.
+- **🏗️ Industrial Grade Architecture**: Modular Monolith following Domain-Driven Design (DDD) principles for maximum maintainability and testability.
 
-## Conceptual pipeline (high level)
+---
 
-1. **Generate or collect Pareto-optimal data** (X, Y).
-2. **Train inverse mapper**: learn g such that g(Y) ~= X.
-3. **Query-time inverse exploration**:
-   - User selects target objective **Y\***.
-   - System checks feasibility (bounds + Pareto proximity).
-   - Inverse model generates candidate **X\***.
-   - Forward check ranks candidates by how well f(X\*) matches Y\*.
+## 🔬 Why This Project?
 
-## System framework
+Forward simulation answers: *"Given these design parameters X, what is the outcome Y?"*
+In reality, the problem is often reversed: *"Given this desired outcome Y*, what parameters X should I use?"*
 
-[See System Framework](docs/processes/system-framework.md)
+### The Challenge
+Direct inverse mapping is notoriously difficult because:
+1.  **Ill-posedness**: Multiple designs (X) can yield the same outcome (Y).
+2.  **Infeasibility**: Many target outcomes are physically or mathematically impossible.
+3.  **Stability**: Small changes in targets can lead to radical shifts in design.
 
-## Where to start
+### Our Solution
+This framework addresses these by learning the **Inverse Decision Mapping** from historical Pareto-optimal data, utilizing generative modeling for one-to-many mappings, and applying strict feasibility filters.
 
-### Table of contents
+---
 
-- [Inverse design pipeline](docs/processes/inverse-design-pipeline.md)
-- [Model training and validation](docs/processes/model-training-validation.md)
-- [MDN estimator](docs/modeling/mdn.md)
-- [Conditional VAE estimator](docs/modeling/conditional-vae.md)
-- [INN estimator](docs/modeling/inn.md)
-- [VAE modeling notes](docs/modeling/vae.md)
-- [NSGA-II optimization notes](docs/modeling/nsga2-optimization.md)
+## 🏗️ Technical Architecture
 
-## Project structure (high level)
+The system is built as a **Modular Monolith** with clear separation of concerns in a layered DDD structure.
 
-- [System design overview](docs/specs/design.md)
+```mermaid
+graph TD
+    subgraph "External Layers"
+        CLI["💻 CLI Entrypoints"]
+        NB["📓 Notebooks"]
+    end
 
-## Tech stack and architecture
+    subgraph "Core Engine (src/modules/optimization_engine)"
+        APP["⚙️ Application Layer<br/>(Use Cases & Orchestration)"]
+        DOM["🧠 Domain Layer<br/>(Business Rules & Entities)"]
+        INF["🌐 Infrastructure Layer<br/>(ML Adapters, Repositories)"]
+    end
 
-- **Language and runtime:** Python 3.12 with a research-friendly stack in `pyproject.toml`.
-- **Notebooks:** Jupyter notebooks in `notebooks/` for exploration, experiments, and documentation.
-- **Modeling and optimization:** scikit-learn, PyTorch, pymoo, pykrige, and related scientific tooling.
-- **Data and visualization:** pandas, numpy, matplotlib, seaborn, Plotly.
-- **Architecture:** modular monolith with Domain-Driven Design layering in `src/` (domain, application, infrastructure, CLI, workflows).
-- **Engineering practices:** clean module boundaries, shared cross-cutting utilities, and replaceable adapters for datasets, models, and visualization.
+    CLI --> APP
+    NB --> APP
+    APP --> DOM
+    INF -- Implements Interfaces --> DOM
+    APP --> INF
+```
 
-## Thesis alignment
+---
 
-This repository supports the thesis **"Tracing the Objectives Backwards: Data-Driven Inverse Exploration of Multi-Objective Problems."** The core contribution is a model-agnostic inverse exploration workflow that learns **Y -> X** mappings from forward evaluations and enables interactive, query-time design without re-running optimization for every target.
+## 🚦 Quick Start
+
+### 1. Prerequisites
+- Python 3.12+
+- [uv](https://github.com/astral-sh/uv) (recommended)
+
+### 2. Setup
+```bash
+# Clone the repository
+git clone https://github.com/Nicola-Ibrahim/Pareto-Optimization-.git
+cd Pareto-Optimization-
+
+# Sync dependencies
+uv sync
+```
+
+### 3. Basic Workflow
+```bash
+# Generate a Pareto-optimal dataset (e.g., COCO Function 5)
+make data-generate function-id=5
+
+# Train an inverse MDN model
+make model-train-inverse estimator=mdn dataset-name=cocoex_f5
+
+# Generate design candidates for a target
+make model-generate-decision target="[0.5, 0.5]"
+```
+
+---
+
+## 📖 Documentation Index
+
+| Guide | Description |
+|-------|-------------|
+| 🧭 **[Developer Portal](docs/README.md)** | Start here for a full index of all project docs. |
+| 🛠️ **[Usage & Building](docs/guide/usage.md)** | Comprehensive setup and CLI execution guide. |
+| 🧬 **[Inverse Pipeline](docs/processes/inverse-design-pipeline.md)** | Deep dive into the mathematical and logical flow. |
+| 🏛️ **[DDD Architecture](docs/concepts/ddd-architecture-guide.md)** | Detailed explanation of the modular monolith design. |
+| 🔬 **[Model Specs](docs/modeling/mdn.md)** | Documentation for MDN, CVAE, and INN models. |
+
+---
+
+## 🎓 Thesis Context
+
+This repository supports the thesis: **"Tracing the Objectives Backwards: Data-Driven Inverse Exploration of Multi-Objective Problems."** It provides the reference implementation for the proposed model-agnostic inverse exploration workflow.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
