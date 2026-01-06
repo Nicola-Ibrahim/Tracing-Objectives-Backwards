@@ -1,110 +1,67 @@
-# 🎯 Multi-Objective Optimization: Inverse Decision Mapping
+# 🎯 Model Training & Validation Workflow
 
-## 🎯 Objective
+This document outlines the standardized process for training inverse estimators and verifying their predictive accuracy.
 
-Train a model to **learn the inverse mapping**:
+---
 
-> From: objective values (on the Pareto front)  
-> To: decision variables that generated them
+## 🔬 Core Objective
 
-Formally:
-
+The goal is to learn a mapping $I$ such that:
 $$
 I: \mathbf{y} \in \mathbb{R}^m \longmapsto \mathbf{x} \in \mathbb{R}^n
 $$
+where $\mathbf{y}$ are objectives on the Pareto front and $\mathbf{x}$ are the corresponding design variables.
 
-Where:
+---
 
-- $\mathbf{y}$ = objective vector
-  $$
-  Y = \{ \mathbf{y}_i = (f_1^{(i)}, f_2^{(i)}, \dots, f_m^{(i)}) \}_{i=1}^N
-  $$
+## 🔁 The Standard Pipeline
 
-- $\mathbf{x}$ = decision vector
-  $$
-  X = \{ \mathbf{x}_i \in \mathbb{R}^n \}_{i=1}^N
-  $$
+We follow a rigid multi-phase process to ensure results are reproducible and statistically sound.
 
-We aim to compute a **decision vector** $\mathbf{x}_{\text{target}}$ that would generate an objective close to the target:
+### Phase 1: Data Preparation 📂
+1.  **Load Pareto Data**: Extract $(X, Y)$ pairs from ground-truth optimization runs.
+2.  **Normalization**: Scale both spaces to $[0, 1]$ for numerical stability.
+3.  **Train/Val Split**: Isolate a test set to measure generalization.
 
-$$
-\mathbf{x}_{\text{target}} \approx I(\mathbf{y}_{\text{target}})
-$$
+### Phase 2: Model Fitting 🧠
+Train the selected inverse mapper (MDN, CVAE, RBF, etc.) on the normalized training objectives to predict normalized decision variables.
 
-Where $I(\cdot)$ is an **inverse decision mapper**, trained on historical Pareto-optimal data
+### Phase 3: Validation & Metrics 🔍
+1.  **Predict**: Generate candidate designs $\mathbf{x}_{\text{pred}}$ for validation objectives.
+2.  **Inverse Transform**: Scale predictions back to the original physical units.
+3.  **Score**: Capture Mean Squared Error (MSE), Mean Absolute Error (MAE), and $R^2$ scores.
 
-## 🔁 Process Overview
+---
 
-We build a model to learn how to map from objective values to decision values.
-
-### Steps
-
-1. **Load Historical Pareto Data**
-   - Objective values $Y$ and decision values $X$
-
-2. **Train/Validation Split**
-   - Split into two subsets to assess generalization.
-
-3. **Normalize the Data**
-   - Scale both objectives and decisions to $[0, 1]$ using min-max normalization:
-     $$
-     \text{norm}(z) = \frac{z - \min(z)}{\max(z) - \min(z)}
-     $$
-
-4. **Train the Mapper**
-   - Fit a model such as **RBF**, **Kriging**, or **MLP** to learn:
-     $$
-     I: \mathbb{R}^m \rightarrow \mathbb{R}^n, \quad \mathbf{y} \mapsto \mathbf{x}
-     $$
-
-5. **Validate and Measure Accuracy**
-   - Predict decision values on unseen data
-   - Compare predictions using a metric like Mean Squared Error (MSE)
-
-6. **Save the Model**
-   - Store the trained interpolator, normalizers, and performance metrics
-
-## 📊 Flowchart: Training Phase
+## 📊 Pipeline Visual Structure
 
 ```mermaid
 flowchart TD
-  %% -----------------------------
-  subgraph "PHASE 1 - 📂 Data Preparation"
-    A["📂 Load Pareto Data (objectives, decisions)"]
-    A -->| Split into train & val | B["✂️ Train/Validation Split"]
-    B -->| Fit scaler on objectives | C["⚖️ Fit Objective Normalizer"]
-    B -->| Fit scaler on decisions | D["⚖️ Fit Decision Normalizer"]
-    C -->| Transform objectives_train | E["📏 Normalize Training Objectives"]
-    D -->| Transform decisions_train | F["📏 Normalize Training Decisions"]
-  end
-  %% -----------------------------
-  subgraph "PHASE 2 - 🧠 Model Training"
-    E -->| Normalized objectives | G["🧠 Train Inverse Mapper (RBF, MLP, etc.)"]
-    F -->| Normalized decisions | G
-  end
-  %% -----------------------------
-  subgraph "PHASE 3 - 🔍 Validation"
-    subgraph "🔹 Input Transformation"
-      G --> H["🔍 Normalize Validation Objectives (objectives_val → objectives_val_norm)"]
+    subgraph "📂 Preparation"
+        A["Load Pareto Data"] --> B["✂️ Train/Val Split"]
+        B --> C["⚖️ Normalize (Min-Max)"]
     end
-    subgraph "🔹 Prediction"
-      H --> I["🧠 Predict Normalized Decisions (decisions_pred_norm)"]
-      I --> J["🔁 Inverse Transform to Original Scale (decisions_pred)"]
-    end
-    subgraph "🔹 Evaluation"
-      J --> K1["📐 Compute MSE"]
-      J --> K2["📐 Compute MAE"]
-      J --> K3["📐 Compute R² Score"]
-      K1 --> K["📊 Aggregate Validation Metrics"]
-      K2 --> K
-      K3 --> K
-    end
-  end
-  %% -----------------------------
-  subgraph "PHASE 4 - 💾 Save & Store"
-    K --> L["📦 Package Interpolator Model (model + scalers + metrics)"]
-    L --> M["💾 Save to Model Repository"]
-    M --> N["✅ Training Complete"]
-  end
 
+    subgraph "🧠 Training"
+        C --> D["🧠 Fit Inverse Mapper"]
+    end
+
+    subgraph "🔍 Validation"
+        D --> E["🔍 Predict Decisions"]
+        E --> F["📐 Compute Accuracy Metrics"]
+    end
+
+    subgraph "💾 Persistence"
+        F --> G["📦 Package Artifact (Model + Scalers)"]
+        G --> H["💾 Save to Repository"]
+    end
 ```
+
+---
+
+## ✅ Deliverables
+
+Every training run produces:
+-   **Model Weights**: The trained estimator state.
+-   **Scalers**: The exact normalization parameters used during training.
+-   **Metadata**: JSON report containing hyperparameter settings and validation scores.
