@@ -4,25 +4,25 @@
 -->
 
 <!-- .slide: class="title-slide" data-transition="zoom" -->
-<div class="space-y-12 py-10">
-  <div class="space-y-4">
+<div class="space-y-8 py-6">
+  <div class="space-y-3">
     <p class="eyebrow fade-up">Master Thesis Presentation</p>
-    <div class="space-y-2">
+    <div class="space-y-1">
       <h1 class="font-display leading-tight text-ink">Tracing the Objectives Backwards</h1>
-      <h3 class="font-sans text-[1.1em] tracking-[0.02em] font-medium text-slate-600">Data-Driven Inverse Exploration of Multi-Objective Problems</h3>
+      <h3 class="font-sans text-[0.9em] tracking-[0.02em] font-medium text-slate-600">Data-Driven Inverse Exploration of Multi-Objective Problems</h3>
     </div>
   </div>
   
-  <div class="glass-card max-w-2xl border-l-8 border-accent">
-    <div class="grid grid-cols-2 gap-8 text-[0.65em]">
-      <div class="space-y-2">
+  <div class="glass-card max-w-xl border-l-8 border-accent">
+    <div class="grid grid-cols-2 gap-6 text-[0.6em]">
+      <div class="space-y-1">
         <p class="text-muted uppercase tracking-widest font-bold">Author</p>
-        <p class="font-semibold text-ink text-lg">Nicola Ibrahim</p>
+        <p class="font-semibold text-ink text-base">Nicola Ibrahim</p>
         <p class="text-slate-500">M.Sc. Computer Engineering</p>
       </div>
-      <div class="space-y-2 text-right">
+      <div class="space-y-1 text-right">
         <p class="text-muted uppercase tracking-widest font-bold">Institution</p>
-        <p class="font-semibold text-ink text-lg">Paderborn University</p>
+        <p class="font-semibold text-ink text-base">Paderborn University</p>
         <p class="text-slate-500">January 5, 2026</p>
       </div>
     </div>
@@ -34,8 +34,8 @@ Note: Welcome everyone. Today I'm presenting my thesis on inverse design—learn
 ---
 
 <h2 class="slide-title">Agenda</h2>
-<div class="grid grid-cols-2 gap-12 mt-8">
-  <div class="space-y-6">
+<div class="grid grid-cols-2 gap-8 mt-4">
+  <div class="space-y-4">
     <div class="glass-card fragment fade-up" data-fragment-index="1">
       <p class="eyebrow">01</p>
       <p class="font-bold text-ink">Motivation & Problem</p>
@@ -49,7 +49,7 @@ Note: Welcome everyone. Today I'm presenting my thesis on inverse design—learn
       <p class="font-bold text-ink">Models & Evaluation</p>
     </div>
   </div>
-  <div class="space-y-6">
+  <div class="space-y-4">
     <div class="glass-card fragment fade-up" data-fragment-index="4">
       <p class="eyebrow">04</p>
       <p class="font-bold text-ink">Experiments & Results</p>
@@ -99,18 +99,18 @@ Note: In practice, we know what we want (outcomes) but not how to get there (dec
     <p>Learn a data-driven inverse rule $\hat{g}: Y \to X$ that proposes <strong>multiple candidate decisions</strong> $\hat{x}$ for a target $y^*$.</p>
   </div>
 
-  <div class="grid grid-cols-3 gap-6">
+  <div class="grid grid-cols-3 gap-4">
     <div class="card border-l-4 border-brand">
-      <p class="font-bold text-brand">Non-uniqueness</p>
-      <p class="text-xs">Many $x$ can yield the same $y^*$.</p>
+      <p class="font-bold text-brand text-sm">Non-uniqueness</p>
+      <p class="text-[0.6em]">Many $x$ can yield the same $y^*$.</p>
     </div>
     <div class="card border-l-4 border-accent">
-      <p class="font-bold text-accent">Infeasibility</p>
-      <p class="text-xs">Some $y^*$ have no preimage in $X$.</p>
+      <p class="font-bold text-accent text-sm">Infeasibility</p>
+      <p class="text-[0.6em]">Some $y^*$ have no preimage in $X$.</p>
     </div>
     <div class="card border-l-4 border-slate-500">
-      <p class="font-bold text-slate-500">Stability</p>
-      <p class="text-xs">Small $\Delta y^*$ can cause large $\Delta x$.</p>
+      <p class="font-bold text-slate-500 text-sm">Stability</p>
+      <p class="text-[0.6em]">Small $\Delta y^*$ can cause large $\Delta x$.</p>
     </div>
   </div>
 </div>
@@ -164,8 +164,8 @@ Note: We need models that can output multiple distinct candidates to handle this
     <p class="text-[0.6em] text-slate-500 line-clamp-3">Uses bijective architecture to preserve information. Latent space padding handles ill-posedness.</p>
   </div>
 </div>
-<div class="mt-8">
-  <img src="assets/models.svg" alt="Model families" class="h-48 mx-auto" />
+<div class="mt-4">
+  <img src="assets/models.svg" alt="Model families" class="h-40 mx-auto" />
 </div>
 
 ---
@@ -243,7 +243,7 @@ Note: Emphasize that we evaluate in objective space because that's what the user
     </div>
   </div>
   <div class="space-y-4">
-    <img src="assets/pareto-front.svg" alt="Pareto front results" />
+    <img src="assets/pareto-front.svg" alt="Pareto front results" class="h-64 mx-auto" />
     <p class="text-[0.5em] text-center text-muted">Comparison of target specs vs. forward-evaluated results.</p>
   </div>
 </div>
@@ -291,7 +291,7 @@ Note: Emphasize that we evaluate in objective space because that's what the user
 ---
 
 <div class="h-full flex flex-col items-center justify-center text-center space-y-12">
-  <h1 class="text-6xl font-display text-ink">Thank You</h1>
+  <h1 class="text-5xl font-display text-ink">Thank You</h1>
   <div class="space-y-4">
     <h3 class="text-accent uppercase tracking-widest font-bold">Questions?</h3>
     <p class="text-muted italic">Tracing the Objectives Backwards</p>
