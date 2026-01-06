@@ -57,7 +57,7 @@ FORWARD_TARGET_ESTIMATOR = $(if $(forward_estimator),$(forward_estimator),$(if $
 .PHONY: help
 help:  # Display this help menu with all available commands
 	@echo "$(YELLOW)================================================================$(RESET)"
-	@echo "$(YELLOW)                   🚀 Project Commands 🚀                    $(RESET)"
+	@echo "$(YELLOW)             🚀 Tracing Objectives Backwards 🚀              $(RESET)"
 	@echo "$(YELLOW)================================================================$(RESET)"
 	@printf "$(GREEN)%-35s$(RESET)  %s\n" "Command" "Description"
 	@echo "$(YELLOW)-----------------------------------  --------------------------$(RESET)"

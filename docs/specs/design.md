@@ -1,77 +1,60 @@
-
-# 🧠 AI Inverse Mapping System Design
+# Inverse Mapping System Design
 
 ## Purpose
 
-This system enables inverse mapping from objective values (Y) to decision variables (X) using AI models, leveraging historical Pareto-optimal data, interpolation, and generative techniques.
+This system supports inverse mapping from objective values (Y) back to decision variables (X). It is built to be research-friendly while keeping production-grade structure: modeling, feasibility checks, and evaluation are isolated from I/O, visualization, and orchestration.
 
----
+## Architectural style
 
-## Main Architecture (Mermaid Diagram)
+- **Modular monolith**: the codebase is split into clear modules under `src/modules/` while remaining a single deployable project.
+- **Domain-Driven Design (DDD) layering**: `domain`, `application`, and `infrastructure` are explicit, plus `cli` and `workflows` for user-facing entry points.
+- **Ports and adapters**: domain logic depends on interfaces, while concrete implementations live in infrastructure.
 
-```mermaid
-flowchart TD
-    subgraph Domain Layer
-        D1[Entities]
-        D2[Value Objects]
-        D3[Domain Services]
-        D4[Business Rules]
-    end
-    subgraph Application Layer
-        A1[Use Cases]
-        A2[Orchestration]
-    end
-    subgraph Infrastructure Layer
-        I1[Persistence]
-        I2[External APIs]
-        I3[Visualization]
-    end
-    D1 --> A1
-    D2 --> A1
-    D3 --> A1
-    D4 --> A1
-    A1 --> I1
-    A1 --> I2
-    A1 --> I3
-```
+### Layer responsibilities
 
----
+- **Domain** (`src/modules/optimization_engine/domain`): entities, value objects, domain services, and core rules (e.g., feasibility, validation, modeling abstractions).
+- **Application** (`src/modules/optimization_engine/application`): use cases and orchestration (training, generating, assuring, visualizing).
+- **Infrastructure** (`src/modules/optimization_engine/infrastructure`): datasets, modeling adapters, visualization, repositories, processing, and shared logging/ACL.
+- **CLI** (`src/modules/optimization_engine/cli`): command entry points for generating, training, visualizing, and assurance tasks.
+- **Workflows** (`src/modules/optimization_engine/workflows`): end-to-end pipelines that compose multiple use cases.
+- **Shared** (`src/modules/shared`): cross-cutting utilities used by multiple modules.
 
-## Architectural Overview
+## Core workflow (high level)
 
-- **Domain-Driven Design (DDD):**
-  - Separation of domain, application, and infrastructure layers.
-  - Domain layer contains entities, value objects, services, and business rules.
-- **Inverse Mapping Pipeline:**
-  1. User specifies target objective Y*.
-  2. System normalizes Y*.
-  3. Feasibility check (LSNF).
-  4. Predict X* via inverse interpolator.
-  5. Denormalize X*.
-  6. Evaluate f(X*).
-  7. If infeasible, suggest alternatives.
-- **Feasibility Checking:**
-  - Local Spherical Neighborhood Feasibility (LSNF): A point is feasible if it lies within any sphere around normalized Pareto points.
-- **Modeling Approaches:**
-  - Deterministic: Clough-Tocher, Kriging, Linear, NN, RBF, Spline, SVR.
-  - Probabilistic: Gaussian Process, Conditional VAE.
-- **Visualization:**
-  - Interactive metrics and results using Plotly.
-- **Diagrams:**
-  - C4 diagrams for system process, VAE training/testing, interpolation.
+1. **Dataset generation**: produce or load Pareto-optimal data (X, Y).
+2. **Inverse modeling**: train inverse estimators that map Y to candidate X.
+3. **Feasibility and validation**: check bounds, Pareto proximity, and calibration gates.
+4. **Evaluation**: forward-evaluate candidates and score objective match quality.
+5. **Visualization**: plot datasets, diagnostics, and model comparisons.
 
----
+## Why this design
 
-## Key Design Principles
+- **Clear separation of concerns** keeps domain logic pure and testable.
+- **Replaceable adapters** make it easy to swap datasets, models, and plotting tools.
+- **Research to production path**: notebooks and experiments remain exploratory, while `src/` keeps a stable, modular codebase.
+- **Scalable evolution**: new models, scoring strategies, and visualization modules can be added without refactoring core logic.
 
-- Modularity, maintainability, and testability.
-- Extensibility for new models and validation strategies.
-- Clear separation of business logic and technical concerns.
+## Capabilities and features
 
----
+- **Inverse design pipeline** with deterministic and probabilistic model families.
+- **Feasibility checks** that guard against out-of-distribution targets.
+- **Decision validation and scoring** to rank candidate solutions.
+- **Dataset generation and benchmarking** using synthetic and domain-specific problems.
+- **Diagnostics and visualization** for model performance and Pareto analysis.
+- **CLI-driven workflows** for reproducible training, evaluation, and reporting.
 
-## Additional Information
+## Strength points
 
-- **Technologies:** Python, Plotly, scikit-learn, PyTorch/TensorFlow, Mermaid.
-- **Data:** Historical Pareto-optimal datasets, synthetic benchmarks.
-- **Extensibility:** Designed for easy integration of new models, validation strategies, and visualization tools.
+- **Modularity**: domain, application, and infrastructure are isolated.
+- **Extensibility**: new estimators and validation strategies plug in cleanly.
+- **Reproducibility**: workflows and CLI commands enable repeatable runs.
+- **Maintainability**: predictable structure reduces coupling and debugging time.
+
+## Technology stack
+
+- **Language/runtime**: Python 3.12
+- **Notebooks**: Jupyter (via `ipykernel`, `nbformat`)
+- **Modeling/ML**: scikit-learn, PyTorch, pykrige, HDBSCAN, UMAP
+- **Optimization**: pymoo, COCO benchmarking tools
+- **Data/visualization**: pandas, numpy, matplotlib, seaborn, Plotly
+- **CLI and utilities**: click, tqdm, pydantic, wandb
