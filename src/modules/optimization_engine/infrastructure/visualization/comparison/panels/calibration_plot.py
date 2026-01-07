@@ -28,13 +28,13 @@ def add_calibration_plot(
     )
 
     for model_name, res in results_map.items():
-        calibration = res.get("detailed_results", {}).get("calibration_curves")
-        if calibration is None:
+        calibration_curve = res.get("calibration", {}).get("curve")
+        if calibration_curve is None:
             continue
 
         color = color_map.get(model_name, "gray")
-        pit_values = calibration["pit_values"]
-        cdf_y = calibration["cdf_y"]
+        pit_values = calibration_curve["pit_values"]
+        cdf_y = calibration_curve["cdf_y"]
 
         fig.add_trace(
             go.Scatter(

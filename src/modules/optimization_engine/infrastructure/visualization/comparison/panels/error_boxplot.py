@@ -18,7 +18,7 @@ def add_error_boxplot(
         if model_name in results_map:
             res = results_map[model_name]
             # Use pre-calculated residuals distributions
-            best_shots = res["detailed_results"]["residuals"]["per_point_best"]
+            best_shots = res["performance"]["distributions"]["lowest_residual"]
 
             color = color_map.get(model_name, "gray")
 

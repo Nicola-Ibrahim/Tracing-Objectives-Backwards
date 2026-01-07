@@ -37,23 +37,26 @@ class InverseModelEvaluator:
         Evaluates an inverse model candidate against a forward ground truth.
 
         Returns a dictionary containing:
-        - metrics: High-level performance scores (errors, diversity, calibration).
-        - ordered_candidates: Samples sorted by their simulation error (best to worst).
-        - median_candidates: The component-wise median of suggested decisions.
-        - distribution_stats: Statistical property of the candidate distribution.
-        - calibration: Detailed PIT and CRPS data.
+        - metrics:
+            - accuracy: mean_lowest_resi_residual, median_best_shot_residual, reliability_residual, etc.
+            - uncertainty: diversity_score, sharpness.
+            - calibration: calibration_residual, crps.
+        - detailed_results:
+            - residuals: lowest_residual, reliability, diversity, all_samples.
+            - candidates: ordered, median, std.
+            - calibration_curves: pit_values, cdf_y.
         """
 
         # 1. Pipeline: Sample -> Simulate -> Calculate Errors
 
         # Sample candidates from inverse model
-        # Sampled candidates shape: (n_test_points, num_generated_candidates, x_dim)
+        # Sampled candidates shape: (n_test_samples, num_generated_candidates, x_dim)
         sampled_candidates = self._sample_from_inverse_model(
             inverse_estimator, test_objectives, num_samples, random_state
         )
 
         # Simulate forward results
-        # Forward simulation results shape: (n_test_points, num_generated_candidates, y_dim)
+        # Forward simulation results shape: (n_test_samples, num_generated_candidates, y_dim)
         forward_simulation_results = self._simulate_forward_results(
             forward_estimator=forward_estimator,
             sampled_candidates=sampled_candidates,
@@ -62,14 +65,14 @@ class InverseModelEvaluator:
         )
 
         # Calculate residuals (errors) for each sample
-        # Residuals shape: (n_test_points, num_generated_candidates)
+        # Residuals shape: (n_test_samples, num_generated_candidates)
         residuals = self._calculate_residuals(
             forward_simulation_results=forward_simulation_results,
             test_objectives=test_objectives,
         )
 
         # 2. Extract detailed spatial information
-        # Ranked candidates shape: (n_test_points, num_generated_candidates, x_dim)
+        # Ranked candidates shape: (n_test_samples, num_generated_candidates, x_dim)
         ranked_candidates = self._rank_candidates_by_residuals(
             sampled_candidates=sampled_candidates,
             residuals=residuals,
@@ -91,37 +94,13 @@ class InverseModelEvaluator:
         )
 
         return {
-            "metrics": {
-                "accuracy": performance_metrics["accuracy"],
-                "uncertainty": performance_metrics["uncertainty"],
-                "calibration": {
-                    "calibration_residual": calibration_data["calibration_residual"],
-                    "crps": calibration_data["crps"],
-                },
+            "performance": performance_metrics,
+            "candidates": {
+                "ordered": ranked_candidates,
+                "median": distribution_stats["median_candidates"],
+                "std": distribution_stats["std_candidates"],
             },
-            "detailed_results": {
-                "residuals": {
-                    "per_point_best": performance_metrics["distributions"][
-                        "best_shots"
-                    ],
-                    "per_point_reliability": performance_metrics["distributions"][
-                        "reliabilities"
-                    ],
-                    "per_point_diversity": performance_metrics["distributions"][
-                        "diversities"
-                    ],
-                    "all_samples": residuals,
-                },
-                "candidates": {
-                    "ordered": ranked_candidates,
-                    "median": distribution_stats["median_candidates"],
-                    "std": distribution_stats["std_candidates"],
-                },
-                "calibration_curves": {
-                    "pit_values": calibration_data["pit_values"],
-                    "cdf_y": calibration_data["cdf_y"],
-                },
-            },
+            "calibration": calibration_data,
         }
 
     def _sample_from_inverse_model(
@@ -182,9 +161,9 @@ class InverseModelEvaluator:
     ) -> np.ndarray:
         """
         Calculates the Euclidean distance between simulated and target objectives.
-        Output shape: (n_test_points, num_generated_candidates)
+        Output shape: (n_test_samples, num_generated_candidates)
         """
-        # Expand targets for broadcasting: (n_test_points, 1, y_dim)
+        # Expand targets for broadcasting: (n_test_samples, 1, y_dim)
         targets_expanded = test_objectives[:, np.newaxis, :]
 
         # Calculate L2 norm across the objective dimension
@@ -196,12 +175,12 @@ class InverseModelEvaluator:
         """
         Sorts generated candidates for each test point from closest to farthest from target.
         """
-        # Get sorting indices for each test row (n_test_points, num_generated_candidates)
+        # Get sorting indices for each test row (n_test_samples, num_generated_candidates)
         sort_indices = np.argsort(residuals, axis=1)
 
         # Boolean indexing for 3D is tricky, we use advanced indexing
-        n_test_points, n_samples, x_dim = sampled_candidates.shape
-        row_indices = np.arange(n_test_points)[:, np.newaxis]
+        n_test_samples, n_samples, x_dim = sampled_candidates.shape
+        row_indices = np.arange(n_test_samples)[:, np.newaxis]
 
         return sampled_candidates[row_indices, sort_indices]
 
@@ -229,55 +208,55 @@ class InverseModelEvaluator:
         Computes high-level performance metrics for the estimator.
         """
         # Best Shot: The minimum error achieved across all samples for each test point
-        # Calcualte the minimum error for each test point (n_test_points, ) row-wise
-        per_point_best = np.min(residuals, axis=1)
+        # The shape is (n_test_samples, ) row-wise
+        lowest_residual = np.min(residuals, axis=1)
 
         # Reliability: The median error across samples for each test point
-        # Calculate the median error for each test point (n_test_points, ) row-wise
-        per_point_reliability = np.median(residuals, axis=1)
+        # The shape is (n_test_samples, ) row-wise
+        reliability = np.median(residuals, axis=1)
 
         # Diversity: How much the suggested solutions differ from each other for each test point
-        per_point_diversity = np.std(sampled_candidates, axis=1).mean(axis=1)
+        # The shape is (n_test_samples, ) row-wise
+        diversity = np.std(sampled_candidates, axis=1).mean(axis=1)
 
         # Success Rate: Percentage of points where the best shot is "accurate enough"
         # Using a threshold of 0.01 in normalized objective space (adjustable)
         threshold = 0.01
-        success_rate = float(np.mean(per_point_best < threshold))
+        success_rate = float(np.mean(lowest_residual < threshold))
 
         # Quantiles of the best shot distribution across the test set
         quantiles = {
-            "q25": float(np.percentile(per_point_best, 25)),
-            "q50": float(np.percentile(per_point_best, 50)),  # Median
-            "q75": float(np.percentile(per_point_best, 75)),
-            "q95": float(np.percentile(per_point_best, 95)),
+            "q25": float(np.percentile(lowest_residual, 25)),
+            "q50": float(np.percentile(lowest_residual, 50)),  # Median
+            "q75": float(np.percentile(lowest_residual, 75)),
+            "q95": float(np.percentile(lowest_residual, 95)),
         }
 
         # Global aggregates (means)
-        mean_best_shot = float(np.mean(per_point_best))
-        mean_reliability = float(np.mean(per_point_reliability))
-        mean_diversity = float(np.mean(per_point_diversity))
+        mean_lowest_residual = float(np.mean(lowest_residual))
+        median_lowest_residual = float(np.median(lowest_residual))
+        mean_reliability = float(np.mean(reliability))
+        mean_diversity = float(np.mean(diversity))
 
         # Sharpness: The width of the predictive distribution (90% interval)
         q95_dec = np.percentile(sampled_candidates, 95, axis=1)
         q05_dec = np.percentile(sampled_candidates, 5, axis=1)
-        mean_sharpness = float(np.mean(q95_dec - q05_dec))
+        sharpness = q95_dec - q05_dec
+        mean_sharpness = float(np.mean(sharpness))
 
         return {
-            "accuracy": {
-                "mean_best_shot_residual": mean_best_shot,
-                "median_best_shot_residual": quantiles["q50"],
-                "reliability_residual": mean_reliability,
-                "success_rate_0.01": success_rate,
-                "best_shot_quantiles": quantiles,
-            },
-            "uncertainty": {
-                "diversity_score": mean_diversity,
-                "sharpness": mean_sharpness,
-            },
+            "mean_lowest_residual": mean_lowest_residual,
+            "median_lowest_residual": median_lowest_residual,
+            "mean_reliability": mean_reliability,
+            "success_rate": success_rate,
+            "quantiles": quantiles,
+            "mean_diversity": mean_diversity,
+            "mean_sharpness": mean_sharpness,
             "distributions": {
-                "best_shots": per_point_best,
-                "reliabilities": per_point_reliability,
-                "diversities": per_point_diversity,
+                "lowest_residual": lowest_residual,
+                "reliability": reliability,
+                "diversity": diversity,
+                "sharpness": sharpness,
             },
         }
 
@@ -314,15 +293,17 @@ class InverseModelEvaluator:
         pit_values = np.sort(pit_values)
         cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
 
-        # Calibration Error: Mean absolute deviation from the ideal uniform CDF
-        calibration_error = float(np.mean(np.abs(pit_values - cdf_y)))
+        # Calibration Residual: Mean absolute deviation from the ideal uniform CDF
+        mean_residual = float(np.mean(np.abs(pit_values - cdf_y)))
         mean_crps = float(np.mean(crps_per_dim))
 
         return {
-            "pit_values": pit_values,
-            "cdf_y": cdf_y,
-            "calibration_residual": calibration_error,
-            "crps": mean_crps,
+            "mean_residual": mean_residual,
+            "mean_crps": mean_crps,
+            "curve": {
+                "pit_values": pit_values,
+                "cdf_y": cdf_y,
+            },
         }
 
 

@@ -17,13 +17,13 @@ def add_metrics_bar_plots(
     # 1. Best Shot (Row 2, Col 1)
     for model_name in model_names:
         if model_name in results_map:
-            accuracy = results_map[model_name]["metrics"]["accuracy"]
+            performance = results_map[model_name]["performance"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[accuracy["mean_best_shot_residual"]],
+                    y=[performance["mean_lowest_residual"]],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -36,13 +36,13 @@ def add_metrics_bar_plots(
     # 2. Calibration Error (Row 2, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            calibration = results_map[model_name]["metrics"]["calibration"]
+            calibration = results_map[model_name]["calibration"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[calibration.get("calibration_residual", 0)],
+                    y=[calibration.get("mean_residual", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -55,13 +55,13 @@ def add_metrics_bar_plots(
     # 3. CRPS (Row 2, Col 3)
     for model_name in model_names:
         if model_name in results_map:
-            calibration = results_map[model_name]["metrics"]["calibration"]
+            calibration = results_map[model_name]["calibration"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[calibration.get("crps", 0)],
+                    y=[calibration.get("mean_crps", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -74,13 +74,13 @@ def add_metrics_bar_plots(
     # 4. Diversity (Row 3, Col 1)
     for model_name in model_names:
         if model_name in results_map:
-            uncertainty = results_map[model_name]["metrics"]["uncertainty"]
+            performance = results_map[model_name]["performance"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[uncertainty["diversity_score"]],
+                    y=[performance["mean_diversity"]],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -93,13 +93,13 @@ def add_metrics_bar_plots(
     # 5. Sharpness (Row 3, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            uncertainty = results_map[model_name]["metrics"]["uncertainty"]
+            performance = results_map[model_name]["performance"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[uncertainty.get("sharpness", 0)],
+                    y=[performance.get("mean_sharpness", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
