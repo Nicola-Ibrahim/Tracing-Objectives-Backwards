@@ -44,31 +44,34 @@ class InverseModelEvaluator:
         - calibration: Detailed PIT and CRPS data.
         """
         # 1. Pipeline: Sample -> Simulate -> Calculate Errors
-        candidates_3d = self._sample_from_inverse_model(
+        sampled_candidates = self._sample_from_inverse_model(
             inverse_estimator, test_objectives, num_samples, random_state
         )
 
-        simulated_objectives_3d = self._simulate_forward_results(
-            forward_estimator, candidates_3d, decision_normalizer, objective_normalizer
+        forward_simulation_results = self._simulate_forward_results(
+            forward_estimator,
+            sampled_candidates,
+            decision_normalizer,
+            objective_normalizer,
         )
 
         simulation_errors = self._calculate_simulation_errors(
-            simulated_objectives_3d, test_objectives
+            forward_simulation_results, test_objectives
         )
 
         # 2. Extract detailed spatial information
-        ordered_candidates = self._rank_candidates_by_error(
-            candidates_3d, simulation_errors
+        ranked_candidates = self._rank_candidates_by_error(
+            sampled_candidates, simulation_errors
         )
-        distribution_stats = self._compute_candidate_distribution_stats(candidates_3d)
+        candidate_stats = self._compute_candidate_distribution_stats(sampled_candidates)
 
         # 3. Aggregate performance metrics
         performance_metrics = self._compute_performance_metrics(
-            simulation_errors=simulation_errors, candidates_3d=candidates_3d
+            simulation_errors=simulation_errors, candidates_3d=sampled_candidates
         )
 
         calibration_data = self._compute_calibration_data(
-            candidates_3d=candidates_3d, test_decisions=test_decisions
+            candidates_3d=sampled_candidates, test_decisions=test_decisions
         )
 
         return {
@@ -79,9 +82,9 @@ class InverseModelEvaluator:
                 "crps": calibration_data["crps"],
                 "diversity_score": performance_metrics["diversity_score"],
             },
-            "ordered_candidates": ordered_candidates,
-            "median_candidates": distribution_stats["median_candidates"],
-            "distribution_stats": distribution_stats,
+            "ordered_candidates": ranked_candidates,
+            "median_candidates": candidate_stats["median_candidates"],
+            "distribution_stats": candidate_stats,
             "raw_errors": simulation_errors,
             "calibration": calibration_data,
         }

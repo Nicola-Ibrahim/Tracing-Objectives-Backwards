@@ -30,36 +30,19 @@ def cli():
     )
 
     candidates = [
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=1, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=2, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=3, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=4, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=5, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=6, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.INN, version=1, dataset_name="cocoex_f5"
-        ),
-        InverseEstimatorCandidate(
-            type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"
-        ),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=1),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=2),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=3),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=4),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=5),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=6),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=7),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
     ]
 
     command = CompareInverseModelsCommand(
+        dataset_name="cocoex_f5",
         candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
         num_samples=250,

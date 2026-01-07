@@ -111,4 +111,4 @@ class InverseComparisonVisualizer(BaseVisualizer):
             width=300,
         )
 
-        return fig
+        fig.show()

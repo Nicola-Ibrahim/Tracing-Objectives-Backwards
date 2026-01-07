@@ -4,7 +4,7 @@ from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
 
 class InverseEstimatorCandidate(BaseModel):
-    """Represents a specific inverse estimator candidate (type, optional version, and dataset)."""
+    """Represents a specific inverse estimator candidate (type and optional version)."""
 
     type: EstimatorTypeEnum = Field(
         ...,
@@ -15,24 +15,21 @@ class InverseEstimatorCandidate(BaseModel):
         description="Specific integer version number (e.g., 1). If None, latest is used.",
         examples=[1],
     )
-    dataset_name: str | None = Field(
-        ...,
-        description="Dataset identifier associated with this estimator.",
-        examples=["dataset"],
-    )
 
 
 class CompareInverseModelsCommand(BaseModel):
-    """Command payload for comparing inverse model candidates."""
+    """Command payload for comparing inverse model candidates on a single dataset."""
+
+    dataset_name: str = Field(
+        ...,
+        description="Dataset identifier to use for comparison.",
+        examples=["dataset"],
+    )
 
     candidates: list[InverseEstimatorCandidate] = Field(
         ...,
         description="List of model candidates to compare.",
-        examples=[
-            [
-                {"type": EstimatorTypeEnum.MDN.value, "version": 1, "dataset_name": "dataset"}
-            ]
-        ],
+        examples=[[{"type": EstimatorTypeEnum.MDN.value, "version": 1}]],
     )
 
     forward_estimator_type: EstimatorTypeEnum = Field(
@@ -54,18 +51,7 @@ class CompareInverseModelsCommand(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_datasets(self) -> "CompareInverseModelsCommand":
+    def _validate_candidates(self) -> "CompareInverseModelsCommand":
         if not self.candidates:
             raise ValueError("At least one candidate must be provided.")
-        dataset_names = {c.dataset_name or "dataset" for c in self.candidates}
-        estimator_keys = {(c.type.value, c.version) for c in self.candidates}
-        if len(dataset_names) > 1:
-            if len(estimator_keys) != 1:
-                raise ValueError(
-                    "Comparing across multiple datasets requires a single estimator type/version."
-                )
-            if next(iter(estimator_keys))[1] is None:
-                raise ValueError(
-                    "Comparing across multiple datasets requires a fixed estimator version."
-                )
         return self
