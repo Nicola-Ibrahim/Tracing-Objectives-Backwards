@@ -45,10 +45,15 @@ class InverseModelEvaluator:
         """
 
         # 1. Pipeline: Sample -> Simulate -> Calculate Errors
+
+        # Sample candidates from inverse model
+        # Sampled candidates shape: (n_test_points, num_generated_candidates, x_dim)
         sampled_candidates = self._sample_from_inverse_model(
             inverse_estimator, test_objectives, num_samples, random_state
         )
 
+        # Simulate forward results
+        # Forward simulation results shape: (n_test_points, num_generated_candidates, y_dim)
         forward_simulation_results = self._simulate_forward_results(
             forward_estimator=forward_estimator,
             sampled_candidates=sampled_candidates,
@@ -56,16 +61,20 @@ class InverseModelEvaluator:
             objective_normalizer=objective_normalizer,
         )
 
+        # Calculate residuals (errors) for each sample
+        # Residuals shape: (n_test_points, num_generated_candidates)
         residuals = self._calculate_residuals(
             forward_simulation_results=forward_simulation_results,
             test_objectives=test_objectives,
         )
 
         # 2. Extract detailed spatial information
+        # Ranked candidates shape: (n_test_points, num_generated_candidates, x_dim)
         ranked_candidates = self._rank_candidates_by_residuals(
             sampled_candidates=sampled_candidates,
             residuals=residuals,
         )
+
         distribution_stats = self._compute_candidates_distribution_stats(
             sampled_candidates=sampled_candidates,
         )
@@ -82,17 +91,21 @@ class InverseModelEvaluator:
         )
 
         return {
-            "metrics": {
-                "best_shot_error": performance_metrics["best_shot_error"],
+            "accuracy": performance_metrics["accuracy"],
+            "probabilistic": {
                 "calibration_error": calibration_data["calibration_error"],
-                "sharpness": performance_metrics["sharpness"],
                 "crps": calibration_data["crps"],
-                "diversity_score": performance_metrics["diversity_score"],
+                **performance_metrics["probabilistic"],
             },
-            "ordered_candidates": ranked_candidates,
-            "distribution_stats": distribution_stats,
-            "raw_residuals": residuals,
-            "calibration": calibration_data,
+            "decisions": {
+                "ordered_candidates": ranked_candidates,
+                "distribution_stats": distribution_stats,
+            },
+            "diagnostics": {
+                "raw_residuals": residuals,
+                "calibration_details": calibration_data,
+                **performance_metrics["distributions"],
+            },
         }
 
     def _sample_from_inverse_model(
@@ -153,9 +166,9 @@ class InverseModelEvaluator:
     ) -> np.ndarray:
         """
         Calculates the Euclidean distance between simulated and target objectives.
-        Output shape: (n_test, num_samples)
+        Output shape: (n_test_points, num_generated_candidates)
         """
-        # Expand targets for broadcasting: (n_test, 1, y_dim)
+        # Expand targets for broadcasting: (n_test_points, 1, y_dim)
         targets_expanded = test_objectives[:, np.newaxis, :]
 
         # Calculate L2 norm across the objective dimension
@@ -167,12 +180,12 @@ class InverseModelEvaluator:
         """
         Sorts generated candidates for each test point from closest to farthest from target.
         """
-        # Get sorting indices for each test row (n_test, num_samples)
+        # Get sorting indices for each test row (n_test_points, num_generated_candidates)
         sort_indices = np.argsort(residuals, axis=1)
 
         # Boolean indexing for 3D is tricky, we use advanced indexing
-        n_test, n_samples, x_dim = sampled_candidates.shape
-        row_indices = np.arange(n_test)[:, np.newaxis]
+        n_test_points, n_samples, x_dim = sampled_candidates.shape
+        row_indices = np.arange(n_test_points)[:, np.newaxis]
 
         return sampled_candidates[row_indices, sort_indices]
 
@@ -195,32 +208,61 @@ class InverseModelEvaluator:
 
     def _compute_performance_metrics(
         self, residuals: np.ndarray, sampled_candidates: np.ndarray
-    ) -> dict[str, float]:
+    ) -> dict[str, Any]:
         """
         Computes high-level performance metrics for the estimator.
         """
         # Best Shot: The minimum error achieved across all samples for each test point
-        best_shots = np.min(residuals, axis=1)
-        mean_best_shot = float(np.mean(best_shots))
+        # Calcualte the minimum error for each test point (n_test_points, ) row-wise
+        per_point_best = np.min(residuals, axis=1)
 
-        # Reliability: The median error across samples (how often are we 'close enough')
-        reliabilities = np.median(residuals, axis=1)
-        mean_reliability = float(np.mean(reliabilities))
+        # Reliability: The median error across samples for each test point
+        # Calculate the median error for each test point (n_test_points, ) row-wise
+        per_point_reliability = np.median(residuals, axis=1)
 
-        # Diversity: How much the suggested solutions differ from each other
-        diversities = np.std(sampled_candidates, axis=1).mean(axis=1)
-        mean_diversity = float(np.mean(diversities))
+        # Diversity: How much the suggested solutions differ from each other for each test point
+        per_point_diversity = np.std(sampled_candidates, axis=1).mean(axis=1)
+
+        # Success Rate: Percentage of points where the best shot is "accurate enough"
+        # Using a threshold of 0.01 in normalized objective space (adjustable)
+        threshold = 0.01
+        success_rate = float(np.mean(per_point_best < threshold))
+
+        # Quantiles of the best shot distribution across the test set
+        quantiles = {
+            "q25": float(np.percentile(per_point_best, 25)),
+            "q50": float(np.percentile(per_point_best, 50)),  # Median
+            "q75": float(np.percentile(per_point_best, 75)),
+            "q95": float(np.percentile(per_point_best, 95)),
+        }
+
+        # Global aggregates (means)
+        mean_best_shot = float(np.mean(per_point_best))
+        mean_reliability = float(np.mean(per_point_reliability))
+        mean_diversity = float(np.mean(per_point_diversity))
 
         # Sharpness: The width of the predictive distribution (90% interval)
-        q95 = np.percentile(sampled_candidates, 95, axis=1)
-        q05 = np.percentile(sampled_candidates, 5, axis=1)
-        sharpness = float(np.mean(q95 - q05))
+        q95_dec = np.percentile(sampled_candidates, 95, axis=1)
+        q05_dec = np.percentile(sampled_candidates, 5, axis=1)
+        mean_sharpness = float(np.mean(q95_dec - q05_dec))
 
         return {
-            "best_shot_error": mean_best_shot,
-            "average_median_error": mean_reliability,
-            "diversity_score": mean_diversity,
-            "sharpness": sharpness,
+            "accuracy": {
+                "mean_best_shot_error": mean_best_shot,
+                "median_best_shot_error": quantiles["q50"],
+                "reliability_error": mean_reliability,
+                "success_rate_0.01": success_rate,
+                "quantiles": quantiles,
+            },
+            "probabilistic": {
+                "diversity_score": mean_diversity,
+                "sharpness": mean_sharpness,
+            },
+            "distributions": {
+                "best_shots": per_point_best,
+                "reliabilities": per_point_reliability,
+                "diversities": per_point_diversity,
+            },
         }
 
     def _compute_calibration_data(

@@ -45,7 +45,7 @@ def cli():
         dataset_name="cocoex_f5",
         candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
-        num_samples=250,
+        num_samples=40,
         random_state=42,
     )
 

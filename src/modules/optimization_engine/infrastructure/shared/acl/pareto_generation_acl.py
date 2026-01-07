@@ -75,7 +75,4 @@ class GenerationDataACL:
             problem_type=dataset.name,
             original_metadata=metadata,
         )
-        print(
-            f"ACL: Transformed Dataset ({data_identifier}) to AnalysisResultDTO for analysis."
-        )
         return transformed_data

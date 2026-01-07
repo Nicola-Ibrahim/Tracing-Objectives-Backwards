@@ -18,9 +18,9 @@ def add_error_boxplot(
     for model_name in model_names:
         if model_name in results_map:
             res = results_map[model_name]
-            # Use raw errors to get the distribution of best shots across test samples
-            raw_errors = res["raw_errors"]
-            best_shots = np.min(raw_errors, axis=1)
+            # Use raw residuals to get the distribution of best shots across test samples
+            raw_residuals = res["diagnostics"]["raw_residuals"]
+            best_shots = np.min(raw_residuals, axis=1)
 
             color = color_map.get(model_name, "gray")
 

@@ -28,7 +28,7 @@ def add_calibration_plot(
     )
 
     for model_name, res in results_map.items():
-        calibration = res.get("calibration")
+        calibration = res.get("diagnostics", {}).get("calibration_details")
         if calibration is None:
             continue
 
