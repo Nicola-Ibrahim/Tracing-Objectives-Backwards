@@ -1,4 +1,4 @@
-from typing import Any, Self
+from typing import Self
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
