@@ -33,109 +33,174 @@ class InverseModelEvaluator:
         num_samples: int = 250,
         random_state: int = 42,
     ) -> dict[str, Any]:
-        simulation_results = self._generate_and_simulate_candidates(
-            inverse_estimator=inverse_estimator,
-            forward_estimator=forward_estimator,
-            test_objectives=test_objectives,
-            decision_normalizer=decision_normalizer,
-            objective_normalizer=objective_normalizer,
-            num_samples=num_samples,
-            random_state=random_state,
+        """
+        Evaluates an inverse model candidate against a forward ground truth.
+
+        Returns a dictionary containing:
+        - metrics: High-level performance scores (errors, diversity, calibration).
+        - ordered_candidates: Samples sorted by their simulation error (best to worst).
+        - median_candidates: The component-wise median of suggested decisions.
+        - distribution_stats: Statistical property of the candidate distribution.
+        - calibration: Detailed PIT and CRPS data.
+        """
+        # 1. Pipeline: Sample -> Simulate -> Calculate Errors
+        candidates_3d = self._sample_from_inverse_model(
+            inverse_estimator, test_objectives, num_samples, random_state
         )
 
-        candidates_3d = simulation_results["candidates_3d"]
-        raw_errors = simulation_results["raw_errors"]
-
-        metrics = self._compute_performance_metrics(
-            raw_errors=raw_errors, candidates_3d=candidates_3d
+        simulated_objectives_3d = self._simulate_forward_results(
+            forward_estimator, candidates_3d, decision_normalizer, objective_normalizer
         )
 
-        calibration = self._compute_calibration_data(
+        simulation_errors = self._calculate_simulation_errors(
+            simulated_objectives_3d, test_objectives
+        )
+
+        # 2. Extract detailed spatial information
+        ordered_candidates = self._rank_candidates_by_error(
+            candidates_3d, simulation_errors
+        )
+        distribution_stats = self._compute_candidate_distribution_stats(candidates_3d)
+
+        # 3. Aggregate performance metrics
+        performance_metrics = self._compute_performance_metrics(
+            simulation_errors=simulation_errors, candidates_3d=candidates_3d
+        )
+
+        calibration_data = self._compute_calibration_data(
             candidates_3d=candidates_3d, test_decisions=test_decisions
         )
 
         return {
             "metrics": {
-                "best_shot_error": metrics["best_shot_error"],
-                "calibration_error": calibration["calibration_error"],
-                "sharpness": metrics["sharpness"],
-                "crps": calibration["crps"],
-                "diversity_score": metrics["diversity_score"],
+                "best_shot_error": performance_metrics["best_shot_error"],
+                "calibration_error": calibration_data["calibration_error"],
+                "sharpness": performance_metrics["sharpness"],
+                "crps": calibration_data["crps"],
+                "diversity_score": performance_metrics["diversity_score"],
             },
-            "raw_errors": raw_errors,
-            "calibration": calibration,
+            "ordered_candidates": ordered_candidates,
+            "median_candidates": distribution_stats["median_candidates"],
+            "distribution_stats": distribution_stats,
+            "raw_errors": simulation_errors,
+            "calibration": calibration_data,
         }
 
-    def _generate_and_simulate_candidates(
+    def _sample_from_inverse_model(
         self,
         inverse_estimator: BaseEstimator,
-        forward_estimator: BaseEstimator,
         test_objectives: np.ndarray,
-        decision_normalizer: BaseNormalizer,
-        objective_normalizer: BaseNormalizer,
         num_samples: int,
         random_state: int,
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """
-        Generates candidates from inverse model and runs them through the forward model.
-        Returns the raw error matrix (n_test, num_samples).
+        Generates decision candidates (decisions) for the target objectives.
+        Output shape: (n_test, num_samples, x_dim)
         """
-        n_test, y_dim = test_objectives.shape
-
-        # STEP 1: Vectorized Sampling
-        # We ask the estimator to sample for ALL test targets at once.
-        # Expected Output Shape: (n_test, num_samples, x_dim)
-        candidates_3d = inverse_estimator.sample(
+        candidates = inverse_estimator.sample(
             test_objectives, n_samples=num_samples, seed=random_state
         )
-        if candidates_3d.ndim == 2:
-            candidates_3d = candidates_3d[:, np.newaxis, :]
 
-        n_test_act, n_samp_act, x_dim = candidates_3d.shape
+        # Ensure 3D shape if only 1 sample was requested
+        if candidates.ndim == 2:
+            candidates = candidates[:, np.newaxis, :]
 
-        # STEP 2: Batch Simulation
-        # Flatten for processing through normalizers and forward model
+        return candidates
+
+    def _simulate_forward_results(
+        self,
+        forward_estimator: BaseEstimator,
+        candidates_3d: np.ndarray,
+        decision_normalizer: BaseNormalizer,
+        objective_normalizer: BaseNormalizer,
+    ) -> np.ndarray:
+        """
+        Passes candidates through the forward model to see what objectives they achieve.
+        Output shape: (n_test, num_samples, y_dim)
+        """
+        n_test, n_samples, x_dim = candidates_3d.shape
+
+        # Flatten for batch processing through network
         candidates_flat = candidates_3d.reshape(-1, x_dim)
 
-        # A. Denormalize decisions (Network Space -> Physics Space)
-        candidates_orig = decision_normalizer.inverse_transform(candidates_flat)
+        # Physics Space: Denormalize decisions for the simulator
+        candidates_phys = decision_normalizer.inverse_transform(candidates_flat)
 
-        # B. Run Simulator / Forward Model
-        pred_obj_flat = forward_estimator.predict(candidates_orig)
+        # Simulation: Predict objectives in physics space
+        pred_obj_phys = forward_estimator.predict(candidates_phys)
+        if not isinstance(pred_obj_phys, np.ndarray):
+            pred_obj_phys = np.array(pred_obj_phys)
 
-        if not isinstance(pred_obj_flat, np.ndarray):
-            pred_obj_flat = np.array(pred_obj_flat)
+        # Network Space: Normalize predicted objectives for error calculation
+        pred_obj_norm = objective_normalizer.transform(pred_obj_phys)
 
-        # C. Normalize predicted objectives (Physics Space -> Normalized Space)
-        pred_obj_norm = objective_normalizer.transform(pred_obj_flat)
+        y_dim = pred_obj_norm.shape[-1]
+        return pred_obj_norm.reshape(n_test, n_samples, y_dim)
 
-        # STEP 3: Reshape back to (n_test, num_samples, y_dim)
-        pred_obj_norm_3d = pred_obj_norm.reshape(n_test_act, n_samp_act, y_dim)
-
-        # STEP 4: Calculate Euclidean Distance (Error)
-        # Prepare targets for broadcasting: (n_test, 1, y_dim)
+    def _calculate_simulation_errors(
+        self, simulated_objectives_3d: np.ndarray, test_objectives: np.ndarray
+    ) -> np.ndarray:
+        """
+        Calculates the Euclidean distance between simulated and target objectives.
+        Output shape: (n_test, num_samples)
+        """
+        # Expand targets for broadcasting: (n_test, 1, y_dim)
         targets_expanded = test_objectives[:, np.newaxis, :]
-        raw_errors = np.linalg.norm(pred_obj_norm_3d - targets_expanded, axis=2)
+
+        # Calculate L2 norm across the objective dimension
+        return np.linalg.norm(simulated_objectives_3d - targets_expanded, axis=2)
+
+    def _rank_candidates_by_error(
+        self, candidates_3d: np.ndarray, simulation_errors: np.ndarray
+    ) -> np.ndarray:
+        """
+        Sorts generated candidates for each test point from closest to farthest from target.
+        """
+        # Get sorting indices for each test row (n_test, num_samples)
+        sort_indices = np.argsort(simulation_errors, axis=1)
+
+        # Boolean indexing for 3D is tricky, we use advanced indexing
+        n_test, n_samples, x_dim = candidates_3d.shape
+        row_indices = np.arange(n_test)[:, np.newaxis]
+
+        return candidates_3d[row_indices, sort_indices]
+
+    def _compute_candidate_distribution_stats(
+        self, candidates_3d: np.ndarray
+    ) -> dict[str, np.ndarray]:
+        """
+        Computes statistical properties of the suggested decision distribution.
+        """
+        # Median candidate: The "average" suggested solution for each test point
+        median_candidates = np.median(candidates_3d, axis=1)
+
+        # Spread: Standard deviation per dimension
+        std_candidates = np.std(candidates_3d, axis=1)
 
         return {
-            "candidates_3d": candidates_3d,
-            "raw_errors": raw_errors,
+            "median_candidates": median_candidates,
+            "std_candidates": std_candidates,
         }
 
     def _compute_performance_metrics(
-        self, raw_errors: np.ndarray, candidates_3d: np.ndarray
+        self, simulation_errors: np.ndarray, candidates_3d: np.ndarray
     ) -> dict[str, float]:
-        best_shots = np.min(raw_errors, axis=1)
+        """
+        Computes high-level performance metrics for the estimator.
+        """
+        # Best Shot: The minimum error achieved across all samples for each test point
+        best_shots = np.min(simulation_errors, axis=1)
         mean_best_shot = float(np.mean(best_shots))
 
-        reliabilities = np.median(raw_errors, axis=1)
+        # Reliability: The median error across samples (how often are we 'close enough')
+        reliabilities = np.median(simulation_errors, axis=1)
         mean_reliability = float(np.mean(reliabilities))
 
+        # Diversity: How much the suggested solutions differ from each other
         diversities = np.std(candidates_3d, axis=1).mean(axis=1)
         mean_diversity = float(np.mean(diversities))
 
-        # 4. Sharpness: Width of the 90% Prediction Interval
-        # Average (95th percentile - 5th percentile) across samples and dimensions
+        # Sharpness: The width of the predictive distribution (90% interval)
         q95 = np.percentile(candidates_3d, 95, axis=1)
         q05 = np.percentile(candidates_3d, 5, axis=1)
         sharpness = float(np.mean(q95 - q05))
@@ -150,6 +215,10 @@ class InverseModelEvaluator:
     def _compute_calibration_data(
         self, candidates_3d: np.ndarray, test_decisions: np.ndarray
     ) -> dict[str, Any]:
+        """
+        Analyzes how well the model's confidence matches its actual accuracy.
+        Uses PIT (Probability Integral Transform) and CRPS (Continuous Ranked Probability Score).
+        """
         n_test, n_samples, x_dim = candidates_3d.shape
         pit_values = []
         crps_per_dim = []
@@ -159,16 +228,14 @@ class InverseModelEvaluator:
                 true_val = test_decisions[i, d]
                 model_samples = candidates_3d[i, :, d]
 
-                # PIT Calculation
+                # PIT: Fraction of samples lower than the true value.
+                # If calibrated, PIT should follow a Uniform distribution.
                 pit = np.mean(model_samples <= true_val)
                 pit_values.append(pit)
 
-                # 5. CRPS (Sample-based approximation)
+                # CRPS: Measures the distance between the predictive CDF and the true value (step function).
                 # Formula: E|X - y| - 0.5 * E|X - X'|
                 mae_to_true = np.mean(np.abs(model_samples - true_val))
-
-                # Pairwise absolute difference between all samples
-                # Note: For very large n_samples, consider a more optimized version
                 diff_matrix = np.abs(model_samples[:, None] - model_samples)
                 expected_dist = np.mean(diff_matrix)
 
@@ -177,6 +244,8 @@ class InverseModelEvaluator:
 
         pit_values = np.sort(pit_values)
         cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
+
+        # Calibration Error: Mean absolute deviation from the ideal uniform CDF
         calibration_error = float(np.mean(np.abs(pit_values - cdf_y)))
         mean_crps = float(np.mean(crps_per_dim))
 
