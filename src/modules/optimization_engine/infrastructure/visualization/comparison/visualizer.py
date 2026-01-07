@@ -36,9 +36,9 @@ class InverseComparisonVisualizer(BaseVisualizer):
             ],
             subplot_titles=(
                 "<b>Calibration Curve</b><br><sup>How well predicted probabilities match observed frequency</sup>",
-                "<b>Re-simulation Error</b><br><sup>Distribution of accuracy across multiple samples</sup>",
-                "<b>Best Shot Error</b><br><sup>Minimum error found per target (Lower is Better)</sup>",
-                "<b>Calibration Error</b><br><sup>Gap between confidence and frequency (Lower is Better)</sup>",
+                "<b>Re-simulation Residuals</b><br><sup>Distribution of accuracy across multiple samples</sup>",
+                "<b>Best Shot Residual</b><br><sup>Minimum residual found per target (Lower is Better)</sup>",
+                "<b>Calibration Residual</b><br><sup>Gap between confidence and frequency (Lower is Better)</sup>",
                 "<b>CRPS</b><br><sup>Combined accuracy and uncertainty score (Lower is Better)</sup>",
                 "<b>Diversity Score</b><br><sup>Exploration/spread of candidates (Higher is Better)</sup>",
                 "<b>Sharpness</b><br><sup>Precision/narrowness of intervals (Lower is Better)</sup>",
@@ -81,7 +81,7 @@ class InverseComparisonVisualizer(BaseVisualizer):
             ),
             xaxis1_title="Predicted Confidence",
             yaxis1_title="Observed Frequency",
-            yaxis2_title="Error Magnitude",
+            yaxis2_title="Residual Magnitude",
         )
 
         # Update subplot title font sizes
@@ -98,9 +98,9 @@ class InverseComparisonVisualizer(BaseVisualizer):
             showarrow=False,
             text=(
                 "<b>How to read the tradeoffs</b><br>"
-                "• <b>Accurate but Overconfident</b>:<br>Low best_shot_error, narrow intervals,<br>but high calibration_error."
+                "• <b>Accurate but Overconfident</b>:<br>Low best_shot_residual, narrow intervals,<br>but high calibration_residual."
                 "<br><br>"
-                "• <b>Honest but Vague</b>:<br>Low calibration_error (hits diagonal),<br>but wide intervals (high sharpness)."
+                "• <b>Honest but Vague</b>:<br>Low calibration_residual (hits diagonal),<br>but wide intervals (high sharpness)."
                 "<br><br>"
                 "• <b>The Winner</b>:<br>Lowest CRPS - best compromise<br>between accuracy and uncertainty."
             ),

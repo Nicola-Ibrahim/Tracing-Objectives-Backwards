@@ -91,20 +91,36 @@ class InverseModelEvaluator:
         )
 
         return {
-            "accuracy": performance_metrics["accuracy"],
-            "probabilistic": {
-                "calibration_error": calibration_data["calibration_error"],
-                "crps": calibration_data["crps"],
-                **performance_metrics["probabilistic"],
+            "metrics": {
+                "accuracy": performance_metrics["accuracy"],
+                "uncertainty": performance_metrics["uncertainty"],
+                "calibration": {
+                    "calibration_residual": calibration_data["calibration_residual"],
+                    "crps": calibration_data["crps"],
+                },
             },
-            "decisions": {
-                "ordered_candidates": ranked_candidates,
-                "distribution_stats": distribution_stats,
-            },
-            "diagnostics": {
-                "raw_residuals": residuals,
-                "calibration_details": calibration_data,
-                **performance_metrics["distributions"],
+            "detailed_results": {
+                "residuals": {
+                    "per_point_best": performance_metrics["distributions"][
+                        "best_shots"
+                    ],
+                    "per_point_reliability": performance_metrics["distributions"][
+                        "reliabilities"
+                    ],
+                    "per_point_diversity": performance_metrics["distributions"][
+                        "diversities"
+                    ],
+                    "all_samples": residuals,
+                },
+                "candidates": {
+                    "ordered": ranked_candidates,
+                    "median": distribution_stats["median_candidates"],
+                    "std": distribution_stats["std_candidates"],
+                },
+                "calibration_curves": {
+                    "pit_values": calibration_data["pit_values"],
+                    "cdf_y": calibration_data["cdf_y"],
+                },
             },
         }
 
@@ -248,13 +264,13 @@ class InverseModelEvaluator:
 
         return {
             "accuracy": {
-                "mean_best_shot_error": mean_best_shot,
-                "median_best_shot_error": quantiles["q50"],
-                "reliability_error": mean_reliability,
+                "mean_best_shot_residual": mean_best_shot,
+                "median_best_shot_residual": quantiles["q50"],
+                "reliability_residual": mean_reliability,
                 "success_rate_0.01": success_rate,
-                "quantiles": quantiles,
+                "best_shot_quantiles": quantiles,
             },
-            "probabilistic": {
+            "uncertainty": {
                 "diversity_score": mean_diversity,
                 "sharpness": mean_sharpness,
             },
@@ -305,7 +321,7 @@ class InverseModelEvaluator:
         return {
             "pit_values": pit_values,
             "cdf_y": cdf_y,
-            "calibration_error": calibration_error,
+            "calibration_residual": calibration_error,
             "crps": mean_crps,
         }
 

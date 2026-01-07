@@ -1,6 +1,5 @@
 from typing import Any
 
-import numpy as np
 import plotly.graph_objects as go
 
 
@@ -18,9 +17,8 @@ def add_error_boxplot(
     for model_name in model_names:
         if model_name in results_map:
             res = results_map[model_name]
-            # Use raw residuals to get the distribution of best shots across test samples
-            raw_residuals = res["diagnostics"]["raw_residuals"]
-            best_shots = np.min(raw_residuals, axis=1)
+            # Use pre-calculated residuals distributions
+            best_shots = res["detailed_results"]["residuals"]["per_point_best"]
 
             color = color_map.get(model_name, "gray")
 

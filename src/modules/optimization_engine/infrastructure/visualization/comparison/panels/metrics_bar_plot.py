@@ -17,21 +17,17 @@ def add_metrics_bar_plots(
     # 1. Best Shot (Row 2, Col 1)
     for model_name in model_names:
         if model_name in results_map:
-            accuracy = results_map[model_name]["accuracy"]
+            accuracy = results_map[model_name]["metrics"]["accuracy"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[
-                        accuracy.get(
-                            "mean_best_shot_error", accuracy.get("best_shot_error", 0)
-                        )
-                    ],
+                    y=[accuracy["mean_best_shot_residual"]],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
-                    name="Best Shot Error",
+                    name="Best Shot Residual",
                 ),
                 row=2,
                 col=1,
@@ -40,17 +36,17 @@ def add_metrics_bar_plots(
     # 2. Calibration Error (Row 2, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            probabilistic = results_map[model_name]["probabilistic"]
+            calibration = results_map[model_name]["metrics"]["calibration"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[probabilistic.get("calibration_error", 0)],
+                    y=[calibration.get("calibration_residual", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
-                    name="Calibration Error",
+                    name="Calibration Residual",
                 ),
                 row=2,
                 col=2,
@@ -59,13 +55,13 @@ def add_metrics_bar_plots(
     # 3. CRPS (Row 2, Col 3)
     for model_name in model_names:
         if model_name in results_map:
-            probabilistic = results_map[model_name]["probabilistic"]
+            calibration = results_map[model_name]["metrics"]["calibration"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[probabilistic.get("crps", 0)],
+                    y=[calibration.get("crps", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -78,13 +74,13 @@ def add_metrics_bar_plots(
     # 4. Diversity (Row 3, Col 1)
     for model_name in model_names:
         if model_name in results_map:
-            probabilistic = results_map[model_name]["probabilistic"]
+            uncertainty = results_map[model_name]["metrics"]["uncertainty"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[probabilistic["diversity_score"]],
+                    y=[uncertainty["diversity_score"]],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
@@ -97,13 +93,13 @@ def add_metrics_bar_plots(
     # 5. Sharpness (Row 3, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            probabilistic = results_map[model_name]["probabilistic"]
+            uncertainty = results_map[model_name]["metrics"]["uncertainty"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[probabilistic.get("sharpness", 0)],
+                    y=[uncertainty.get("sharpness", 0)],
                     marker_color=color,
                     showlegend=False,
                     legendgroup=model_name,
