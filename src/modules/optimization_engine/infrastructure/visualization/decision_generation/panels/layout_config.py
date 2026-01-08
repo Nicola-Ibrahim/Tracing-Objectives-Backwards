@@ -1,7 +1,7 @@
 import plotly.express as px
 
 # Layout Constants
-MAX_COLS = 3
+MAX_COLS = 2
 DEFAULT_WIDTH = 1800
 DEFAULT_PLOT_HEIGHT = 600
 
@@ -12,6 +12,11 @@ TARGET_MARKER = dict(
     symbol="star",
     size=15,
     line=dict(width=2, color="black"),
+)
+BEST_MARKER = dict(
+    symbol="diamond-tall",
+    size=10,
+    line=dict(width=1, color="black"),
 )
 
 

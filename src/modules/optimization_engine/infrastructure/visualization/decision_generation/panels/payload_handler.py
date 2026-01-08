@@ -13,6 +13,13 @@ def prepare_payload(data: object) -> dict:
         raise ValueError("Pareto front must have at least two objective columns.")
     payload["pareto_front"] = pareto_front
 
+    # Validate Pareto Set
+    if "pareto_set" in payload:
+        pareto_set = np.asarray(payload["pareto_set"], dtype=float)
+        if pareto_set.ndim == 1:
+            pareto_set = pareto_set.reshape(-1, 1)
+        payload["pareto_set"] = pareto_set
+
     # Validate Target
     target = np.asarray(payload["target_objective"], dtype=float).reshape(-1)
     if target.size < 2:
@@ -34,12 +41,16 @@ def _coerce_payload(data: object) -> dict[str, object]:
     ):
         return {
             "pareto_front": getattr(data, "pareto_front"),
+            "pareto_set": getattr(data, "pareto_set", None),
             "target_objective": getattr(data, "target_objective"),
             "generators": [
                 {
                     "name": getattr(run, "name", None),
                     "decisions": getattr(run, "decisions", None),
                     "predicted_objectives": getattr(run, "predicted_objectives", None),
+                    "best_index": getattr(run, "best_index", None),
+                    "best_decision": getattr(run, "best_decision", None),
+                    "best_objective": getattr(run, "best_objective", None),
                 }
                 for run in getattr(data, "generators")
             ],

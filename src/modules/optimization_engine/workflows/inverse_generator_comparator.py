@@ -103,6 +103,15 @@ class InverseGeneratorComparator:
                     target_objective_raw=target_objective_raw,
                 )
 
+                # Update generator_runs with best point info for visualization
+                generator_runs[-1].update(
+                    {
+                        "best_index": selection.best_index,
+                        "best_decision": selection.best_decision,
+                        "best_objective": selection.best_objective,
+                    }
+                )
+
                 results_map[name] = {
                     "decisions": candidates_raw,
                     "predicted_objectives": predicted_objectives,

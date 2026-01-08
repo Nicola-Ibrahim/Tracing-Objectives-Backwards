@@ -138,6 +138,7 @@ class GenerateDecisionCommandHandler:
         return {
             "dataset_name": dataset.name,
             "pareto_front": dataset.pareto.front,
+            "pareto_set": dataset.pareto.set,
             "target_objective": target_objective,
             "generators": generator_runs,
         }
