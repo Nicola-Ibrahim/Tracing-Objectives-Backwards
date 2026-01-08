@@ -9,7 +9,7 @@ from ....domain.datasets.entities.processed_data import ProcessedData
 from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
-from ....workflows.decision_generation_workflow import DecisionGenerationWorkflow
+from ....workflows.inverse_generator_comparator import InverseGeneratorComparator
 from .command import GenerateDecisionCommand, InverseEstimatorCandidate
 
 
@@ -18,19 +18,19 @@ class GenerateDecisionCommandHandler:
     Generate Design Candidates (X) for a requested Objective (Y).
 
     Unified Handler for Multiple Models:
-    - Uses a dedicated decision-generation workflow.
+    - Uses a dedicated inverse generator comparator.
     - Compares generation capability across multiple inverse models (MDN, CVAE, etc).
     """
 
     def __init__(
         self,
-        workflow: DecisionGenerationWorkflow,
+        comparator: InverseGeneratorComparator,
         model_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,
         visualizer: BaseVisualizer | None = None,
     ):
-        self._workflow = workflow
+        self._comparator = comparator
         self._model_repository = model_repository
         self._data_repository = data_repository
         self._logger = logger
@@ -64,21 +64,20 @@ class GenerateDecisionCommandHandler:
             candidates=command.inverse_estimators, dataset_name=command.dataset_name
         )
 
-        # 4. Load forward estimator using private helper
-        forward_estimator = self._load_forward_estimator(
+        # 4. Load forward estimator using repository directly (as requested by user earlier)
+        forward_estimator = self._model_repository.get_latest_version(
             estimator_type=command.forward_estimator_type.value,
+            mapping_direction="forward",
             dataset_name=command.dataset_name,
-        )
+        ).estimator
 
-        # 5. Run generation workflow
-        # TODO: Edit inverse_estimators to use dictionary instead of tuple
-        workflow_output: dict[str, object] = self._workflow.run(
-            inverse_estimators=list(inverse_estimators.items()),
-            pareto_front=dataset.pareto.front,
-            target_objective_raw=target_objective_raw,
-            target_objective_norm=target_objective_norm,
-            decisions_normalizer=dataset.processed.decisions_normalizer,
+        # 5. Run comparison workflow
+        workflow_output = self._comparator.compare(
+            inverse_estimators=inverse_estimators,
             forward_estimator=forward_estimator,
+            target_objective_norm=target_objective_norm,
+            target_objective_raw=target_objective_raw,
+            decisions_normalizer=dataset.processed.decisions_normalizer,
             n_samples=command.n_samples,
             distance_tolerance=command.distance_tolerance,
         )
@@ -126,20 +125,6 @@ class GenerateDecisionCommandHandler:
             inverse_estimators[display_name] = artifact.estimator
 
         return inverse_estimators
-
-    def _load_forward_estimator(
-        self, estimator_type: str, dataset_name: str
-    ) -> BaseEstimator:
-        """
-        Loads the forward estimator from the repository.
-        """
-        self._logger.log_info(f"Loading forward estimator: {estimator_type}...")
-        artifact = self._model_repository.get_latest_version(
-            estimator_type=estimator_type,
-            mapping_direction="forward",
-            dataset_name=dataset_name,
-        )
-        return artifact.estimator
 
     def _build_visualization_payload(
         self,

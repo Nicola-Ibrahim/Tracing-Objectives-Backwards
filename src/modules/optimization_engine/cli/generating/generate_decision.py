@@ -18,7 +18,7 @@ from ...infrastructure.shared.loggers.cmd_logger import CMDLogger
 from ...infrastructure.visualization.decision_generation import (
     DecisionGenerationComparisonVisualizer,
 )
-from ...workflows.decision_generation_workflow import DecisionGenerationWorkflow
+from ...workflows.inverse_generator_comparator import InverseGeneratorComparator
 
 
 @click.command(help="Generate decision candidates for a target objective.")
@@ -52,7 +52,7 @@ def main():
 
     # Initialize the handler with pre-built services
     handler = GenerateDecisionCommandHandler(
-        workflow=DecisionGenerationWorkflow(),
+        comparator=InverseGeneratorComparator(),
         model_repository=FileSystemModelArtifactRepository(),
         data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
