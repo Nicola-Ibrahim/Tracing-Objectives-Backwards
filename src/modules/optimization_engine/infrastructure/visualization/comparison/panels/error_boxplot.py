@@ -12,7 +12,8 @@ def add_error_boxplot(
     model_names: list[str],
 ) -> None:
     """
-    Adds Re-simulation Error Boxplot to the specified subplot using raw error data.
+    Adds a boxplot showing the distribution of the lowest residuals achieved
+    across all test samples for each model.
     """
     for model_name in model_names:
         if model_name in results_map:

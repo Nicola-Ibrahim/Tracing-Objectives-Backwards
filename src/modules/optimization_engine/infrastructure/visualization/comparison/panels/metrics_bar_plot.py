@@ -2,6 +2,8 @@ from typing import Any
 
 import plotly.graph_objects as go
 
+from ..color_utils import darken_rgba
+
 
 def add_metrics_bar_plots(
     fig: go.Figure,
@@ -14,26 +16,7 @@ def add_metrics_bar_plots(
     Each model is added as a separate trace and linked to the legend via legendgroup.
     """
 
-    # 1. Best Shot (Row 2, Col 1)
-    for model_name in model_names:
-        if model_name in results_map:
-            performance = results_map[model_name]["performance"]
-            color = color_map.get(model_name, "gray")
-
-            fig.add_trace(
-                go.Bar(
-                    x=[model_name],
-                    y=[performance["mean_lowest_residual"]],
-                    marker_color=color,
-                    showlegend=False,
-                    legendgroup=model_name,
-                    name="Best Shot Residual",
-                ),
-                row=2,
-                col=1,
-            )
-
-    # 2. Calibration Error (Row 2, Col 2)
+    # 1. Calibration Residual (Row 1, Col 2)
     for model_name in model_names:
         if model_name in results_map:
             calibration = results_map[model_name]["calibration"]
@@ -43,16 +26,19 @@ def add_metrics_bar_plots(
                 go.Bar(
                     x=[model_name],
                     y=[calibration.get("mean_residual", 0)],
-                    marker_color=color,
+                    marker=dict(
+                        color=color,
+                        line=dict(color=darken_rgba(color), width=1.5),
+                    ),
                     showlegend=False,
                     legendgroup=model_name,
                     name="Calibration Residual",
                 ),
-                row=2,
+                row=1,
                 col=2,
             )
 
-    # 3. CRPS (Row 2, Col 3)
+    # 2. CRPS (Row 1, Col 3)
     for model_name in model_names:
         if model_name in results_map:
             calibration = results_map[model_name]["calibration"]
@@ -62,16 +48,63 @@ def add_metrics_bar_plots(
                 go.Bar(
                     x=[model_name],
                     y=[calibration.get("mean_crps", 0)],
-                    marker_color=color,
+                    marker=dict(
+                        color=color,
+                        line=dict(color=darken_rgba(color), width=1.5),
+                    ),
                     showlegend=False,
                     legendgroup=model_name,
                     name="CRPS",
+                ),
+                row=1,
+                col=3,
+            )
+
+    # 3. Mean Lowest Residual (Row 2, Col 2)
+    for model_name in model_names:
+        if model_name in results_map:
+            performance = results_map[model_name]["performance"]
+            color = color_map.get(model_name, "gray")
+
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[performance["mean_lowest_residual"]],
+                    marker=dict(
+                        color=color,
+                        line=dict(color=darken_rgba(color), width=1.5),
+                    ),
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="Mean Lowest Residual",
+                ),
+                row=2,
+                col=2,
+            )
+
+    # 4. Mean Reliability (Row 2, Col 3)
+    for model_name in model_names:
+        if model_name in results_map:
+            performance = results_map[model_name]["performance"]
+            color = color_map.get(model_name, "gray")
+
+            fig.add_trace(
+                go.Bar(
+                    x=[model_name],
+                    y=[performance.get("mean_reliability", 0)],
+                    marker=dict(
+                        color=color,
+                        line=dict(color=darken_rgba(color), width=1.5),
+                    ),
+                    showlegend=False,
+                    legendgroup=model_name,
+                    name="Mean Reliability",
                 ),
                 row=2,
                 col=3,
             )
 
-    # 4. Diversity (Row 3, Col 1)
+    # 5. Diversity (Row 3, Col 1)
     for model_name in model_names:
         if model_name in results_map:
             performance = results_map[model_name]["performance"]
@@ -81,16 +114,19 @@ def add_metrics_bar_plots(
                 go.Bar(
                     x=[model_name],
                     y=[performance["mean_diversity"]],
-                    marker_color=color,
+                    marker=dict(
+                        color=color,
+                        line=dict(color=darken_rgba(color), width=1.5),
+                    ),
                     showlegend=False,
                     legendgroup=model_name,
-                    name="Diversity Score",
+                    name="Diversity",
                 ),
                 row=3,
                 col=1,
             )
 
-    # 5. Sharpness (Row 3, Col 2)
+    # 6. Sharpness (Row 3, Col 2)
     for model_name in model_names:
         if model_name in results_map:
             performance = results_map[model_name]["performance"]
@@ -100,7 +136,10 @@ def add_metrics_bar_plots(
                 go.Bar(
                     x=[model_name],
                     y=[performance.get("mean_sharpness", 0)],
-                    marker_color=color,
+                    marker=dict(
+                        color=color,
+                        line=dict(color=darken_rgba(color), width=1.5),
+                    ),
                     showlegend=False,
                     legendgroup=model_name,
                     name="Sharpness",

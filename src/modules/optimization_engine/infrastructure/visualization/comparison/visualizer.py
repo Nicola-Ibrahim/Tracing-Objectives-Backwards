@@ -29,33 +29,35 @@ class InverseComparisonVisualizer(BaseVisualizer):
         fig = make_subplots(
             rows=3,
             cols=3,
-            specs=[
-                [{}, {"colspan": 2}, None],
-                [{}, {}, {}],
-                [{}, {}, None],
-            ],
             subplot_titles=(
-                "<b>Calibration Curve</b><br><sup>How well predicted probabilities match observed frequency</sup>",
-                "<b>Re-simulation Residuals</b><br><sup>Distribution of accuracy across multiple samples</sup>",
-                "<b>Best Shot Residual</b><br><sup>Minimum residual found per target (Lower is Better)</sup>",
-                "<b>Calibration Residual</b><br><sup>Gap between confidence and frequency (Lower is Better)</sup>",
+                "<b>Calibration Curve</b><br><sup>PIT CDF vs Ideal Uniform: A well-calibrated model follows the diagonal</sup>",
+                "<b>Calibration Residual</b><br><sup>Mean absolute deviation from ideal calibration (Lower is Better)</sup>",
                 "<b>CRPS</b><br><sup>Combined accuracy and uncertainty score (Lower is Better)</sup>",
-                "<b>Diversity Score</b><br><sup>Exploration/spread of candidates (Higher is Better)</sup>",
-                "<b>Sharpness</b><br><sup>Precision/narrowness of intervals (Lower is Better)</sup>",
+                "<b>Lowest Residual Distribution</b><br><sup>Spread of best-case accuracy across test samples</sup>",
+                "<b>Mean Lowest Residual</b><br><sup>Average best-case accuracy (Lower is Better)</sup>",
+                "<b>Mean Reliability</b><br><sup>Average median residual: typical prediction quality (Lower is Better)</sup>",
+                "<b>Diversity</b><br><sup>Average spread of candidate solutions: higher means more exploration</sup>",
+                "<b>Sharpness</b><br><sup>Width of 90% prediction intervals: lower means more certain</sup>",
             ),
-            vertical_spacing=0.15,
+            vertical_spacing=0.12,
+            horizontal_spacing=0.08,
         )
 
         model_names = list(results_map.keys())
         color_map = get_model_colors(model_names)
 
-        # --- 1. Calibration Curve (Row 1, Col 1) ---
+        # --- Row 1: Calibration Metrics ---
         add_calibration_plot(fig, 1, 1, results_map, color_map)
+        # Note: Calibration Residual and CRPS are added in add_metrics_bar_plots
 
-        # --- 2. Re-simulation Error Boxplot (Row 1, Col 2-3) ---
-        add_error_boxplot(fig, 1, 2, results_map, color_map, model_names)
+        # --- Row 2: Performance Metrics ---
+        add_error_boxplot(fig, 2, 1, results_map, color_map, model_names)
+        # Note: Mean Lowest Residual and Mean Reliability are added in add_metrics_bar_plots
 
-        # --- 3. Metrics Bar Charts ---
+        # --- Row 3: Uncertainty Metrics ---
+        # Note: Diversity and Sharpness are added in add_metrics_bar_plots
+
+        # --- Add all Bar Metrics ---
         add_metrics_bar_plots(fig, results_map, color_map, model_names)
 
         fig.update_layout(
@@ -98,9 +100,9 @@ class InverseComparisonVisualizer(BaseVisualizer):
             showarrow=False,
             text=(
                 "<b>How to read the tradeoffs</b><br>"
-                "• <b>Accurate but Overconfident</b>:<br>Low best_shot_residual, narrow intervals,<br>but high calibration_residual."
+                "• <b>Accurate but Overconfident</b>:<br>Low mean_lowest_residual, narrow intervals,<br>but high mean_residual."
                 "<br><br>"
-                "• <b>Honest but Vague</b>:<br>Low calibration_residual (hits diagonal),<br>but wide intervals (high sharpness)."
+                "• <b>Honest but Vague</b>:<br>Low mean_residual (hits diagonal),<br>but wide intervals (high sharpness)."
                 "<br><br>"
                 "• <b>The Winner</b>:<br>Lowest CRPS - best compromise<br>between accuracy and uncertainty."
             ),

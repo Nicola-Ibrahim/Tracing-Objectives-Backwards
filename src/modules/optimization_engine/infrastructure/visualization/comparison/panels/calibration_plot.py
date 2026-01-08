@@ -43,7 +43,6 @@ def add_calibration_plot(
                 mode="lines",
                 name=f"{model_name}",
                 line=dict(color=color, width=2),
-                opacity=0.7,
                 legendgroup=model_name,
             ),
             row=row,
