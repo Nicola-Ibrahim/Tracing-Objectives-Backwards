@@ -27,11 +27,10 @@ class InverseModelEvaluator:
         inverse_estimator: BaseEstimator,
         forward_estimator: BaseEstimator,
         test_objectives: np.ndarray,
+        test_decisions: np.ndarray,
         decision_normalizer: BaseNormalizer,
         objective_normalizer: BaseNormalizer,
-        test_decisions: np.ndarray,
-        num_samples: int = 250,
-        random_state: int = 42,
+        num_samples: int,
     ) -> dict[str, Any]:
         """
         Evaluates an inverse model candidate against a forward ground truth.
@@ -39,7 +38,7 @@ class InverseModelEvaluator:
         Returns a dictionary containing:
         - metrics:
             - accuracy: mean_lowest_resi_residual, median_best_shot_residual, reliability_residual, etc.
-            - uncertainty: diversity_score, sharpness.
+            - uncertainty: diversity_score, interval_width.
             - calibration: calibration_residual, crps.
         - detailed_results:
             - residuals: lowest_residual, reliability, diversity, all_samples.
@@ -52,7 +51,7 @@ class InverseModelEvaluator:
         # Sample candidates from inverse model
         # Sampled candidates shape: (n_test_samples, num_generated_candidates, x_dim)
         sampled_candidates = self._sample_from_inverse_model(
-            inverse_estimator, test_objectives, num_samples, random_state
+            inverse_estimator, test_objectives, num_samples
         )
 
         # Simulate forward results
@@ -108,15 +107,12 @@ class InverseModelEvaluator:
         inverse_estimator: BaseEstimator,
         test_objectives: np.ndarray,
         num_samples: int,
-        random_state: int,
     ) -> np.ndarray:
         """
         Generates decision candidates (decisions) for the target objectives.
         Output shape: (n_test, num_samples, x_dim)
         """
-        candidates = inverse_estimator.sample(
-            test_objectives, n_samples=num_samples, seed=random_state
-        )
+        candidates = inverse_estimator.sample(test_objectives, n_samples=num_samples)
 
         # Ensure 3D shape if only 1 sample was requested
         if candidates.ndim == 2:
@@ -238,11 +234,11 @@ class InverseModelEvaluator:
         mean_reliability = float(np.mean(reliability))
         mean_diversity = float(np.mean(diversity))
 
-        # Sharpness: The width of the predictive distribution (90% interval)
+        # Interval Width (90%): The width of the predictive distribution
         q95_dec = np.percentile(sampled_candidates, 95, axis=1)
         q05_dec = np.percentile(sampled_candidates, 5, axis=1)
-        sharpness = q95_dec - q05_dec
-        mean_sharpness = float(np.mean(sharpness))
+        interval_width = q95_dec - q05_dec
+        mean_interval_width = float(np.mean(interval_width))
 
         return {
             "mean_lowest_residual": mean_lowest_residual,
@@ -251,12 +247,12 @@ class InverseModelEvaluator:
             "success_rate": success_rate,
             "quantiles": quantiles,
             "mean_diversity": mean_diversity,
-            "mean_sharpness": mean_sharpness,
+            "mean_interval_width": mean_interval_width,
             "distributions": {
                 "lowest_residual": lowest_residual,
                 "reliability": reliability,
                 "diversity": diversity,
-                "sharpness": sharpness,
+                "interval_width": interval_width,
             },
         }
 
@@ -264,8 +260,29 @@ class InverseModelEvaluator:
         self, sampled_candidates: np.ndarray, test_decisions: np.ndarray
     ) -> dict[str, Any]:
         """
-        Analyzes how well the model's confidence matches its actual accuracy.
-        Uses PIT (Probability Integral Transform) and CRPS (Continuous Ranked Probability Score).
+        Evaluates the model's performance using two distinct lenses:
+        1. CRPS (How useful/accurate is the guess?)
+        2. Calibration (How honest is the model about its uncertainty?)
+
+        --- CRPS (Continuous Ranked Probability Score) ---
+        Think of this as the "Total Performance" grade.
+        It rewards models that are both 'Accurate' (near the truth) and 'Sharp'
+        (not just guessing wildly).
+        - A lower CRPS is better.
+        - Formula used: E|X - y| (Distance to truth) - 0.5 * E|X - X'| (Spread of guesses).
+
+        --- Calibration & PIT (Probability Integral Transform) ---
+        This measures "Honesty." It doesn't care if the model missed the target;
+        it cares if the model *knew* it might miss.
+        - PIT Values: For every test point, we see where the truth fell relative
+        to our samples.
+        - PIT Curve: If calibrated, this should be a diagonal line (Uniform).
+        - U-Shape curve: Model is 'Overconfident' (Truth falls outside its predicted range often).
+        - Hump-Shape curve: Model is 'Underconfident' (Truth is always in the middle, but model predicted a huge range).
+
+        Returns:
+            A dictionary containing the calibration error (gap from honesty),
+            mean CRPS (overall quality), and the curve data for plotting.
         """
         n_test, n_samples, x_dim = sampled_candidates.shape
         pit_values = []
@@ -276,29 +293,32 @@ class InverseModelEvaluator:
                 true_val = test_decisions[i, d]
                 model_samples = sampled_candidates[i, :, d]
 
-                # PIT: Fraction of samples lower than the true value.
-                # If calibrated, PIT should follow a Uniform distribution.
+                # 1. Calculate PIT (For the "Honesty" check)
+                # Find what 'percentile' the true value landed in.
                 pit = np.mean(model_samples <= true_val)
                 pit_values.append(pit)
 
-                # CRPS: Measures the distance between the predictive CDF and the true value (step function).
-                # Formula: E|X - y| - 0.5 * E|X - X'|
+                # 2. Calculate CRPS (For the "Total Grade")
+                # Part A: Average distance of samples to the truth (Accuracy)
                 mae_to_true = np.mean(np.abs(model_samples - true_val))
+                # Part B: Average distance between samples (Sharpness/Certainty)
                 diff_matrix = np.abs(model_samples[:, None] - model_samples)
                 expected_dist = np.mean(diff_matrix)
 
+                # Total score = Accuracy - 0.5 * Sharpness
                 crps_val = mae_to_true - 0.5 * expected_dist
                 crps_per_dim.append(crps_val)
 
+        # Sort PIT values to create the calibration curve
         pit_values = np.sort(pit_values)
         cdf_y = np.arange(1, len(pit_values) + 1) / len(pit_values)
 
-        # Calibration Residual: Mean absolute deviation from the ideal uniform CDF
-        mean_residual = float(np.mean(np.abs(pit_values - cdf_y)))
+        # Calibration Error: How far is our PIT curve from the ideal diagonal?
+        calibration_error = float(np.mean(np.abs(pit_values - cdf_y)))
         mean_crps = float(np.mean(crps_per_dim))
 
         return {
-            "mean_residual": mean_residual,
+            "calibration_error": calibration_error,
             "mean_crps": mean_crps,
             "curve": {
                 "pit_values": pit_values,
@@ -323,8 +343,7 @@ class InverseModelComparator:
         decision_normalizer: BaseNormalizer,
         objective_normalizer: BaseNormalizer,
         test_decisions: np.ndarray,
-        num_samples: int = 250,
-        random_state: int = 42,
+        num_samples: int,
     ) -> dict[str, dict[str, Any]]:
         """
         Compares multiple inverse estimators and returns a structured dictionary.
@@ -340,7 +359,6 @@ class InverseModelComparator:
                 objective_normalizer=objective_normalizer,
                 test_decisions=test_decisions,
                 num_samples=num_samples,
-                random_state=random_state,
             )
             comparison_results[name] = results
 

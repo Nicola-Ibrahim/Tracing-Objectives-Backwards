@@ -44,12 +44,6 @@ class CompareInverseModelsCommand(BaseModel):
         examples=[250],
     )
 
-    random_state: int = Field(
-        ...,
-        description="Random seed for reproducibility.",
-        examples=[42],
-    )
-
     @model_validator(mode="after")
     def _validate_candidates(self) -> "CompareInverseModelsCommand":
         if not self.candidates:

@@ -25,14 +25,14 @@ def add_metrics_bar_plots(
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[calibration.get("mean_residual", 0)],
+                    y=[calibration.get("calibration_error", 0)],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
                     ),
                     showlegend=False,
                     legendgroup=model_name,
-                    name="Calibration Residual",
+                    name="Calibration Error (Dist to Diagonal)",
                 ),
                 row=1,
                 col=2,
@@ -126,7 +126,7 @@ def add_metrics_bar_plots(
                 col=1,
             )
 
-    # 6. Sharpness (Row 3, Col 2)
+    # 6. Interval Width (Row 3, Col 2)
     for model_name in model_names:
         if model_name in results_map:
             performance = results_map[model_name]["performance"]
@@ -135,14 +135,14 @@ def add_metrics_bar_plots(
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[performance.get("mean_sharpness", 0)],
+                    y=[performance.get("mean_interval_width", 0)],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
                     ),
                     showlegend=False,
                     legendgroup=model_name,
-                    name="Sharpness",
+                    name="Interval Width",
                 ),
                 row=3,
                 col=2,

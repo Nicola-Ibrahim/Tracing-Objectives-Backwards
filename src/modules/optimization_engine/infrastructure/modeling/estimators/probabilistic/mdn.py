@@ -465,7 +465,7 @@ class MDNEstimator(ProbabilisticEstimator):
     def sample(
         self,
         X: npt.NDArray[np.float64],
-        n_samples: int = 1,
+        n_samples: int,
         seed: int = 42,
         temperature: float = 0.5,  # component spread temperature
         tau_pi: float = 0.5,  # mixture-weight (softmax) temperature

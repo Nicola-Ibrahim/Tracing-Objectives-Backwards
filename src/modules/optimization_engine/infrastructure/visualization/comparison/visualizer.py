@@ -30,14 +30,14 @@ class InverseComparisonVisualizer(BaseVisualizer):
             rows=3,
             cols=3,
             subplot_titles=(
-                "<b>Calibration Curve</b><br><sup>PIT CDF vs Ideal Uniform: A well-calibrated model follows the diagonal</sup>",
-                "<b>Calibration Residual</b><br><sup>Mean absolute deviation from ideal calibration (Lower is Better)</sup>",
-                "<b>CRPS</b><br><sup>Combined accuracy and uncertainty score (Lower is Better)</sup>",
+                "<b>Probability Integral Transform (PIT) Calibration Curve</b><br><sup>Comparison of empirical PIT distribution against the theoretical uniform ideal.</sup>",
+                "<b>Mean Absolute Calibration Error (MACE)</b><br><sup>Scalar quantification of the deviation from perfect calibration (Lower is Better).</sup>",
+                "<b>Continuous Ranked Probability Score (CRPS)</b><br><sup>Comprehensive metric for predictive accuracy and distribution sharpness (Lower is Better).</sup>",
                 "<b>Lowest Residual Distribution</b><br><sup>Spread of best-case accuracy across test samples</sup>",
                 "<b>Mean Lowest Residual</b><br><sup>Average best-case accuracy (Lower is Better)</sup>",
                 "<b>Mean Reliability</b><br><sup>Average median residual: typical prediction quality (Lower is Better)</sup>",
                 "<b>Diversity</b><br><sup>Average spread of candidate solutions: higher means more exploration</sup>",
-                "<b>Sharpness</b><br><sup>Width of 90% prediction intervals: lower means more certain</sup>",
+                "<b>Interval Width (90%)</b><br><sup>Width of prediction intervals: lower means more precise</sup>",
             ),
             vertical_spacing=0.12,
             horizontal_spacing=0.08,
@@ -81,7 +81,7 @@ class InverseComparisonVisualizer(BaseVisualizer):
                 xanchor="left",
                 x=1.02,
             ),
-            xaxis1_title="Predicted Confidence",
+            xaxis1_title="Theoretical Quantiles",
             yaxis1_title="Observed Frequency",
             yaxis2_title="Residual Magnitude",
         )
@@ -100,9 +100,9 @@ class InverseComparisonVisualizer(BaseVisualizer):
             showarrow=False,
             text=(
                 "<b>How to read the tradeoffs</b><br>"
-                "• <b>Accurate but Overconfident</b>:<br>Low mean_lowest_residual, narrow intervals,<br>but high mean_residual."
+                "• <b>Accurate but Overconfident</b>:<br>Low mean_lowest_residual, narrow intervals,<br>but high calibration_error."
                 "<br><br>"
-                "• <b>Honest but Vague</b>:<br>Low mean_residual (hits diagonal),<br>but wide intervals (high sharpness)."
+                "• <b>Honest but Vague</b>:<br>Low mean_residual (hits diagonal),<br>but wide intervals (high interval_width)."
                 "<br><br>"
                 "• <b>The Winner</b>:<br>Lowest CRPS - best compromise<br>between accuracy and uncertainty."
             ),

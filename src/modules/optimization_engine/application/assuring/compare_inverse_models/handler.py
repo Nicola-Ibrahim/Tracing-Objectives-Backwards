@@ -69,7 +69,6 @@ class CompareInverseModelsHandler:
             objective_normalizer=dataset.processed.objectives_normalizer,
             test_decisions=dataset.processed.decisions_test,
             num_samples=command.num_samples,
-            random_state=command.random_state,
         )
 
         # 4. Generate comparison plots
