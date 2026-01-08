@@ -10,7 +10,7 @@ from ....domain.datasets.interfaces.base_repository import BaseDatasetRepository
 from ....domain.modeling.interfaces.base_estimator import BaseEstimator
 from ....domain.modeling.interfaces.base_repository import BaseModelArtifactRepository
 from ....workflows.decision_generation_workflow import DecisionGenerationWorkflow
-from .command import GenerateDecisionCommand
+from .command import GenerateDecisionCommand, InverseEstimatorCandidate
 
 
 class GenerateDecisionCommandHandler:
@@ -38,91 +38,131 @@ class GenerateDecisionCommandHandler:
 
     def execute(self, command: GenerateDecisionCommand) -> dict[str, Any]:
         """
-        Generate candidates for the target using multiple models.
-        Returns dictionary with results for each model.
+        Coordinates the generation of decision candidates using multiple inverse models.
         """
-        # 1) Load dataset + processed artifacts (normalizers, train/test splits, pareto front).
-        dataset_name = next(
-            iter({c.dataset_name or "dataset" for c in command.inverse_estimators})
+        self._logger.log_info(
+            f"Starting decision generation on '{command.dataset_name}'. "
+            f"Candidates: {[(c.type.value, c.version) for c in command.inverse_estimators]}, "
+            f"Forward: {command.forward_estimator_type.value}"
         )
 
-        dataset: Dataset = self._data_repository.load(dataset_name)
-        processed_data = dataset.processed
-        if not processed_data:
+        # 1. Load context: dataset and processed data
+        dataset: Dataset = self._data_repository.load(command.dataset_name)
+        if not dataset.processed:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
 
-        # 2) Prepare target objective:
-        #    - raw: in original objective units (used for selection + plotting)
-        #    - norm: in normalized objective space (used as inverse-estimator input)
+        # 2. Prepare target objective (raw + normalized)
         target_objective_raw, target_objective_norm = self._prepare_target(
-            command.target_objective, processed_data
+            command.target_objective, dataset.processed
         )
-
         self._logger.log_info(
             f"Target Objective (Raw): {target_objective_raw.tolist()}"
         )
 
-        # 3) Resolve inverse estimators requested by the command (type + optional version).
-        #    Version lookup and artifact reading are repository responsibilities.
-        inverse_estimators = self._model_repository.get_estimators(
-            mapping_direction="inverse",
-            requested=[(c.type.value, c.version) for c in command.inverse_estimators],
-            dataset_name=dataset_name,
+        # 3. Initialize inverse estimators using private helper
+        inverse_estimators = self._initialize_estimators(
+            candidates=command.inverse_estimators, dataset_name=command.dataset_name
         )
 
-        # 4) Resolve the forward estimator used for:
-        #    - predicting objective outcomes for generated candidates
-        #    - ranking/selecting the best candidate per inverse estimator
-        self._logger.log_info(
-            f"Loading forward estimator: {command.forward_estimator_type.value}..."
-        )
-        forward_artifact = self._model_repository.get_latest_version(
+        # 4. Load forward estimator using private helper
+        forward_estimator = self._load_forward_estimator(
             estimator_type=command.forward_estimator_type.value,
-            mapping_direction="forward",
-            dataset_name=dataset_name,
+            dataset_name=command.dataset_name,
         )
-        forward_estimator: BaseEstimator = forward_artifact.estimator
 
-        # 5) Run generation workflow:
-        #    - generates candidates per inverse estimator
-        #    - predicts objectives via forward_estimator
-        #    - optionally applies validators and selects the best candidate
+        # 5. Run generation workflow
+        # TODO: Edit inverse_estimators to use dictionary instead of tuple
         workflow_output: dict[str, object] = self._workflow.run(
-            inverse_estimators=inverse_estimators,
+            inverse_estimators=list(inverse_estimators.items()),
             pareto_front=dataset.pareto.front,
             target_objective_raw=target_objective_raw,
             target_objective_norm=target_objective_norm,
-            decisions_normalizer=processed_data.decisions_normalizer,
+            decisions_normalizer=dataset.processed.decisions_normalizer,
             forward_estimator=forward_estimator,
             n_samples=command.n_samples,
             distance_tolerance=command.distance_tolerance,
         )
 
-        # 6) Collect results and build a visualization payload in the handler.
-        #    The visualizer expects a plain dict with pareto_front/target/generators.
+        # 6. Build visualization payload and generate plots
         results_map = workflow_output["results_map"]
         generator_runs = workflow_output["generator_runs"]
 
-        visualization_data = {
-            "dataset_name": dataset.name,
-            "pareto_front": dataset.pareto.front,
-            "target_objective": target_objective_raw,
-            "generators": generator_runs,
-        }
-
-        # 7) Optional visualization: show how each estimator sampled (pre-validation) and
-        #    where the target lies relative to the pareto front.
         if results_map and self._visualizer:
             self._logger.log_info("Generating comparison visualization...")
+            visualization_data = self._build_visualization_payload(
+                dataset=dataset,
+                target_objective=target_objective_raw,
+                generator_runs=generator_runs,
+            )
             self._visualizer.plot(visualization_data)
 
-        # 6. Return Results
         return results_map
+
+    def _initialize_estimators(
+        self, candidates: list[InverseEstimatorCandidate], dataset_name: str
+    ) -> dict[str, BaseEstimator]:
+        """
+        Initializes inverse estimator instances from the repository.
+        """
+        inverse_estimators: dict[str, BaseEstimator] = {}
+
+        for candidate in candidates:
+            inverse_type = candidate.type.value
+            version = candidate.version
+            display_name = (
+                f"{inverse_type} (v{version})"
+                if version
+                else f"{inverse_type} (latest)"
+            )
+
+            # Resolve from repository
+            artifact = self._model_repository.get_version_by_number(
+                estimator_type=inverse_type,
+                version=version,
+                mapping_direction="inverse",
+                dataset_name=dataset_name,
+            )
+
+            inverse_estimators[display_name] = artifact.estimator
+
+        return inverse_estimators
+
+    def _load_forward_estimator(
+        self, estimator_type: str, dataset_name: str
+    ) -> BaseEstimator:
+        """
+        Loads the forward estimator from the repository.
+        """
+        self._logger.log_info(f"Loading forward estimator: {estimator_type}...")
+        artifact = self._model_repository.get_latest_version(
+            estimator_type=estimator_type,
+            mapping_direction="forward",
+            dataset_name=dataset_name,
+        )
+        return artifact.estimator
+
+    def _build_visualization_payload(
+        self,
+        dataset: Dataset,
+        target_objective: np.ndarray,
+        generator_runs: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Builds the visualization payload for the visualizer.
+        """
+        return {
+            "dataset_name": dataset.name,
+            "pareto_front": dataset.pareto.front,
+            "target_objective": target_objective,
+            "generators": generator_runs,
+        }
 
     def _prepare_target(
         self, target_objective: list, processed_data: ProcessedData
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Prepares raw and normalized target objectives."""
+        """
+        Prepares raw and normalized target objectives.
+        """
         target_objective_raw = np.array(target_objective, dtype=float).reshape(1, -1)
         target_objective_norm = processed_data.objectives_normalizer.transform(
             target_objective_raw

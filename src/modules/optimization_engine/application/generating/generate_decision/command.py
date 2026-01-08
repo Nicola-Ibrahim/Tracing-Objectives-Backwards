@@ -1,16 +1,38 @@
 from pydantic import BaseModel, Field, model_validator
 
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from ...assuring.compare_inverse_models.command import InverseEstimatorCandidate
+
+
+class InverseEstimatorCandidate(BaseModel):
+    """Represents a specific inverse estimator candidate (type and optional version)."""
+
+    type: EstimatorTypeEnum = Field(
+        ...,
+        examples=[EstimatorTypeEnum.MDN.value],
+    )
+    version: int | None = Field(
+        ...,
+        description="Specific integer version number (e.g., 1). If None, latest is used.",
+        examples=[1],
+    )
 
 
 class GenerateDecisionCommand(BaseModel):
+    dataset_name: str = Field(
+        ...,
+        description="Dataset identifier to use for comparison.",
+        examples=["dataset"],
+    )
+
     inverse_estimators: list[InverseEstimatorCandidate] = Field(
         ...,
         description="list of inverse model candidates (type + version) to use for generation",
         examples=[
             [
-                {"type": EstimatorTypeEnum.MDN.value, "version": 1, "dataset_name": "dataset"}
+                {
+                    "type": EstimatorTypeEnum.MDN.value,
+                    "version": 1,
+                }
             ]
         ],
     )
@@ -39,27 +61,3 @@ class GenerateDecisionCommand(BaseModel):
         description="Diversity method for suggestions.",
         examples=["euclidean"],
     )
-    suggestion_noise_scale: float = Field(
-        ...,
-        description="Noise scale applied to suggestions.",
-        examples=[0.05],
-    )
-    validation_enabled: bool = Field(
-        ...,
-        description="Enable decision validation.",
-        examples=[True],
-    )
-    feasibility_enabled: bool = Field(
-        ...,
-        description="Enable feasibility checks.",
-        examples=[True],
-    )
-
-    @model_validator(mode="after")
-    def _validate_single_dataset(self) -> "GenerateDecisionCommand":
-        if not self.inverse_estimators:
-            raise ValueError("At least one inverse estimator must be provided.")
-        dataset_names = {c.dataset_name or "dataset" for c in self.inverse_estimators}
-        if len(dataset_names) > 1:
-            raise ValueError("Decision generation supports only one dataset at a time.")
-        return self

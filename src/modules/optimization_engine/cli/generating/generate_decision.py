@@ -1,10 +1,8 @@
 import click
 
-from ...application.assuring.compare_inverse_models.command import (
-    InverseEstimatorCandidate,
-)
 from ...application.generating.generate_decision.command import (
     GenerateDecisionCommand,
+    InverseEstimatorCandidate,
 )
 from ...application.generating.generate_decision.handler import (
     GenerateDecisionCommandHandler,
@@ -31,49 +29,25 @@ def main():
 
     # Create the command object using the provided estimator and hardcoded target
     command = GenerateDecisionCommand(
+        dataset_name="cocoex_f5",
         inverse_estimators=[
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=1, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=2, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=3, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=4, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=5, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=6, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=7, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.INN, version=1, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.CVAE, version=1, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.CVAE, version=2, dataset_name="cocoex_f5"
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.CVAE, version=3, dataset_name="cocoex_f5"
-            ),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=2),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=3),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=4),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=5),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=6),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=7),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=3),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
         target_objective=[410, 1400],
         distance_tolerance=0.02,
-        n_samples=10,
+        n_samples=20,
         diversity_method="euclidean",
-        suggestion_noise_scale=0.05,
-        validation_enabled=True,
-        feasibility_enabled=True,
     )
 
     # Initialize the handler with pre-built services

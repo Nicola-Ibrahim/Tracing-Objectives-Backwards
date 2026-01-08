@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from ....domain.modeling.enums.estimator_type import EstimatorTypeEnum
 
@@ -43,9 +43,3 @@ class CompareInverseModelsCommand(BaseModel):
         description="Number of samples to draw from the inverse model for each target.",
         examples=[250],
     )
-
-    @model_validator(mode="after")
-    def _validate_candidates(self) -> "CompareInverseModelsCommand":
-        if not self.candidates:
-            raise ValueError("At least one candidate must be provided.")
-        return self
