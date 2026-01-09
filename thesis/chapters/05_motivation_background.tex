@@ -236,9 +236,12 @@ and then ranks or filters them using a task discrepancy that reflects the design
 Uncertainty is therefore not an auxiliary statistic but a functional part of the inverse pipeline. The spread of $p_{\widehat{\theta}}(\vect{x}\mid\vect{y}^{\star})$ reflects how concentrated the evidence is around particular decisions for the specified target, and it provides a natural basis for deciding how many candidates to generate and how conservative selection should be. Likelihood-based training and evaluation also align with this role, because they reward distributions that are calibrated as well as informative.
 
 
+\subsection{Why we choose the following Modeling approaches}
+Write about each modelling and why it is used and what problem it solves.
+
 \subsection{Mixture Density Networks}\label{sec:mdn}
 
-Mixture density networks model a conditional distribution by representing it as a finite mixture whose parameters depend on the conditioning variable. For a $K$-component Gaussian mixture, the conditional density is
+Mixture density networks model a conditional distribution by representing it as a finite mixture whose parameters depend on the conditioning variable. This is particularly useful when the inverse relation is multi-valued: multiple distinct decisions can legitimately correspond to the same target outcome, so learning a single conditional mean is not an adequate description of the inverse map. For a $K$-component Gaussian mixture, the conditional density is
 \begin{equation}
   q_\theta(\vect{x}\mid\vect{y})
   \;=\;
@@ -246,7 +249,22 @@ Mixture density networks model a conditional distribution by representing it as 
   \mathcal{N}\!\big(\vect{x}\,;\,\boldsymbol{\mu}_k(\vect{y};\theta),\boldsymbol{\Sigma}_k(\vect{y};\theta)\big),
   \label{eq:mdn_conditional}
 \end{equation}
-where $\pi_k(\vect{y};\theta)\ge 0$ and $\sum_{k=1}^{K}\pi_k(\vect{y};\theta)=1$. A neural network outputs the mixture weights, means, and covariance parameters as functions of $\vect{y}$, using standard constraints such as a softmax for $\pi_k$ and positive-definite parameterisations for $\boldsymbol{\Sigma}_k$. The parameters are learned by maximising the conditional log-likelihood, equivalently minimising the negative log-likelihood
+where $\pi_k(\vect{y};\theta)\ge 0$ and $\sum_{k=1}^{K}\pi_k(\vect{y};\theta)=1$.
+A neural network outputs the mixture weights, means, and covariance parameters as functions of $\vect{y}$, using standard constraints such as a softmax for $\pi_k$ and positive-definite parameterisations for $\boldsymbol{\Sigma}_k$ (e.g., diagonal variances via exponentiation, or full covariances via a Cholesky factor).
+
+The parameters are learned by maximum conditional likelihood.
+Equivalently, we solve the empirical risk minimisation problem
+\begin{equation}
+  \theta^\star
+  \;=\;
+  \arg\min_{\theta}\;\mathcal{L}_{\mathrm{MDN}}(\theta)
+  \;=\;
+  \arg\min_{\theta}\left(
+  -\sum_{i=1}^{N}\log q_\theta(\vect{x}_i\mid\vect{y}_i)
+  \right),
+  \label{eq:mdn_opt_problem}
+\end{equation}
+where the negative log-likelihood (NLL) expands to
 \begin{equation}
   \mathcal{L}_{\mathrm{MDN}}(\theta)
   \;=\;
@@ -258,12 +276,54 @@ where $\pi_k(\vect{y};\theta)\ge 0$ and $\sum_{k=1}^{K}\pi_k(\vect{y};\theta)=1$
   \Bigg).
   \label{eq:mdn_nll}
 \end{equation}
-Candidate generation is obtained directly from the mixture representation. For a query $\vect{y}^\star$, one samples a component index
+In practice, optimisation proceeds with stochastic gradient methods on mini-batches $B$.
+Let $\ell_i(\theta) = -\log \sum_{k=1}^{K}\pi_k(\vect{y}_i;\theta)\,\mathcal{N}(\vect{x}_i;\boldsymbol{\mu}_k(\vect{y}_i;\theta),\boldsymbol{\Sigma}_k(\vect{y}_i;\theta))$ denote the per-sample NLL.
+Then the mini-batch objective is
+\begin{equation}
+  \mathcal{L}_{B}(\theta)
+  \;=\;
+  \frac{1}{|B|}\sum_{i\in B}\ell_i(\theta),
+  \label{eq:mdn_minibatch_loss}
+\end{equation}
+and parameters are updated by
+\begin{equation}
+  \theta_{t+1}
+  \;=\;
+  \theta_t
+  \;-\;
+  \eta_t\,\nabla_\theta \mathcal{L}_{B}(\theta_t),
+  \label{eq:mdn_sgd_update}
+\end{equation}
+with gradients computed by backpropagation through the network outputs.
+
+A useful way to see what the NLL is encouraging is through the component responsibilities (soft assignments)
+\begin{equation}
+  \gamma_{i,k}
+  \;=\;
+  \frac{
+    \pi_k(\vect{y}_i;\theta)\,
+    \mathcal{N}\!\big(\vect{x}_i;\boldsymbol{\mu}_k(\vect{y}_i;\theta),\boldsymbol{\Sigma}_k(\vect{y}_i;\theta)\big)
+  }{
+    \sum_{j=1}^{K}\pi_j(\vect{y}_i;\theta)\,
+    \mathcal{N}\!\big(\vect{x}_i;\boldsymbol{\mu}_j(\vect{y}_i;\theta),\boldsymbol{\Sigma}_j(\vect{y}_i;\theta)\big)
+  }.
+  \label{eq:mdn_responsibilities}
+\end{equation}
+Each $\gamma_{i,k}$ measures how much component $k$ explains the observation $(\vect{x}_i,\vect{y}_i)$ under the current parameters.
+During training, these responsibilities modulate the gradient signal: components that explain the data point well receive stronger updates to their weights, means, and covariances, while implausible components are pushed away.
+This mechanism is precisely what allows an MDN to fit multi-modal conditional distributions instead of collapsing to a single averaged inverse.
+
+Candidate generation is obtained directly from the mixture representation.
+For a query $\vect{y}^\star$, one samples a component index
 $k \sim \mathrm{Categorical}(\pi_1(\vect{y}^\star),\dots,\pi_K(\vect{y}^\star))$
 and then samples
 $\vect{x}\sim\mathcal{N}(\boldsymbol{\mu}_k(\vect{y}^\star),\boldsymbol{\Sigma}_k(\vect{y}^\star))$.
-Repeating this procedure produces a candidate set whose diversity is controlled by the learned mixture weights and component spreads. MDNs therefore provide an explicit, likelihood-trained mechanism for modelling multimodality in conditional candidate generation. \cite{bishop1994mixture}
+Repeating this procedure produces a candidate set whose diversity is controlled by the learned mixture weights and component spreads.
+MDNs therefore provide an explicit, likelihood-trained mechanism for modelling multimodality in conditional candidate generation \cite{bishop1994mixture}.
 
+In the context of materials inverse design, this capability addresses the core difficulty that the property-to-structure map is rarely one-to-one: different compositions, microstructures, or process conditions can yield similar target properties, and the forward relation is typically nonlinear and scale dependent.
+An MDN supports this setting by returning multiple distinct candidates for the same target property vector, while the mixture weights provide a data-driven notion of which solution families are more probable under the learned model.
+This makes MDNs a practical choice when the goal is not only to hit a target, but also to expose alternative feasible design routes for subsequent screening or constraint checking.
 
 \begin{figure}[t]
   \centering
@@ -271,6 +331,7 @@ Repeating this procedure produces a candidate set whose diversity is controlled 
   \caption[MDN architecture]{Mixture density network conditioned on the target $\vect{y}$. A shared backbone outputs mixture weights $\pi_k(\vect{y})$ and component parameters $(\boldsymbol{\mu}_k(\vect{y}),\boldsymbol{\Sigma}_k(\vect{y}))$, enabling multimodal sampling of decision candidates $\vect{x}$ for a fixed target.}
   \label{fig:mdn_architecture}
 \end{figure}
+
 
 
 \subsection{Conditional Variational Autoencoders}\label{sec:cvae}
@@ -282,6 +343,14 @@ Conditional variational autoencoders represent conditional variability through a
   \int p_\theta(\vect{x}\mid\vect{y},\vect{z})\,p_\theta(\vect{z}\mid\vect{y})\,\mathrm{d}\vect{z}.
   \label{eq:cvae_marginal}
 \end{equation}
+In practice, the decoder $p_\theta(\vect{x}\mid\vect{y},\vect{z})$ and the (possibly conditional) prior $p_\theta(\vect{z}\mid\vect{y})$ are parameterised by neural networks. A common choice for continuous decision variables is a Gaussian decoder,
+\[
+  p_\theta(\vect{x}\mid\vect{y},\vect{z})
+  \;=\;
+  \mathcal{N}\!\big(\vect{x};\,g_\theta(\vect{y},\vect{z}),\,\sigma_x^2 \mathbf{I}\big),
+\]
+so that the reconstruction term corresponds (up to constants) to a weighted squared error between $\vect{x}$ and the decoder output $g_\theta(\vect{y},\vect{z})$. The conditional prior is often taken as a standard normal (independent of $\vect{y}$) or as a learned Gaussian whose parameters depend on $\vect{y}$; the latter can better match heterogeneous conditional variability in inverse mappings \cite{Sohn2015CVAE}.
+
 Because the marginal likelihood is generally intractable, training proceeds by maximising an evidence lower bound using an approximate posterior (encoder) $q_\phi(\vect{z}\mid\vect{x},\vect{y})$:
 \begin{equation}
   \log p_\theta(\vect{x}\mid\vect{y})
@@ -293,7 +362,69 @@ Because the marginal likelihood is generally intractable, training proceeds by m
 \end{equation}
 so the optimisation target is the negative of the right-hand side summed over the dataset. The reconstruction term encourages $\vect{x}$ to be well explained given $(\vect{y},\vect{z})$, while the KL term regularises the encoder distribution toward the conditional prior so that sampling remains meaningful. Candidate generation follows directly from the generative structure: for a query $\vect{y}^\star$, sample $\vect{z}\sim p_\theta(\vect{z}\mid\vect{y}^\star)$ and then sample or decode $\vect{x}\sim p_\theta(\vect{x}\mid\vect{y}^\star,\vect{z})$, repeating to obtain multiple candidates. Conditioning fixes the target context, while variation in $\vect{z}$ induces diversity in $\vect{x}$ under a fixed $\vect{y}^\star$. \cite{Sohn2015CVAE}
 
+To make the optimisation explicit, define the per-sample ELBO
+\[
+  \mathcal{J}_i(\theta,\phi)
+  \;=\;
+  \mathbb{E}_{q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)}\!\big[\log p_\theta(\vect{x}_i\mid\vect{y}_i,\vect{z})\big]
+  \;-\;
+  \mathrm{KL}\!\big(q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)\ \|\ p_\theta(\vect{z}\mid\vect{y}_i)\big),
+\]
+and the training problem
+\begin{equation}
+  (\theta^\star,\phi^\star)
+  \;=\;
+  \arg\max_{\theta,\phi}\sum_{i=1}^{N}\mathcal{J}_i(\theta,\phi)
+  \;\equiv\;
+  \arg\min_{\theta,\phi}\;\mathcal{L}_{\mathrm{CVAE}}(\theta,\phi),
+  \label{eq:cvae_opt_problem}
+\end{equation}
+where the negative-ELBO loss is
+\begin{equation}
+  \mathcal{L}_{\mathrm{CVAE}}(\theta,\phi)
+  \;=\;
+  \sum_{i=1}^{N}
+  \left(
+    -\,\mathbb{E}_{q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)}\!\big[\log p_\theta(\vect{x}_i\mid\vect{y}_i,\vect{z})\big]
+    \;+\;
+    \mathrm{KL}\!\big(q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)\ \|\ p_\theta(\vect{z}\mid\vect{y}_i)\big)
+  \right).
+  \label{eq:cvae_loss}
+\end{equation}
+A standard parameterisation uses a Gaussian encoder
+$q_\phi(\vect{z}\mid\vect{x},\vect{y})=\mathcal{N}(\boldsymbol{\mu}_\phi(\vect{x},\vect{y}),\mathrm{diag}(\boldsymbol{\sigma}^2_\phi(\vect{x},\vect{y})))$,
+and training employs the reparameterisation trick,
+\[
+  \vect{z}
+  \;=\;
+  \boldsymbol{\mu}_\phi(\vect{x},\vect{y})
+  \;+\;
+  \boldsymbol{\sigma}_\phi(\vect{x},\vect{y})\odot \boldsymbol{\epsilon},
+  \qquad
+  \boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},\mathbf{I}),
+\]
+which turns the stochastic expectation in Eq.~\eqref{eq:cvae_loss} into a differentiable Monte Carlo estimator. Optimisation then proceeds with mini-batch stochastic gradients: for a batch $B$,
+\[
+  \mathcal{L}_{B}(\theta,\phi)
+  \;=\;
+  \frac{1}{|B|}\sum_{i\in B}
+  \left(
+    -\,\mathbb{E}_{q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)}\!\big[\log p_\theta(\vect{x}_i\mid\vect{y}_i,\vect{z})\big]
+    \;+\;
+    \mathrm{KL}\!\big(q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)\ \|\ p_\theta(\vect{z}\mid\vect{y}_i)\big)
+  \right),
+\]
+and the parameter update takes the form
+\[
+  (\theta_{t+1},\phi_{t+1})
+  \;=\;
+  (\theta_t,\phi_t)
+  \;-\;
+  \eta_t\,\nabla_{\theta,\phi}\mathcal{L}_{B}(\theta_t,\phi_t),
+\]
+with gradients computed by backpropagation.
 
+In inverse design problems, the property-to-decision relation is typically nonlinear and non-unique: distinct structures or process parameters can satisfy the same target property vector. CVAEs are attractive in this setting because they learn a structured latent space that supports one-to-many conditional generation: holding $\vect{y}^\star$ fixed while sampling $\vect{z}$ yields diverse candidates that remain consistent with the target context. This allows inverse exploration to surface alternative feasible design routes for downstream screening, constraint checking, or synthesis planning, rather than collapsing to a single averaged solution.
 
 \begin{figure}[t]
   \centering
@@ -301,6 +432,84 @@ so the optimisation target is the negative of the right-hand side summed over th
   \caption[CVAE architecture]{Conditional VAE for candidate generation. An encoder learns a latent representation from $(\vect{x},\vect{y})$ during training, and a decoder generates $\vect{x}$ from $(\vect{y},\vect{z})$; diversity comes from sampling $\vect{z}$ while holding $\vect{y}^{\star}$ fixed.}
   \label{fig:cvae_architecture}
 \end{figure}
+
+
+
+\subsection{Invertible Neural Networks (INN)}\label{sec:inn}
+
+Invertible neural networks enforce an exact bijection by augmenting the target with latent variables that capture the information not determined by the conditioning signal. This is particularly useful in inverse design settings, where the forward map can be well-defined but information-losing: many distinct designs can yield essentially the same target response. Rather than forcing a single ``best guess'' in such one-to-many regimes, INNs introduce a latent variable $\vect{z}$ to represent the missing degrees of freedom and to make sampling of alternative solutions explicit.
+
+A common construction defines an invertible map between $\vect{x}$ and the pair $(\vect{y},\vect{z})$,
+\begin{equation}
+  (\widehat{\vect{y}},\vect{z}) \;=\; f_\theta(\vect{x}),
+  \qquad
+  \vect{x} \;=\; f_\theta^{-1}(\vect{y},\vect{z}),
+  \label{eq:inn_bijection}
+\end{equation}
+where $\vect{z}$ is assigned a simple reference distribution, typically $\mathcal{N}(\vect{0},\mathbf{I})$. The practical goal is then to learn parameters $\theta$ such that: (i) the forward pass predicts outcomes consistently, $\widehat{\vect{y}}\approx \vect{y}$; and (ii) the additional latent output behaves like a clean ``reservoir'' of uncertainty, i.e., it matches the chosen base distribution and does not carry spurious structure that should be explained by $\vect{y}$.
+
+Training couples a supervised term that forces the forward pass to match the observed $\vect{y}$ with a distribution-matching term that shapes the latent variables. One representative objective is
+\begin{equation}
+  \min_\theta\;
+  \mathcal{L}_{\mathrm{INN}}(\theta)
+  \;=\;
+  \mathbb{E}\!\left[\,
+    \|\vect{y}-f_{\theta,y}(\vect{x})\|_2^2
+  \right]
+  \;+\;
+  \lambda_z\,
+  \mathrm{MMD}\!\Big(q_\theta(\vect{y},\vect{z}),\; p(\vect{y})\,p(\vect{z})\Big),
+  \label{eq:inn_loss}
+\end{equation}
+where $q_\theta(\vect{y},\vect{z})$ denotes the joint distribution induced by pushing data through the forward direction of the network and $\mathrm{MMD}$ is a kernel-based discrepancy between distributions. In words, the first term ensures forward consistency (so the inverse samples do not drift away from the intended target), while the second term encourages the induced joint to behave like an independent product $p(\vect{y})p(\vect{z})$: the network should ``explain'' what it can through $\vect{y}$ and delegate the remaining variability to $\vect{z}$, shaped to match a simple prior.
+
+A standard definition is
+\begin{equation}
+  \mathrm{MMD}^2(P,Q)
+  \;=\;
+  \mathbb{E}_{u,u'\sim P}[k(u,u')]
+  \;+\;
+  \mathbb{E}_{v,v'\sim Q}[k(v,v')]
+  \;-\;
+  2\,\mathbb{E}_{u\sim P,\ v\sim Q}[k(u,v)],
+  \label{eq:mmd_def}
+\end{equation}
+for a characteristic kernel $k$. In implementation, we minimise an empirical approximation of \eqref{eq:inn_loss} over a dataset $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$ using minibatches $\mathcal{B}$:
+\begin{equation}
+  \widehat{\theta}
+  \;=\;
+  \arg\min_{\theta}\;
+  \frac{1}{|\mathcal{B}|}\sum_{i\in\mathcal{B}}
+  \|\vect{y}_i-f_{\theta,y}(\vect{x}_i)\|_2^2
+  \;+\;
+  \lambda_z\,
+  \widehat{\mathrm{MMD}}^2\!\Big(\{(\widehat{\vect{y}}_i,\vect{z}_i)\}_{i\in\mathcal{B}},\ \{(\vect{y}_i,\tilde{\vect{z}}_i)\}_{i\in\mathcal{B}}\Big),
+  \label{eq:inn_empirical_objective}
+\end{equation}
+where $(\widehat{\vect{y}}_i,\vect{z}_i)=f_\theta(\vect{x}_i)$ are samples from the model-induced joint and $\tilde{\vect{z}}_i\sim\mathcal{N}(\vect{0},\mathbf{I})$. To approximate samples from the product distribution $p(\vect{y})p(\vect{z})$, one can pair observed $\vect{y}_i$ with independently drawn $\tilde{\vect{z}}_i$ (or equivalently, shuffle $\vect{z}$ across the batch to break dependence). A commonly used unbiased minibatch estimator is
+\begin{align}
+  \widehat{\mathrm{MMD}}^2(P,Q)
+  \;=\;&
+  \frac{1}{m(m-1)}\sum_{i\neq j} k(u_i,u_j)
+  \;+\;
+  \frac{1}{n(n-1)}\sum_{i\neq j} k(v_i,v_j)
+  \;-\;
+  \frac{2}{mn}\sum_{i=1}^{m}\sum_{j=1}^{n} k(u_i,v_j),
+  \label{eq:mmd_unbiased_estimator}
+\end{align}
+with $\{u_i\}_{i=1}^{m}\sim P$ and $\{v_j\}_{j=1}^{n}\sim Q$. Because all terms are differentiable in $\theta$ through $u_i=f_\theta(\vect{x}_i)$, we optimise \eqref{eq:inn_empirical_objective} with standard stochastic gradient methods by backpropagating through the forward pass,
+\begin{equation}
+  \theta_{t+1}
+  \;=\;
+  \theta_t \;-\; \eta_t\,\nabla_{\theta}\,\mathcal{L}_{\mathrm{INN}}(\theta_t),
+  \label{eq:inn_sgd_update}
+\end{equation}
+where $\eta_t$ is the step size (in practice typically via an adaptive optimiser).
+
+It is worth noting that many INN architectures are built from coupling blocks that make both $f_\theta$ and $f_\theta^{-1}$ cheap to evaluate. In related flow-based formulations, one may also replace distribution-matching with an explicit likelihood objective derived from the change-of-variables formula; the appeal is the same: a tractable training signal, exact sampling, and a latent space whose structure controls diversity.
+
+Candidate generation is explicit and does not require approximate inference: for a query $\vect{y}^\star$, sample $\vect{z}\sim \mathcal{N}(\vect{0},\mathbf{I})$ and compute $\vect{x}=f_\theta^{-1}(\vect{y}^\star,\vect{z})$, repeating to obtain a diverse candidate set. The invertibility constraint makes the mapping from latent variation to candidate diversity transparent and supports stable sampling for fixed conditioning. In inverse design contexts such as materials or photonic structures, where distinct microstructures can match the same target property vector, this ``latent-augmented inverse'' provides a principled way to return multiple high-fidelity alternatives rather than collapsing to an averaged, non-physical design. \cite{Ardizzone2019INN}
+
 
 
 \subsection{Invertible Neural Networks (INN)}\label{sec:inn}

@@ -4,14 +4,14 @@
 
 \chapter{Experiments}\label{chap:experiments}
 
-This chapter presents the empirical findings for two experiments. Results are organised by experiment, reported with descriptive statistics and pre-specified indicators, and shown without interpretation.
+% This section follows a two-stage evaluation pipeline. First, we tune each inverse-model family with an intra-model ablation study, using outcome-space target matching to identify a best-performing configuration within that family. We then freeze these best-in-class configurations and compare models head-to-head under identical data splits, target sets, and sampling protocol.
 
 \section{bi-objective case}\label{sec:exp_coco}
 
-\subsection{Multi-objective optimisation}
+\subsection{Multi-objective optimization}
 A multi-objective optimisation problem (MOP) is defined by decision variables
 $\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector
-$\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. We consider minimisation of all objectives.
+$\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. We consider minimization of all objectives.
 A general constrained MOP is written as
 \begin{align}
 \min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\
@@ -21,14 +21,14 @@ h_k(\vect{x}) &= 0,\quad k=1,\dots,K.
 \end{align}
 The feasible region $\calX$ is assumed compact. Objectives may be nonlinear, non-convex, and costly to evaluate, which motivates data-driven surrogates and inverse models in later sections.
 
-Trade-offs are formalised by Pareto dominance. For $\vect{u},\vect{v}\in\R^m$,
+Trade-offs are formalized by Pareto dominance. For $\vect{u},\vect{v}\in\R^m$,
 $\vect{u}\preceq\vect{v}$ holds if $u_i\le v_i$ for all $i$ and $u_j<v_j$ for at least one index $j$.
 A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ satisfies
 $\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
-Figure~\ref{fig:coco_pareto_front} illustrates the dominated region and a typical non-dominated approximation set returned by the optimiser.
+Figure~\ref{fig:pareto_front} illustrates the dominated region and a typical non-dominated approximation set returned by the optimizer.
 
 
-\begin{figure}[t]
+\begin{figure}[h]
   \centering
   \input{figures/pareto_front}
   \caption{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
@@ -38,7 +38,7 @@ Figure~\ref{fig:coco_pareto_front} illustrates the dominated region and a typica
 
 \subsection{Problem and data}
 We generate bi-objective data from the COCO BBOB test functions using the \texttt{cocoex} Python interface
-(which provides benchmark suites via \texttt{Suite} and standardised function instances) \cite{cocoexDocs, cocoBBOBOverview}.
+(which provides benchmark suites via \texttt{Suite} and standardized function instances) \cite{cocoexDocs, cocoBBOBOverview}.
 We focus on four BBOB functions: $f_5$ (Linear Slope), $f_6$ (Attractive Sector), $f_{10}$ (Ellipsoid), and $f_{20}$ (Schwefel $x\sin(x)$).
 These functions cover boundary optima and strong directionality ($f_5$), pronounced asymmetry ($f_6$),
 ill-conditioning ($f_{10}$), and highly multi-modal structure ($f_{20}$).
@@ -50,9 +50,9 @@ To obtain a two-objective problem from each selected function, we pair two COCO 
 with $(a,b)$ fixed per function (e.g., $a=1,b=2$). Instances implement deterministic transformations and shifts while preserving the function family, enabling reproducible variation across runs.
 
 For each function-based bi-objective problem, we run NSGA-II with a fixed evaluation budget and random seeds \cite{deb2002nsga2}.
-The optimisation objective is to obtain Pareto-relevant data by approximating the Pareto-optimal set and its image in objective space.
+The optimization objective is to obtain Pareto-relevant data by approximating the Pareto-optimal set and its image in objective space.
 At the same time, we log a larger set of decision--outcome pairs than the final non-dominated set by recording evaluations throughout the run.
-This produces broad coverage of the outcome region while keeping the optimisation signal centred on Pareto performance.
+This produces broad coverage of the outcome region while keeping the optimization signal centered on Pareto performance.
 
 For each selected function, we collect $N=8000$ records $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$, where $\vect{y}_i=\vect{f}(\vect{x}_i)$.
 Each record stores a dominance flag indicating whether $\vect{y}_i$ is non-dominated within the final archive.
@@ -72,9 +72,9 @@ We evaluate the inverse models across two dimensions: first, an intra-model abla
 \subsection{Hyperparameter Ablation and Model Selection}
 \label{subsec:ablation}
 
-Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the number of coupling layers (and corresponding subnet capacity). To avoid attributing performance differences to under- or over-parameterised settings, we first run an ablation study within each model family and select a single configuration for downstream comparison.
+Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the number of coupling layers (and corresponding subnet capacity). To avoid attributing performance differences to under- or over-parameterized settings, we first run an ablation study within each model family and select a single configuration for downstream comparison.
 
-Table~\ref{tab:ablation_results} summarises the mean outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ across a representative subset of configurations. The overall pattern is that additional capacity can improve target matching up to a saturation point, after which gains diminish and the model may begin to oversmooth the inverse relation. Figure~\ref{fig:ablation_scaling} visualises this scaling behaviour and helps identify where extra capacity no longer translates into materially better discrepancy.
+Table~\ref{tab:ablation_results} summarizes the mean outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ across a representative subset of configurations. The overall pattern is that additional capacity can improve target matching up to a saturation point, after which gains diminish and the model may begin to oversmooth the inverse relation. Figure~\ref{fig:ablation_scaling} visualizes this scaling behaviour and helps identify where extra capacity no longer translates into materially better discrepancy.
 
 \begin{table}[h]
     \centering
@@ -166,9 +166,9 @@ For each test case $i$ and decision dimension $d$, we compute the PIT value from
 \]
 The quantity $z_{i,d}$ is the empirical percentile position of the true component $x_{i,d}$ within the model's sampled candidates for that query.
 If the sampled conditional distribution is calibrated component-wise, then the aggregated PIT values are approximately uniform on $[0,1]$.
-We visualise this by plotting the empirical CDF of $\{z_{i,d}\}$ against the diagonal $u\mapsto u$.
+We visualize this by plotting the empirical CDF of $\{z_{i,d}\}$ against the diagonal $u\mapsto u$.
 Systematic departures from the diagonal reveal how uncertainty is distorted: concentration of PIT mass near 0 and 1 indicates overconfidence (samples too tight, truth falls in the tails too often), while PIT mass concentrated near 0.5 indicates underconfidence (samples too wide, truth falls near the centre too often).
-To summarise the plot with a single number, we quantify deviation from the diagonal using the calibration error implemented in our pipeline:
+To summarize the plot with a single number, we quantify deviation from the diagonal using the calibration error implemented in our pipeline:
 \[
   \mathrm{CalErr}
   \;=\;
@@ -188,7 +188,7 @@ For each test case $i$ and dimension $d$, we compute a sample-based CRPS from th
   \frac{1}{2}\,\mathbb{E}\,|X-X'|,
 \]
 where $X$ and $X'$ are independent draws from the predictive distribution represented by the candidate samples.
-The first term measures how far the samples are, on average, from the truth (distributional accuracy), while the second term penalises excessive spread by measuring the typical distance between samples (distributional sharpness).
+The first term measures how far the samples are, on average, from the truth (distributional accuracy), while the second term penalizes excessive spread by measuring the typical distance between samples (distributional sharpness).
 A low CRPS therefore corresponds to candidate sets that concentrate near the ground truth without inflating uncertainty.
 
 Taken together, PIT/CalErr and CRPS separate behaviours that outcome-space error alone can hide.
@@ -216,7 +216,7 @@ In the discussion, we read these results jointly: PIT proximity to the diagonal 
 We next hold the best-in-class models fixed and evaluate them across multiple datasets (here: across COCO functions), keeping the sampling protocol unchanged.
 This view matters because uncertainty behaviour can shift with landscape properties such as conditioning, multi-modality, and the effective dimensionality of the inverse mapping.
 Stable calibration error and CRPS across functions indicate robust distributional behaviour, whereas large shifts identify where a model becomes systematically overconfident, underconfident, or overly diffuse.
-These per-function patterns are then used to contextualise the manual target-level inspection that follows, where users care about both hitting the target and understanding how much to trust the candidate set.
+These per-function patterns are then used to contextualize the manual target-level inspection that follows, where users care about both hitting the target and understanding how much to trust the candidate set.
 
 \begin{table}[H]
   \centering
