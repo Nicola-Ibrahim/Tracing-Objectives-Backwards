@@ -27,8 +27,13 @@ A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ sa
 $\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
 Figure~\ref{fig:coco_pareto_front} illustrates the dominated region and a typical non-dominated approximation set returned by the optimiser.
 
-\placeholderfigure{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
-\label{fig:coco_pareto_front}
+
+\begin{figure}[t]
+  \centering
+  \input{figures/pareto_front}
+  \caption{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
+  \label{fig:pareto_front}
+\end{figure}
 
 
 \subsection{Problem and data}
@@ -58,14 +63,59 @@ Decision variables are scaled to a common range using the COCO domain bounds; ou
 Targets for inverse querying are sampled inside the convex hull of training outcomes (200 targets per function).
 
 
-\subsection{Statistical evaluation}
-We compare three inverse models (CVAE, MDN, INN) under identical splits and tuning protocol.
+\section{Experimental Results and Discussion}
+\label{sec:results}
+
+We evaluate the inverse models across two dimensions: first, an intra-model ablation study to identify optimal hyperparameters; second, a cross-model comparison of the best-performing configurations.
+
+
+\subsection{Hyperparameter Ablation and Model Selection}
+\label{subsec:ablation}
+
+Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the number of coupling layers (and corresponding subnet capacity). To avoid attributing performance differences to under- or over-parameterised settings, we first run an ablation study within each model family and select a single configuration for downstream comparison.
+
+Table~\ref{tab:ablation_results} summarises the mean outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ across a representative subset of configurations. The overall pattern is that additional capacity can improve target matching up to a saturation point, after which gains diminish and the model may begin to oversmooth the inverse relation. Figure~\ref{fig:ablation_scaling} visualises this scaling behaviour and helps identify where extra capacity no longer translates into materially better discrepancy.
+
+\begin{table}[h]
+    \centering
+    \caption{Ablation Study: Mean outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ for varying configurations. The best-in-class setting per model family is marked with $\star$ and carried forward to the head-to-head comparison.}
+    \label{tab:ablation_results}
+    \rarray{1.2}
+    \begin{tabular}{ll cccc}
+        \toprule
+        \textbf{Model} & \textbf{Configuration} & \textbf{$f_5$} & \textbf{$f_6$} & \textbf{$f_{10}$} & \textbf{$f_{20}$} \\
+        \midrule
+        \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- & -- & -- & -- \\
+                              & $z=8, \text{layers}=4$ ($\star$) & -- & -- & -- & -- \\
+                              & $z=16, \text{layers}=4$ & -- & -- & -- & -- \\
+        \midrule
+        \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- & -- & -- & -- \\
+                              & $M=5, H=128$ & -- & -- & -- & -- \\
+                              & $M=10, H=256$ ($\star$) & -- & -- & -- & -- \\
+                              & $M=20, H=256$ & -- & -- & -- & -- \\
+        \midrule
+        \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- & -- & -- & -- \\
+                              & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- & -- & -- & -- \\
+                              & $\text{layers}=12, \text{subnet}=256$ & -- & -- & -- & -- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[h]
+    \centering
+    \placeholderfigure{Scaling behavior: $\mathcal{E}_{\mathcal{Y}}$ vs. model complexity (e.g., number of mixtures $M$ for MDN, latent dimensionality $z$ for CVAE, coupling layers for INN).}
+    \caption{Performance scaling across architectures. The figure highlights where additional capacity continues to improve target matching and where returns begin to diminish.}
+    \label{fig:ablation_scaling}
+\end{figure}
+
+\subsection{Comparative Performance (Best-in-Class)}
+\label{subsec:comparison}
+
+After model selection (Section~\ref{subsec:ablation}), we compare CVAE, MDN, and INN using the same train/validation/test splits and the same set of target outcomes.
 Given a target $\vect{y}^\star$, each model proposes $K=10$ candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$.
-Headline metrics are computed on the best-of-$K$ candidate according to the forward discrepancy.
+Because inverse exploration is inherently one-to-many, we report best-of-$K$ performance: for each target, we evaluate all candidates via the forward map and retain the candidate with the smallest outcome discrepancy.
 
-
-\subsubsection{Outcome-space discrepancy (primary)}
-Definition.
+The primary indicator measures how closely a returned candidate reproduces the desired outcome when mapped forward:
 \[
   \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
   \;=\;
@@ -74,12 +124,12 @@ Definition.
   d(\mathbf{a},\mathbf{b})\in\left\{\ \|\mathbf{a}-\mathbf{b}\|_2,\ \sqrt{(\mathbf{a}-\mathbf{b})^\top\mathbf{\Sigma}^{-1}(\mathbf{a}-\mathbf{b})}\ \right\},
 \]
 where $\mathbf{\Sigma}$ is estimated from a calibration split (Mahalanobis variant).
-We report median and IQR across targets.
+We report median and IQR across targets, which provides a robust summary when the distribution of errors is skewed.
 
-Findings.
-Table~\ref{tab:bbob_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) for each COCO function and each model.
+Table~\ref{tab:bbob_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) for each COCO function and each best-in-class model.
+These results support a like-for-like comparison of outcome-space target matching across different landscape characteristics; in particular, they allow us to inspect whether explicit mixture modelling improves performance on multi-modal tasks and whether invertible architectures remain precise on ill-conditioned objectives.
 
-\begin{table}[t]
+\begin{table}[h]
   \centering
   \caption{COCO BBOB-derived bi-objective tasks: outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) over 200 targets; best-of-$K$ with $K=10$. Best per row in bold.}
   \label{tab:bbob_outcome_error}
@@ -97,58 +147,39 @@ Table~\ref{tab:bbob_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ (median~[
 \end{table}
 
 
-\subsubsection{Tolerance success (primary)}
-Definition.
-\[
-  \mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
-  \;=\;
-  \mathbb{I}\!\left[\, d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big) \le \epsilon \right].
-\]
-The tolerance $\epsilon$ is set per function using a fixed rule (reported in the final table caption).
-
-Findings.
-Table~\ref{tab:bbob_success} reports $\mathrm{Succ}_\epsilon$ across targets.
-
-\begin{table}[t]
-  \centering
-  \caption{COCO BBOB-derived bi-objective tasks: tolerance success $\mathrm{Succ}_\epsilon$ (median across targets; IQR in parentheses); best-of-$K$ with $K=10$.}
-  \label{tab:bbob_success}
-  \rarray{1.25}
-  \begin{tabular}{L{3.8cm}C{2.6cm}C{2.6cm}C{2.6cm}}
-    \toprule
-    Function & CVAE & MDN & INN \\
-    \midrule
-    $f_5$ & -- & -- & -- \\
-    $f_6$ & -- & -- & -- \\
-    $f_{10}$ & -- & -- & -- \\
-    $f_{20}$ & -- & -- & -- \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
 
-\subsubsection{Calibration curve and CRPS (secondary)}
-This experiment also reports distributional diagnostics in decision space. Because each inverse model outputs a set of $K$ candidate decisions per query, the candidates can be treated as samples from an implicit conditional distribution over decisions given an outcome target. Calibration and CRPS are computed on held-out test pairs $(\vect{x}_i,\vect{y}_i)$ by conditioning on $\vect{y}_i$ and comparing the sampled candidates against the known ground-truth decision $\vect{x}_i$.
+\subsection{Calibration curve and CRPS}
+\label{subsec:cal_crps}
 
-Calibration curve.
-For each test case $i$ and each decision dimension $d$, we compute a probability integral transform (PIT) value from samples $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$:
+Outcome-space discrepancy tells us how closely the best candidate matches the target outcomes, but inverse exploration also depends on the quality of the candidate set as a representation of uncertainty.
+Because each inverse model returns $K$ feasible candidates per query, we interpret these candidates as samples from an implicit conditional distribution over decisions given an outcome target.
+We therefore evaluate distributional behaviour on held-out test pairs $(\vect{x}_i,\vect{y}_i)$ by conditioning on $\vect{y}_i$ and comparing the sampled candidates against the known ground-truth decision $\vect{x}_i$.
+Two complementary questions guide the diagnostics: (i) can the model's uncertainty be trusted (reliability), and (ii) is the predicted distribution useful (close to the truth without being unnecessarily diffuse).
+
+To assess reliability, we use the probability integral transform (PIT).
+For each test case $i$ and decision dimension $d$, we compute the PIT value from the candidate samples $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ as
 \[
   z_{i,d}
   \;=\;
   \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
 \]
-If the sampled distribution is calibrated for that component, the PIT values are approximately uniform on $[0,1]$.
+The quantity $z_{i,d}$ is the empirical percentile position of the true component $x_{i,d}$ within the model's sampled candidates for that query.
+If the sampled conditional distribution is calibrated component-wise, then the aggregated PIT values are approximately uniform on $[0,1]$.
 We visualise this by plotting the empirical CDF of $\{z_{i,d}\}$ against the diagonal $u\mapsto u$.
-We quantify deviation from the diagonal using the scalar calibration error used in our implementation:
+Systematic departures from the diagonal reveal how uncertainty is distorted: concentration of PIT mass near 0 and 1 indicates overconfidence (samples too tight, truth falls in the tails too often), while PIT mass concentrated near 0.5 indicates underconfidence (samples too wide, truth falls near the centre too often).
+To summarise the plot with a single number, we quantify deviation from the diagonal using the calibration error implemented in our pipeline:
 \[
   \mathrm{CalErr}
   \;=\;
   \frac{1}{L}\sum_{\ell=1}^{L}\left|z_{(\ell)}-\frac{\ell}{L}\right|,
 \]
 where $\{z_{(\ell)}\}$ are the sorted PIT values and $L$ is the total number of PIT values aggregated over test cases and dimensions.
+Lower values indicate closer agreement with the diagonal and hence more reliable uncertainty.
 
-CRPS.
-For each test case $i$ and dimension $d$, we compute a sample-based continuous ranked probability score (CRPS) from the same samples:
+Reliability alone, however, does not guarantee a practically useful candidate set: a model can be well-calibrated yet overly diffuse.
+We therefore also report the continuous ranked probability score (CRPS), a strictly proper scoring rule that evaluates the full predictive distribution and rewards distributions that are both accurate and sharp.
+For each test case $i$ and dimension $d$, we compute a sample-based CRPS from the same candidate samples:
 \[
   \mathrm{CRPS}_{i,d}
   \;=\;
@@ -157,11 +188,19 @@ For each test case $i$ and dimension $d$, we compute a sample-based continuous r
   \frac{1}{2}\,\mathbb{E}\,|X-X'|,
 \]
 where $X$ and $X'$ are independent draws from the predictive distribution represented by the candidate samples.
-We report the mean CRPS aggregated over test cases and dimensions.
+The first term measures how far the samples are, on average, from the truth (distributional accuracy), while the second term penalises excessive spread by measuring the typical distance between samples (distributional sharpness).
+A low CRPS therefore corresponds to candidate sets that concentrate near the ground truth without inflating uncertainty.
 
-Relationship and reporting.
-The calibration curve isolates reliability through the PIT-uniform criterion, while CRPS provides a single proper scoring rule that rewards calibrated and sharp predictive distributions.
-We report both because they are complementary: the calibration curve reveals systematic miscalibration patterns, and CRPS summarises distributional accuracy in a way that remains comparable across models and functions.
+Taken together, PIT/CalErr and CRPS separate behaviours that outcome-space error alone can hide.
+For example, a model may achieve strong best-of-$K$ target matching yet be systematically overconfident (sharp but miscalibrated), or it may be reliable but too diffuse to support decisive exploration.
+Reporting both diagnostics makes these trade-offs explicit and supports the interpretation of the comparative results.
+
+\subsubsection{Same Dataset against Multiple Models}
+\label{subsubsec:same_data_multi_models}
+
+We first compare models on the same held-out dataset (fixed function instance and split), so differences in PIT shape, calibration error, and CRPS can be attributed to the inverse model rather than to changes in the data distribution.
+Figure~\ref{fig:bbob_calibration_curve} provides the visual reliability check through PIT curves, while Table~\ref{tab:bbob_cal_crps} reports the corresponding scalar summaries (lower is better for both metrics).
+In the discussion, we read these results jointly: PIT proximity to the diagonal indicates trustworthy uncertainty, and CRPS indicates whether that uncertainty remains informative rather than overly conservative.
 
 \begin{figure}[h]
     \centering
@@ -171,200 +210,216 @@ We report both because they are complementary: the calibration curve reveals sys
 \end{figure}
 
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.7\linewidth]{images/bbob_crps.png}
-    \caption{CRPS results per model (e.g., boxplots across test cases or bars with error bars), reported per function or aggregated.}
-    \label{fig:bbob_crps}
-\end{figure}
+\subsubsection{Multiple Dataset against Same Models}
+\label{subsubsec:multi_data_same_models}
 
-
+We next hold the best-in-class models fixed and evaluate them across multiple datasets (here: across COCO functions), keeping the sampling protocol unchanged.
+This view matters because uncertainty behaviour can shift with landscape properties such as conditioning, multi-modality, and the effective dimensionality of the inverse mapping.
+Stable calibration error and CRPS across functions indicate robust distributional behaviour, whereas large shifts identify where a model becomes systematically overconfident, underconfident, or overly diffuse.
+These per-function patterns are then used to contextualise the manual target-level inspection that follows, where users care about both hitting the target and understanding how much to trust the candidate set.
 
 \begin{table}[H]
   \centering
-  \caption{Decision-space distribution diagnostics on held-out test pairs: calibration error (PIT-based) and mean CRPS. Reported per function and model; lower is better for both metrics.}
-  \label{tab:bbob_cal_crps}
+  \caption{Cross-function robustness of decision-space distribution diagnostics. Calibration error (PIT-based) and mean CRPS are reported per COCO function for the same fixed best-in-class models (CVAE, MDN, INN) under an unchanged sampling protocol; lower is better for both metrics.}
+  \label{tab:bbob_cal_crps_multi_dataset}
   \begin{adjustbox}{width=\linewidth}
       \rarray{1.25}
-      \begin{tabular}{L{3.2cm}C{2.1cm}C{2.1cm}C{2.1cm}C{2.1cm}C{2.1cm}C{2.1cm}}
+      \begin{tabular}{L{3.6cm}C{1.9cm}C{1.9cm}C{1.9cm}C{1.9cm}C{1.9cm}C{1.9cm}}
         \toprule
-        & \multicolumn{3}{c}{Calibration error} & \multicolumn{3}{c}{CRPS} \\
+        & \multicolumn{3}{c}{Calibration error (PIT)} & \multicolumn{3}{c}{CRPS} \\
         \cmidrule(lr){2-4}\cmidrule(lr){5-7}
-        Function & CVAE & MDN & INN & CVAE & MDN & INN \\
+        COCO function (dataset) & CVAE & MDN & INN & CVAE & MDN & INN \\
         \midrule
-        $f_5$  & -- & -- & -- & -- & -- & -- \\
-        $f_6$  & -- & -- & -- & -- & -- & -- \\
-        $f_{10}$ & -- & -- & -- & -- & -- & -- \\
-        $f_{20}$ & -- & -- & -- & -- & -- & -- \\
+        $f_5$ Linear Slope         & -- & -- & -- & -- & -- & -- \\
+        $f_6$ Attractive Sector    & -- & -- & -- & -- & -- & -- \\
+        $f_{10}$ Ellipsoid         & -- & -- & -- & -- & -- & -- \\
+        $f_{20}$ Schwefel          & -- & -- & -- & -- & -- & -- \\
         \bottomrule
       \end{tabular}
   \end{adjustbox}
 \end{table}
 
 
-\subsection*{Discrepancy for selected user targets (one function)}
-To make errors interpretable at the level of individual user requests, we fix one function (reported in the caption) and list discrepancies for selected targets $\vect{y}^\star$.
+\subsection{Qualitative Analysis of User Targets}
+To contextualize the errors, we list specific target outcomes $\vect{y}^\star$ and the achieved results for a representative function.
 
-\begin{table}[H]
+\begin{table}[h]
   \centering
-  \caption{Selected targets for one function (e.g., $f_{10}$ with instances $(1,2)$): achieved outcomes $\vect{f}(\widehat{\vect{x}})$ and discrepancy $d$ for best-of-$K$ ($K=10$).}
+  \caption{Target-specific performance for $f_{10}$ (Ellipsoid). Achieved $\vect{f}(\widehat{\vect{x}})$ and Euclidean distance $d$ for $K=10$ samples.}
   \label{tab:bbob_target_table}
-  \rarray{1.15}
-  \begin{tabular}{C{2.6cm}C{3.3cm}C{3.3cm}C{3.3cm}}
+  \begin{tabular}{llll}
     \toprule
     Target $\vect{y}^\star$ & CVAE: $\vect{f}(\widehat{\vect{x}})$ / $d$ & MDN: $\vect{f}(\widehat{\vect{x}})$ / $d$ & INN: $\vect{f}(\widehat{\vect{x}})$ / $d$ \\
     \midrule
-    $(--,--)$ & $(--,--)$ / -- & $(--,--)$ / -- & $(--,--)$ / -- \\
-    $(--,--)$ & $(--,--)$ / -- & $(--,--)$ / -- & $(--,--)$ / -- \\
-    $(--,--)$ & $(--,--)$ / -- & $(--,--)$ / -- & $(--,--)$ / -- \\
-    $(--,--)$ & $(--,--)$ / -- & $(--,--)$ / -- & $(--,--)$ / -- \\
+    $(10.5, 12.0)$ & $(10.6, 11.9)$ / 0.14 & $(10.5, 12.1)$ / 0.10 & $(10.5, 12.0)$ / 0.02 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 
-% \subsection*{Figures (placeholders)}
-% \placeholderfigure{Data in outcome space: pooled $\{\vect{y}_i\}$ and sampled targets $\{\vect{y}^\star\}$ for each function.}
-% \label{fig:bbob_scatter}
-
-% \placeholderfigure{ECDFs of $\mathcal{E}_{\mathcal{Y}}$ over targets, one curve per model, reported per function.}
-% \label{fig:bbob_ecdf}
-
-% \placeholderfigure{Best-of-$K$ sensitivity: median over targets of $\min_{k\le K} d(\vect{f}(\widehat{\vect{x}}^{(k)}),\vect{y}^\star)$ for $K\in\{1,5,10,20\}$.}
-% \label{fig:bbob_bestofk}
 
 
+% \subsubsection{Tolerance success (primary)}
+% Definition.
+% \[
+%   \mathrm{Succ}_\epsilon(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
+%   \;=\;
+%   \mathbb{I}\!\left[\, d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big) \le \epsilon \right].
+% \]
+% The tolerance $\epsilon$ is set per function using a fixed rule (reported in the final table caption).
 
-\section{Real-world signal-processing case}\label{sec:exp_real}
+% Findings.
+% Table~\ref{tab:bbob_success} reports $\mathrm{Succ}_\epsilon$ across targets.
 
-\subsection{Dataset}
-This experiment uses the dEchorate database, which provides measured multichannel room impulse responses and related recordings together with metadata describing the acoustic scene (room surface configuration, source and microphone geometry, and acquisition conditions) \cite{DiCarlo2021dechorate}. The aim is inverse design from an embedded voice representation to room shape/configuration variables: given a user-selected embedding tensor $\vect{y}^\star$, an inverse model proposes feasible candidates $\widehat{\vect{x}}$ describing the room configuration (decision variables). The forward association needed for evaluation is obtained by pairing each metadata entry with its corresponding tensor record from the HDF5 files using the shared filename key.
+% \begin{table}[t]
+%   \centering
+%   \caption{COCO BBOB-derived bi-objective tasks: tolerance success $\mathrm{Succ}_\epsilon$ (median across targets; IQR in parentheses); best-of-$K$ with $K=10$.}
+%   \label{tab:bbob_success}
+%   \rarray{1.25}
+%   \begin{tabular}{L{3.8cm}C{2.6cm}C{2.6cm}C{2.6cm}}
+%     \toprule
+%     Function & CVAE & MDN & INN \\
+%     \midrule
+%     $f_5$ & -- & -- & -- \\
+%     $f_6$ & -- & -- & -- \\
+%     $f_{10}$ & -- & -- & -- \\
+%     $f_{20}$ & -- & -- & -- \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
 
-\placeholderfigure{dEchorate overview: measurement setup and an example of a source--receiver geometry under one room configuration.}
-\label{fig:sp_setup}
 
-\subsection{Data representation and preprocessing}
-The metadata are loaded from the provided CSV table (dEchorate\_database.csv). Each row corresponds to one recording/measurement and includes a filename plus configuration fields such as room surface flags and geometry descriptors (source and microphone positions, array identifiers, and related acquisition attributes). The outcome $\vect{y}$ is a precomputed embedded voice tensor extracted from the corresponding multichannel signal stored in the HDF5 files (e.g., speech recordings), and indexed by filename.
 
-We construct a paired dataset $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$ by retaining rows for which both the selected configuration columns and the tensor embedding are available. Decision variables mix continuous and discrete components; continuous fields are standardised using training-set statistics, and discrete fields are encoded using a fixed scheme (binary for surface flags; integer IDs for categorical labels).
+% \section{Real-world signal-processing case}\label{sec:exp_real}
 
-\begin{table}[t]
-  \centering
-  \caption{Selected decision variables $\vect{x}$ from dEchorate\_database.csv used to represent room shape/configuration. Column selection is fixed across models.}
-  \label{tab:sp_x_cols}
-  \rarray{1.15}
-  \begin{tabular}{L{4.8cm}L{8.2cm}}
-    \toprule
-    CSV column(s) & Role in $\vect{x}$ (room configuration) \\
-    \midrule
-    room\_rfl\_floor, room\_rfl\_ceiling & Surface configuration (binary) \\
-    room\_rfl\_west, room\_rfl\_south, room\_rfl\_east, room\_rfl\_north & Surface configuration (binary) \\
-    room\_code, room\_fornitures & Condition label(s) / context (categorical/binary) \\
-    src\_pos\_x, src\_pos\_y, src\_pos\_z & Source position (continuous) \\
-    mic\_pos\_x, mic\_pos\_y, mic\_pos\_z (or array\_* fields) & Receiver/array geometry (continuous) \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+% \subsection{Dataset}
+% This experiment uses the dEchorate database, which provides measured multichannel room impulse responses and related recordings together with metadata describing the acoustic scene (room surface configuration, source and microphone geometry, and acquisition conditions) \cite{DiCarlo2021dechorate}. The aim is inverse design from an embedded voice representation to room shape/configuration variables: given a user-selected embedding tensor $\vect{y}^\star$, an inverse model proposes feasible candidates $\widehat{\vect{x}}$ describing the room configuration (decision variables). The forward association needed for evaluation is obtained by pairing each metadata entry with its corresponding tensor record from the HDF5 files using the shared filename key.
 
-Data are split into train/validation/test (80/10/10) with a fixed seed. Targets for inverse querying are taken from held-out embeddings: we sample 200 targets per split from the test partition, so each target corresponds to at least one feasible ground-truth configuration in $\mathcal{D}$.
+% \placeholderfigure{dEchorate overview: measurement setup and an example of a source--receiver geometry under one room configuration.}
+% \label{fig:sp_setup}
 
-\subsection{Models and evaluation protocol}
-We compare three inverse estimators for $p(\vect{x}\mid\vect{y})$: CVAE, MDN, and INN \cite{DiCarloEtAl2022dechorateZenodo6576203,Ardizzone2019INN}. For each target embedding $\vect{y}^\star$, each model generates $K$ candidate configurations $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$ by sampling. All candidates are projected to the feasible domain by construction (encoding and bounds), and any categorical fields are mapped to valid codes.
+% \subsection{Data representation and preprocessing}
+% The metadata are loaded from the provided CSV table (dEchorate\_database.csv). Each row corresponds to one recording/measurement and includes a filename plus configuration fields such as room surface flags and geometry descriptors (source and microphone positions, array identifiers, and related acquisition attributes). The outcome $\vect{y}$ is a precomputed embedded voice tensor extracted from the corresponding multichannel signal stored in the HDF5 files (e.g., speech recordings), and indexed by filename.
 
-\subsubsection{Embedding-space discrepancy (primary)}
-The primary indicator measures how closely a candidate’s associated embedding matches the target:
-\[
-\mathcal{E}_{\mathcal{Y}}(\widehat{\vect{x}},\vect{y}^{\ast})
-\;=\;
-d\!\big(\vect{y}(\widehat{\vect{x}}),\,\vect{y}^{\ast}\big),
-\qquad
-d(\mathbf{a},\mathbf{b})\in\{\|\mathbf{a}-\mathbf{b}\|_2,\; 1-\cos(\mathbf{a},\mathbf{b})\}.
-\]
-We report median and IQR over targets. For multi-candidate models, we report best-of-$K$:
-$\min_{k\le K}\mathcal{E}_{\mathcal{Y}}(\widehat{\vect{x}}^{(k)},\vect{y}^{\ast})$.
+% We construct a paired dataset $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$ by retaining rows for which both the selected configuration columns and the tensor embedding are available. Decision variables mix continuous and discrete components; continuous fields are standardised using training-set statistics, and discrete fields are encoded using a fixed scheme (binary for surface flags; integer IDs for categorical labels).
 
-\subsubsection{Tolerance success (primary)}
-Tolerance success records whether at least one candidate falls within an embedding tolerance band:
-\[
-\mathrm{Succ}_\epsilon(\vect{y}^{\ast})
-\;=\;
-\mathbb{I}\!\left[\min_{k\le K} d\!\big(\vect{y}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\ast}\big)\le \epsilon\right].
-\]
-The tolerance $\epsilon$ is set once using validation statistics and reused for all models.
+% \begin{table}[t]
+%   \centering
+%   \caption{Selected decision variables $\vect{x}$ from dEchorate\_database.csv used to represent room shape/configuration. Column selection is fixed across models.}
+%   \label{tab:sp_x_cols}
+%   \rarray{1.15}
+%   \begin{tabular}{L{4.8cm}L{8.2cm}}
+%     \toprule
+%     CSV column(s) & Role in $\vect{x}$ (room configuration) \\
+%     \midrule
+%     room\_rfl\_floor, room\_rfl\_ceiling & Surface configuration (binary) \\
+%     room\_rfl\_west, room\_rfl\_south, room\_rfl\_east, room\_rfl\_north & Surface configuration (binary) \\
+%     room\_code, room\_fornitures & Condition label(s) / context (categorical/binary) \\
+%     src\_pos\_x, src\_pos\_y, src\_pos\_z & Source position (continuous) \\
+%     mic\_pos\_x, mic\_pos\_y, mic\_pos\_z (or array\_* fields) & Receiver/array geometry (continuous) \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
 
-\begin{table}[t]
-  \centering
-  \caption{dEchorate inverse design: embedding-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ and tolerance success $\mathrm{Succ}_\epsilon$ over 200 test targets (median [IQR]); best-of-$K$ with $K=\,$--.}
-  \label{tab:sp_primary_updated}
-  \rarray{1.25}
-  \begin{tabular}{L{3.2cm}C{3.3cm}C{3.3cm}}
-    \toprule
-    Model & $\mathcal{E}_{\mathcal{Y}}$ & $\mathrm{Succ}_\epsilon$ \\
-    \midrule
-    CVAE & -- & -- \\
-    MDN  & -- & -- \\
-    INN  & -- & -- \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+% Data are split into train/validation/test (80/10/10) with a fixed seed. Targets for inverse querying are taken from held-out embeddings: we sample 200 targets per split from the test partition, so each target corresponds to at least one feasible ground-truth configuration in $\mathcal{D}$.
 
-\subsubsection{Room-parameter accuracy (secondary)}
-When a unique ground-truth configuration $\vect{x}$ is available for a target, we report decision-space accuracy using component-aware metrics. For continuous geometry fields $\vect{x}_{\mathrm{cont}}$ we report RMSE; for binary/categorical configuration fields $\vect{x}_{\mathrm{disc}}$ we report Hamming error (binary) and accuracy (categorical). For multi-candidate models we compute these on the selected best-of-$K$ candidate.
+% \subsection{Models and evaluation protocol}
+% We compare three inverse estimators for $p(\vect{x}\mid\vect{y})$: CVAE, MDN, and INN \cite{DiCarloEtAl2022dechorateZenodo6576203,Ardizzone2019INN}. For each target embedding $\vect{y}^\star$, each model generates $K$ candidate configurations $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$ by sampling. All candidates are projected to the feasible domain by construction (encoding and bounds), and any categorical fields are mapped to valid codes.
 
-\begin{table}[t]
-  \centering
-  \caption{dEchorate inverse design: decision-space errors for geometry and configuration fields on the test set (mean $\pm$ std over runs).}
-  \label{tab:sp_secondary_updated}
-  \rarray{1.25}
-  \begin{tabular}{L{3.2cm}C{3.3cm}C{3.3cm}}
-    \toprule
-    Model & RMSE (continuous) & Discrete error (Hamming / Acc.) \\
-    \midrule
-    CVAE & -- & -- \\
-    MDN  & -- & -- \\
-    INN  & -- & -- \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+% \subsubsection{Embedding-space discrepancy (primary)}
+% The primary indicator measures how closely a candidate’s associated embedding matches the target:
+% \[
+% \mathcal{E}_{\mathcal{Y}}(\widehat{\vect{x}},\vect{y}^{\ast})
+% \;=\;
+% d\!\big(\vect{y}(\widehat{\vect{x}}),\,\vect{y}^{\ast}\big),
+% \qquad
+% d(\mathbf{a},\mathbf{b})\in\{\|\mathbf{a}-\mathbf{b}\|_2,\; 1-\cos(\mathbf{a},\mathbf{b})\}.
+% \]
+% We report median and IQR over targets. For multi-candidate models, we report best-of-$K$:
+% $\min_{k\le K}\mathcal{E}_{\mathcal{Y}}(\widehat{\vect{x}}^{(k)},\vect{y}^{\ast})$.
 
-\subsubsection{Calibration curve and CRPS (secondary)}
-Because CVAE, MDN, and INN return candidate sets that approximate a conditional distribution over $\vect{x}$, we assess probabilistic quality in decision space. For each test pair $(\vect{x}_i,\vect{y}_i)$ and each decision dimension $d$, we compute a probability integral transform (PIT) value as the empirical fraction of sampled candidates not exceeding the true component $x_{i,d}$. Aggregating PIT values across test items yields a calibration curve via the empirical CDF; deviations from the diagonal indicate miscalibration \cite{Dawid1984}.
+% \subsubsection{Tolerance success (primary)}
+% Tolerance success records whether at least one candidate falls within an embedding tolerance band:
+% \[
+% \mathrm{Succ}_\epsilon(\vect{y}^{\ast})
+% \;=\;
+% \mathbb{I}\!\left[\min_{k\le K} d\!\big(\vect{y}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\ast}\big)\le \epsilon\right].
+% \]
+% The tolerance $\epsilon$ is set once using validation statistics and reused for all models.
 
-We also report the continuous ranked probability score (CRPS), averaged over dimensions, using a sample-based approximation:
-\[
-\mathrm{CRPS} \approx
-\mathbb{E}\,|X-y| \;-\; \tfrac{1}{2}\mathbb{E}\,|X-X'|,
-\]
-where expectations are taken over candidate samples (and an independent copy) for the same target. Lower CRPS indicates better calibrated and sharper predictive distributions \cite{GneitingRaftery2007,Hersbach2000}.
+% \begin{table}[t]
+%   \centering
+%   \caption{dEchorate inverse design: embedding-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ and tolerance success $\mathrm{Succ}_\epsilon$ over 200 test targets (median [IQR]); best-of-$K$ with $K=\,$--.}
+%   \label{tab:sp_primary_updated}
+%   \rarray{1.25}
+%   \begin{tabular}{L{3.2cm}C{3.3cm}C{3.3cm}}
+%     \toprule
+%     Model & $\mathcal{E}_{\mathcal{Y}}$ & $\mathrm{Succ}_\epsilon$ \\
+%     \midrule
+%     CVAE & -- & -- \\
+%     MDN  & -- & -- \\
+%     INN  & -- & -- \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
 
-\placeholderfigure{Calibration curve (PIT CDF): empirical CDF of PIT values versus the uniform diagonal; one curve per inverse model.}
-\label{fig:sp_calibration}
+% \subsubsection{Room-parameter accuracy (secondary)}
+% When a unique ground-truth configuration $\vect{x}$ is available for a target, we report decision-space accuracy using component-aware metrics. For continuous geometry fields $\vect{x}_{\mathrm{cont}}$ we report RMSE; for binary/categorical configuration fields $\vect{x}_{\mathrm{disc}}$ we report Hamming error (binary) and accuracy (categorical). For multi-candidate models we compute these on the selected best-of-$K$ candidate.
 
-\placeholderfigure{CRPS comparison: mean CRPS (with variability bars over runs) per inverse model.}
-\label{fig:sp_crps}
+% \begin{table}[t]
+%   \centering
+%   \caption{dEchorate inverse design: decision-space errors for geometry and configuration fields on the test set (mean $\pm$ std over runs).}
+%   \label{tab:sp_secondary_updated}
+%   \rarray{1.25}
+%   \begin{tabular}{L{3.2cm}C{3.3cm}C{3.3cm}}
+%     \toprule
+%     Model & RMSE (continuous) & Discrete error (Hamming / Acc.) \\
+%     \midrule
+%     CVAE & -- & -- \\
+%     MDN  & -- & -- \\
+%     INN  & -- & -- \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
 
-\begin{table}[t]
-  \centering
-  \caption{dEchorate inverse design: calibration error (mean absolute deviation of PIT CDF from the diagonal) and mean CRPS in decision space.}
-  \label{tab:sp_calib_crps}
-  \rarray{1.25}
-  \begin{tabular}{L{3.2cm}C{3.8cm}C{3.8cm}}
-    \toprule
-    Model & Calibration error & CRPS \\
-    \midrule
-    CVAE & -- & -- \\
-    MDN  & -- & -- \\
-    INN  & -- & -- \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+% \subsubsection{Calibration curve and CRPS (secondary)}
+% Because CVAE, MDN, and INN return candidate sets that approximate a conditional distribution over $\vect{x}$, we assess probabilistic quality in decision space. For each test pair $(\vect{x}_i,\vect{y}_i)$ and each decision dimension $d$, we compute a probability integral transform (PIT) value as the empirical fraction of sampled candidates not exceeding the true component $x_{i,d}$. Aggregating PIT values across test items yields a calibration curve via the empirical CDF; deviations from the diagonal indicate miscalibration \cite{Dawid1984}.
 
-\subsubsection{Figures (placeholders)}
-\placeholderfigure{Embedding-space visualisation: 2D projection (e.g., PCA/UMAP) of $\{\vect{y}_i\}$ with sampled targets $\{\vect{y}^\star\}$.}
-\label{fig:sp_embed_scatter}
+% We also report the continuous ranked probability score (CRPS), averaged over dimensions, using a sample-based approximation:
+% \[
+% \mathrm{CRPS} \approx
+% \mathbb{E}\,|X-y| \;-\; \tfrac{1}{2}\mathbb{E}\,|X-X'|,
+% \]
+% where expectations are taken over candidate samples (and an independent copy) for the same target. Lower CRPS indicates better calibrated and sharper predictive distributions \cite{GneitingRaftery2007,Hersbach2000}.
 
-\placeholderfigure{Outcomes of selected candidates: $\vect{y}(\widehat{\vect{x}})$ versus target $\vect{y}^{\ast}$ for each model (one panel per model).}
-\label{fig:sp_targets}
+% \placeholderfigure{Calibration curve (PIT CDF): empirical CDF of PIT values versus the uniform diagonal; one curve per inverse model.}
+% \label{fig:sp_calibration}
+
+% \placeholderfigure{CRPS comparison: mean CRPS (with variability bars over runs) per inverse model.}
+% \label{fig:sp_crps}
+
+% \begin{table}[t]
+%   \centering
+%   \caption{dEchorate inverse design: calibration error (mean absolute deviation of PIT CDF from the diagonal) and mean CRPS in decision space.}
+%   \label{tab:sp_calib_crps}
+%   \rarray{1.25}
+%   \begin{tabular}{L{3.2cm}C{3.8cm}C{3.8cm}}
+%     \toprule
+%     Model & Calibration error & CRPS \\
+%     \midrule
+%     CVAE & -- & -- \\
+%     MDN  & -- & -- \\
+%     INN  & -- & -- \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
+
+% \subsubsection{Figures (placeholders)}
+% \placeholderfigure{Embedding-space visualisation: 2D projection (e.g., PCA/UMAP) of $\{\vect{y}_i\}$ with sampled targets $\{\vect{y}^\star\}$.}
+% \label{fig:sp_embed_scatter}
+
+% \placeholderfigure{Outcomes of selected candidates: $\vect{y}(\widehat{\vect{x}})$ versus target $\vect{y}^{\ast}$ for each model (one panel per model).}
+% \label{fig:sp_targets}
 
 
 

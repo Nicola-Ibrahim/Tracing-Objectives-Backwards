@@ -1,0 +1,92 @@
+\begin{tikzpicture}[
+    % --- Local Definitions for self-contained code ---
+    execute at begin picture={
+        \definecolor{paretoBlue}{HTML}{0077BB}
+        \definecolor{dominatedGray}{HTML}{999999}
+        \definecolor{dominanceRegion}{HTML}{EE442F}
+        \definecolor{feasibleFill}{HTML}{EDF6F9}
+    },
+    scale=1.2,
+    >=Stealth,
+    % Style for the points on the Pareto front
+    frontPoint/.style={circle, draw=paretoBlue, fill=paretoBlue, inner sep=2pt, outer sep=0pt},
+    % Style for dominated points
+    domPoint/.style={circle, draw=dominatedGray!80, fill=dominatedGray!50, inner sep=1.5pt},
+    % Style for text labels
+    label text/.style={font=\footnotesize\sffamily},
+    axis label/.style={font=\small\sffamily\bfseries}
+]
+
+    % --- 1. Define Coordinates ---
+    % Points on the Pareto Front (forming a convex shape toward origin)
+    \coordinate (PF1) at (1, 5.5);
+    \coordinate (PF2) at (2, 3.5);
+    \coordinate (PF3) at (3.5, 2.2); % We will use this point for the dominance example
+    \coordinate (PF4) at (5.5, 1.5);
+    \coordinate (PF5) at (7.5, 1.2);
+
+    % Dominated points (scattered "behind" the front)
+    \coordinate (D1) at (2.5, 5);
+    \coordinate (D2) at (4, 4);
+    \coordinate (D3) at (5, 3);
+    \coordinate (D4) at (6.5, 2.5);
+    \coordinate (D5) at (3, 6);
+    \coordinate (D6) at (7, 4);
+    \coordinate (D7) at (4.5, 5.5);
+
+    % Axes limits
+    \def\xmax{8.5}
+    \def\ymax{6.5}
+
+
+    % --- 2. Draw Feasible / Objective Space (Background Layer) ---
+    \begin{pgfonlayer}{background}
+        % Shade the region "behind" the front to represent the feasible objective space
+        \fill[feasibleFill] plot[smooth tension=0.5] coordinates {(PF1) (PF2) (PF3) (PF4) (PF5)}
+            -- (\xmax, 1.2) -- (\xmax, \ymax) -- (1, \ymax) -- cycle;
+    \end{pgfonlayer}
+
+
+    % --- 3. Illustrate Pareto Dominance (Middle Layer) ---
+    % We show that PF3 dominates D2 and D3.
+    \begin{pgfonlayer}{main}
+        % Draw the "Cone of Dominance" originating from PF3
+        % Any point in this shaded region is dominated by PF3 (because it's worse in f1 AND f2)
+        \fill[dominanceRegion, opacity=0.2] (PF3) rectangle (\xmax, \ymax);
+        \draw[dominanceRegion, dashed, thick] (PF3) -- (PF3 |- 0,\ymax) node[above, label text, opacity=1] {Worse $f_1$};
+        \draw[dominanceRegion, dashed, thick] (PF3) -- (PF3 -| \xmax,0) node[right, label text, opacity=1] {Worse $f_2$};
+
+        % Add annotations for the dominance example
+        \node[label text, anchor=south west, text=dominanceRegion!80!black] at ($(PF3)+(0.2,0.2)$) {Region dominated by Point A};
+        \node[frontPoint, label={[label text, text=paretoBlue]below left:Point A}] at (PF3) {};
+        \node[domPoint, label={[label text, text=dominatedGray]above right:Point B}] at (D2) {};
+
+        % An arrow showing the relationship explicitly
+        \draw[->, thick, dominanceRegion, shorten >=2pt, shorten <=2pt] (PF3) to[bend left=20] node[midway, above right, label text, font=\scriptsize\sffamily] {A dominates B} (D2);
+    \end{pgfonlayer}
+
+
+    % --- 4. Draw Axes ---
+    \draw[->, thick, line width=1.2pt] (0,0) -- (\xmax+0.5, 0) node[below left=0.1cm and 0.1cm, axis label, align=center] {Objective 1 ($f_1$)\\$\leftarrow$ Minimize};
+    \draw[->, thick, line width=1.2pt] (0,0) -- (0, \ymax+0.5) node[below left=0.1cm and 0.1cm, axis label, rotate=90, align=center] {Objective 2 ($f_2$)\\$\leftarrow$ Minimize};
+
+
+    % --- 5. Draw the Pareto Front and Points (Foreground Layer) ---
+    % Draw the thick line connecting Pareto points
+    \draw[paretoBlue, line width=2pt, smooth tension=0.5] plot coordinates {(PF1) (PF2) (PF3) (PF4) (PF5)};
+
+    % Draw dominated points
+    \foreach \pt in {D1, D2, D3, D4, D5, D6, D7} \node[domPoint] at (\pt) {};
+
+    % Draw Pareto Front points again (to sit on top of the line)
+    \foreach \pt in {PF1, PF2, PF3, PF4, PF5} \node[frontPoint] at (\pt) {};
+
+
+    % --- 6. Final Annotations ---
+    % Label the Pareto Front
+    \node[text=paretoBlue, font=\sffamily\bfseries, anchor=south west] at ($(PF5)+(0.2,0.1)$) {Pareto Front (Non-dominated Set)};
+
+    % Label the Feasible Space
+    \node[text=dominatedGray!80!black, font=\sffamily\itshape] at (6, 5) {Feasible Objective Space};
+
+\end{tikzpicture}

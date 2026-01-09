@@ -39,6 +39,13 @@ that can be queried with a target $\vect{y}^{\star}$ to produce candidate decisi
 
 Inverse questions arise throughout signal-processing practice. A designer may specify a frequency-response template and seek filter parameters, prescribe a spatial beam pattern and seek array weights, target a rate--distortion operating point and seek encoder settings, or work backward from desired detection performance to system parameters. These examples share the same core difficulty: forward evaluation is typically straightforward, while the inverse mapping from a target outcome to feasible decisions can be ambiguous, sensitive, or even infeasible. This makes data-driven models, particularly modern machine learning methods, a natural tool for proposing candidate designs quickly and supporting interactive exploration under uncertainty.
 
+\begin{figure}[t]
+  \centering
+  \input{figures/decision_objective_mapping}
+  \caption{Illustration of the mapping between the decision space (design parameters $\mathbf{x}$) and the objective space (performance metrics $\mathbf{f}$). The forward problem maps design parameters to properties, while material inverse design seeks the set of optimal parameters $\mathbf{x}$ that satisfy target requirements on the Pareto front.}
+  \label{fig:decision_objective_mapping}
+\end{figure}
+
 
 \section{Problem statement and purpose}
 

@@ -1,0 +1,99 @@
+
+\begin{tikzpicture}[
+    % --- Local Definitions to avoid global conflicts ---
+    execute at begin picture={
+        \definecolor{decisionFill}{HTML}{E3F2FD} 
+        \definecolor{decisionLine}{HTML}{1565C0} 
+        \definecolor{objectiveFill}{HTML}{E8F5E9} 
+        \definecolor{objectiveLine}{HTML}{2E7D32} 
+        \definecolor{paretoColor}{HTML}{D32F2F}   
+        \definecolor{dominatedColor}{HTML}{455A64}
+    },
+    font=\sffamily,
+    >=Stealth,
+    thick,
+    % Style Definitions
+    point/.style={circle, inner sep=0pt, minimum size=5pt},
+    paretoPoint/.style={point, fill=paretoColor},
+    domPoint/.style={point, fill=dominatedColor},
+    mappingLine/.style={->, dashed, draw=gray!100, shorten >=3pt, shorten <=3pt},
+    axisLabel/.style={font=\sffamily\scriptsize\bfseries}
+]
+
+% ============================
+% LEFT PLOT: Decision Space
+% ============================
+\begin{scope}[local bounding box=decisionBox]
+    % Axes
+    \draw[->, line width=1pt] (0,0) -- (4.5,0) node[below, axisLabel] {$x_1$ (Parameters)};
+    \draw[->, line width=1pt] (0,0) -- (0,4.5) node[left, axisLabel, rotate=90, anchor=south] {$x_2$};
+    \node[above=0.2cm, font=\sffamily\bfseries\footnotesize, text=decisionLine] at (2.25, 4.5) {Decision Space (Many)};
+
+    % Feasible Region
+    \def\decisionBlob{(0.8,1.2) to[out=80, in=190] (2.2,4.0) to[out=10, in=160] (3.8,3.0) to[out=-20, in=70] (3.5,0.8) to[out=250, in=-10] cycle}
+    \fill[decisionFill, opacity=0.8] \decisionBlob;
+    \draw[decisionLine, line width=0.8pt] \decisionBlob;
+
+    % Points in Decision Space
+    \coordinate (P1_x_a) at (1.1, 3.2); % First point for many-to-one
+    \coordinate (P1_x_b) at (1.6, 3.8); % Second point for many-to-one
+    \coordinate (P2_x)   at (2.5, 3.6);
+    \coordinate (P3_x)   at (3.5, 1.8);
+    
+    \node[paretoPoint] at (P1_x_a) {};
+    \node[paretoPoint] at (P1_x_b) {};
+    \node[paretoPoint] at (P2_x) {};
+    \node[paretoPoint] at (P3_x) {};
+    
+    \node[above, paretoColor, font=\tiny\bfseries] at (2.2, 4.0) {Pareto Set (Solutions)};
+\end{scope}
+
+% ============================
+% RIGHT PLOT: Objective Space
+% ============================
+\begin{scope}[xshift=7cm, local bounding box=objectiveBox]
+    % Axes
+    \draw[->, line width=1pt] (0,0) -- (4.5,0) node[below, axisLabel] {$f_1$ (Properties) $\rightarrow$ min};
+    \draw[->, line width=1pt] (0,0) -- (0,4.5) node[left, axisLabel, rotate=90, anchor=south] {$f_2 \rightarrow$ min};
+    \node[above=0.2cm, font=\sffamily\bfseries\footnotesize, text=objectiveLine] at (2.25, 4.5) {Objective Space (One)};
+
+    % Feasible Region
+    \def\objectiveBlob{(1.2, 3.8) to[out=10, in=170] (3.5, 4.2) to[out=-10, in=90] (4.2, 2.0) to[out=270, in=20] (3.0, 1.2) to[out=200, in=-80] cycle}
+    \fill[objectiveFill, opacity=0.8] \objectiveBlob;
+    \draw[objectiveLine, line width=0.8pt] \objectiveBlob;
+
+    % Points in Objective Space
+    \coordinate (P1_f) at (1.3, 3.6); % Shared target point
+    \coordinate (P2_f) at (2.0, 2.0); 
+    \coordinate (P3_f) at (3.5, 1.3); 
+
+    % Pareto Front Curve
+    \draw[paretoColor, line width=1.5pt, smooth tension=1] plot coordinates {(P1_f) (P2_f) (P3_f)};
+
+    \node[paretoPoint] at (P1_f) {};
+    \node[paretoPoint] at (P2_f) {};
+    \node[paretoPoint] at (P3_f) {};
+
+    \node[below left, paretoColor, font=\tiny\bfseries] at (P2_f) {Pareto Front};
+\end{scope}
+
+% ============================
+% MAPPINGS (Showing Many-to-One)
+% ============================
+\begin{pgfonlayer}{background}
+    % Many-to-one mapping for the first objective point
+    \draw[mappingLine] (P1_x_a) to[out=15, in=175] (P1_f);
+    \draw[mappingLine] (P1_x_b) to[out=5, in=165] (P1_f);
+    
+    % Standard mappings for others
+    \draw[mappingLine] (P2_x) to[out=10, in=170] (P2_f);
+    \draw[mappingLine] (P3_x) to[out=10, in=170] (P3_f);
+\end{pgfonlayer}
+
+% ============================
+% INVERSE DESIGN ANNOTATION
+% ============================
+\path (decisionBox.south) -- (objectiveBox.south) coordinate[midway] (CenterMid);
+\draw[<-, line width=2pt, paretoColor] ($(CenterMid)+(-2,-1.2)$) -- node[above, font=\scriptsize\bfseries, text=paretoColor] {Inverse Design (One-to-Many)} node[below, font=\tiny, text=black, align=center] {Finding multiple valid parameter sets\\for a single target property} ($(CenterMid)+(2,-1.2)$);
+
+\end{tikzpicture}
