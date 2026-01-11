@@ -27,16 +27,14 @@ A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ sa
 $\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
 Figure~\ref{fig:pareto_front} illustrates the dominated region and a typical non-dominated approximation set returned by the optimizer.
 
-
-\begin{figure}[h]
+\begin{figure}[!htbp]
   \centering
   \input{figures/pareto_front}
-  \caption{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
+  \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
   \label{fig:pareto_front}
 \end{figure}
 
-
-\subsection{Problem and data}
+\subsection{Problem and Data}
 We generate bi-objective data from the COCO BBOB test functions using the \texttt{cocoex} Python interface
 (which provides benchmark suites via \texttt{Suite} and standardized function instances) \cite{cocoexDocs, cocoBBOBOverview}.
 We focus on four BBOB functions: $f_5$ (Linear Slope), $f_6$ (Attractive Sector), $f_{10}$ (Ellipsoid), and $f_{20}$ (Schwefel $x\sin(x)$).
@@ -63,10 +61,10 @@ Decision variables are scaled to a common range using the COCO domain bounds; ou
 Targets for inverse querying are sampled inside the convex hull of training outcomes (200 targets per function).
 
 
-\section{Experimental Results and Discussion}
-\label{sec:results}
+% \subsection{}{Experimental Results and Discussion}
+% \label{sec:results}
 
-We evaluate the inverse models across two dimensions: first, an intra-model ablation study to identify optimal hyperparameters; second, a cross-model comparison of the best-performing configurations.
+% We evaluate the inverse models across two dimensions: first, an intra-model ablation study to identify optimal hyperparameters; second, a cross-model comparison of the best-performing configurations.
 
 
 \subsection{Hyperparameter Ablation and Model Selection}
@@ -76,7 +74,7 @@ Inverse decision mapping is sensitive to model capacity: for MDNs this is govern
 
 Table~\ref{tab:ablation_results} summarizes the mean outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ across a representative subset of configurations. The overall pattern is that additional capacity can improve target matching up to a saturation point, after which gains diminish and the model may begin to oversmooth the inverse relation. Figure~\ref{fig:ablation_scaling} visualizes this scaling behaviour and helps identify where extra capacity no longer translates into materially better discrepancy.
 
-\begin{table}[h]
+\begin{table}[!htbp]
     \centering
     \caption{Ablation Study: Mean outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ for varying configurations. The best-in-class setting per model family is marked with $\star$ and carried forward to the head-to-head comparison.}
     \label{tab:ablation_results}
@@ -104,11 +102,12 @@ Table~\ref{tab:ablation_results} summarizes the mean outcome-space discrepancy $
 \begin{figure}[h]
     \centering
     \placeholderfigure{Scaling behavior: $\mathcal{E}_{\mathcal{Y}}$ vs. model complexity (e.g., number of mixtures $M$ for MDN, latent dimensionality $z$ for CVAE, coupling layers for INN).}
-    \caption{Performance scaling across architectures. The figure highlights where additional capacity continues to improve target matching and where returns begin to diminish.}
+    \caption[Performance Scaling and Model Complexity]{Performance scaling across architectures. The figure highlights where additional capacity continues to improve target matching and where returns begin to diminish.}
     \label{fig:ablation_scaling}
 \end{figure}
 
-\subsection{Comparative Performance (Best-in-Class)}
+
+\subsection{Comparative Performance}
 \label{subsec:comparison}
 
 After model selection (Section~\ref{subsec:ablation}), we compare CVAE, MDN, and INN using the same train/validation/test splits and the same set of target outcomes.
@@ -129,7 +128,7 @@ We report median and IQR across targets, which provides a robust summary when th
 Table~\ref{tab:bbob_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) for each COCO function and each best-in-class model.
 These results support a like-for-like comparison of outcome-space target matching across different landscape characteristics; in particular, they allow us to inspect whether explicit mixture modelling improves performance on multi-modal tasks and whether invertible architectures remain precise on ill-conditioned objectives.
 
-\begin{table}[h]
+\begin{table}[!htbp]
   \centering
   \caption{COCO BBOB-derived bi-objective tasks: outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) over 200 targets; best-of-$K$ with $K=10$. Best per row in bold.}
   \label{tab:bbob_outcome_error}
@@ -202,13 +201,12 @@ We first compare models on the same held-out dataset (fixed function instance an
 Figure~\ref{fig:bbob_calibration_curve} provides the visual reliability check through PIT curves, while Table~\ref{tab:bbob_cal_crps} reports the corresponding scalar summaries (lower is better for both metrics).
 In the discussion, we read these results jointly: PIT proximity to the diagonal indicates trustworthy uncertainty, and CRPS indicates whether that uncertainty remains informative rather than overly conservative.
 
-\begin{figure}[h]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.7\linewidth]{images/bbob_calibration_curve.png}
-    \caption{Calibration curve (PIT empirical CDF vs.\ diagonal) for each model; optionally one panel per function.}
+    \caption[Model Calibration Analysis on BBOB Benchmarks]{Calibration curve (PIT empirical CDF vs.\ diagonal) for each model; optionally one panel per function.}
   \label{fig:bbob_calibration_curve}
 \end{figure}
-
 
 \subsubsection{Multiple Dataset against Same Models}
 \label{subsubsec:multi_data_same_models}
@@ -218,7 +216,7 @@ This view matters because uncertainty behaviour can shift with landscape propert
 Stable calibration error and CRPS across functions indicate robust distributional behaviour, whereas large shifts identify where a model becomes systematically overconfident, underconfident, or overly diffuse.
 These per-function patterns are then used to contextualize the manual target-level inspection that follows, where users care about both hitting the target and understanding how much to trust the candidate set.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \caption{Cross-function robustness of decision-space distribution diagnostics. Calibration error (PIT-based) and mean CRPS are reported per COCO function for the same fixed best-in-class models (CVAE, MDN, INN) under an unchanged sampling protocol; lower is better for both metrics.}
   \label{tab:bbob_cal_crps_multi_dataset}
@@ -243,7 +241,7 @@ These per-function patterns are then used to contextualize the manual target-lev
 \subsection{Qualitative Analysis of User Targets}
 To contextualize the errors, we list specific target outcomes $\vect{y}^\star$ and the achieved results for a representative function.
 
-\begin{table}[h]
+\begin{table}[!htbp]
   \centering
   \caption{Target-specific performance for $f_{10}$ (Ellipsoid). Achieved $\vect{f}(\widehat{\vect{x}})$ and Euclidean distance $d$ for $K=10$ samples.}
   \label{tab:bbob_target_table}
@@ -423,7 +421,7 @@ To contextualize the errors, we list specific target outcomes $\vect{y}^\star$ a
 
 
 
-\section{Discussion of Results}
+\subsection{Discussion of Results}
 
 Across benchmarks, Gaussian process regression emerges as the most
 effective inverse modelling strategy.  Its probabilistic nature allows

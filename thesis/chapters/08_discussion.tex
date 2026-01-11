@@ -31,6 +31,8 @@ Three limitations deserve emphasis. (i) \emph{Archive representativeness}: if tr
 Building on these findings, we outline concrete, study-aligned directions:
 
 \begin{itemize}
+    \item \textbf{Apply tandem loss.} 
+    
   \item \textbf{Coverage-aware reporting.} Augment $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_{\epsilon}$ with conformal prediction sets in outcome space (split-conformal on residuals of $\mathbf{f}(g(\cdot))$), yielding finite-sample coverage guarantees for “achieved outcome within a calibrated ball around $\mathbf{y}^{\ast}$.” This adds a statistically principled reliability layer without re-training the inverse model. :contentReference[oaicite:5]{index=5}
   \item \textbf{Instance-generalisation on COCO.} Evaluate cross-instance transfer (train on a subset of instances, test on held-out instances) and cross-suite robustness (e.g., varying dimension), leveraging COCO’s standardised instance machinery and post-processing tools for rigorous comparison. :contentReference[oaicite:6]{index=6}
   \item \textbf{Distance calibration and scaling.} Systematise the choice between Euclidean and Mahalanobis distances via validated scaling protocols (e.g., covariance from a calibration split), and report sensitivity analyses so practitioners can match $d(\cdot,\cdot)$ to domain semantics. :contentReference[oaicite:7]{index=7}

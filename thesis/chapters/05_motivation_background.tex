@@ -87,14 +87,42 @@ Inverse design starts from a target response and searches the (typically vast an
 \subsubsection{Exploration-based inverse design:}
 Exploration-first approaches iteratively probe unknown design regions to discover candidates that satisfy performance constraints under sparse supervision. Reinforcement learning (RL) agents optimize sequences of design decisions by interacting with a simulator or learned environment; Monte Carlo Tree Search (MCTS) supplies strong look-ahead priors; and particle-swarm methods provide robust heuristic global search. For photonic device geometry, Hwang \emph{et~al.} combined an Advantage Actor–Critic (A2C) agent (IDEA) with a critic-value branch tree (CVBT) to diversify high-scoring candidate designs~\cite{Hwang2022_ASOC}. CASTING extends MCTS to continuous actions for materials discovery, improving exploration efficiency in high-dimensional spaces~\cite{Banik2023_NPJCM}, while MCTS has also accelerated polymer sequence design under astronomical combinatorics~\cite{Patra2020_Nanoscale}. When physics solvers are expensive or gradients are unavailable, population heuristics such as Particle Swarm Optimization (PSO) remain effective global explorers; notably, PSO coupled with self-consistent field theory (SCFT) has realized bulk copolymer morphologies meeting target patterns~\cite{Khadilkar2017_Macromolecules,Wang2018_SoftComput}. RL has likewise guided combinatorial chemistry to reach molecules with extreme property targets that confound distribution-learning models~\cite{Kim2024_ChemSci}. Strengths of exploration methods include label frugality, no need for bijective mappings, and natural diversity; typical limitations are high compute budgets (many simulator calls), reward shaping sensitivity, and difficulty enforcing hard constraints without additional mechanism design.
 
+\begin{figure}[!htbp]
+  \centering
+  \begin{adjustbox}{width=\linewidth}
+      \input{figures/exploration_based_inverse}
+  \end{adjustbox}
+  \caption[Exploration-Based Inverse Design Framework]{Framework of exploration-based inverse design. Agents or heuristic algorithms iteratively probe unknown design regions by interacting with simulators or learned environments to discover candidates under sparse supervision.}
+  \label{fig:exploration_based_inverse}
+\end{figure}
+
 \subsubsection{Model-based inverse design:}
 Model-based strategies learn data-driven or physics-informed maps that enable inference from desired properties back to candidate designs. A pragmatic pattern is \emph{forward–inverse coupling}: Liu \emph{et~al.} introduced a tandem neural architecture that mitigates non-uniqueness by training an inverse network cascaded with a forward predictor, so only property-consistent designs survive~\cite{Liu2018_ACSPhotonics}. Industrial alloy workflows have operationalized this idea: the ML Design System (MLDS) generates property$\to$composition (P2C) proposals that are validated by a more reliable composition$\to$property (C2P) forward model; iterations continue until target errors are met, enabling copper and aluminum alloy discoveries~\cite{Wang2019_NPJCM,Jiang2022_JMST}. 
 Surrogate modeling is the other mainstay: random-forest or neural surrogates approximate expensive simulators and are inverted with classical optimizers. In Li-ion cathodes, a learned surrogate over synthesis descriptors enabled inverse ``retrosynthesis'' of processing conditions achieving high discharge capacity, validated experimentally~\cite{Liow2022_NanoEnergy}. Transfer learning further bolsters small-data surrogates; e.g., TLOpt leverages pretraining and then couples the surrogate to genetic and Bayesian optimizers to match target spectra in optical materials~\cite{Dong2021_CMS}. 
 Finally, \emph{generative models} (VAEs, GANs, autoregressive flows) map low-dimensional latent variables to design manifolds, providing smooth spaces for search and conditional sampling. VAEs have been used to traverse continuous microstructure spaces to optimize mechanical response~\cite{Kim2021_MatDes}, and generative pipelines have supported inverse design of high-entropy refractory alloys~\cite{Debnath2021_JMI}. GAN-based inverse mappers have also produced morphing composite beams that realize prescribed shapes under actuation~\cite{Brzin2024_EAAI}. Model-based methods excel in sample efficiency and amortized inference once trained, but must explicitly manage non-uniqueness (e.g., via forward validators or conditional priors), distribution shift, and uncertainty quantification.
 
+\begin{figure}[!htbp]
+  \centering
+  \begin{adjustbox}{width=\linewidth}
+      \input{figures/model_based_inverse}
+  \end{adjustbox}
+  \caption[Model-Based Inverse Design Framework]{Framework of model-based inverse design. Data-driven or physics-informed mappings, such as forward–inverse coupling or generative models (VAEs/GANs), enable direct inference from desired properties back to candidate designs.}
+  \label{fig:model_based_inverse}
+\end{figure}
+
 \subsubsection{Optimization-based inverse design:}
 Here the inverse task is posed as optimizing one or more objectives (e.g., error to a target spectrum) over design variables, subject to constraints. \emph{Bayesian Optimization} (BO) offers strong sample efficiency by balancing exploration and exploitation with acquisition functions; in combination with graph deep-learning energy models, BO has led to experimentally realized superhard compounds and efficient exploration of hypothetical crystals~\cite{Zuo2021_MaterialsToday}. BO/active-learning loops have also delivered high-performance Mg--Mn alloys with few experiments~\cite{Mi2024_JMagAlloys}. Gaussian/Bayesian hybrids can tackle metamaterial inverse design with uncertainty-aware updates~\cite{Zheng2020_JAP}, and deep-learning Bayesian frameworks support attribute-driven molecular design under priors and constraints~\cite{Tagade2019_NPJCM}. 
 \emph{Genetic algorithms} (GA) remain a strong baseline for discrete or constrained spaces and can be hybridized with surrogates; e.g., GA+NN co-optimization achieved efficient photonic device design with reduced data needs~\cite{Ren2021_PhotonicsResearch}. When full-wave or continuum physics is differentiable, \emph{topology optimization} (adjoint gradients) provides a powerful PDE-constrained inverse design tool widely adopted in photonics~\cite{Christiansen2021_JOSAB,Jensen2011_LPR}. Optimization-based schemes provide principled multi-objective trade-offs, constraint handling, and sample-efficient search, but depend on accurate surrogates/acquisitions, careful problem parameterization, and (for gradient methods) differentiable solvers and single-valued adjoints.
+
+\begin{figure}[!htbp]
+  \centering
+  \begin{adjustbox}{width=\linewidth}
+      \input{figures/optimization_based_inverse}
+  \end{adjustbox}
+  \caption[Optimization-Based Inverse Design Framework]{Iterative framework for optimization-based inverse design. Target performance is translated into mathematical objectives and solved via engines like Bayesian Optimization, Genetic Algorithms, or Topology Optimization through continuous feedback loops.}
+  \label{fig:optimization_based_inverse}
+\end{figure}
+
 
 In practice, hybrid pipelines perform best: exploration agents query model-based surrogates (\emph{RL $\leftrightarrow$ surrogate}); generative latents are optimized with BO/GA (\emph{gen. model $\rightarrow$ optimizer}); and forward–inverse couplings screen P2C proposals through trusted C2P evaluators before simulation or experiment. Which path to prefer depends on data regime, simulator cost, constraints, and whether gradients are available. Table~\ref{tab:inv_compare} summarizes the trade-space.
 
@@ -154,7 +182,7 @@ Because inverse decision mapping is often one-to-many, diversity in \(\mathcal{D
 
 \section{Modeling Background}\label{sec:modelling_background}
 
-Learning-based mapping approaches treat inverse decision mapping as an inference problem driven by data. Rather than assuming that the inverse relation can be written as a stable function, they learn statistical relationships between decisions and outcomes and use these relationships to answer inverse queries. This viewpoint is consistent with the inverse-problems literature: the reverse direction is often ill-posed, meaning that solutions may be non-unique, sensitive to perturbations, or absent for some targets. In decision mapping this is not exceptional; many distinct decisions can induce outcomes that are indistinguishable at the resolution implied by the discrepancy measure and the noise level. \cite{Ongie2020,Stuart2010}
+Model-based mapping approaches treat inverse decision mapping as an inference problem driven by data. Rather than assuming that the inverse relation can be written as a stable function, they learn statistical relationships between decisions and outcomes and use these relationships to answer inverse queries. This viewpoint is consistent with the inverse-problems literature: the reverse direction is often ill-posed, meaning that solutions may be non-unique, sensitive to perturbations, or absent for some targets. In decision mapping this is not exceptional; many distinct decisions can induce outcomes that are indistinguishable at the resolution implied by the discrepancy measure and the noise level. \cite{Ongie2020,Stuart2010}
 
 We describe the setting through a forward relation between a decision $\vect{x}\in\calX$ and an outcome $\vect{y}\in\calY$,
 \begin{equation}
@@ -235,9 +263,6 @@ and then ranks or filters them using a task discrepancy that reflects the design
 
 Uncertainty is therefore not an auxiliary statistic but a functional part of the inverse pipeline. The spread of $p_{\widehat{\theta}}(\vect{x}\mid\vect{y}^{\star})$ reflects how concentrated the evidence is around particular decisions for the specified target, and it provides a natural basis for deciding how many candidates to generate and how conservative selection should be. Likelihood-based training and evaluation also align with this role, because they reward distributions that are calibrated as well as informative.
 
-
-\subsection{Why we choose the following Modeling approaches}
-Write about each modelling and why it is used and what problem it solves.
 
 \subsection{Mixture Density Networks}\label{sec:mdn}
 
@@ -435,7 +460,7 @@ In inverse design problems, the property-to-decision relation is typically nonli
 
 
 
-\subsection{Invertible Neural Networks (INN)}\label{sec:inn}
+\subsection{Invertible Neural Networks}\label{sec:inn}
 
 Invertible neural networks enforce an exact bijection by augmenting the target with latent variables that capture the information not determined by the conditioning signal. This is particularly useful in inverse design settings, where the forward map can be well-defined but information-losing: many distinct designs can yield essentially the same target response. Rather than forcing a single ``best guess'' in such one-to-many regimes, INNs introduce a latent variable $\vect{z}$ to represent the missing degrees of freedom and to make sampling of alternative solutions explicit.
 
@@ -510,45 +535,9 @@ It is worth noting that many INN architectures are built from coupling blocks th
 
 Candidate generation is explicit and does not require approximate inference: for a query $\vect{y}^\star$, sample $\vect{z}\sim \mathcal{N}(\vect{0},\mathbf{I})$ and compute $\vect{x}=f_\theta^{-1}(\vect{y}^\star,\vect{z})$, repeating to obtain a diverse candidate set. The invertibility constraint makes the mapping from latent variation to candidate diversity transparent and supports stable sampling for fixed conditioning. In inverse design contexts such as materials or photonic structures, where distinct microstructures can match the same target property vector, this ``latent-augmented inverse'' provides a principled way to return multiple high-fidelity alternatives rather than collapsing to an averaged, non-physical design. \cite{Ardizzone2019INN}
 
+ß
 
-
-\subsection{Invertible Neural Networks (INN)}\label{sec:inn}
-
-Invertible neural networks enforce an exact bijection by augmenting the target with latent variables that capture the information not determined by the conditioning signal. A common construction defines an invertible map between $\vect{x}$ and the pair $(\vect{y},\vect{z})$,
-\begin{equation}
-  (\widehat{\vect{y}},\vect{z}) \;=\; f_\theta(\vect{x}),
-  \qquad
-  \vect{x} \;=\; f_\theta^{-1}(\vect{y},\vect{z}),
-  \label{eq:inn_bijection}
-\end{equation}
-where $\vect{z}$ is assigned a simple reference distribution, typically $\mathcal{N}(\vect{0},\mathbf{I})$. Training couples a supervised term that forces the forward pass to match the observed $\vect{y}$ with a distribution-matching term that shapes the latent variables. One representative objective is
-\begin{equation}
-  \min_\theta\;
-  \mathcal{L}_{\mathrm{INN}}(\theta)
-  \;=\;
-  \mathbb{E}\!\left[\,
-    \|\vect{y}-f_{\theta,y}(\vect{x})\|_2^2
-  \right]
-  \;+\;
-  \lambda_z\,
-  \mathrm{MMD}\!\Big(q_\theta(\vect{y},\vect{z}),\; p(\vect{y})\,p(\vect{z})\Big),
-  \label{eq:inn_loss}
-\end{equation}
-where $q_\theta(\vect{y},\vect{z})$ denotes the joint distribution induced by pushing data through the forward direction of the network and $\mathrm{MMD}$ is a kernel-based discrepancy between distributions. A standard definition is
-\begin{equation}
-  \mathrm{MMD}^2(P,Q)
-  \;=\;
-  \mathbb{E}_{u,u'\sim P}[k(u,u')]
-  \;+\;
-  \mathbb{E}_{v,v'\sim Q}[k(v,v')]
-  \;-\;
-  2\,\mathbb{E}_{u\sim P,\ v\sim Q}[k(u,v)],
-  \label{eq:mmd_def}
-\end{equation}
-for a characteristic kernel $k$. Candidate generation is explicit and does not require approximate inference: for a query $\vect{y}^\star$, sample $\vect{z}\sim \mathcal{N}(\vect{0},\mathbf{I})$ and compute $\vect{x}=f_\theta^{-1}(\vect{y}^\star,\vect{z})$, repeating to obtain a diverse candidate set. The invertibility constraint makes the mapping from latent variation to candidate diversity transparent and supports stable sampling for fixed conditioning. \cite{Ardizzone2019INN}
-
-
-\begin{figure}[t]
+\begin{figure}[h]
   \centering
   \input{figures/inn_architecture}
   \caption[INN architecture]{Invertible neural network with latent augmentation. The model learns a bijection between $\vect{x}$ and $(\vect{y},\vect{z})$, so candidates are generated by fixing $\vect{y}^{\star}$, sampling $\vect{z}$, and applying the inverse pass to obtain $\vect{x}$.}

@@ -1,0 +1,100 @@
+\begin{tikzpicture}[
+    node distance=1.6cm and 1.2cm,
+    font=\sffamily,
+    >=Stealth,
+    thick,
+    % --- Node Styles using standard TikZ colors ---
+    data/.style={
+        draw=blue,
+        fill=blue!10,
+        text=black,
+        rectangle,
+        rounded corners=5pt,
+        minimum width=2.2cm,
+        minimum height=1cm,
+        align=center,
+        font=\sffamily\bfseries\footnotesize
+    },
+    model/.style={
+        draw=orange,
+        fill=orange!10,
+        text=black,
+        rectangle,
+        rounded corners=10pt,
+        minimum width=2.8cm,
+        minimum height=1.3cm,
+        align=center,
+        font=\sffamily\bfseries\small
+    },
+    decision/.style={
+        draw=black,
+        fill=gray!10,
+        text=black,
+        diamond,
+        aspect=1.8,
+        minimum width=2cm,
+        minimum height=1.2cm,
+        align=center,
+        font=\sffamily\tiny\bfseries
+    },
+    final/.style={
+        draw=green!50!black,
+        fill=green!10,
+        text=black,
+        rectangle,
+        rounded corners=5pt,
+        minimum width=2.2cm,
+        minimum height=1cm,
+        align=center,
+        font=\sffamily\bfseries\footnotesize
+    },
+    connector/.style={
+        ->,
+        color=gray,
+        line width=1.2pt
+    }
+]
+
+% ================= The Main Flow =================
+
+% 1. Target Performance
+\node[data] (target) {Determine\\Target Performance\\($\mathbf{f}^*$)};
+
+% 2. Inverse Model
+\node[model, right=of target] (inverse_model) {Inverse / Generative\\Model\\(P2C Map)};
+
+% 3. Candidate Design
+\node[data, right=of inverse_model] (candidate) {Proposed\\Candidate Design\\($\mathbf{x}'$)};
+
+% 4. Forward Model (Validator)
+\node[model, right=of candidate, draw=green!70!black, fill=green!5] (forward_model) {Forward Model\\(C2P Validator)};
+
+% 5. Evaluation Decision
+\node[decision, right=of forward_model] (evaluate) {Evaluate\\Performance\\$\hat{\mathbf{f}} \approx \mathbf{f}^*$?};
+
+% 6. Final Design Solution
+\node[final, right=0.8cm of evaluate] (final_design) {Validated\\Design Solution\\($\mathbf{x}^*$)};
+
+% ================= Connections & Loops =================
+
+\draw[connector] (target) -- (inverse_model);
+\draw[connector] (inverse_model) -- (candidate);
+\draw[connector] (candidate) -- (forward_model);
+\draw[connector] (forward_model) -- node[above, font=\tiny] {$\hat{\mathbf{f}}$} (evaluate);
+\draw[connector] (evaluate) -- node[above, font=\tiny, text=green!50!black] {Yes} (final_design);
+
+% Feedback Loop (Iteration)
+\draw[connector, orange] (evaluate.south) |- ++(0,-1.2) -| node[pos=0.25, above, font=\tiny\bfseries, text=black] {No: Refine Search / Re-sample} (inverse_model.south);
+
+% ================= Annotations & Background =================
+
+\begin{pgfonlayer}{background}
+    \node[fill=gray!5, rounded corners=10pt, draw=gray!20, dashed, fit=(inverse_model) (candidate) (forward_model) (evaluate), inner sep=10pt] (loop_bg) {};
+    \node[above, font=\sffamily\bfseries\footnotesize, text=gray] at (loop_bg.north) {Model-Based Coupling Loop};
+\end{pgfonlayer}
+
+% Context Labels
+\node[below=0.2cm of inverse_model, font=\tiny, text width=2.5cm, align=center] {e.g., VAE, GAN, or Tandem Network};
+\node[below=0.2cm of forward_model, font=\tiny, text width=2.5cm, align=center] {e.g., Surrogate Neural Network};
+
+\end{tikzpicture}

@@ -1,0 +1,105 @@
+\begin{tikzpicture}[
+    node distance=1.6cm and 1.2cm,
+    font=\sffamily,
+    >=Stealth,
+    thick,
+    % --- Node Styles using standard TikZ colors ---
+    input/.style={
+        draw=blue,
+        fill=blue!10,
+        text=black,
+        rectangle,
+        rounded corners=5pt,
+        minimum width=2.5cm,
+        minimum height=1.1cm,
+        align=center,
+        font=\sffamily\bfseries\footnotesize
+    },
+    process/.style={
+        draw=orange,
+        fill=orange!10,
+        text=black,
+        rectangle,
+        rounded corners=10pt,
+        minimum width=3cm,
+        minimum height=1.4cm,
+        align=center,
+        font=\sffamily\bfseries\small
+    },
+    engine/.style={
+        draw=black,
+        fill=gray!15,
+        text=black,
+        rectangle,
+        double,
+        rounded corners=2pt,
+        minimum width=3.2cm,
+        minimum height=1.6cm,
+        align=center,
+        font=\sffamily\bfseries\small
+    },
+    solver/.style={
+        draw=green!50!black,
+        fill=green!10,
+        text=black,
+        rectangle,
+        rounded corners=5pt,
+        minimum width=2.5cm,
+        minimum height=1.1cm,
+        align=center,
+        font=\sffamily\bfseries\footnotesize
+    },
+    connector/.style={
+        ->,
+        color=gray,
+        line width=1.2pt
+    },
+    iterLabel/.style={font=\sffamily\tiny\bfseries, text=orange}
+]
+
+% ================= The Optimization Flow =================
+
+% 1. Step 1: Target Performance
+\node[input] (target) {1. Determine\\Target Performance\\($\mathbf{f}^*$)};
+
+% 2. Step 2: Translation
+\node[process, right=of target] (translate) {2. Translate to\\Optimization\\Objectives};
+\node[below=0.1cm of translate, font=\tiny, text width=2.5cm, align=center] {Define Loss $L(\theta)$ \&\\Constraints $g(\mathbf{x})$};
+
+% 3. Step 3: Optimization Strategy (The Engine)
+\node[engine, right=of translate] (optimizer) {3. Select\\Optimization\\Strategy};
+
+% 4. Step 4: Performance Evaluation
+\node[solver, right=of optimizer] (evaluate) {4. Evaluate\\Design\\Performance};
+
+% 5. Final Output
+\node[input, right=of evaluate, draw=green!70!black, fill=green!5] (result) {Optimized\\Design Variable\\($\mathbf{x}^*$)};
+
+% ================= Loop & Connections =================
+
+\draw[connector] (target) -- (translate);
+\draw[connector] (translate) -- (optimizer);
+\draw[connector] (optimizer) -- (evaluate);
+\draw[connector] (evaluate) -- node[above, font=\tiny, text=green!50!black] {Met} (result);
+
+% Iterative Optimization Loop
+\draw[connector, orange] (evaluate.south) |- ++(0,-1.2) -| node[pos=0.25, above, iterLabel] {Iterative Update (Gradients / Acquisition)} (optimizer.south);
+
+% ================= Strategy Callouts =================
+
+% Branching out from the Optimizer node to show types
+\node[above=0.6cm of optimizer, font=\tiny\bfseries, text=blue!80!black, draw=blue!30, fill=blue!5, rounded corners=2pt, inner sep=3pt] (bo) {Bayesian Opt. (BO)};
+\node[left=0.2cm of bo, font=\tiny\bfseries, text=orange!80!black, draw=orange!30, fill=orange!5, rounded corners=2pt, inner sep=3pt] (ga) {Genetic Alg. (GA)};
+\node[right=0.2cm of bo, font=\tiny\bfseries, text=green!50!black, draw=green!30, fill=green!5, rounded corners=2pt, inner sep=3pt] (topo) {Topology Opt.};
+
+\draw[densely dotted, gray] (optimizer.north) -- (bo.south);
+\draw[densely dotted, gray] (optimizer.north) -- (ga.south);
+\draw[densely dotted, gray] (optimizer.north) -- (topo.south);
+
+% Background Grouping
+\begin{pgfonlayer}{background}
+    \node[fill=gray!5, rounded corners=12pt, draw=gray!20, dashed, fit=(optimizer) (evaluate) (bo) (ga) (topo), inner sep=12pt] (opt_loop) {};
+    \node[below, font=\sffamily\bfseries\tiny, text=gray] at (opt_loop.south) {Iterative Search \& Refinement};
+\end{pgfonlayer}
+
+\end{tikzpicture}

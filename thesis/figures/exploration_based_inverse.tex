@@ -1,0 +1,100 @@
+\begin{tikzpicture}[
+    node distance=1.8cm and 2.0cm,
+    font=\sffamily,
+    >=Stealth,
+    thick,
+    % --- Standard TikZ Styles ---
+    goal/.style={
+        draw=blue,
+        fill=blue!10,
+        text=black,
+        rectangle,
+        rounded corners=5pt,
+        minimum width=2.5cm,
+        minimum height=1.2cm,
+        align=center,
+        font=\sffamily\bfseries\footnotesize
+    },
+    engine/.style={
+        draw=orange,
+        fill=orange!10,
+        text=black,
+        rectangle,
+        rounded corners=10pt,
+        minimum width=3.2cm,
+        minimum height=1.5cm,
+        align=center,
+        font=\sffamily\bfseries\small
+    },
+    env/.style={
+        draw=black,
+        fill=gray!15,
+        text=black,
+        ellipse,
+        minimum width=3.2cm,
+        minimum height=1.5cm,
+        align=center,
+        font=\sffamily\bfseries\small
+    },
+    candidate/.style={
+        draw=green!50!black,
+        fill=green!10,
+        text=black,
+        rectangle,
+        rounded corners=5pt,
+        minimum width=2.5cm,
+        minimum height=1.2cm,
+        align=center,
+        font=\sffamily\bfseries\footnotesize
+    },
+    connector/.style={
+        ->,
+        color=gray,
+        line width=1.2pt
+    },
+    label_font/.style={font=\sffamily\tiny\itshape, text=gray}
+]
+
+% ================= The Exploration Flow =================
+
+% 1. Input/Goals
+\node[goal] (goals) {Design Space\\Constraints \& Goals\\(Sparse Labels)};
+
+% 2. The Explorer Engine
+\node[engine, right=of goals] (engine) {Exploration Engine\\(RL Agent, MCTS,\\or Heuristic PSO)};
+
+% 3. The Environment/Simulator
+\node[env, below=1.5cm of engine] (simulator) {Environment /\\Physics Simulator};
+
+% 4. Output/Candidates
+\node[candidate, right=of engine] (output) {Diverse High-Scoring\\Candidate Designs};
+
+% ================= Loop & Connections =================
+
+% Initial Trigger
+\draw[connector] (goals) -- (engine);
+
+% RL/Interaction Loop
+\draw[connector, bend left=40] (engine.east) to node[right, label_font] {Action (Design Selection)} (simulator.east);
+\draw[connector, bend left=40] (simulator.west) to node[left, label_font] {Observation / Reward (Property)} (engine.west);
+
+% Final Discovery
+\draw[connector] (engine) -- node[above, label_font] {Discovery} (output);
+
+% ================= Annotations =================
+
+% Method descriptions
+\node[below=0.2cm of engine, font=\tiny, text width=3.2cm, align=center] {Iteratively optimizes sequences of decisions};
+\node[below=0.2cm of simulator, font=\tiny, text width=3.5cm, align=center] {Provides feedback where\\gradients may be unavailable};
+
+% Background highlights
+\begin{pgfonlayer}{background}
+    \node[fill=orange!5, rounded corners=12pt, draw=orange!20, dashed, fit=(engine) (simulator), inner sep=15pt] (loop_bg) {};
+    \node[above right, font=\sffamily\bfseries\tiny, text=orange] at (loop_bg.south west) {Active Exploration Loop};
+\end{pgfonlayer}
+
+% Key Strength Callouts
+\node[above=0.3cm of engine, text=blue!80!black, font=\tiny\bfseries] {High Exploration Efficiency};
+\node[above=0.3cm of output, text=green!50!black, font=\tiny\bfseries] {Population Diversity};
+
+\end{tikzpicture}
