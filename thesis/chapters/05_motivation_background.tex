@@ -65,16 +65,23 @@ A third challenge is generalization under distribution shift. Training data typi
 
 Finally, representation and computation determine what inverse querying can deliver in practice. Candidate throughput depends on how $\calX$ is parameterized, how efficiently $q_\theta$ can generate candidates, and how expensive verification is, creating coupled trade-offs between expressivity, tractability, and fidelity. Probabilistic modeling perspectives make these trade-offs explicit: richer conditional mechanisms can better represent multi-modal inverse relations, but may increase sampling cost and complicate reliable selection~\cite{Papamakarios2021}. For this thesis, this motivates analyzing proposal quality, verifier fidelity, and sampling strategy jointly, since improvements in one component can be negated by bottlenecks in another.
 
-Together, these challenges motivate organising inverse-design methods by how they allocate inductive bias between proposal and verification, and by how they manage set-level utility, mismatch, generalization risk, uncertainty, and computational cost under realistic budgets.
+Together, these challenges motivate organizing inverse-design methods by how they allocate inductive bias between proposal and verification, and by how they manage set-level utility, mismatch, generalization risk, uncertainty, and computational cost under realistic budgets.
 
 
 
 \subsection{Strategies}
 
-Inverse design starts from a target response and searches the (typically vast and constrained) space of compositions, structures, and processes for feasible solutions. Compared with forward modeling, inverse problems are often ill-posed (one-to-many mappings) and data-limited, amplifying concerns around generalization, uncertainty, and reproducibility in machine-learning (ML) workflows~\cite{KabanikhinSurvey}. In practice, three complementary strategy families are prevalent: exploration-based (agent- or heuristic-driven search with minimal labels), model-based (learning bidirectional or generative structure–property surrogates), and optimization-based (treating inverse design as an explicit optimization over design variables) \cite{Liu2025Review, Melati2025_InverseDesignPIC_Tutorial}. Below we outline their core ideas, typical algorithms, representative materials applications, and practical trade-offs.
+Inverse design starts from a target response and searches the (typically vast and constrained) space of compositions, structures, and processes for feasible solutions. Relative to forward modeling, the inverse direction is often ill-posed in the sense that multiple distinct designs can correspond to the same target response, and available evaluations are commonly limited by simulation or experimental cost~\cite{KabanikhinSurvey}. These properties shape what is practical: inverse methods must balance exploration, modeling assumptions, and verification cost in order to deliver actionable candidate designs.
+
+Across materials and photonics, three complementary strategy families are commonly distinguished: exploration-based methods, which prioritize sequential probing with minimal reliance on labeled datasets; model-based methods, which learn surrogate structure--property relationships (including inverse or generative components) to enable fast querying; and optimization-based methods, which formulate inverse design explicitly as an optimization problem over design variables and solve it with numerical search~\cite{Liu2025Review, Melati2025_InverseDesignPIC_Tutorial}. The remainder of this section summarizes their core ideas, typical algorithms, representative applications, and practical trade-offs, using the propose-and-verify lens developed earlier to highlight where each family places its main inductive bias.
+
+
+
+% Inverse design starts from a target response and searches the (typically vast and constrained) space of compositions, structures, and processes for feasible solutions. Compared with forward modeling, inverse problems are often ill-posed (one-to-many mappings) and data-limited, amplifying concerns around generalization, uncertainty, and reproducibility in machine-learning (ML) workflows~\cite{KabanikhinSurvey}. In practice, three complementary strategy families are prevalent: exploration-based (agent- or heuristic-driven search with minimal labels), model-based (learning bidirectional or generative structure–property surrogates), and optimization-based (treating inverse design as an explicit optimization over design variables) \cite{Liu2025Review, Melati2025_InverseDesignPIC_Tutorial}. Below we outline their core ideas, typical algorithms, representative materials applications, and practical trade-offs.
 
 \subsubsection{Exploration-based inverse design:}
-Exploration-first approaches iteratively probe unknown design regions to discover candidates that satisfy performance constraints under sparse supervision. Reinforcement learning (RL) agents optimize sequences of design decisions by interacting with a simulator or learned environment; Monte Carlo Tree Search (MCTS) supplies strong look-ahead priors; and particle-swarm methods provide robust heuristic global search. For photonic device geometry, Hwang \emph{et~al.} combined an Advantage Actor–Critic (A2C) agent (IDEA) with a critic-value branch tree (CVBT) to diversify high-scoring candidate designs~\cite{Hwang2022_ASOC}. CASTING extends MCTS to continuous actions for materials discovery, improving exploration efficiency in high-dimensional spaces~\cite{Banik2023_NPJCM}, while MCTS has also accelerated polymer sequence design under astronomical combinatorics~\cite{Patra2020_Nanoscale}. When physics solvers are expensive or gradients are unavailable, population heuristics such as Particle Swarm Optimization (PSO) remain effective global explorers; notably, PSO coupled with self-consistent field theory (SCFT) has realized bulk copolymer morphologies meeting target patterns~\cite{Khadilkar2017_Macromolecules,Wang2018_SoftComput}. RL has likewise guided combinatorial chemistry to reach molecules with extreme property targets that confound distribution-learning models~\cite{Kim2024_ChemSci}. Strengths of exploration methods include label frugality, no need for bijective mappings, and natural diversity; typical limitations are high compute budgets (many simulator calls), reward shaping sensitivity, and difficulty enforcing hard constraints without additional mechanism design.
+
+Exploration-based strategies iteratively probe design regions to discover candidates that satisfy target criteria under sparse supervision. In this family, the proposer is realized by an agent or heuristic search policy, while verification is provided by a simulator, experiment, or surrogate evaluator. Figure~\ref{fig:exploration_based_inverse} illustrates this interaction: an exploration mechanism proposes new designs, a forward evaluator scores them, and the resulting feedback drives the next proposals.
 
 \begin{figure}[!htbp]
   \centering
@@ -85,10 +92,14 @@ Exploration-first approaches iteratively probe unknown design regions to discove
   \label{fig:exploration_based_inverse}
 \end{figure}
 
+Reinforcement learning (RL) agents cast inverse design as sequential decision-making, where actions modify a design and rewards reflect forward-evaluated performance. Monte Carlo Tree Search (MCTS) provides look-ahead by expanding a decision tree of candidate modifications, and population heuristics such as Particle Swarm Optimisation (PSO) supply robust global search when gradients are unavailable. For photonic device geometry, Hwang et~al.\ combined an Advantage Actor--Critic agent (IDEA) with a critic-value-based branch tree (CVBT) to promote diversified high-performing candidates~\cite{Hwang2022_ASOC}. CASTING adapts MCTS to continuous actions for materials discovery, improving exploration efficiency in high-dimensional spaces~\cite{Banik2023_NPJCM}, and MCTS has also been used to accelerate copolymer sequence design under combinatorial growth of the search space~\cite{Patra2020_Nanoscale}. When physics solvers are expensive, or gradients are difficult to obtain, PSO remains a practical global optimizer; for example, PSO coupled with self-consistent field theory (SCFT) has been used to target bulk multiblock-copolymer morphologies that match prescribed patterns~\cite{Khadilkar2017_Macromolecules, Wang2018_SoftComput}. RL has likewise been used to guide rule-based combinatorial chemistry toward extreme-property targets that are challenging for distribution-learning approaches to reach reliably~\cite{Kim2024_ChemSci}.
+
+A recurring strength of exploration-first methods is that they can operate without a bijective inverse map and can naturally generate diverse candidates; the main limitations are the number of forward evaluations required, sensitivity to reward or scoring design, and the need for additional mechanisms when hard constraints must be enforced.
+
+
 \subsubsection{Model-based inverse design:}
-Model-based strategies learn data-driven or physics-informed maps that enable inference from desired properties back to candidate designs. A pragmatic pattern is \emph{forward–inverse coupling}: Liu \emph{et~al.} introduced a tandem neural architecture that mitigates non-uniqueness by training an inverse network cascaded with a forward predictor, so only property-consistent designs survive~\cite{Liu2018_ACSPhotonics}. Industrial alloy workflows have operationalized this idea: the ML Design System (MLDS) generates property$\to$composition (P2C) proposals that are validated by a more reliable composition$\to$property (C2P) forward model; iterations continue until target errors are met, enabling copper and aluminum alloy discoveries~\cite{Wang2019_NPJCM,Jiang2022_JMST}. 
-Surrogate modeling is the other mainstay: random-forest or neural surrogates approximate expensive simulators and are inverted with classical optimizers. In Li-ion cathodes, a learned surrogate over synthesis descriptors enabled inverse ``retrosynthesis'' of processing conditions achieving high discharge capacity, validated experimentally~\cite{Liow2022_NanoEnergy}. Transfer learning further bolsters small-data surrogates; e.g., TLOpt leverages pretraining and then couples the surrogate to genetic and Bayesian optimizers to match target spectra in optical materials~\cite{Dong2021_CMS}. 
-Finally, \emph{generative models} (VAEs, GANs, autoregressive flows) map low-dimensional latent variables to design manifolds, providing smooth spaces for search and conditional sampling. VAEs have been used to traverse continuous microstructure spaces to optimize mechanical response~\cite{Kim2021_MatDes}, and generative pipelines have supported inverse design of high-entropy refractory alloys~\cite{Debnath2021_JMI}. GAN-based inverse mappers have also produced morphing composite beams that realize prescribed shapes under actuation~\cite{Brzin2024_EAAI}. Model-based methods excel in sample efficiency and amortized inference once trained, but must explicitly manage non-uniqueness (e.g., via forward validators or conditional priors), distribution shift, and uncertainty quantification.
+
+Model-based strategies learn mappings from data (and, where available, physics structure) so that a target property specification can be translated into candidate designs with minimal online search. Figure~\ref{fig:model_based_inverse} summarizes the common workflow: a learned inverse or generative component proposes candidates conditioned on the target, and a forward evaluator is used to enforce property consistency, filter infeasible outputs, and support ranking.
 
 \begin{figure}[!htbp]
   \centering
@@ -99,9 +110,21 @@ Finally, \emph{generative models} (VAEs, GANs, autoregressive flows) map low-dim
   \label{fig:model_based_inverse}
 \end{figure}
 
+
+
+A widely used pattern is forward--inverse coupling. Liu et~al.\ proposed a tandem architecture in which an inverse network is trained through a cascaded forward predictor, so that the inverse component is rewarded for producing designs whose predicted properties match the target, even when the inverse mapping is non-unique~\cite{Liu2018_ACSPhotonics}. Alloy design workflows operationalize the same idea by pairing a property-to-composition proposer with a more reliable composition-to-property predictor and iterating proposal and validation until the target tolerance is met. Machine-learning design system (MLDS) pipelines have used this property-oriented strategy to identify candidate compositions for copper and aluminium alloys and then validate them using the forward predictor and subsequent screening~\cite{Wang2019_NPJCM,Jiang2022_JMST}.
+
+Surrogate modeling provides a second route. Here, a regression surrogate approximates an expensive simulator or experiment-derived response, and inverse design is carried out by embedding that surrogate inside a numerical search procedure. In lithium-ion cathodes, Liow et~al.\ trained an inverse-design surrogate over expert-derived synthesis descriptors to infer processing parameters that achieve high discharge capacity, reporting forward-evaluated performance consistent with the target specification~\cite{Liow2022_NanoEnergy}. When data are scarce, transfer learning can stabilize the forward surrogate and improve downstream inversion; for example, TLOpt combines a transfer-learned predictor with global optimization to suggest compositions that match a desired optical absorption spectrum~\cite{Dong2021_CMS}.
+
+A third model-based route uses generative representations to provide a structured design manifold. Variational autoencoders and related latent-variable models map designs into a continuous latent space that supports smooth interpolation and guided search. Kim et~al.\ used a variational autoencoder to construct a continuous microstructure space and to explore microstructures associated with desired mechanical behavior~\cite{Kim2021_MatDes}. Generative pipelines have also been demonstrated for inverse alloy design, including workflows targeting refractory high-entropy alloys~\cite{Debnath2021_JMI}, and GAN-based inverse mappers have been used to design soft composite beams that morph into prescribed shapes under actuation~\cite{Brzin2024_EAAI}.
+
+Model-based methods are attractive because they offer amortized inference once trained and can reduce the number of expensive evaluations required online. Their practical weaknesses mirror the challenges discussed earlier: they must manage non-uniqueness through appropriate conditioning and validation, remain robust to distribution shift when queries move outside the data-supported region, and avoid over-reliance on approximate forward evaluators when verification fidelity is limited.
+
+
+
 \subsubsection{Optimization-based inverse design:}
-Here the inverse task is posed as optimizing one or more objectives (e.g., error to a target spectrum) over design variables, subject to constraints. \emph{Bayesian Optimization} (BO) offers strong sample efficiency by balancing exploration and exploitation with acquisition functions; in combination with graph deep-learning energy models, BO has led to experimentally realized superhard compounds and efficient exploration of hypothetical crystals~\cite{Zuo2021_MaterialsToday}. BO/active-learning loops have also delivered high-performance Mg--Mn alloys with few experiments~\cite{Mi2024_JMagAlloys}. Gaussian/Bayesian hybrids can tackle metamaterial inverse design with uncertainty-aware updates~\cite{Zheng2020_JAP}, and deep-learning Bayesian frameworks support attribute-driven molecular design under priors and constraints~\cite{Tagade2019_NPJCM}. 
-\emph{Genetic algorithms} (GA) remain a strong baseline for discrete or constrained spaces and can be hybridized with surrogates; e.g., GA+NN co-optimization achieved efficient photonic device design with reduced data needs~\cite{Ren2021_PhotonicsResearch}. When full-wave or continuum physics is differentiable, \emph{topology optimization} (adjoint gradients) provides a powerful PDE-constrained inverse design tool widely adopted in photonics~\cite{Christiansen2021_JOSAB,Jensen2011_LPR}. Optimization-based schemes provide principled multi-objective trade-offs, constraint handling, and sample-efficient search, but depend on accurate surrogates/acquisitions, careful problem parameterization, and (for gradient methods) differentiable solvers and single-valued adjoints.
+
+Optimization-based strategies pose inverse design as an explicit numerical optimization problem over decision variables, where the objective measures mismatch to a target response (for example, error to a desired spectrum) and constraints encode admissibility. Figure~\ref{fig:optimization_based_inverse} depicts the common loop: an optimizer proposes new designs, a forward evaluator scores them, and the resulting feedback guides subsequent proposals until a stopping criterion is met.
 
 \begin{figure}[!htbp]
   \centering
@@ -113,40 +136,47 @@ Here the inverse task is posed as optimizing one or more objectives (e.g., error
 \end{figure}
 
 
-In practice, hybrid pipelines perform best: exploration agents query model-based surrogates (\emph{RL $\leftrightarrow$ surrogate}); generative latents are optimized with BO/GA (\emph{gen. model $\rightarrow$ optimizer}); and forward–inverse couplings screen P2C proposals through trusted C2P evaluators before simulation or experiment. Which path to prefer depends on data regime, simulator cost, constraints, and whether gradients are available. Table~\ref{tab:inv_compare} summarizes the trade-space.
+Bayesian optimization (BO) is often used when evaluations are expensive and gradients are unavailable. It builds a probabilistic surrogate of the objective and uses an acquisition rule to decide which candidate to evaluate next. In crystal discovery, Zuo et~al.\ combined BO with a graph-based energy model and symmetry-constrained relaxation to screen a large transition-metal boride and carbide space for ultra-incompressible hard materials, reporting synthesis and mechanical characterization consistent with the model-guided screening~\cite{Zuo2021_MaterialsToday}. Active-learning loops based on BO have likewise been used to reduce experimental iteration in alloy development; for example, Mi et~al.\ report a Bayesian-optimization active-learning workflow for designing Mg--Mn-based wrought magnesium alloys with experimentally measured mechanical properties~\cite{Mi2024_JMagAlloys}. Related Bayesian formulations have also been demonstrated for inverse design of acoustic metamaterials, where a Gauss--Bayesian model is used to propose designs for prescribed absorption targets and the resulting designs are validated experimentally~\cite{Zheng2020_JAP}. For molecular and materials discovery, deep-learning frameworks can also be coupled to optimization objectives and constraint logic to enable attribute-driven inverse design under specified property targets~\cite{Tagade2019_NPJCM}.
 
-\begin{table}[H]
+
+Genetic algorithms remain a practical baseline, particularly for discrete, mixed, or heavily constrained decision spaces, and they are commonly hybridized with surrogate predictors to reduce evaluation cost. In photonics, Ren et~al.\ combine a genetic algorithm with a deep neural network to optimize device geometries while reducing the amount of training data required compared with earlier learning-based inverse design approaches~\cite{Ren2021_PhotonicsResearch}.
+
+When the governing physics is differentiable, topology optimization provides a powerful PDE-constrained inverse-design tool through adjoint sensitivities. This family is widely adopted in nanophotonics, where adjoint gradients enable large-scale continuous optimization under physical constraints and manufacturing considerations~\cite{Christiansen2021_JOSAB,Jensen2011_LPR}. In exchange for this efficiency, gradient-based methods depend on reliable differentiable solvers and well-posed adjoint formulations, and their outcomes remain sensitive to parameterization and local minima.
+
+
+
+
+In practice, hybrid pipelines are common because they combine complementary strengths. Exploration policies can query model-based surrogates to reduce evaluation cost, latent representations learned by generative models can be searched using BO or evolutionary optimizers, and forward--inverse couplings can screen property-to-design proposals through a trusted forward evaluator before simulation or experiment. The preferred pathway depends on the data regime, evaluation cost, constraint structure, and whether gradients of the forward model are accessible. Table~\ref{tab:inv_compare} summarizes the main trade-offs.
+
+\begin{table}[!htbp]
 \centering
-\caption{Compact comparison of inverse-design strategies.}
+\caption{Comparison of inverse-design strategy families.}
 \label{tab:inv_compare}
-\setlength{\tabcolsep}{4pt}           % tighten horizontal padding
-\renewcommand{\arraystretch}{1.12}    % subtle vertical compaction
-\footnotesize                         % or \scriptsize if still wide
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.12}
+\footnotesize
 \begin{tabularx}{\linewidth}{
-  >{\raggedright\arraybackslash}p{2.6cm}
-  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}p{3.1cm}
   >{\raggedright\arraybackslash}X
   >{\raggedright\arraybackslash}X}
 \toprule
-\textbf{Strategy} & \textbf{Typical algorithms} & \textbf{Strengths} & \textbf{Common caveats} \\
+\textbf{Strategy} & \textbf{Strengths} & \textbf{Common caveats} \\
 \midrule
-\emph{Exploration-based}
-& RL (A2C/PPO + simulators); MCTS (discrete/continuous); PSO and other swarm heuristics
-& Label-frugal; discovers diverse solutions; robust to one-to-many mappings
-& Many simulator calls; reward-shaping sensitivity; constraint enforcement can be nontrivial \\
+Exploration-based
+& Data-light; naturally diverse; robust under one-to-many inverses
+& Many evaluations; sensitive to scoring/reward; constraints may need extra handling \\
 \addlinespace[2pt]
-\emph{Model-based}
-& Forward--inverse (tandem) nets; supervised surrogates (RF/NN); transfer learning; VAEs/GANs
-& Sample-efficient; amortized inference; possible uncertainty handling via calibrated models
-& Non-uniqueness requires forward validation; distribution shift; data curation and retraining loops \\
+Model-based
+& Fast querying after training; reduces online evaluations; can encode learned structure
+& Needs validation under non-uniqueness; distribution shift; depends on data quality and retraining \\
 \addlinespace[2pt]
-\emph{Optimization-based}
-& Bayesian optimization / active learning; genetic algorithms; adjoint (topology) optimization
-& Strong sample-efficiency (BO); handles constraints and multi-objective trade-offs; scalable with gradients
-& Surrogate bias; local minima; need differentiable solvers/valid adjoints; parameterization sensitivity \\
+Optimization-based
+& Principled constraints and trade-offs; sample-efficient with BO; efficient with adjoint gradients
+& Surrogate/acquisition bias; local minima; requires differentiable solvers and stable parameterisations \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
 
 
 \section{Data Acquisition}\label{sec:database}
