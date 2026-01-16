@@ -2,7 +2,7 @@
 % Background and Motivation
 %-------------------------------------------------------------------------------
 
-\chapter{Background and Motivation}\label{chap:motivation}
+\chapter{Background and Motivation}\label{chap:Background}
 
 
 The Related Work chapter reviewed a range of approaches that, despite differing in mechanism, confront the same underlying difficulty: the mapping from decisions to objectives is comparatively easy to evaluate, while the reverse direction is generally not a well-behaved inversion. Inverse decision mapping begins with this asymmetry. Forward models can be executed by analysis, simulation, or experiment; in contrast, recovering decisions from specified outcomes must contend with non-uniqueness, sensitivity to perturbations, and, in some cases, unattainable targets~\cite{Stuart2010}. The consequence is practical as well as theoretical: inverse design is more naturally treated as an inference task than as an algebraic operation.
@@ -492,7 +492,7 @@ A standard definition is
   2\,\mathbb{E}_{u\sim P,\ v\sim Q}[k(u,v)],
   \label{eq:mmd_def}
 \end{equation}
-for a characteristic kernel $k$. In implementation, we minimise an empirical approximation of \eqref{eq:inn_loss} over a dataset $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$ using minibatches $\mathcal{B}$:
+for a characteristic kernel $k$. In implementation, we minimize an empirical approximation of \eqref{eq:inn_loss} over a dataset $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$ using minibatches $\mathcal{B}$:
 \begin{equation}
   \widehat{\theta}
   \;=\;
@@ -515,7 +515,7 @@ where $(\widehat{\vect{y}}_i,\vect{z}_i)=f_\theta(\vect{x}_i)$ are samples from 
   \frac{2}{mn}\sum_{i=1}^{m}\sum_{j=1}^{n} k(u_i,v_j),
   \label{eq:mmd_unbiased_estimator}
 \end{align}
-with $\{u_i\}_{i=1}^{m}\sim P$ and $\{v_j\}_{j=1}^{n}\sim Q$. Because all terms are differentiable in $\theta$ through $u_i=f_\theta(\vect{x}_i)$, we optimise \eqref{eq:inn_empirical_objective} with standard stochastic gradient methods by backpropagating through the forward pass,
+with $\{u_i\}_{i=1}^{m}\sim P$ and $\{v_j\}_{j=1}^{n}\sim Q$. Because all terms are differentiable in $\theta$ through $u_i=f_\theta(\vect{x}_i)$, we optimize \eqref{eq:inn_empirical_objective} with standard stochastic gradient methods by backpropagating through the forward pass,
 \begin{equation}
   \theta_{t+1}
   \;=\;

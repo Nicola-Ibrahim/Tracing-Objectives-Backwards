@@ -2,111 +2,153 @@
 % Methodology
 %-------------------------------------------------------------------------------
 
-\chapter{Methodology}\label{chap:method}
+\chapter{Methodology}\label{chap:methodology}
 
-Inverse decision mapping becomes practically useful when it supports interactive design exploration: a user specifies a target outcome $\vect{y}^{\star}$ and the method proposes candidate decisions $\widehat{\vect{x}}\in\calX$ that plausibly realise that target. The Introduction framed this task as inherently ambiguous and sometimes infeasible, and posed research questions about (i) constructing an outcome $\!\to\!$ decision mechanism, (ii) defining attainment in a reproducible way, and (iii) understanding which modelling choices generalise to unseen targets. The methodology presented here turns those requirements into a concrete protocol centered on probabilistic candidate generation followed by explicit outcome-space evaluation.
+Earlier chapters established inverse querying as a practical interface for multi-objective design:
+a user specifies a target objective vector and expects actionable decision suggestions, despite
+non-uniqueness and possible infeasibility. Building on that foundation, the present chapter
+specifies the framework adopted to answer such queries and to evaluate inverse models under a
+shared and reproducible protocol. The central aim is to make claims about attainment traceable to
+a declared evaluation rule, rather than to implicit properties of a particular inverse model.
 
-The core stance is to learn an amortised inverse model that represents the inverse relation as a conditional distribution rather than as a single-valued map. A probabilistic inverse supports one-to-many structure by generating multiple candidates for the same target, enabling exploration rather than forcing an arbitrary point estimate. This conditional-density viewpoint is widely used in amortised inference and simulation-based inference, where offline training yields fast query-time sampling. \cite{Papamakarios2021,Cranmer2020SBI} In this thesis, evaluation is treated as a distinct stage that scores and ranks candidates using an explicit discrepancy in outcome space, computed via the best available outcome evaluator.
 
-Three design principles shape the chapter and the experiments that follow:
-\begin{itemize}
-  \item Candidate-based inversion: inverse querying produces a set of candidates by sampling from a learned conditional model, making ambiguity visible through diversity rather than suppressing it by construction. \cite{Cranmer2020SBI}
-  \item Decoupled evaluation: learning is performed from paired examples without requiring an explicit forward operator; attainment is assessed after training by scoring candidates with a task-defined outcome discrepancy and an outcome evaluator that may be a simulator, a surrogate, a measurement routine, or an offline mapping available only for evaluation. \cite{Arridge2019,Ongie2020}
-  \item Comparable reporting: experiments fix a common candidate budget and a common scoring rule so that comparisons reflect modelling choices rather than interface differences or ad hoc evaluation. \cite{Arridge2019,Ongie2020}
-\end{itemize}
+The methodology follows a model-based inverse design approach. An inverse model is trained offline
+from paired data and is used at query time to propose decision candidates; a separate evaluation
+stage then checks and ranks candidates in objective space using a stated outcome evaluator and a
+task-defined discrepancy. Three commitments are held constant throughout
+the empirical study. The method returns a candidate set rather than a single decision, attainment is
+defined in objective space through an explicit evaluator and discrepancy, and comparisons use a fixed
+candidate budget and a consistent reporting rule. 
 
-The following sections formalise the probabilistic inverse model and its training objective, define the query-time candidate generation procedure, and specify how candidates are scored and ranked in outcome space under an explicit discrepancy measure. Subsequent methodological components (constraints, feasibility handling, and any optional refinement procedures) are introduced only as needed for reproducible implementation and evaluation across datasets and benchmarks.
+% The remainder of the chapter is organized as follows. Section~\ref{sec:problem_formulation} defines
+% the learning and evaluation problem and fixes the objects that constitute an inverse query and its
+% assessment. Section~\ref{sec:rationale_tradeoffs} motivates the selected methodological family and
+% summarises the main trade-offs relative to deterministic inverse prediction and query-time
+% optimisation. Section~\ref{sec:framework} presents the operational workflow used in implementation
+% and experiments, anchored by the propose--check schematic in Figure~\ref{fig:framework}.
 
 
 %-------------------------------------------------------------------------------
-\section{Theoretical framework}\label{sec:theory_model}
+\section{Problem formulation}\label{sec:problem_formulation}
 %-------------------------------------------------------------------------------
 
-The methodology treats inverse design as learning a conditional model over decisions given outcomes. Rather than approximating a single inverse function, we learn a probabilistic inverse $q_\theta(\vect{x}\mid\vect{y})$ that can represent multi-modality and generate multiple candidates for the same target. This conditional-density framing supports amortised querying: training fits a reusable conditional model from paired examples, and inference reduces to sampling conditioned on the target. \cite{Papamakarios2021,Cranmer2020SBI}
+Inverse querying is formulated as learning a conditional model over decisions given objectives.
+Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the admissible decision space and
+$\mathcal{Y}\subset\mathbb{R}^{m}$ the objective space. A query specifies a target
+$\vect{y}^{\star}\in\mathcal{Y}$. The method returns a set of candidate decisions
+$\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}\subset\mathcal{X}$ together with an ordering induced by
+objective-space attainment. The output therefore consists of alternatives and a declared basis for
+preferring one alternative over another.
 
-Given a representative dataset $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$, model parameters are fit by conditional likelihood:
+The inverse component is represented as a parametric conditional distribution
+$q_\theta(\vect{x}\mid\vect{y})$. A distributional inverse can represent multi-modality and is
+therefore suitable for one-to-many inverse structure, which is expected when multiple decisions
+produce similar objective outcomes under the task discrepancy. 
+
+Training uses paired observations $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$ and fits
+parameters by regularized conditional maximum likelihood,
 \begin{equation}
 \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}
 \Big[-\log q_\theta(\vect{x}_i\mid\vect{y}_i)\Big] + \lambda\,\Omega(\theta),
 \label{eq:cond_mle_inverse}
 \end{equation}
-where $\Omega(\theta)$ denotes regularisation. This training objective depends only on paired data and does not assume access to a forward operator during learning, which keeps the inverse model applicable across settings with different levels of forward-model availability. \cite{Arridge2019,Ongie2020}
+where $\Omega(\theta)$ is a regularization term and $\lambda\ge 0$ controls its contribution. The
+objective depends only on paired data and does not require an analytic forward operator during
+learning, which keeps the approach applicable when forward evaluation is available only for
+assessment. \cite{Arridge2019,Ongie2020}
 
-At query time, the inverse model produces a candidate set by sampling:
+At query time, the method draws a fixed-size candidate set,
 \begin{equation}
-  \widehat{\vect{x}}^{(k)} \sim q_\theta(\vect{x}\mid\vect{y}^\star),\qquad k=1,\dots,K.
+  \widehat{\vect{x}}^{(k)} \sim q_{\widehat{\theta}}(\vect{x}\mid\vect{y}^\star),
+  \qquad k=1,\dots,K,
   \label{eq:candidate_generation}
 \end{equation}
-Candidates are then assessed in outcome space using a task-defined discrepancy $d(\cdot,\cdot)$ together with an outcome evaluator $\mathcal{E}:\calX\to\calY$ that represents the best available mechanism for assessing outcomes. Depending on the setting, $\mathcal{E}$ may be a simulator, a learned surrogate, a measurement routine, or an offline mapping used only for evaluation. \cite{Arridge2019,Ongie2020} For a target $\vect{y}^\star$, each candidate receives a score
+and assesses attainment in objective space using an outcome evaluator
+$\mathcal{E}:\mathcal{X}\to\mathcal{Y}$ together with a task-defined discrepancy $d(\cdot,\cdot)$.
+\cite{Arridge2019,Ongie2020} Candidate $k$ receives score
 \begin{equation}
-  r^{(k)}(\vect{y}^\star) \;=\; d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^\star\big),
+  r^{(k)}(\vect{y}^\star) \;=\;
+  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^\star\big),
   \qquad k=1,\dots,K,
   \label{eq:candidate_scores}
 \end{equation}
-which induces a ranking and supports two usage modes: exploratory use returns the ranked set (or a top subset), while deployment can optionally select a single decision as the best-aligned candidate under the declared discrepancy and evaluator. Fixing $K$, $\mathcal{E}$, and $d$ at evaluation time makes attainment statements traceable to an explicit scoring rule rather than to implicit model behaviour. \cite{Arridge2019,Ongie2020}
+which induces a ranking over candidates. Fixing $(K,\mathcal{E},d)$ defines the evaluation contract
+used throughout the thesis and makes attainment claims traceable to an explicit rule that is shared
+across inverse model families. \cite{Arridge2019,Ongie2020}
 
 
 %-------------------------------------------------------------------------------
-\section{Methodology selection and defence}\label{sec:method_defence}
+\section{Rationale and trade-offs}\label{sec:rationale_tradeoffs}
 %-------------------------------------------------------------------------------
 
-The research questions call for an inverse querying mechanism that (i) respects non-uniqueness by producing meaningful alternatives, (ii) answers queries quickly enough for interactive use, and (iii) supports reproducible attainment assessment in outcome space. These requirements motivate an inverse-mapping methodology built around probabilistic candidate generation: most computation occurs offline by fitting $q_\theta(\vect{x}\mid\vect{y})$ via \eqref{eq:cond_mle_inverse}, and each new target is answered by sampling candidates via \eqref{eq:candidate_generation}. This amortised design is consistent with established practice in learned inverse problems and simulation-based inference, where conditional density estimation is used to make repeated inverse queries efficient. \cite{Arridge2019,Ongie2020,Cranmer2020SBI}
+Model-based inverse design is adopted because it aligns with the constraints of inverse querying in
+multi-objective settings. Non-uniqueness is a typical feature of the inverse relation, and a method
+that returns a single decision can conceal ambiguity and cause comparisons to depend on model-specific
+selection behavior. A conditional model addresses this directly by supporting multiple candidates
+per target and by moving selection to an explicit objective-space rule. 
 
-A second choice is to separate learning from evaluation. The inverse model is trained from paired examples, while attainment is assessed after training by scoring candidates with an explicit outcome discrepancy under a stated evaluator, as in \eqref{eq:candidate_scores}. This decoupling is methodologically useful because forward-model access varies by dataset and domain: some settings provide a trusted simulator, others support only surrogate or measurement-based assessment, and some benchmarks permit evaluation through recorded outcomes alone. Stating the evaluator and discrepancy explicitly ties conclusions to a declared notion of attainment and supports comparable reporting across experiments. \cite{Arridge2019,Ongie2020}
+The methodology is also selected to support repeated use. Offline training amortizes the cost of
+inversion, so query-time computation reduces to sampling under a fixed candidate budget and evaluating
+candidates under the declared contract in Section~\ref{sec:problem_formulation}. This design follows
+established practice in amortized and simulation-based inference, where conditional density estimation
+enables efficient repeated conditioning queries once training is complete. \cite{Papamakarios2021,Cranmer2020SBI}
 
-Finally, optimisation-at-query-time remains complementary. Black-box search procedures, including Bayesian optimisation, can refine a candidate when evaluations are affordable, but they increase query-time cost and introduce additional tuning and search design choices. The default methodology therefore prioritises amortised candidate generation with post-hoc scoring, while treating query-time optimisation as an optional refinement stage when deployment constraints permit. \cite{Shahriari2016BayesOpt}
+A further motivation is comparability across benchmarks with heterogeneous forward access. Some
+settings provide a trusted simulator, while others permit only surrogate-based or recorded-outcome
+evaluation. By defining attainment through a stated evaluator $\mathcal{E}$ and discrepancy $d$, the
+methodology keeps the success criterion stable while allowing the evaluation mechanism to reflect what
+a benchmark provides. 
 
+These choices introduce trade-offs that are important for interpretation. Performance depends on the
+quality and fidelity of the evaluator used for checking, and a fixed candidate budget $K$ limits the
+probability of identifying a high-quality candidate in strongly multi-modal settings. In addition, if
+targets fall outside the region supported by the training archive, the inverse model may propose
+candidates that are plausible under the learned distribution but attain the target poorly under the
+evaluator. These limitations motivate the controlled evaluation protocol and the reporting strategy
+used in the experimental chapter. 
+
+Query-time optimization remains complementary rather than central. When evaluations are reliable and
+affordable, black-box refinement procedures such as Bayesian optimization can improve a candidate, but
+they introduce additional design choices that complicate fair comparison, including acquisition design,
+initialization, and stopping criteria. For this reason, the baseline in
+this thesis prioritizes amortized candidate generation with explicit checking and ranking, and treats
+optimization-based refinement as an optional extension.
 
 
 %-------------------------------------------------------------------------------
-\section{Methodological framework}\label{sec:framework}
+\section{Framework and protocol}\label{sec:framework}
 %-------------------------------------------------------------------------------
 
-From this point onward the chapter shifts from motivation to execution. The goal is to make
-inverse querying behave like a practical routine that can be run repeatedly and compared
-fairly across model families. The workflow follows a simple pattern: learn an inverse proposal
-model, generate multiple candidates for each new target, and then score those
-candidates in outcome space using an explicit discrepancy rule. In this way, ambiguity is
-handled by generation, while attainment is handled by checking under a declared evaluator
-and metric rather than by relying on implicit properties of the inverse model. 
+Figure~\ref{fig:framework} summarizes the workflow used throughout the thesis. The protocol follows
+a propose--check structure: an inverse model proposes candidate decisions for a queried target, and a
+separate checking stage evaluates and ranks those candidates in objective space under the declared
+evaluator and discrepancy. The separation ensures that ambiguity is handled through generation, while
+attainment is assessed by an explicit scoring rule.
 
 \begin{figure}[!htbp]
   \centering
   \begin{adjustbox}{width=\linewidth}
       \input{figures/framework}
   \end{adjustbox}
-  \caption[Propose--Check Workflow Framework]{Propose--check workflow used throughout the thesis. An inverse model generates a candidate set for a target outcome, and an explicit evaluation stage scores and ranks candidates using a stated outcome evaluator and discrepancy.}
+  \caption[Propose--Check Workflow Framework]{Propose--check workflow used throughout the thesis. An inverse model generates a candidate set for a target objective vector, and an explicit evaluation stage scores and ranks candidates using a stated outcome evaluator and discrepancy.}
   \label{fig:framework}
 \end{figure}
 
+The workflow is executed in four stages. First, the inverse proposal model is trained offline from
+paired data using the conditional likelihood objective in \eqref{eq:cond_mle_inverse}. Second, a query
+$\vect{y}^{\star}$ is answered by sampling $K$ candidates from the trained conditional model, as in
+\eqref{eq:candidate_generation}. Treating $K$ as fixed is part of the experimental interface and keeps
+the output format consistent across model families. Third, each candidate is checked by applying the
+evaluator and discrepancy in \eqref{eq:candidate_scores}. The evaluator $\mathcal{E}$ is selected to
+match the benchmark and deployment context and may be a simulator, a measurement routine, a surrogate
+used for checking, or an offline mapping reserved for evaluation. \cite{Arridge2019,Ongie2020} Fourth,
+the method returns candidates ordered by their objective-space scores; when a single decision is
+required, the best-ranked candidate under the declared rule is selected.
 
-The starting point is a conditional distribution over decisions given outcomes,
-$q_{\theta}(\vect{x}\mid\vect{y})$. Once this model is trained, a user query $\vect{y}^{\star}$ is
-answered by drawing a fixed-size set of candidates:
-\begin{equation}
-  \widehat{\vect{x}}^{(k)} \sim q_{\widehat{\theta}}(\vect{x}\mid\vect{y}^{\star}),
-  \qquad k=1,\dots,K .
-  \label{eq:candidate_generation}
-\end{equation}
-We keep the candidate budget $K$ fixed across experiments so the user-facing interface stays
-the same regardless of the chosen model family, and so comparisons reflect modelling choices
-rather than differences in output conventions.
-
-Candidate generation alone is not sufficient, because the thesis evaluates success in outcome
-space. After sampling, each candidate is therefore checked by computing its outcome through
-the best available outcome evaluator $\mathcal{E}:\mathcal{X}\to\mathcal{Y}$ and scoring it with a
-task-defined discrepancy $d(\cdot,\cdot)$:
-\begin{equation}
-  r^{(k)}(\vect{y}^{\star}) \;=\;
-  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big),
-  \qquad k=1,\dots,K .
-  \label{eq:candidate_scoring}
-\end{equation}
-The evaluator $\mathcal{E}$ is intentionally defined broadly. Depending on the dataset and the
-deployment context, it may be an explicit simulator, a measurement routine, a learned
-surrogate trained for checking, or an offline mapping used only for evaluation. The method
-returns candidates ranked by $r^{(k)}(\vect{y}^{\star})$; when a single deployed configuration is
-required, it is taken as the best-ranked candidate under the declared scoring rule. 
+Two practical implications follow from this protocol. Candidate generation reflects what is supported
+by the training archive through $q_{\widehat{\theta}}(\vect{x}\mid\vect{y})$, while attainment is
+defined by the pair $(\mathcal{E},d)$. Recording $(K,\mathcal{E},d)$ alongside model configuration
+therefore makes results auditable and enables fair comparison across inverse model families.
 
 
 
