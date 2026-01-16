@@ -151,28 +151,35 @@ defined by the pair $(\mathcal{E},d)$. Recording $(K,\mathcal{E},d)$ alongside m
 therefore makes results auditable and enables fair comparison across inverse model families.
 
 
-
 %-------------------------------------------------------------------------------
 \section{Inverse-model training}\label{sec:training}
 %-------------------------------------------------------------------------------
 
-With the propose--check interface fixed in Section~\ref{sec:framework}, implementation starts by fitting the candidate generator from paired examples
-$\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$. The goal is to learn a conditional distribution
-$q_{\theta}(\vect{x}\mid\vect{y})$ that assigns high probability to decisions that are consistent with the observed decision--outcome relationship, while remaining expressive enough to represent one-to-many structure. Chapter~3 motivates the three conditional families used in this thesis (MDN, CVAE, INN) and derives their probabilistic forms; here we restate the corresponding training objectives in the form used for experiments and implementation.
+With the propose--check protocol fixed in Section~\ref{sec:framework}, implementation begins by
+training the inverse proposal model from paired decision--objective examples
+$\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$. The training goal is to obtain a conditional
+generator $q_{\theta}(\vect{x}\mid\vect{y})$ that captures the empirical decision--objective relation
+while remaining expressive enough to represent one-to-many structure. The modelling background in
+Chapter~\ref{chap:Background} introduces the three conditional families used in the thesis and
+derives their probabilistic forms. The present section specifies the optimisation objectives as used
+in the experiments.
 
-Across all models, parameter estimation follows the same principle: maximise conditional fit to the observed pairs while controlling capacity through regularisation. In practice, we minimise the regularised negative conditional log-likelihood,
-\begin{equation}
-  \widehat{\theta}\in\arg\min_{\theta}\;
-  \frac{1}{N}\sum_{i=1}^{N}\Big[-\log q_{\theta}(\vect{x}_i\mid\vect{y}_i)\Big]
-  \;+\;\lambda\,\Omega(\theta),
-  \label{eq:cond_mle_inverse}
-\end{equation}
-where $\Omega(\theta)$ collects stabilising terms such as weight decay and any model-specific penalties. This fitting step uses only paired data; the outcome evaluator $\mathcal{E}$ and discrepancy $d$ are introduced later and only enter through the candidate scoring rule in Section~\ref{sec:framework}.
+Across models, parameter estimation follows a shared principle: fit the conditional distribution to
+the observed pairs under the regularised conditional likelihood objective in
+\eqref{eq:cond_mle_inverse}. The role of regularisation is collected in $\Omega(\cdot)$ and includes
+standard stabilising terms such as weight decay, together with any model-specific penalties. The
+evaluation components, namely the outcome evaluator $\mathcal{E}$ and discrepancy $d$, are not used
+during training and enter only through the checking rule defined by \eqref{eq:candidate_scores}.
 
-The three instantiations below differ in how they parameterise $q_{\theta}(\vect{x}\mid\vect{y})$ and how the log-density in \eqref{eq:cond_mle_inverse} is computed or approximated.
+The three instantiations below differ in how they parameterise $q_{\theta}(\vect{x}\mid\vect{y})$ and
+how the conditional log-density in \eqref{eq:cond_mle_inverse} is computed or approximated.
 
-Mixture Density Network (MDN).
-The MDN represents the conditional density as a finite Gaussian mixture with outcome-dependent parameters (see Chapter~3, Eq.~(3.14)--(3.15)):
+%-------------------------------------------------------------------------------
+\subsection{Mixture density network}\label{subsec:mdn_training}
+%-------------------------------------------------------------------------------
+
+The mixture density network represents the conditional density as a finite Gaussian mixture with
+$\vect{y}$-dependent parameters,
 \begin{equation}
   q_{\theta}(\vect{x}\mid\vect{y}) =
   \sum_{j=1}^{M}\pi_{\theta,j}(\vect{y})\,
@@ -181,10 +188,20 @@ The MDN represents the conditional density as a finite Gaussian mixture with out
   \sum_{j=1}^{M}\pi_{\theta,j}(\vect{y})=1,\ \ \pi_{\theta,j}(\vect{y})\ge 0 .
   \label{eq:mdn_density}
 \end{equation}
-Training substitutes \eqref{eq:mdn_density} into \eqref{eq:cond_mle_inverse} and optimises the resulting mixture negative log-likelihood. The implementation follows standard constraints for mixture weights and covariance parameterisation, as detailed in the Modeling Background.
+Training substitutes \eqref{eq:mdn_density} into the objective in \eqref{eq:cond_mle_inverse} and
+optimises the resulting mixture negative log-likelihood. The implementation enforces the standard
+constraints on mixture weights and uses a stable parameterisation of covariance matrices, consistent
+with the model definition in Chapter~\ref{chap:Background}.
 
-Conditional Variational Autoencoder (CVAE).
-The CVAE introduces latent variables to represent conditional variability and trains by maximising a variational lower bound on $\log q_{\theta}(\vect{x}\mid\vect{y})$ (see Chapter~3, Eq.~(3.16)--(3.17)). Using an encoder $q_{\phi}(\vect{z}\mid\vect{x},\vect{y})$ and a decoder $p_{\theta}(\vect{x}\mid\vect{y},\vect{z})$, the objective becomes
+%-------------------------------------------------------------------------------
+\subsection{Conditional variational autoencoder}\label{subsec:cvae_training}
+%-------------------------------------------------------------------------------
+
+The conditional variational autoencoder introduces latent variables to represent conditional
+variability. Direct maximisation of $\log q_{\theta}(\vect{x}\mid\vect{y})$ is replaced by maximising
+a variational lower bound using an encoder $q_{\phi}(\vect{z}\mid\vect{x},\vect{y})$ and decoder
+$p_{\theta}(\vect{x}\mid\vect{y},\vect{z})$. The training objective is the negative evidence lower
+bound plus regularisation,
 \begin{equation}
   \widehat{\theta},\widehat{\phi}\in\arg\min_{\theta,\phi}\;
   -\frac{1}{N}\sum_{i=1}^{N}\Big[
@@ -194,15 +211,22 @@ The CVAE introduces latent variables to represent conditional variability and tr
   +\lambda\,\Omega(\theta,\phi),
   \label{eq:cvae_elbo}
 \end{equation}
-which is the negative ELBO plus regularisation. This keeps the training criterion tractable while still targeting a conditional generative model whose latent variation can produce diverse candidates for a fixed $\vect{y}^{\star}$.
+which provides a tractable surrogate for conditional likelihood training. At query time, latent
+variation allows the decoder to generate diverse candidates for a fixed target $\vect{y}^{\star}$,
+consistent with the fixed candidate budget used in evaluation.
 
-Invertible Neural Network (INN).
-The INN implements a conditional density through an invertible transformation between a simple reference latent and the decision, conditioned on the outcome target. Using a conditional invertible map $T_{\theta}(\cdot;\vect{y})$,
+%-------------------------------------------------------------------------------
+\subsection{Invertible neural network}\label{subsec:inn_training}
+%-------------------------------------------------------------------------------
+
+The invertible neural network defines a conditional density through an invertible transformation
+between a simple reference latent distribution and the decision, conditioned on the objective
+vector. Using a conditional invertible map $T_{\theta}(\cdot;\vect{y})$,
 \begin{equation}
   \vect{x} = T_{\theta}(\vect{z};\vect{y}),\qquad \vect{z}\sim \mathcal{N}(\mathbf{0},\mathbf{I}),
   \label{eq:inn_forward_map}
 \end{equation}
-the conditional log-density follows from a change-of-variables construction (see the Modeling Background for the invertibility setup; the implementation uses the standard log-determinant form):
+the conditional log-density follows from a change-of-variables construction,
 \begin{equation}
   \log q_{\theta}(\vect{x}\mid\vect{y}) =
   \log p(\vect{z}) +
@@ -211,9 +235,19 @@ the conditional log-density follows from a change-of-variables construction (see
   \vect{z}=T_{\theta}^{-1}(\vect{x};\vect{y}).
   \label{eq:inn_change_of_vars}
 \end{equation}
-Substituting \eqref{eq:inn_change_of_vars} into \eqref{eq:cond_mle_inverse} yields a direct likelihood-based training objective. This preserves an explicit density model while maintaining a sampling mechanism that is compatible with the fixed candidate budget $K$ used throughout the experiments.
+Substituting \eqref{eq:inn_change_of_vars} into \eqref{eq:cond_mle_inverse} yields a direct
+likelihood-based objective. Sampling is obtained by drawing $\vect{z}$ from the reference prior and
+applying $T_{\theta}(\vect{z};\vect{y}^{\star})$, which integrates naturally with the fixed candidate
+budget used in the propose--check protocol.
 
-In summary, MDN, CVAE, and INN all realise the same training goal---a conditional generator $q_{\theta}(\vect{x}\mid\vect{y})$ fitted from paired data---but they differ in how multimodality is represented (mixture components, latent-variable decoding, or invertible latent transport). Downstream evaluation then treats their sampled candidates uniformly via the shared scoring rule in \eqref{eq:candidate_scoring}, so empirical comparisons reflect differences in the learned conditional model rather than differences in the evaluation interface.
+In summary, the three model families share the same training goal, namely a conditional generator
+$q_{\theta}(\vect{x}\mid\vect{y})$ fit from paired data under the objective in
+\eqref{eq:cond_mle_inverse}. They differ in how conditional variability is represented, through
+mixture components in MDNs, latent-variable decoding in CVAEs, or invertible latent transport in
+INNs. Downstream evaluation treats sampled candidates uniformly via the shared checking rule in
+\eqref{eq:candidate_scores}, so empirical comparisons reflect differences in the learned conditional
+model rather than differences in the evaluation interface.
+
 
 
 %-------------------------------------------------------------------------------
