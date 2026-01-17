@@ -254,78 +254,241 @@ model rather than differences in the evaluation interface.
 \section{Evaluation plan}\label{sec:evaluation}
 %-------------------------------------------------------------------------------
 
-The inverse models in this thesis return a candidate set for each target rather than a single point estimate. Evaluation therefore answers a concrete question: given a target $\vect{y}^{\star}$ and candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$, which candidates most closely satisfy the objective under a stated checking mechanism, and how often does at least one candidate meet a specification-level requirement. This section fixes that checking mechanism so that results remain comparable across model families and datasets.
+Evaluation follows the propose--check contract defined in Section~\ref{sec:framework}. For each target
+$\vect{y}^{\star}$, an inverse model produces $K$ decision candidates
+$\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$. A fixed forward checker computes the corresponding checked
+objective vectors,
+\[
+  \widehat{\vect{y}}^{(k)} \;=\; \mathcal{E}(\widehat{\vect{x}}^{(k)}), \qquad k=1,\dots,K,
+\]
+where $\mathcal{E}:\mathcal{X}\rightarrow\mathcal{Y}$ denotes the best available evaluator for the
+benchmark (simulator, measurement routine, or checking surrogate). 
+All reported metrics are derived from these checked outcomes, and $\mathcal{E}$ is not accessed by
+inverse models at test time beyond producing candidates. Fixing $\mathcal{E}$, the discrepancy
+definition $d$, and the candidate budget $K$ keeps comparisons attributable to inverse modelling
+choices rather than changes in the evaluation interface. 
 
-Evaluation is performed through an outcome evaluator $\mathcal{E}:\mathcal{X}\to\mathcal{Y}$, which represents the best available way to assess outcomes for proposed decisions. Depending on the setting, $\mathcal{E}$ may be a trusted forward simulator, an experimental measurement routine, or a surrogate model used purely for checking when an explicit forward model is not available. 
+The evaluation suite is organised around four complementary views. The first quantifies attainment
+under a finite candidate budget. The second scores the probabilistic accuracy of the induced outcome
+distribution. The third checks reliability of uncertainty through coverage calibration. The fourth
+tests conditional calibration in design space using simulation-based calibration diagnostics.
 
-\subsection{Outcome-space checking and ranking}\label{sec:eval_checking}
 
-For each candidate, we compute an outcome-space discrepancy score relative to the user target:
-\begin{equation}
-  r^{(k)}(\vect{y}^{\star})
-  \;=\;
-  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big),
-  \qquad k=1,\dots,K,
-  \label{eq:candidate_scoring}
-\end{equation}
-and rank candidates by increasing $r^{(k)}(\vect{y}^{\star})$. This score is the main evaluation primitive: it is the mechanism by which the forward model or surrogate contributes to validation, and it is the basis for all reported attainment metrics.
+%-------------------------------------------------------------------------------
+\subsection{Discrepancy metrics}\label{sec:eval_discrepancy}
+%-------------------------------------------------------------------------------
 
-To summarise performance in a way that respects the one-to-many nature of the inverse mapping, we report the best-achieved discrepancy within the candidate set:
-\begin{equation}
-  \mathcal{E}_{\mathcal{Y}}^{(K)}(\vect{y}^{\star})
-  \;=\;
-  \min_{k\in\{1,\dots,K\}}
-  d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big).
-  \label{eq:best_of_k_error}
-\end{equation}
-When qualitative exploration is the goal, the ranked list itself is retained; when a single deployed decision is required, it is chosen as the top-ranked candidate under \eqref{eq:candidate_scoring}. Using $\min_k$ as the reporting convention keeps comparisons consistent while still crediting methods that generate useful diversity.
+Attainment is assessed in objective space using the checked outcomes
+$\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$ obtained from the forward checker. Discrepancy metrics
+therefore reflect the declared evaluation interface rather than internal quantities of a particular
+inverse model.
 
-The discrepancy $d$ is selected to match the outcome semantics and scaling. After standardising outcomes, Euclidean distance provides a transparent default. When outcome dimensions are correlated or have heterogeneous noise, a Mahalanobis discrepancy incorporates covariance structure:
+To make distances comparable across objective dimensions, discrepancies are computed in standardised
+objective space. Let $\widetilde{\vect{y}}$ denote objectives after standardisation using statistics
+computed on the training split. Euclidean distance in the standardised space provides a transparent
+default. When objective dimensions exhibit strong correlation, a Mahalanobis discrepancy incorporates
+covariance structure,
 \begin{equation}
   d_{\mathrm{Mah}}(\vect{u},\vect{v})
   \;=\;
   \sqrt{(\vect{u}-\vect{v})^{\top}\boldsymbol{\Sigma}^{-1}(\vect{u}-\vect{v})},
   \label{eq:mahalanobis_distance}
 \end{equation}
-with $\boldsymbol{\Sigma}$ estimated from a reference split of outcomes. \cite{Bishop2006PRML}
+where $\boldsymbol{\Sigma}$ is estimated on a reference split of outcomes and regularised to ensure
+stable inversion. \cite{Mahalanobis1936, DeMaesschalck2000}
 
-\subsection{Tolerance-based attainment}\label{sec:eval_tolerance}
-
-Outcome-space distances are informative, but many applications ultimately require a specification-level statement: whether the method can produce at least one candidate within an acceptable tolerance. Using the same discrepancy as in \eqref{eq:candidate_scoring}, we report
+Given a target $\vect{y}^{\star}$, each candidate receives a checked discrepancy score
 \begin{equation}
-  \mathrm{Succ}^{(K)}_{\epsilon}(\vect{y}^{\star})
+  s^{(k)}(\vect{y}^{\star})
   \;=\;
-  \mathbb{I}\!\left[\,
-    \min_{k\in\{1,\dots,K\}}
-    d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^{\star}\big)
-    \le \epsilon
-  \right],
-  \label{eq:succ_eps_bestofk}
-\end{equation}
-where $\epsilon$ is set by domain tolerances or by a declared experimental specification. Reporting both $\mathcal{E}_{\mathcal{Y}}^{(K)}$ and $\mathrm{Succ}^{(K)}_{\epsilon}$ separates continuous closeness from compliance with a target specification.
-
-\subsection{Operational-domain validator (ODD) for constraint-aware evaluation}\label{sec:eval_odd}
-
-Discrepancy alone does not capture all evaluation needs. In practice, users often impose additional constraints beyond matching $\vect{y}^{\star}$, such as admissible operating regions, safety limits, or validity requirements tied to the training distribution. To make these requirements explicit, we include an operational-domain validator, denoted ODD, that acts as an additional evaluation mechanism.
-
-The ODD produces an in-domain score or acceptance decision for a candidate outcome (and, if needed, for a candidate decision):
-\begin{equation}
-  s_{\psi}^{(k)} \;=\; \mathrm{ODD}_{\psi}\!\big(\widehat{\vect{x}}^{(k)},\,\mathcal{E}(\widehat{\vect{x}}^{(k)})\big),
+  d\!\big(\widetilde{\mathcal{E}}(\widehat{\vect{x}}^{(k)}),\,\widetilde{\vect{y}}^{\star}\big),
   \qquad k=1,\dots,K,
-  \label{eq:odd_score}
+  \label{eq:per_candidate_discrepancy}
 \end{equation}
-where larger $s_{\psi}^{(k)}$ indicates better conformity to the operational domain. In machine-learning terms, this corresponds to out-of-distribution or novelty detection: the validator is trained beforehand to capture the data distribution (and any user-declared admissibility structure), so that candidates outside the supported regime can be flagged or rejected. \cite{Lu2025OODSurvey}
+where $\widetilde{\mathcal{E}}(\cdot)$ denotes evaluation followed by standardisation in objective
+space. The set of scores $\{s^{(k)}(\vect{y}^{\star})\}_{k=1}^{K}$ is the basis for the discrepancy
+summaries reported below.
 
-In evaluation, we combine target attainment and operational-domain validity by filtering or re-ranking. A simple filtering rule keeps only candidates that satisfy a validator threshold $\tau$ and any explicit user constraints encoded as a predicate $c(\cdot)\le 0$ in outcome space:
+Two statistics are reported per target. The first is the minimum checked discrepancy within the
+candidate set,
 \begin{equation}
-  \mathcal{K}_{\mathrm{valid}}(\vect{y}^{\star})
+  D_{\min}^{(K)}(\vect{y}^{\star})
   \;=\;
-  \Big\{\,k:\ s_{\psi}^{(k)}\ge\tau\ \ \text{and}\ \ c\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)})\big)\le 0 \Big\}.
-  \label{eq:valid_set}
+  \min_{k\in\{1,\dots,K\}} \; s^{(k)}(\vect{y}^{\star}),
+  \label{eq:Dmin}
 \end{equation}
-Ranking is then applied within $\mathcal{K}_{\mathrm{valid}}(\vect{y}^{\star})$ using the same discrepancy score \eqref{eq:candidate_scoring}. If no candidate passes the validator, the method reports this explicitly and the query is treated as not attained under the declared operational constraints. This makes failure modes interpretable: the method may fail because candidates do not match the target, because they violate user constraints, or because they fall outside the learned operational domain.
+and the second is the median checked discrepancy across candidates,
+\begin{equation}
+  D_{\mathrm{med}}^{(K)}(\vect{y}^{\star})
+  \;=\;
+  \mathrm{median}_{k\in\{1,\dots,K\}} \; s^{(k)}(\vect{y}^{\star}).
+  \label{eq:Dmed}
+\end{equation}
 
-The threshold $\tau$ is selected in advance on held-out data to control the strictness of the validator under the training regime. This keeps ODD decisions reproducible and prevents post hoc threshold tuning that would compromise comparability across experiments. The exact ODD model class used (e.g., one-class classification, energy-based scoring, or density-based scoring) is treated as part of the evaluation configuration and is reported alongside the discrepancy definition. \cite{Liu2020EnergyOOD}
+$D_{\min}^{(K)}$ measures attainment under a finite candidate budget. It answers the direct question
+posed by a candidate-based interface: after generating $K$ alternatives and checking them, how close
+is the best candidate to the target in objective space? This statistic aligns with deployment-oriented
+use, where a single decision is selected as the top-ranked candidate under the declared checker and
+discrepancy. It also respects one-to-many structure by crediting methods that can produce at least one
+high-quality alternative within the fixed budget.
+
+On its own, $D_{\min}^{(K)}$ can be overly optimistic because it depends only on the best candidate and
+ignores the remainder of the set. A method may achieve a small $D_{\min}^{(K)}$ through rare outliers
+while producing many candidates that lie far from the target. $D_{\mathrm{med}}^{(K)}$ addresses this
+limitation by describing typical candidate quality under the same query. A small $D_{\mathrm{med}}^{(K)}$
+indicates that many candidates concentrate near the target, which is desirable when the candidate set
+is used for exploration or when repeated querying is expected. A large $D_{\mathrm{med}}^{(K)}$ indicates
+that most candidates are not well aligned, and that success may rely on occasional lucky draws.
+
+Interpreting the two statistics jointly separates attainment from typical set behaviour. The following
+cases provide a direct reading of candidate-set behaviour under the fixed budget $K$:
+\begin{itemize}
+  \item Small $D_{\min}^{(K)}$ and large $D_{\mathrm{med}}^{(K)}$: outlier-driven attainment. The method
+  occasionally produces an excellent candidate, but most candidates are not well aligned with the
+  target.
+  \item Moderate $D_{\min}^{(K)}$ and moderate $D_{\mathrm{med}}^{(K)}$: consistent targeting with limited
+  sharpness. The method places many candidates in a reasonable region, but rarely achieves very small
+  discrepancy.
+  \item Small $D_{\min}^{(K)}$ and small $D_{\mathrm{med}}^{(K)}$: accurate and reliable candidate sets.
+  Many candidates concentrate near the target, and the best candidate is also close.
+  \item Large $D_{\min}^{(K)}$ and large $D_{\mathrm{med}}^{(K)}$: weak attainment under the declared
+  checker and discrepancy. The candidate set does not align well with the target.
+\end{itemize}
+
+Across a target set $\mathcal{T}$, results are summarised using robust statistics of
+$D_{\min}^{(K)}$ and $D_{\mathrm{med}}^{(K)}$, including the median and interquartile range, with the mean
+reported when informative. The candidate budget $K$ is treated as part of the evaluation interface.
+Increasing $K$ can reduce $D_{\min}^{(K)}$ by providing more opportunities to draw a close candidate even
+without changing the underlying conditional model. For this reason, comparisons fix $K$ within an
+experiment and report results separately for each $K$ used.
+
+
+%-------------------------------------------------------------------------------
+\subsection{Probabilistic accuracy: CRPS on the induced outcome distribution}\label{sec:eval_crps}
+%-------------------------------------------------------------------------------
+
+The candidate set induces an empirical predictive distribution over checked outcomes for each target.
+To evaluate probabilistic accuracy in a way that accounts for both closeness and dispersion, the
+continuous ranked probability score (CRPS) is used as a proper scoring rule.
+\cite{GneitingRaftery2007,Hersbach2000}
+
+Because $\vect{y}$ is vector-valued, CRPS is computed marginally per objective dimension and then
+aggregated. Let $\widehat{y}^{(k)}_{j}$ denote the $j$th component of the checked outcome
+$\widehat{\vect{y}}^{(k)}$ after standardisation, and let $y^{\star}_{j}$ denote the corresponding
+target component. The empirical CRPS for dimension $j$ under $K$ samples is
+\begin{equation}
+  \mathrm{CRPS}^{(K)}_{j}(\vect{y}^{\star})
+  \;=\;
+  \frac{1}{K}\sum_{k=1}^{K}\left|\widehat{y}^{(k)}_{j}-y^{\star}_{j}\right|
+  \;-\;
+  \frac{1}{2K^{2}}\sum_{k=1}^{K}\sum_{\ell=1}^{K}\left|\widehat{y}^{(k)}_{j}-\widehat{y}^{(\ell)}_{j}\right|.
+  \label{eq:crps_ensemble}
+\end{equation}
+The reported CRPS aggregates these marginal scores across dimensions,
+\begin{equation}
+  \mathrm{CRPS}^{(K)}(\vect{y}^{\star})
+  \;=\;
+  \frac{1}{m}\sum_{j=1}^{m}\mathrm{CRPS}^{(K)}_{j}(\vect{y}^{\star}),
+  \label{eq:crps_mean}
+\end{equation}
+where $m$ is the number of objectives.
+
+CRPS complements $D_{\min}^{(K)}$ and $D_{\mathrm{med}}^{(K)}$. The first term in
+\eqref{eq:crps_ensemble} rewards distributions that concentrate near the target, while the second term
+penalises overly concentrated or degenerate sets. As a proper scoring rule, CRPS discourages
+misrepresenting uncertainty: under repeated queries, the expected score is optimised when the
+predictive distribution matches the data-generating distribution for the checked outcomes.
+\cite{GneitingRaftery2007}
+
+%-------------------------------------------------------------------------------
+\subsection{Reliability of uncertainty: calibration curve and scalar calibration error}\label{sec:eval_reliability}
+%-------------------------------------------------------------------------------
+
+Probabilistic accuracy does not by itself guarantee reliable uncertainty. Reliability is assessed by
+checking whether nominal predictive coverage levels match empirical coverage, following standard
+notions of calibration. \cite{Dawid1982,Kuleshov2018}
+
+For each objective dimension $j$ and nominal level $\alpha\in(0,1)$, the candidate set defines an
+empirical central prediction interval using sample quantiles,
+\[
+  I^{(K)}_{j,\alpha}(\vect{y}^{\star})
+  \;=\;
+  \left[\widehat{q}^{(K)}_{j}((1-\alpha)/2),\ \widehat{q}^{(K)}_{j}((1+\alpha)/2)\right],
+\]
+where $\widehat{q}^{(K)}_{j}(\beta)$ denotes the empirical $\beta$-quantile of
+$\{\widehat{y}^{(k)}_{j}\}_{k=1}^{K}$.
+
+Empirical coverage for level $\alpha$ is then computed over the target set $\mathcal{T}$ as
+\begin{equation}
+  \widehat{C}_{j}^{(K)}(\alpha)
+  \;=\;
+  \frac{1}{|\mathcal{T}|}\sum_{\vect{y}^{\star}\in\mathcal{T}}
+  \mathbb{I}\!\left[y^{\star}_{j}\in I^{(K)}_{j,\alpha}(\vect{y}^{\star})\right].
+  \label{eq:coverage_curve}
+\end{equation}
+A calibration curve plots $\widehat{C}_{j}^{(K)}(\alpha)$ against $\alpha$; a well-calibrated method
+tracks the diagonal $\widehat{C}=\alpha$. For compact reporting, a scalar calibration error is
+computed over a fixed set of nominal levels $\{\alpha_{\ell}\}_{\ell=1}^{L}$,
+\begin{equation}
+  \mathrm{CE}_{j}^{(K)}
+  \;=\;
+  \frac{1}{L}\sum_{\ell=1}^{L}\left|\widehat{C}_{j}^{(K)}(\alpha_{\ell})-\alpha_{\ell}\right|,
+  \label{eq:calibration_error}
+\end{equation}
+and aggregated across dimensions, for example by averaging $\mathrm{CE}_{j}^{(K)}$ over $j$.
+This reporting format makes uncertainty reliability explicit while remaining compatible with
+multi-objective settings where objectives differ in scale prior to standardisation.
+
+%-------------------------------------------------------------------------------
+\subsection{Conditional calibration in design space: SBC ranks and uniformity tests}\label{sec:eval_sbc}
+%-------------------------------------------------------------------------------
+
+Reliability in objective space does not fully diagnose whether the conditional sampler behaves
+consistently in design space. Conditional calibration is therefore evaluated using
+simulation-based calibration (SBC) diagnostics whenever a reference generative process is available.
+\cite{TaltsEtAl2018SBC}
+
+An SBC trial is constructed by sampling a reference design $\vect{x}_{\mathrm{ref}}$ from the design
+prior or benchmark archive and generating its corresponding objective vector using the same checker,
+$\vect{y}_{\mathrm{ref}}=\mathcal{E}(\vect{x}_{\mathrm{ref}})$. Given $\vect{y}_{\mathrm{ref}}$, the
+inverse model produces $K$ candidates
+$\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}\sim q(\vect{x}\mid\vect{y}_{\mathrm{ref}})$.
+
+Because $\vect{x}$ is vector-valued, SBC is applied through a set of scalar probes
+$g_m:\mathcal{X}\rightarrow\mathbb{R}$, such as individual decision coordinates or benchmark-specific
+derived quantities. For each probe, the rank statistic is
+\begin{equation}
+  R_m
+  \;=\;
+  \#\left\{k:\ g_m(\widehat{\vect{x}}^{(k)}) < g_m(\vect{x}_{\mathrm{ref}})\right\}
+  \in \{0,\dots,K\}.
+  \label{eq:sbc_rank}
+\end{equation}
+Under a conditionally calibrated sampler, the ranks are approximately discrete-uniform across
+repeated trials. Rank histograms are therefore reported for representative probes, and uniformity is
+summarised using a scalar statistic.
+
+Two summary options are used in practice. The first is a goodness-of-fit test against the discrete
+uniform distribution, such as a Kolmogorov--Smirnov-style test applied to the empirical rank CDF,
+reported per probe and aggregated where appropriate. \cite{TaltsEtAl2018SBC} The second reports
+standardised moment deviations of the ranks,
+\begin{equation}
+  z_{\mu,m}
+  \;=\;
+  \frac{\widehat{\mu}_m - K/2}{\sqrt{(K^2-1)/12}},
+  \qquad
+  z_{\sigma,m}
+  \;=\;
+  \frac{\widehat{\sigma}_m^2 - (K^2-1)/12}{\sqrt{\mathrm{Var}(\widehat{\sigma}_m^2)}},
+  \label{eq:sbc_rank_zscores}
+\end{equation}
+where $\widehat{\mu}_m$ and $\widehat{\sigma}_m^2$ are the empirical mean and variance of ranks for
+probe $m$ across trials. In this form, $z_{\mu,m}$ measures systematic bias and $z_{\sigma,m}$ measures
+over- or under-dispersion relative to the uniform reference. The SBC diagnostics are interpreted as
+explanatory checks: they complement attainment metrics by indicating whether good best-of-$K$
+performance is achieved through a sampler whose conditional uncertainty is consistent with the
+reference generative process.
+
 
 
 %-------------------------------------------------------------------------------
