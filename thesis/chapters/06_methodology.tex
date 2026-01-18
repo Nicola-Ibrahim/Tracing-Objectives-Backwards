@@ -510,40 +510,49 @@ trade-off explicit for candidate-based inversion. \cite{Diebold1998,GneitingRaft
 \section{Pipelines}\label{sec:pipelines}
 %-------------------------------------------------------------------------------
 
-\subsection{Training pipeline}\label{sec:train_pipeline}
+\subsection{Training pipeline and estimator selection}\label{sec:train_pipeline}
 
-Model training follows a repeatable routine that keeps preprocessing and model selection consistent
-across problems. Algorithm~\ref{alg:train_pipeline} provides a compact description. In short, we
-compute fixed normalisation transforms, split the data for validation-based selection, and fit the
-chosen inverse model by minimising its training loss. Hyperparameters are selected under a fixed
-search budget using a validation criterion. The trained model and preprocessing transforms are then
-frozen and used unchanged in the candidate-generation and assessment steps described next.
+Model training follows a repeatable routine that keeps preprocessing and model selection
+consistent across problems. Algorithm~\ref{alg:train_pipeline} summarizes the procedure.
+We compute fixed normalisation transforms, split the data for validation-based selection,
+and train multiple estimator configurations under a fixed search budget.
+Rather than selecting models purely by training loss, we select the final estimator using
+design-space uncertainty diagnostics computed on held-out paired data:
+PIT-based calibration (as a reliability check) and CRPS (as a usefulness check). The selected
+estimator and preprocessing transforms are then frozen and used unchanged for candidate
+generation at query time.
 
 \begin{algorithm}[!htbp]
-  \caption{Training and model selection for inverse candidate generation}\label{alg:train_pipeline}
+  \caption{Training and estimator selection using PIT calibration and CRPS}\label{alg:train_pipeline}
   \begin{algorithmic}[1]
     \Require Paired data $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$
-    \Require Hyperparameter search space $\mathcal{H}$ and search budget $B$
-    \Ensure Best fitted inverse model $\widehat{q}$ and preprocessing transforms $\mathcal{T}$
+    \Require Hyperparameter/model search space $\mathcal{H}$ and search budget $B$
+    \Require Candidate budget $K$ for validation diagnostics
+    \Ensure Selected inverse estimator $\widehat{q}$ and preprocessing transforms $\mathcal{T}$
 
     \State $\mathcal{T} \leftarrow \text{compute\_transforms}(\mathcal{D})$ \Comment{Scaling for $\vect{x}$ and $\vect{y}$}
-    \State $\mathcal{D}_{T}, \mathcal{D}_{V} \leftarrow \text{split}(\mathcal{T}(\mathcal{D}))$ \Comment{Train and validation splits}
-    \State $S_{\mathrm{best}} \leftarrow +\infty$
-    
+    \State $\mathcal{D}_{T}, \mathcal{D}_{V} \leftarrow \text{split}(\mathcal{T}(\mathcal{D}))$ \Comment{Train/validation split}
+    \State $(\mathrm{CRPS}_{\mathrm{best}},\mathrm{CalErr}_{\mathrm{best}}) \leftarrow (+\infty,+\infty)$
+
     \For{$b=1$ to $B$}
       \State Sample configuration $h_b \in \mathcal{H}$ 
       \State Initialize parameters $\theta_b$ according to $h_b$
       \While{stopping criterion not met}
         \State $\theta_b \leftarrow \text{minimize } \mathcal{L}(\theta_b; \mathcal{D}_{T})$
-        \State Monitor validation score $S_b$ on $\mathcal{D}_{V}$
       \EndWhile
-      \If{$S_b < S_{\mathrm{best}}$}
-        \State $S_{\mathrm{best}} \leftarrow S_b$
+
+      \State Compute validation diagnostics on $\mathcal{D}_{V}$:
+      \State \hspace{1em}Generate $\{\widehat{\vect{x}}^{(k)}_{i}\}_{k=1}^{K} \sim \widehat{q}_{\theta_b}(\vect{x}\mid \vect{y}_i)$ for each $(\vect{x}_i,\vect{y}_i)\in\mathcal{D}_V$
+      \State \hspace{1em}Estimate $\mathrm{CalErr}_b$ from aggregated PIT values
+      \State \hspace{1em}Estimate $\mathrm{CRPS}_b$ from candidate samples
+
+      \If{$(\mathrm{CRPS}_b,\mathrm{CalErr}_b)$ improves selection criterion}
+        \State $(\mathrm{CRPS}_{\mathrm{best}},\mathrm{CalErr}_{\mathrm{best}}) \leftarrow (\mathrm{CRPS}_b,\mathrm{CalErr}_b)$
         \State $(h_{\mathrm{best}}, \theta_{\mathrm{best}}) \leftarrow (h_b, \theta_b)$
       \EndIf
     \EndFor
-    
-    \State $\widehat{q} \leftarrow \text{refit}(h_{\mathrm{best}}, \mathcal{D}_{T} \cup \mathcal{D}_{V})$ \Comment{Optional: final fit on all data}
+
+    \State $\widehat{q} \leftarrow \text{refit}(h_{\mathrm{best}}, \mathcal{D}_{T} \cup \mathcal{D}_{V})$
     \State \Return $\widehat{q}, \mathcal{T}$
   \end{algorithmic}
 \end{algorithm}
@@ -551,30 +560,34 @@ frozen and used unchanged in the candidate-generation and assessment steps descr
 
 \subsection{Querying pipeline}\label{sec:query_pipeline}
 
-Given a target outcome $\vect{y}^{\star}$, the inverse model generates a fixed-size candidate set and
-the assessment suite assigns scores used to rank (and, if configured, filter) candidates.
-Algorithm~\ref{alg:query_pipeline} summarises this target-driven loop. The same routine is used for
-experimental evaluation on held-out targets and for interactive exploration, ensuring that reported
-performance reflects a consistent candidate-generation and assessment interface.
+Given a user-specified target outcome $\vect{y}^{\star}$, the selected inverse estimator
+generates a fixed-size candidate set by sampling from $\widehat{q}(\vect{x}\mid\vect{y}^{\star})$.
+Algorithm~\ref{alg:query_pipeline} summarizes this query-time procedure.
+If an evaluator is available to compute $\widehat{\vect{y}}^{(k)}$ for each candidate, a
+discrepancy score can be computed and used to rank candidates for presentation; otherwise,
+the candidate set is returned without ranking.
 
 \begin{algorithm}[!htbp]
-  \caption{Target-driven querying and candidate assessment}\label{alg:query_pipeline}
+  \caption{Target-driven candidate generation (optional discrepancy-based ranking)}\label{alg:query_pipeline}
   \begin{algorithmic}[1]
-    \Require Trained inverse model $\widehat{q}$, target outcome $\vect{y}^{\star}$, candidate budget $K$
-    \Require Assessment Suite $\mathcal{A}$ (includes Evaluators, ODD, and constraints)
-    \Ensure Ranked candidate list $\mathcal{R}$
+    \Require Trained inverse estimator $\widehat{q}$, preprocessing transforms $\mathcal{T}$
+    \Require Target outcome $\vect{y}^{\star}$, candidate budget $K$
+    \Require Optional evaluator $\mathcal{E}$ and discrepancy $d(\cdot,\cdot)$
+    \Ensure Candidate set (optionally ranked) $\mathcal{R}$
 
-    \Repeat
-      \State Obtain target outcome $\vect{y}^{\star}$
-      \State Generate candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K} \sim \widehat{q}(\vect{x}\mid\vect{y}^{\star})$
-      
+    \State $\vect{y}^{\star} \leftarrow \mathcal{T}(\vect{y}^{\star})$ \Comment{Apply stored transforms}
+    \State Generate candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K} \sim \widehat{q}(\vect{x}\mid\vect{y}^{\star})$
+
+    \If{evaluator $\mathcal{E}$ is available}
       \For{$k=1$ to $K$}
-        \State $\widehat{\vect{y}}^{(k)} \leftarrow \text{Evaluate}(\widehat{\vect{x}}^{(k)})$ \Comment{Using surrogate or ground truth}
-        \State $S^{(k)} \leftarrow \text{Assess}(\widehat{\vect{x}}^{(k)}, \widehat{\vect{y}}^{(k)}, \vect{y}^{\star})$ \Comment{Discrepancy, ODD, and validity}
+        \State $\widehat{\vect{y}}^{(k)} \leftarrow \mathcal{E}(\widehat{\vect{x}}^{(k)})$
+        \State $S^{(k)} \leftarrow d(\widehat{\vect{y}}^{(k)}, \vect{y}^{\star})$
       \EndFor
-      
-      \State $\mathcal{R} \leftarrow \text{RankCandidates}(\{\widehat{\vect{x}}^{(k)}\}, \{S^{(k)}\})$ 
-      \State \Return top subset of $\mathcal{R}$
-    \Until{the exploration session terminates}
+      \State $\mathcal{R} \leftarrow \text{RankCandidates}(\{\widehat{\vect{x}}^{(k)}\}, \{S^{(k)}\})$
+    \Else
+      \State $\mathcal{R} \leftarrow \{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$
+    \EndIf
+
+    \State \Return $\mathcal{R}$
   \end{algorithmic}
 \end{algorithm}
