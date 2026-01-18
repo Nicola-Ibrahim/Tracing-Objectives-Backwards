@@ -365,80 +365,127 @@ experiment and report results separately for each $K$ used.
 \subsection{Design-space uncertainty diagnostics}\label{sec:eval_design}
 %-------------------------------------------------------------------------------
 
-Objective-space attainment does not determine whether the inverse model represents one-to-many
-structure in a reliable and useful way. Candidate-based inversion is intended to produce a conditional
-distribution over decisions, and uncertainty behaviour is therefore evaluated directly in design space.
-These diagnostics are computed on held-out paired test data $(\vect{x}_i,\vect{y}_i)$ by conditioning
-on $\vect{y}_i$ and comparing the resulting candidate samples to the ground-truth decision $\vect{x}_i$.
+Objective-space attainment evaluates whether at least one candidate can reproduce a target
+outcome, but it does not reveal whether the inverse model represents the underlying
+one-to-many structure in a trustworthy way. Because candidate-based inversion is intended
+to act as a conditional sampler over decisions, we also evaluate uncertainty behaviour
+directly in decision space. These diagnostics use held-out paired test data
+$(\vect{x}_i,\vect{y}_i)$: we condition on $\vect{y}_i$, generate $K$ decision candidates, and
+compare the resulting sample distribution to the ground-truth decision $\vect{x}_i$.
 
-Two complementary questions guide the diagnostics. The first concerns reliability: whether the spread
-of sampled candidates is consistent with calibrated uncertainty rather than being systematically too
-narrow, too wide, or biased. The second concerns probabilistic accuracy: whether the sampled
-distribution concentrates near the ground truth without inflating uncertainty.
+We report two complementary perspectives that answer different questions.
+First, reliability (calibration) asks whether the sampler’s stated uncertainty is
+statistically consistent with the realized ground truth---informally, whether the model is
+``honest'' about how uncertain it is. Second, probabilistic accuracy asks whether the
+predictive distribution is practically useful, meaning that it concentrates near the truth
+without becoming unnecessarily diffuse. Reporting both is important because a sampler can
+be well calibrated yet uninformative (too wide), or sharp yet unreliable (overconfident).
 
-\subsubsection{Reliability via PIT calibration curve and calibration error}\label{sec:eval_pit}
 
-Reliability is assessed using the probability integral transform (PIT) applied component-wise to the
-empirical conditional distribution represented by the candidate samples. \cite{Dawid1982} For each
-held-out test case $i$ and decision dimension $d$, the PIT value is computed as the empirical
-percentile position of the ground-truth component $x_{i,d}$ among the sampled candidates,
+\subsubsection{Reliability via PIT}\label{sec:eval_pit}
+
+Reliability evaluates the uncertainty behaviour of the conditional candidate distribution
+under repeated queries. The central question is whether the candidate set provides
+meaningful percentiles: across many test cases, do values labelled as ``10th percentile''
+actually contain the ground truth about 10\% of the time, ``50th percentile'' about 50\% of
+the time, and so on. This is a distribution-level check, not a best-candidate accuracy
+check. \cite{Diebold1998}
+
+We assess reliability using the probability integral transform (PIT), applied component-wise
+to the empirical conditional distribution represented by the $K$ candidates. For each test
+case $i$ and decision dimension $d$, we compute the PIT value as the empirical percentile
+rank of the ground-truth component $x_{i,d}$ among the sampled candidates:
 \begin{equation}
   z_{i,d}
   \;=\;
-  \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
+  \underbrace{\frac{1}{K}\sum_{k=1}^{K}\mathbf{1}\!\left(\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right)}_{\text{percentile rank of }x_{i,d}\text{ among }K\text{ samples}},
   \label{eq:pit_empirical}
 \end{equation}
-The quantity $z_{i,d}\in[0,1]$ indicates where the true value falls relative to the sampled set for
-that query. If the conditional sampler is calibrated for component $d$, then the aggregated PIT values
-over test cases are approximately uniform on $[0,1]$. This provides a direct diagnostic of whether
-uncertainty is distorted under repeated conditioning.
+The quantity $z_{i,d}\in[0,1]$ is the empirical CDF of the $K$ sampled candidates evaluated at
+the ground-truth value $x_{i,d}$. Equivalently, it is the percentile rank of $x_{i,d}$ among the
+samples: for example, $z_{i,d}=0.1$ means roughly 10\% of sampled values lie below $x_{i,d}$.
+If the conditional sampler is calibrated for component $d$, then these ranks aggregated over
+test cases are approximately uniform on $[0,1]$. Systematic departures from uniformity therefore
+diagnose distorted uncertainty under repeated conditioning. \cite{Diebold1998}
 
-Calibration is visualised using a calibration curve constructed from the empirical CDF of aggregated
-PIT values. Let $\{z_{(\ell)}\}_{\ell=1}^{L}$ denote the sorted PIT values aggregated over test cases
-and selected dimensions, where $L$ is the total number of PIT values included. Plotting the empirical
-CDF of $\{z_{(\ell)}\}$ against the diagonal $u\mapsto u$ provides a compact visual check of reliability.
-Systematic departures from the diagonal have a direct interpretation. Concentration of PIT mass near
-0 and 1 indicates overconfidence, where the sampled candidates are too concentrated and the truth
-falls in the tails too often. Concentration of PIT mass near 0.5 indicates underconfidence, where the
-sampled candidates are too diffuse and the truth falls near the centre too often. Skew indicates bias
-in the conditional mapping for that component.
 
-For compact reporting, deviation from the diagonal is summarised by a scalar calibration error,
-implemented in the evaluation pipeline as
+PIT is intentionally based on ranks rather than distances. It can therefore look acceptable
+even when the samples are very wide, provided the truth lands at the right ranks often
+enough across many test cases. For this reason we treat PIT as a reliability diagnostic,
+not a measure of how informative the candidate distribution is.
+
+Calibration is visualized using a PIT calibration curve constructed from the empirical CDF
+of the aggregated PIT values. Let $\{z_{(\ell)}\}_{\ell=1}^{L}$ denote the sorted PIT values
+aggregated over test cases and selected dimensions, where $L$ is the total number of PIT
+values included. Plotting the empirical CDF of $\{z_{(\ell)}\}$ against the diagonal
+$u\mapsto u$ provides a direct baseline for perfect calibration. This view is convenient in
+practice because it summarizes miscalibration without relying on histogram bin choices and
+it supports direct visual comparison across inverse models and sampling schemes. \cite{Diebold1998}
+
+Systematic departures from the diagonal have interpretable signatures:
+\begin{itemize}
+  \item Overconfidence: PIT values concentrate near $0$ and $1$, meaning the candidates are
+  too narrow and the truth falls in the tails too often.
+  \item Underconfidence: PIT values concentrate near $0.5$, meaning the candidates are too
+  wide and the truth falls near the centre too often.
+  \item Bias: PIT values show persistent skew, meaning the conditional mapping is shifted
+  and the truth tends to fall preferentially on one side of the sampled distribution.
+\end{itemize}
+
+For compact reporting, we summarize deviation from the diagonal using a scalar calibration
+error:
 \begin{equation}
   \mathrm{CalErr}
   \;=\;
   \frac{1}{L}\sum_{\ell=1}^{L}\left|z_{(\ell)}-\frac{\ell}{L}\right|.
   \label{eq:calerr}
 \end{equation}
-Lower values indicate closer agreement with the diagonal and therefore more reliable uncertainty
-representation. \cite{Kuleshov2018}
+This quantity measures the average absolute deviation between the empirical PIT CDF and the
+uniform reference CDF evaluated at the corresponding order statistics. Lower values indicate
+more reliable uncertainty representation, which matters when candidate dispersion is used to
+guide downstream exploration or decision-making. \cite{Diebold1998}
+
 
 \subsubsection{Probabilistic accuracy via CRPS}\label{sec:eval_crps}
 
-Reliability alone does not guarantee a practically useful candidate set. A model can be well
-calibrated yet overly diffuse, which can hinder exploration by producing candidates that are valid but
-insufficiently informative. Probabilistic accuracy is therefore evaluated using the continuous ranked
-probability score (CRPS), a strictly proper scoring rule that rewards distributions that are both
-accurate and sharp. \cite{GneitingRaftery2007,Hersbach2000}
+PIT-based reliability checks whether percentiles are meaningful, but it does not determine
+whether the candidate distribution is useful for recovering decisions. In particular, a
+sampler can be well calibrated while remaining overly diffuse, which makes candidate sets
+costly to search and less informative for exploration. We therefore complement PIT with a
+strictly proper scoring rule that rewards distributions that are close to the truth while
+penalizing unnecessary spread. \cite{GneitingRaftery2007}
 
-For each held-out test case $i$ and decision dimension $d$, CRPS is computed from the candidate
-samples. In expectation form,
+We evaluate probabilistic accuracy using the continuous ranked probability score (CRPS).
+In simple terms, CRPS asks the following in our setting:
+did the candidate distribution put mass near the observed design value $x_{i,d}$, and did it
+avoid spreading samples out more than needed? This targets usefulness rather than only
+long-run percentile behaviour. \cite{GneitingRaftery2007,Hersbach2000}
+
+For each held-out test case $i$ and decision dimension $d$, CRPS compares the sampled
+distribution to the ground truth $x_{i,d}$. In expectation form,
 \begin{equation}
   \mathrm{CRPS}_{i,d}
   \;=\;
-  \mathbb{E}\,|X-x_{i,d}|
+  \underbrace{\mathbb{E}\,|X-x_{i,d}|}_{\text{accuracy}}
   \;-\;
-  \frac{1}{2}\,\mathbb{E}\,|X-X'|,
+  \frac{1}{2}\,
+  \underbrace{\mathbb{E}\,|X-X'|}_{\text{dispersion}},
   \label{eq:crps_expectation}
 \end{equation}
-where $X$ and $X'$ are independent draws from the predictive distribution represented by the candidate
-samples. The first term measures distributional accuracy through the typical absolute deviation from
-the truth, while the second term measures sharpness by penalising excessive spread via the typical
-distance between independent draws.
 
-In experiments, the expectations in \eqref{eq:crps_expectation} are estimated using the standard
-sample-based form derived from the $K$ candidate samples,
+where $X$ and $X'$ are independent draws from the predictive distribution represented by the
+candidate samples. The first expectation, $\mathbb{E}[\,|X-x_{i,d}|\,]$, measures typical
+distance to the ground truth and therefore captures accuracy: it is smaller when the sampled
+distribution is centered near $x_{i,d}$. The second expectation, $\mathbb{E}[\,|X-X'|\,]$,
+measures typical distance between two independent draws and therefore captures dispersion:
+it is larger when the predictive distribution is wide. Because this dispersion term is
+subtracted (with factor $1/2$), a distribution that is unnecessarily diffuse increases the
+overall CRPS. Low CRPS therefore indicates candidate sets that place mass near the ground
+truth without inflating spread. \cite{GneitingRaftery2007}
+
+
+In experiments, the expectations in \eqref{eq:crps_expectation} are estimated using the
+standard sample-based form derived from the $K$ candidate samples:
 \begin{equation}
   \widehat{\mathrm{CRPS}}_{i,d}
   \;=\;
@@ -447,16 +494,16 @@ sample-based form derived from the $K$ candidate samples,
   \frac{1}{2K^{2}}\sum_{k=1}^{K}\sum_{\ell=1}^{K}\left|\widehat{x}^{(k)}_{i,d}-\widehat{x}^{(\ell)}_{i,d}\right|.
   \label{eq:crps_samples}
 \end{equation}
-Scores are then aggregated across decision dimensions and test cases, for example by reporting the
-mean CRPS across $(i,d)$. Lower CRPS indicates candidate sets that concentrate near the ground truth
-without inflating uncertainty.
+We aggregate scores across decision dimensions and test cases (for example by reporting the
+mean over $(i,d)$). Lower CRPS corresponds to candidate sets that are both close to the ground
+truth and not unnecessarily wide. \cite{Hersbach2000}
 
-Taken together, PIT-based calibration and CRPS separate behaviours that objective-space discrepancy
-alone can hide. A model may achieve strong best-of-$K$ target matching while being systematically
-overconfident, producing candidate sets that are sharp but unreliable. Conversely, a model may be
-reliable but too diffuse, yielding uncertainty that is technically calibrated yet unhelpful for
-decision-making. Reporting both diagnostics makes these trade-offs explicit and supports
-interpretation of comparative results across inverse model families.
+PIT and CRPS diagnose different failure modes. PIT can appear acceptable even when samples
+are extremely wide, because it is driven by ranks. CRPS will penalize such diffuseness.
+Conversely, a very sharp sampler can achieve good CRPS on easy cases while still being
+systematically overconfident across the dataset, which PIT will expose through U-shaped
+departures from the diagonal. Reporting both diagnostics therefore makes the honesty--usefulness
+trade-off explicit for candidate-based inversion. \cite{Diebold1998,GneitingRaftery2007}
 
 
 %-------------------------------------------------------------------------------
