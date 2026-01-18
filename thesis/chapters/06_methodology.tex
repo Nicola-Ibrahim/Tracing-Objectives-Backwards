@@ -159,19 +159,19 @@ With the propose--check protocol fixed in Section~\ref{sec:framework}, implement
 training the inverse proposal model from paired decision--objective examples
 $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$. The training goal is to obtain a conditional
 generator $q_{\theta}(\vect{x}\mid\vect{y})$ that captures the empirical decision--objective relation
-while remaining expressive enough to represent one-to-many structure. The modelling background in
+while remaining expressive enough to represent one-to-many structure. The modeling background in
 Chapter~\ref{chap:Background} introduces the three conditional families used in the thesis and
-derives their probabilistic forms. The present section specifies the optimisation objectives as used
+derives their probabilistic forms. The present section specifies the optimization objectives as used
 in the experiments.
 
 Across models, parameter estimation follows a shared principle: fit the conditional distribution to
-the observed pairs under the regularised conditional likelihood objective in
-\eqref{eq:cond_mle_inverse}. The role of regularisation is collected in $\Omega(\cdot)$ and includes
-standard stabilising terms such as weight decay, together with any model-specific penalties. The
+the observed pairs under the regularized conditional likelihood objective in
+\eqref{eq:cond_mle_inverse}. The role of regularization is collected in $\Omega(\cdot)$ and includes
+standard stabilizing terms such as weight decay, together with any model-specific penalties. The
 evaluation components, namely the outcome evaluator $\mathcal{E}$ and discrepancy $d$, are not used
 during training and enter only through the checking rule defined by \eqref{eq:candidate_scores}.
 
-The three instantiations below differ in how they parameterise $q_{\theta}(\vect{x}\mid\vect{y})$ and
+The three instantiations below differ in how they parameterize $q_{\theta}(\vect{x}\mid\vect{y})$ and
 how the conditional log-density in \eqref{eq:cond_mle_inverse} is computed or approximated.
 
 %-------------------------------------------------------------------------------
@@ -262,39 +262,41 @@ objective vectors,
   \widehat{\vect{y}}^{(k)} \;=\; \mathcal{E}(\widehat{\vect{x}}^{(k)}), \qquad k=1,\dots,K,
 \]
 where $\mathcal{E}:\mathcal{X}\rightarrow\mathcal{Y}$ denotes the best available evaluator for the
-benchmark (simulator, measurement routine, or checking surrogate). 
-All reported metrics are derived from these checked outcomes, and $\mathcal{E}$ is not accessed by
-inverse models at test time beyond producing candidates. Fixing $\mathcal{E}$, the discrepancy
-definition $d$, and the candidate budget $K$ keeps comparisons attributable to inverse modelling
-choices rather than changes in the evaluation interface. 
+benchmark (simulator, measurement routine, or checking surrogate). All reported metrics are derived
+from checked quantities, and $\mathcal{E}$ is not accessed by inverse models at test time beyond
+producing candidates. Fixing $\mathcal{E}$, the discrepancy definition $d$, and the candidate budget
+$K$ keeps comparisons attributable to inverse modeling choices rather than changes in the evaluation
+interface.
 
-The evaluation suite is organised around four complementary views. The first quantifies attainment
-under a finite candidate budget. The second scores the probabilistic accuracy of the induced outcome
-distribution. The third checks reliability of uncertainty through coverage calibration. The fourth
-tests conditional calibration in design space using simulation-based calibration diagnostics.
-
+Two complementary evaluation views are reported. The first view evaluates the user-facing inverse
+querying interface by measuring attainment in objective space under the checker. The second view
+evaluates the inverse model as a conditional sampler in design space, focusing on uncertainty
+behavior. The separation is deliberate: objective-space metrics quantify whether a target can be
+matched under the declared checker, while design-space diagnostics quantify whether sampled candidates
+behave like a meaningful conditional distribution over decisions.
 
 %-------------------------------------------------------------------------------
-\subsection{Discrepancy metrics}\label{sec:eval_discrepancy}
+\subsection{Objective-space attainment under the checker}\label{sec:eval_objective}
 %-------------------------------------------------------------------------------
 
-Attainment is assessed in objective space using the checked outcomes
-$\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$ obtained from the forward checker. Discrepancy metrics
-therefore reflect the declared evaluation interface rather than internal quantities of a particular
-inverse model.
+Objective-space attainment evaluates how well a candidate set can match a target after checking.
+Given checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$, attainment is summarised using
+discrepancy scores computed in standardised objective space, so that distances are comparable across
+dimensions.
 
-To make distances comparable across objective dimensions, discrepancies are computed in standardised
-objective space. Let $\widetilde{\vect{y}}$ denote objectives after standardisation using statistics
-computed on the training split. Euclidean distance in the standardised space provides a transparent
-default. When objective dimensions exhibit strong correlation, a Mahalanobis discrepancy incorporates
-covariance structure,
+\subsubsection{Discrepancy metrics: $D_{\min}$ and $D_{\mathrm{med}}$}\label{sec:eval_discrepancy}
+
+Let $\widetilde{\vect{y}}$ denote objectives after standardization using statistics computed on the
+training split. Euclidean distance in the standardized space provides a transparent default.
+\cite{Mahalanobis1936} When objective dimensions exhibit strong correlation, a
+Mahalanobis discrepancy incorporates covariance structure,
 \begin{equation}
   d_{\mathrm{Mah}}(\vect{u},\vect{v})
   \;=\;
   \sqrt{(\vect{u}-\vect{v})^{\top}\boldsymbol{\Sigma}^{-1}(\vect{u}-\vect{v})},
   \label{eq:mahalanobis_distance}
 \end{equation}
-where $\boldsymbol{\Sigma}$ is estimated on a reference split of outcomes and regularised to ensure
+where $\boldsymbol{\Sigma}$ is estimated on a reference split of outcomes and regularized to ensure
 stable inversion. \cite{Mahalanobis1936, DeMaesschalck2000}
 
 Given a target $\vect{y}^{\star}$, each candidate receives a checked discrepancy score
@@ -305,12 +307,9 @@ Given a target $\vect{y}^{\star}$, each candidate receives a checked discrepancy
   \qquad k=1,\dots,K,
   \label{eq:per_candidate_discrepancy}
 \end{equation}
-where $\widetilde{\mathcal{E}}(\cdot)$ denotes evaluation followed by standardisation in objective
-space. The set of scores $\{s^{(k)}(\vect{y}^{\star})\}_{k=1}^{K}$ is the basis for the discrepancy
-summaries reported below.
-
-Two statistics are reported per target. The first is the minimum checked discrepancy within the
-candidate set,
+where $\widetilde{\mathcal{E}}(\cdot)$ denotes evaluation followed by standardization in objective
+space. The set of scores $\{s^{(k)}(\vect{y}^{\star})\}_{k=1}^{K}$ is summarized using two statistics.
+The first is the minimum checked discrepancy within the candidate set,
 \begin{equation}
   D_{\min}^{(K)}(\vect{y}^{\star})
   \;=\;
@@ -340,8 +339,8 @@ indicates that many candidates concentrate near the target, which is desirable w
 is used for exploration or when repeated querying is expected. A large $D_{\mathrm{med}}^{(K)}$ indicates
 that most candidates are not well aligned, and that success may rely on occasional lucky draws.
 
-Interpreting the two statistics jointly separates attainment from typical set behaviour. The following
-cases provide a direct reading of candidate-set behaviour under the fixed budget $K$:
+Interpreting the two statistics jointly separates attainment from typical set behavior. The following
+cases provide a direct reading of candidate-set behavior under the fixed budget $K$:
 \begin{itemize}
   \item Small $D_{\min}^{(K)}$ and large $D_{\mathrm{med}}^{(K)}$: outlier-driven attainment. The method
   occasionally produces an excellent candidate, but most candidates are not well aligned with the
@@ -355,140 +354,109 @@ cases provide a direct reading of candidate-set behaviour under the fixed budget
   checker and discrepancy. The candidate set does not align well with the target.
 \end{itemize}
 
-Across a target set $\mathcal{T}$, results are summarised using robust statistics of
+Across a target set $\mathcal{T}$, results are summarized using robust statistics of
 $D_{\min}^{(K)}$ and $D_{\mathrm{med}}^{(K)}$, including the median and interquartile range, with the mean
 reported when informative. The candidate budget $K$ is treated as part of the evaluation interface.
 Increasing $K$ can reduce $D_{\min}^{(K)}$ by providing more opportunities to draw a close candidate even
 without changing the underlying conditional model. For this reason, comparisons fix $K$ within an
 experiment and report results separately for each $K$ used.
 
-
 %-------------------------------------------------------------------------------
-\subsection{Probabilistic accuracy: CRPS on the induced outcome distribution}\label{sec:eval_crps}
+\subsection{Design-space uncertainty diagnostics}\label{sec:eval_design}
 %-------------------------------------------------------------------------------
 
-The candidate set induces an empirical predictive distribution over checked outcomes for each target.
-To evaluate probabilistic accuracy in a way that accounts for both closeness and dispersion, the
-continuous ranked probability score (CRPS) is used as a proper scoring rule.
-\cite{GneitingRaftery2007,Hersbach2000}
+Objective-space attainment does not determine whether the inverse model represents one-to-many
+structure in a reliable and useful way. Candidate-based inversion is intended to produce a conditional
+distribution over decisions, and uncertainty behaviour is therefore evaluated directly in design space.
+These diagnostics are computed on held-out paired test data $(\vect{x}_i,\vect{y}_i)$ by conditioning
+on $\vect{y}_i$ and comparing the resulting candidate samples to the ground-truth decision $\vect{x}_i$.
 
-Because $\vect{y}$ is vector-valued, CRPS is computed marginally per objective dimension and then
-aggregated. Let $\widehat{y}^{(k)}_{j}$ denote the $j$th component of the checked outcome
-$\widehat{\vect{y}}^{(k)}$ after standardisation, and let $y^{\star}_{j}$ denote the corresponding
-target component. The empirical CRPS for dimension $j$ under $K$ samples is
+Two complementary questions guide the diagnostics. The first concerns reliability: whether the spread
+of sampled candidates is consistent with calibrated uncertainty rather than being systematically too
+narrow, too wide, or biased. The second concerns probabilistic accuracy: whether the sampled
+distribution concentrates near the ground truth without inflating uncertainty.
+
+\subsubsection{Reliability via PIT calibration curve and calibration error}\label{sec:eval_pit}
+
+Reliability is assessed using the probability integral transform (PIT) applied component-wise to the
+empirical conditional distribution represented by the candidate samples. \cite{Dawid1982} For each
+held-out test case $i$ and decision dimension $d$, the PIT value is computed as the empirical
+percentile position of the ground-truth component $x_{i,d}$ among the sampled candidates,
 \begin{equation}
-  \mathrm{CRPS}^{(K)}_{j}(\vect{y}^{\star})
+  z_{i,d}
   \;=\;
-  \frac{1}{K}\sum_{k=1}^{K}\left|\widehat{y}^{(k)}_{j}-y^{\star}_{j}\right|
+  \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
+  \label{eq:pit_empirical}
+\end{equation}
+The quantity $z_{i,d}\in[0,1]$ indicates where the true value falls relative to the sampled set for
+that query. If the conditional sampler is calibrated for component $d$, then the aggregated PIT values
+over test cases are approximately uniform on $[0,1]$. This provides a direct diagnostic of whether
+uncertainty is distorted under repeated conditioning.
+
+Calibration is visualised using a calibration curve constructed from the empirical CDF of aggregated
+PIT values. Let $\{z_{(\ell)}\}_{\ell=1}^{L}$ denote the sorted PIT values aggregated over test cases
+and selected dimensions, where $L$ is the total number of PIT values included. Plotting the empirical
+CDF of $\{z_{(\ell)}\}$ against the diagonal $u\mapsto u$ provides a compact visual check of reliability.
+Systematic departures from the diagonal have a direct interpretation. Concentration of PIT mass near
+0 and 1 indicates overconfidence, where the sampled candidates are too concentrated and the truth
+falls in the tails too often. Concentration of PIT mass near 0.5 indicates underconfidence, where the
+sampled candidates are too diffuse and the truth falls near the centre too often. Skew indicates bias
+in the conditional mapping for that component.
+
+For compact reporting, deviation from the diagonal is summarised by a scalar calibration error,
+implemented in the evaluation pipeline as
+\begin{equation}
+  \mathrm{CalErr}
+  \;=\;
+  \frac{1}{L}\sum_{\ell=1}^{L}\left|z_{(\ell)}-\frac{\ell}{L}\right|.
+  \label{eq:calerr}
+\end{equation}
+Lower values indicate closer agreement with the diagonal and therefore more reliable uncertainty
+representation. \cite{Kuleshov2018}
+
+\subsubsection{Probabilistic accuracy via CRPS}\label{sec:eval_crps}
+
+Reliability alone does not guarantee a practically useful candidate set. A model can be well
+calibrated yet overly diffuse, which can hinder exploration by producing candidates that are valid but
+insufficiently informative. Probabilistic accuracy is therefore evaluated using the continuous ranked
+probability score (CRPS), a strictly proper scoring rule that rewards distributions that are both
+accurate and sharp. \cite{GneitingRaftery2007,Hersbach2000}
+
+For each held-out test case $i$ and decision dimension $d$, CRPS is computed from the candidate
+samples. In expectation form,
+\begin{equation}
+  \mathrm{CRPS}_{i,d}
+  \;=\;
+  \mathbb{E}\,|X-x_{i,d}|
   \;-\;
-  \frac{1}{2K^{2}}\sum_{k=1}^{K}\sum_{\ell=1}^{K}\left|\widehat{y}^{(k)}_{j}-\widehat{y}^{(\ell)}_{j}\right|.
-  \label{eq:crps_ensemble}
+  \frac{1}{2}\,\mathbb{E}\,|X-X'|,
+  \label{eq:crps_expectation}
 \end{equation}
-The reported CRPS aggregates these marginal scores across dimensions,
+where $X$ and $X'$ are independent draws from the predictive distribution represented by the candidate
+samples. The first term measures distributional accuracy through the typical absolute deviation from
+the truth, while the second term measures sharpness by penalising excessive spread via the typical
+distance between independent draws.
+
+In experiments, the expectations in \eqref{eq:crps_expectation} are estimated using the standard
+sample-based form derived from the $K$ candidate samples,
 \begin{equation}
-  \mathrm{CRPS}^{(K)}(\vect{y}^{\star})
+  \widehat{\mathrm{CRPS}}_{i,d}
   \;=\;
-  \frac{1}{m}\sum_{j=1}^{m}\mathrm{CRPS}^{(K)}_{j}(\vect{y}^{\star}),
-  \label{eq:crps_mean}
+  \frac{1}{K}\sum_{k=1}^{K}\left|\widehat{x}^{(k)}_{i,d}-x_{i,d}\right|
+  \;-\;
+  \frac{1}{2K^{2}}\sum_{k=1}^{K}\sum_{\ell=1}^{K}\left|\widehat{x}^{(k)}_{i,d}-\widehat{x}^{(\ell)}_{i,d}\right|.
+  \label{eq:crps_samples}
 \end{equation}
-where $m$ is the number of objectives.
+Scores are then aggregated across decision dimensions and test cases, for example by reporting the
+mean CRPS across $(i,d)$. Lower CRPS indicates candidate sets that concentrate near the ground truth
+without inflating uncertainty.
 
-CRPS complements $D_{\min}^{(K)}$ and $D_{\mathrm{med}}^{(K)}$. The first term in
-\eqref{eq:crps_ensemble} rewards distributions that concentrate near the target, while the second term
-penalises overly concentrated or degenerate sets. As a proper scoring rule, CRPS discourages
-misrepresenting uncertainty: under repeated queries, the expected score is optimised when the
-predictive distribution matches the data-generating distribution for the checked outcomes.
-\cite{GneitingRaftery2007}
-
-%-------------------------------------------------------------------------------
-\subsection{Reliability of uncertainty: calibration curve and scalar calibration error}\label{sec:eval_reliability}
-%-------------------------------------------------------------------------------
-
-Probabilistic accuracy does not by itself guarantee reliable uncertainty. Reliability is assessed by
-checking whether nominal predictive coverage levels match empirical coverage, following standard
-notions of calibration. \cite{Dawid1982,Kuleshov2018}
-
-For each objective dimension $j$ and nominal level $\alpha\in(0,1)$, the candidate set defines an
-empirical central prediction interval using sample quantiles,
-\[
-  I^{(K)}_{j,\alpha}(\vect{y}^{\star})
-  \;=\;
-  \left[\widehat{q}^{(K)}_{j}((1-\alpha)/2),\ \widehat{q}^{(K)}_{j}((1+\alpha)/2)\right],
-\]
-where $\widehat{q}^{(K)}_{j}(\beta)$ denotes the empirical $\beta$-quantile of
-$\{\widehat{y}^{(k)}_{j}\}_{k=1}^{K}$.
-
-Empirical coverage for level $\alpha$ is then computed over the target set $\mathcal{T}$ as
-\begin{equation}
-  \widehat{C}_{j}^{(K)}(\alpha)
-  \;=\;
-  \frac{1}{|\mathcal{T}|}\sum_{\vect{y}^{\star}\in\mathcal{T}}
-  \mathbb{I}\!\left[y^{\star}_{j}\in I^{(K)}_{j,\alpha}(\vect{y}^{\star})\right].
-  \label{eq:coverage_curve}
-\end{equation}
-A calibration curve plots $\widehat{C}_{j}^{(K)}(\alpha)$ against $\alpha$; a well-calibrated method
-tracks the diagonal $\widehat{C}=\alpha$. For compact reporting, a scalar calibration error is
-computed over a fixed set of nominal levels $\{\alpha_{\ell}\}_{\ell=1}^{L}$,
-\begin{equation}
-  \mathrm{CE}_{j}^{(K)}
-  \;=\;
-  \frac{1}{L}\sum_{\ell=1}^{L}\left|\widehat{C}_{j}^{(K)}(\alpha_{\ell})-\alpha_{\ell}\right|,
-  \label{eq:calibration_error}
-\end{equation}
-and aggregated across dimensions, for example by averaging $\mathrm{CE}_{j}^{(K)}$ over $j$.
-This reporting format makes uncertainty reliability explicit while remaining compatible with
-multi-objective settings where objectives differ in scale prior to standardisation.
-
-%-------------------------------------------------------------------------------
-\subsection{Conditional calibration in design space: SBC ranks and uniformity tests}\label{sec:eval_sbc}
-%-------------------------------------------------------------------------------
-
-Reliability in objective space does not fully diagnose whether the conditional sampler behaves
-consistently in design space. Conditional calibration is therefore evaluated using
-simulation-based calibration (SBC) diagnostics whenever a reference generative process is available.
-\cite{TaltsEtAl2018SBC}
-
-An SBC trial is constructed by sampling a reference design $\vect{x}_{\mathrm{ref}}$ from the design
-prior or benchmark archive and generating its corresponding objective vector using the same checker,
-$\vect{y}_{\mathrm{ref}}=\mathcal{E}(\vect{x}_{\mathrm{ref}})$. Given $\vect{y}_{\mathrm{ref}}$, the
-inverse model produces $K$ candidates
-$\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}\sim q(\vect{x}\mid\vect{y}_{\mathrm{ref}})$.
-
-Because $\vect{x}$ is vector-valued, SBC is applied through a set of scalar probes
-$g_m:\mathcal{X}\rightarrow\mathbb{R}$, such as individual decision coordinates or benchmark-specific
-derived quantities. For each probe, the rank statistic is
-\begin{equation}
-  R_m
-  \;=\;
-  \#\left\{k:\ g_m(\widehat{\vect{x}}^{(k)}) < g_m(\vect{x}_{\mathrm{ref}})\right\}
-  \in \{0,\dots,K\}.
-  \label{eq:sbc_rank}
-\end{equation}
-Under a conditionally calibrated sampler, the ranks are approximately discrete-uniform across
-repeated trials. Rank histograms are therefore reported for representative probes, and uniformity is
-summarised using a scalar statistic.
-
-Two summary options are used in practice. The first is a goodness-of-fit test against the discrete
-uniform distribution, such as a Kolmogorov--Smirnov-style test applied to the empirical rank CDF,
-reported per probe and aggregated where appropriate. \cite{TaltsEtAl2018SBC} The second reports
-standardised moment deviations of the ranks,
-\begin{equation}
-  z_{\mu,m}
-  \;=\;
-  \frac{\widehat{\mu}_m - K/2}{\sqrt{(K^2-1)/12}},
-  \qquad
-  z_{\sigma,m}
-  \;=\;
-  \frac{\widehat{\sigma}_m^2 - (K^2-1)/12}{\sqrt{\mathrm{Var}(\widehat{\sigma}_m^2)}},
-  \label{eq:sbc_rank_zscores}
-\end{equation}
-where $\widehat{\mu}_m$ and $\widehat{\sigma}_m^2$ are the empirical mean and variance of ranks for
-probe $m$ across trials. In this form, $z_{\mu,m}$ measures systematic bias and $z_{\sigma,m}$ measures
-over- or under-dispersion relative to the uniform reference. The SBC diagnostics are interpreted as
-explanatory checks: they complement attainment metrics by indicating whether good best-of-$K$
-performance is achieved through a sampler whose conditional uncertainty is consistent with the
-reference generative process.
-
+Taken together, PIT-based calibration and CRPS separate behaviours that objective-space discrepancy
+alone can hide. A model may achieve strong best-of-$K$ target matching while being systematically
+overconfident, producing candidate sets that are sharp but unreliable. Conversely, a model may be
+reliable but too diffuse, yielding uncertainty that is technically calibrated yet unhelpful for
+decision-making. Reporting both diagnostics makes these trade-offs explicit and supports
+interpretation of comparative results across inverse model families.
 
 
 %-------------------------------------------------------------------------------
