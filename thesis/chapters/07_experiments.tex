@@ -25,122 +25,196 @@ Trade-offs are formalized by Pareto dominance. For $\vect{u},\vect{v}\in\R^m$,
 $\vect{u}\preceq\vect{v}$ holds if $u_i\le v_i$ for all $i$ and $u_j<v_j$ for at least one index $j$.
 A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ satisfies
 $\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
-Figure~\ref{fig:pareto_front} illustrates the dominated region and a typical non-dominated approximation set returned by the optimizer.
+Figure~\ref{fig:pareto_front} illustrates this geometry for a bi-objective case, showing an example non-dominated
+set (Pareto front approximation) together with a dominated region induced by a representative Pareto point.
 
 \begin{figure}[!htbp]
   \centering
-  \input{figures/pareto_front}
+  \begin{adjustbox}{width=\linewidth}
+      \input{figures/pareto_front}
+  \end{adjustbox}
   \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
   \label{fig:pareto_front}
 \end{figure}
 
-\subsection{Problem and Data}
-We generate bi-objective data from the COCO BBOB test functions using the \texttt{cocoex} Python interface
-(which provides benchmark suites via \texttt{Suite} and standardized function instances) \cite{cocoexDocs, cocoBBOBOverview}.
-We focus on four BBOB functions: $f_5$ (Linear Slope), $f_6$ (Attractive Sector), $f_{10}$ (Ellipsoid), and $f_{20}$ (Schwefel $x\sin(x)$).
-These functions cover boundary optima and strong directionality ($f_5$), pronounced asymmetry ($f_6$),
-ill-conditioning ($f_{10}$), and highly multi-modal structure ($f_{20}$).
 
-To obtain a two-objective problem from each selected function, we pair two COCO instances of the same analytic form:
+\subsection{Problem and Data}
+
+We generate bi-objective data from COCO BBOB test functions using the \texttt{cocoex} Python
+interface, which provides standardized benchmark suites and deterministic function instances.
+\cite{cocoexDocs} We focus on four BBOB functions: $f_5$ (Linear Slope), $f_6$ (Attractive
+Sector), $f_{10}$ (Ellipsoid), and $f_{20}$ (Schwefel $x\sin(x)$), which span boundary optima
+and strong directionality ($f_5$), pronounced asymmetry ($f_6$), ill-conditioning ($f_{10}$),
+and highly multi-modal structure ($f_{20}$). \cite{cocoBBOBOverview}
+
+To obtain a two-objective problem from each selected function, we pair two COCO instances of
+the same analytic form:
 \[
 \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
 \]
-with $(a,b)$ fixed per function (e.g., $a=1,b=2$). Instances implement deterministic transformations and shifts while preserving the function family, enabling reproducible variation across runs.
+with $(a,b)$ fixed per function (e.g., $a=1,b=2$). Instances implement deterministic shifts and
+transformations while preserving the function family, enabling reproducible variation across
+runs. \cite{cocoexDocs,cocoBBOBOverview}
 
-For each function-based bi-objective problem, we run NSGA-II with a fixed evaluation budget and random seeds \cite{deb2002nsga2}.
-The optimization objective is to obtain Pareto-relevant data by approximating the Pareto-optimal set and its image in objective space.
-At the same time, we log a larger set of decision--outcome pairs than the final non-dominated set by recording evaluations throughout the run.
-This produces broad coverage of the outcome region while keeping the optimization signal centered on Pareto performance.
+For each function-based bi-objective problem, we approximate a Pareto set using NSGA-II under
+a fixed evaluation budget and random seeds. \cite{deb2002nsga2} Unlike earlier drafts where
+all evaluated pairs were logged for training, in this chapter we retain only Pareto-relevant
+records: the final non-dominated archive returned by NSGA-II. Concretely, for each function
+we construct a dataset
+\[
+\mathcal{D}_{\mathrm{PF}}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N_{\mathrm{PF}}}, \qquad
+\vect{y}_i=\vect{f}(\vect{x}_i),
+\]
+where each $\vect{y}_i$ is non-dominated within the final archive. The resulting size
+$N_{\mathrm{PF}}$ depends on the function and evaluation budget.
 
-For each selected function, we collect $N=8000$ records $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$, where $\vect{y}_i=\vect{f}(\vect{x}_i)$.
-Each record stores a dominance flag indicating whether $\vect{y}_i$ is non-dominated within the final archive.
-This supports training on the full logged set and also allows Pareto-only filtering when needed.
+This Pareto-only dataset matches the intended use case of inverse Pareto design. In many
+engineering settings, the available data are not arbitrary samples from the full design space,
+but a set of competitive trade-off solutions produced by an optimizer or prior design process.
+A bi-objective Pareto front can be interpreted as a menu of performance trade-offs: for example,
+a point $\vect{y}^\star$ could represent a target balance between power consumption and signal
+fidelity, or between cost and performance in a component design. The inverse model then serves
+as a conditional sampler that maps this chosen trade-off back into decision space, returning
+multiple plausible designs $\vect{x}$ that realize comparable outcomes.
 
-Data are split into train/validation/test (80/10/10) using a fixed seed per function.
-Decision variables are scaled to a common range using the COCO domain bounds; outcomes are standardised using training-set statistics.
-Targets for inverse querying are sampled inside the convex hull of training outcomes (200 targets per function).
+We split $\mathcal{D}_{\mathrm{PF}}$ into train/validation/test (80/10/10) using a fixed seed per
+function. Decision variables are scaled using the COCO domain bounds, and outcomes are
+standardized using training-set statistics. Targets for inverse evaluation are taken from the
+held-out Pareto outcomes (and, when needed, small perturbations of these outcomes to represent
+user-specified targets near the front). This ensures that conditioning queries remain in a
+Pareto-relevant region while still probing generalization beyond the exact training points.
 
 
-% \subsection{}{Experimental Results and Discussion}
-% \label{sec:results}
+%-------------------------------------------------------------------------------
+\subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
+%-------------------------------------------------------------------------------
 
-% We evaluate the inverse models across two dimensions: first, an intra-model ablation study to identify optimal hyperparameters; second, a cross-model comparison of the best-performing configurations.
+\subsubsection{Hyperparameter ablation and model selection}\label{subsubsec:ablation_objective}
 
+Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the
+number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the
+number of coupling layers (and corresponding subnet capacity). To avoid attributing performance
+differences to under- or over-parameterized settings, we run an ablation study within each model
+family and select a single configuration for downstream comparison.
 
-\subsection{Hyperparameter Ablation and Model Selection}
-\label{subsec:ablation}
+To keep the analysis focused and interpretable, the objective-space results in this section are
+reported for a single representative bi-objective problem derived from COCO BBOB $f_5$
+(Linear Slope). This function exhibits strong directionality and boundary effects, which makes it a
+useful stress test for target attainment while remaining simple enough to isolate the impact of model
+capacity and sampling protocol.
 
-Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the number of coupling layers (and corresponding subnet capacity). To avoid attributing performance differences to under- or over-parameterized settings, we first run an ablation study within each model family and select a single configuration for downstream comparison.
+Following the objective-space evaluation defined in Section~\ref{sec:eval_objective}, target
+attainment is summarized using the outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$, computed by
+forward-evaluating candidates and measuring distance to the requested target outcome. Because inverse
+exploration is one-to-many, we report best-of-$K$ discrepancy: for each target we draw $K$ candidates
+and retain the candidate that minimizes discrepancy. Lower values therefore indicate that the sampler
+can reach the requested outcome region within a fixed candidate budget, while larger values indicate
+that even the best candidate among $K$ samples remains far from the target.
 
-Table~\ref{tab:ablation_results} summarizes the mean outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ across a representative subset of configurations. The overall pattern is that additional capacity can improve target matching up to a saturation point, after which gains diminish and the model may begin to oversmooth the inverse relation. Figure~\ref{fig:ablation_scaling} visualizes this scaling behaviour and helps identify where extra capacity no longer translates into materially better discrepancy.
+\paragraph{Median best-of-$K$ discrepancy (single sampling run).}
+Table~\ref{tab:ablation_f5_median} reports the median best-of-$K$ discrepancy over the target set for a
+representative subset of configurations, evaluated on $f_5$. Here, $K=50$ is used to reduce variance in
+the best-of-$K$ estimate and to reflect a moderate candidate budget in objective-space search. The
+median emphasizes typical target attainment under the sampling protocol, while remaining robust to a
+small number of difficult targets. In this table, a lower entry indicates that the configuration
+generates candidate sets whose closest member more consistently aligns with the intended outcome.
 
 \begin{table}[!htbp]
     \centering
-    \caption{Ablation Study: Mean outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ for varying configurations. The best-in-class setting per model family is marked with $\star$ and carried forward to the head-to-head comparison.}
-    \label{tab:ablation_results}
+    \caption{Ablation on COCO $f_5$ (objective space): Median best-of-$K$ outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ over targets, with $K=50$ candidates per target. Lower is better. The best-in-class setting per model family is marked with $\star$.}
+    \label{tab:ablation_f5_median}
     \rarray{1.2}
-    \begin{tabular}{ll cccc}
+    \begin{tabular}{ll c}
         \toprule
-        \textbf{Model} & \textbf{Configuration} & \textbf{$f_5$} & \textbf{$f_6$} & \textbf{$f_{10}$} & \textbf{$f_{20}$} \\
+        \textbf{Model} & \textbf{Configuration} & \textbf{Median $\mathcal{E}_{\mathcal{Y}}$ (best-of-$K$, $K=50$)} \\
         \midrule
-        \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- & -- & -- & -- \\
-                              & $z=8, \text{layers}=4$ ($\star$) & -- & -- & -- & -- \\
-                              & $z=16, \text{layers}=4$ & -- & -- & -- & -- \\
+        \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- \\
+                              & $z=8, \text{layers}=4$ ($\star$) & -- \\
+                              & $z=16, \text{layers}=4$ & -- \\
         \midrule
-        \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- & -- & -- & -- \\
-                              & $M=5, H=128$ & -- & -- & -- & -- \\
-                              & $M=10, H=256$ ($\star$) & -- & -- & -- & -- \\
-                              & $M=20, H=256$ & -- & -- & -- & -- \\
+        \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- \\
+                              & $M=5, H=128$ & -- \\
+                              & $M=10, H=256$ ($\star$) & -- \\
+                              & $M=20, H=256$ & -- \\
         \midrule
-        \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- & -- & -- & -- \\
-                              & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- & -- & -- & -- \\
-                              & $\text{layers}=12, \text{subnet}=256$ & -- & -- & -- & -- \\
+        \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- \\
+                              & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- \\
+                              & $\text{layers}=12, \text{subnet}=256$ & -- \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\paragraph{Robustness across repeated candidate sets (median-of-medians).}
+Best-of-$K$ attainment depends on stochastic sampling: even for a fixed target, different draws can
+yield slightly different minimum discrepancy. To separate systematic differences between model
+configurations from sampling noise, we repeat the candidate generation multiple times per target. For
+each target, we draw $K=50$ candidates independently for $R=10$ repetitions, compute the best-of-$K$
+discrepancy within each repetition, and then summarize each target by the median across repetitions.
+We then aggregate across targets by reporting the median of these per-target medians. This ``median of
+medians'' provides a more stable measure of typical attainment for a fixed sampling budget.
+
+Table~\ref{tab:ablation_f5_mom} reports this robustness-adjusted summary on $f_5$ for the same
+configuration grid. Differences between Table~\ref{tab:ablation_f5_median} and
+Table~\ref{tab:ablation_f5_mom} are informative: configurations whose performance improves substantially
+under repeated sampling tend to exhibit higher sampling variance (occasional strong hits), whereas
+configurations that remain strong under the median-of-medians tend to deliver more consistent
+attainment from one candidate set to the next.
+
+\begin{table}[!htbp]
     \centering
-    \placeholderfigure{Scaling behavior: $\mathcal{E}_{\mathcal{Y}}$ vs. model complexity (e.g., number of mixtures $M$ for MDN, latent dimensionality $z$ for CVAE, coupling layers for INN).}
-    \caption[Performance Scaling and Model Complexity]{Performance scaling across architectures. The figure highlights where additional capacity continues to improve target matching and where returns begin to diminish.}
-    \label{fig:ablation_scaling}
-\end{figure}
+    \caption{Ablation on COCO $f_5$ (objective space): Robust target attainment under repeated sampling. Reported is the median across targets of the per-target median best-of-$K$ discrepancy over $R=10$ independent candidate sets (each with $K=50$). Lower is better. The best-in-class setting per model family is marked with $\star$.}
+    \label{tab:ablation_f5_mom}
+    \rarray{1.2}
+    \begin{tabular}{ll c}
+        \toprule
+        \textbf{Model} & \textbf{Configuration} & \textbf{Median-of-medians $\mathcal{E}_{\mathcal{Y}}$ ($K=50$, $R=10$)} \\
+        \midrule
+        \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- \\
+                              & $z=8, \text{layers}=4$ ($\star$) & -- \\
+                              & $z=16, \text{layers}=4$ & -- \\
+        \midrule
+        \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- \\
+                              & $M=5, H=128$ & -- \\
+                              & $M=10, H=256$ ($\star$) & -- \\
+                              & $M=20, H=256$ & -- \\
+        \midrule
+        \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- \\
+                              & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- \\
+                              & $\text{layers}=12, \text{subnet}=256$ & -- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
+\subsubsection{Effect of sampling budget $K$}\label{subsubsec:objective_budget}
 
-\subsection{Comparative Performance}
-\label{subsec:comparison}
+Best-of-$K$ performance is fundamentally a search-within-the-sampler metric: increasing $K$ provides
+more opportunities for the model to draw a candidate that lands close to the target. Studying how
+$\mathcal{E}_{\mathcal{Y}}$ improves as a function of $K$ therefore reveals how each inverse model
+allocates probability mass over outcome-relevant regions. A method that improves markedly with larger
+$K$ tends to distribute probability mass across multiple regions (so additional samples help discover a
+good match), whereas a method that saturates early tends to concentrate sampling around a smaller
+region of decision space.
 
-After model selection (Section~\ref{subsec:ablation}), we compare CVAE, MDN, and INN using the same train/validation/test splits and the same set of target outcomes.
-Given a target $\vect{y}^\star$, each model proposes $K=10$ candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$.
-Because inverse exploration is inherently one-to-many, we report best-of-$K$ performance: for each target, we evaluate all candidates via the forward map and retain the candidate with the smallest outcome discrepancy.
-
-The primary indicator measures how closely a returned candidate reproduces the desired outcome when mapped forward:
-\[
-  \mathcal{E}_{\mathcal{Y}}(\widehat{\mathbf{x}},\mathbf{y}^{\ast})
-  \;=\;
-  d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}^{\ast}\big),
-  \qquad
-  d(\mathbf{a},\mathbf{b})\in\left\{\ \|\mathbf{a}-\mathbf{b}\|_2,\ \sqrt{(\mathbf{a}-\mathbf{b})^\top\mathbf{\Sigma}^{-1}(\mathbf{a}-\mathbf{b})}\ \right\},
-\]
-where $\mathbf{\Sigma}$ is estimated from a calibration split (Mahalanobis variant).
-We report median and IQR across targets, which provides a robust summary when the distribution of errors is skewed.
-
-Table~\ref{tab:bbob_outcome_error} reports $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) for each COCO function and each best-in-class model.
-These results support a like-for-like comparison of outcome-space target matching across different landscape characteristics; in particular, they allow us to inspect whether explicit mixture modelling improves performance on multi-modal tasks and whether invertible architectures remain precise on ill-conditioned objectives.
+To quantify this effect, we repeat the objective-space evaluation on $f_5$ for
+$K\in\{1,5,10,20\}$. Table~\ref{tab:f5_budget_curve} reports the median best-of-$K$ discrepancy over
+targets for each model family at each budget (using the best-in-class configuration from the ablation
+above). A steeper improvement curve indicates that the method benefits strongly from additional draws,
+consistent with broader mode coverage in the conditional sampler. Earlier saturation indicates that
+additional candidates provide limited benefit, consistent with a more concentrated sampling behaviour.
 
 \begin{table}[!htbp]
   \centering
-  \caption{COCO BBOB-derived bi-objective tasks: outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$ (median~[IQR]) over 200 targets; best-of-$K$ with $K=10$. Best per row in bold.}
-  \label{tab:bbob_outcome_error}
+  \caption{COCO $f_5$ (objective space): Effect of the sampling budget $K$ on target attainment. Reported is the median best-of-$K$ outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ over targets for $K\in\{1,5,10,20\}$ using the best-in-class configuration per model family. Lower is better.}
+  \label{tab:f5_budget_curve}
   \rarray{1.25}
-  \begin{tabular}{L{3.8cm}C{2.6cm}C{2.6cm}C{2.6cm}}
+  \begin{tabular}{c C{2.6cm} C{2.6cm} C{2.6cm}}
     \toprule
-    Function (two-instance bi-objective) & CVAE & MDN & INN \\
+    $K$ & CVAE & MDN & INN \\
     \midrule
-    $f_5$ Linear Slope & -- & -- & -- \\
-    $f_6$ Attractive Sector & -- & -- & -- \\
-    $f_{10}$ Ellipsoid & -- & -- & -- \\
-    $f_{20}$ Schwefel $x\sin(x)$ & -- & -- & -- \\
+    1  & -- & -- & -- \\
+    5  & -- & -- & -- \\
+    10 & -- & -- & -- \\
+    20 & -- & -- & -- \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -148,94 +222,58 @@ These results support a like-for-like comparison of outcome-space target matchin
 
 
 
-\subsection{Calibration curve and CRPS}
-\label{subsec:cal_crps}
 
-Outcome-space discrepancy tells us how closely the best candidate matches the target outcomes, but inverse exploration also depends on the quality of the candidate set as a representation of uncertainty.
-Because each inverse model returns $K$ feasible candidates per query, we interpret these candidates as samples from an implicit conditional distribution over decisions given an outcome target.
-We therefore evaluate distributional behaviour on held-out test pairs $(\vect{x}_i,\vect{y}_i)$ by conditioning on $\vect{y}_i$ and comparing the sampled candidates against the known ground-truth decision $\vect{x}_i$.
-Two complementary questions guide the diagnostics: (i) can the model's uncertainty be trusted (reliability), and (ii) is the predicted distribution useful (close to the truth without being unnecessarily diffuse).
+%-------------------------------------------------------------------------------
+\subsection{Decision-space diagnostics}\label{subsec:decision_diagnostics}
+%-------------------------------------------------------------------------------
 
-To assess reliability, we use the probability integral transform (PIT).
-For each test case $i$ and decision dimension $d$, we compute the PIT value from the candidate samples $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ as
-\[
-  z_{i,d}
-  \;=\;
-  \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
-\]
-The quantity $z_{i,d}$ is the empirical percentile position of the true component $x_{i,d}$ within the model's sampled candidates for that query.
-If the sampled conditional distribution is calibrated component-wise, then the aggregated PIT values are approximately uniform on $[0,1]$.
-We visualize this by plotting the empirical CDF of $\{z_{i,d}\}$ against the diagonal $u\mapsto u$.
-Systematic departures from the diagonal reveal how uncertainty is distorted: concentration of PIT mass near 0 and 1 indicates overconfidence (samples too tight, truth falls in the tails too often), while PIT mass concentrated near 0.5 indicates underconfidence (samples too wide, truth falls near the centre too often).
-To summarize the plot with a single number, we quantify deviation from the diagonal using the calibration error implemented in our pipeline:
-\[
-  \mathrm{CalErr}
-  \;=\;
-  \frac{1}{L}\sum_{\ell=1}^{L}\left|z_{(\ell)}-\frac{\ell}{L}\right|,
-\]
-where $\{z_{(\ell)}\}$ are the sorted PIT values and $L$ is the total number of PIT values aggregated over test cases and dimensions.
-Lower values indicate closer agreement with the diagonal and hence more reliable uncertainty.
+\subsubsection{Hyperparameter ablation and model selection}\label{subsubsec:ablation_decision}
 
-Reliability alone, however, does not guarantee a practically useful candidate set: a model can be well-calibrated yet overly diffuse.
-We therefore also report the continuous ranked probability score (CRPS), a strictly proper scoring rule that evaluates the full predictive distribution and rewards distributions that are both accurate and sharp.
-For each test case $i$ and dimension $d$, we compute a sample-based CRPS from the same candidate samples:
-\[
-  \mathrm{CRPS}_{i,d}
-  \;=\;
-  \mathbb{E}\,|X-x_{i,d}|
-  \;-\;
-  \frac{1}{2}\,\mathbb{E}\,|X-X'|,
-\]
-where $X$ and $X'$ are independent draws from the predictive distribution represented by the candidate samples.
-The first term measures how far the samples are, on average, from the truth (distributional accuracy), while the second term penalizes excessive spread by measuring the typical distance between samples (distributional sharpness).
-A low CRPS therefore corresponds to candidate sets that concentrate near the ground truth without inflating uncertainty.
+We evaluate hyperparameter variants in decision space using the diagnostics defined in
+Section~\ref{sec:eval_design}. For each held-out paired case $(\vect{x}_i,\vect{y}_i)$, we condition on
+$\vect{y}_i$, generate a fixed candidate set of size $K$, and compare the resulting sample
+distribution against the ground-truth decision $\vect{x}_i$. The ablation is reported on the COCO $f_5$
+dataset to match the objective-space analysis and to isolate differences attributable to the inverse
+model rather than to changes in the data distribution.
 
-Taken together, PIT/CalErr and CRPS separate behaviours that outcome-space error alone can hide.
-For example, a model may achieve strong best-of-$K$ target matching yet be systematically overconfident (sharp but miscalibrated), or it may be reliable but too diffuse to support decisive exploration.
-Reporting both diagnostics makes these trade-offs explicit and supports the interpretation of the comparative results.
+Figure~\ref{fig:f5_pit_ablation} summarizes reliability across hyperparameter variants using PIT
+calibration curves. Variants whose curves lie closer to the diagonal exhibit more reliable conditional
+uncertainty under repeated conditioning, whereas systematic deviations indicate miscalibration. In
+particular, curves that bend away from the diagonal signal that the empirical ranks of the truth do
+not match the model’s implied percentiles, meaning that the candidate set does not represent a
+trustworthy conditional distribution for downstream use.
 
-\subsubsection{Same Dataset against Multiple Models}
-\label{subsubsec:same_data_multi_models}
+Figure~\ref{fig:f5_crps_box_ablation} summarizes probabilistic accuracy across the same variants using
+boxplots of per-case CRPS. Lower medians indicate that the sampled conditional distributions place mass
+closer to the ground truth without becoming unnecessarily diffuse, while wider boxes and long tails
+indicate less stable distributional performance across held-out cases. This view is useful because it
+distinguishes variants that occasionally achieve low CRPS from those that do so consistently.
 
-We first compare models on the same held-out dataset (fixed function instance and split), so differences in PIT shape, calibration error, and CRPS can be attributed to the inverse model rather than to changes in the data distribution.
-Figure~\ref{fig:bbob_calibration_curve} provides the visual reliability check through PIT curves, while Table~\ref{tab:bbob_cal_crps} reports the corresponding scalar summaries (lower is better for both metrics).
-In the discussion, we read these results jointly: PIT proximity to the diagonal indicates trustworthy uncertainty, and CRPS indicates whether that uncertainty remains informative rather than overly conservative.
+We select the final configuration by reading these two diagnostics jointly: among variants that achieve
+a PIT curve close to the diagonal in Figure~\ref{fig:f5_pit_ablation}, we prefer those with lower and
+more stable CRPS distributions in Figure~\ref{fig:f5_crps_box_ablation}. Under this criterion, the MDN
+variant MDN7 is preferred over other MDN settings because it attains the lowest median CRPS with a
+comparatively tight interquartile range in Figure~\ref{fig:f5_crps_box_ablation}, while its PIT curve
+in Figure~\ref{fig:f5_pit_ablation} remains closest to the diagonal among the MDN variants. In
+practical terms, this combination indicates that MDN7 produces candidate sets that are typically close
+to the ground truth (low CRPS) and that the implied uncertainty is comparatively reliable (PIT closer
+to uniform). The selected CVAE and INN configurations are chosen analogously by the same joint
+calibration--CRPS criterion.
 
 \begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=0.7\linewidth]{images/bbob_calibration_curve.png}
-    \caption[Model Calibration Analysis on BBOB Benchmarks]{Calibration curve (PIT empirical CDF vs.\ diagonal) for each model; optionally one panel per function.}
-  \label{fig:bbob_calibration_curve}
+  \centering
+  \includegraphics[width=0.78\linewidth]{images/f5_pit_ablation.png}
+  \caption[COCO $f_5$: PIT calibration curves across ablation variants]{PIT calibration curves on COCO $f_5$ for hyperparameter variants (one curve per configuration). Curves closer to the diagonal indicate better reliability under repeated conditioning.}
+  \label{fig:f5_pit_ablation}
 \end{figure}
 
-\subsubsection{Multiple Dataset against Same Models}
-\label{subsubsec:multi_data_same_models}
-
-We next hold the best-in-class models fixed and evaluate them across multiple datasets (here: across COCO functions), keeping the sampling protocol unchanged.
-This view matters because uncertainty behaviour can shift with landscape properties such as conditioning, multi-modality, and the effective dimensionality of the inverse mapping.
-Stable calibration error and CRPS across functions indicate robust distributional behaviour, whereas large shifts identify where a model becomes systematically overconfident, underconfident, or overly diffuse.
-These per-function patterns are then used to contextualize the manual target-level inspection that follows, where users care about both hitting the target and understanding how much to trust the candidate set.
-
-\begin{table}[!htbp]
+\begin{figure}[!htbp]
   \centering
-  \caption{Cross-function robustness of decision-space distribution diagnostics. Calibration error (PIT-based) and mean CRPS are reported per COCO function for the same fixed best-in-class models (CVAE, MDN, INN) under an unchanged sampling protocol; lower is better for both metrics.}
-  \label{tab:bbob_cal_crps_multi_dataset}
-  \begin{adjustbox}{width=\linewidth}
-      \rarray{1.25}
-      \begin{tabular}{L{3.6cm}C{1.9cm}C{1.9cm}C{1.9cm}C{1.9cm}C{1.9cm}C{1.9cm}}
-        \toprule
-        & \multicolumn{3}{c}{Calibration error (PIT)} & \multicolumn{3}{c}{CRPS} \\
-        \cmidrule(lr){2-4}\cmidrule(lr){5-7}
-        COCO function (dataset) & CVAE & MDN & INN & CVAE & MDN & INN \\
-        \midrule
-        $f_5$ Linear Slope         & -- & -- & -- & -- & -- & -- \\
-        $f_6$ Attractive Sector    & -- & -- & -- & -- & -- & -- \\
-        $f_{10}$ Ellipsoid         & -- & -- & -- & -- & -- & -- \\
-        $f_{20}$ Schwefel          & -- & -- & -- & -- & -- & -- \\
-        \bottomrule
-      \end{tabular}
-  \end{adjustbox}
-\end{table}
+  \includegraphics[width=0.78\linewidth]{images/f5_crps_box_ablation.png}
+  \caption[COCO $f_5$: CRPS boxplots across ablation variants]{Distribution of per-case CRPS values on COCO $f_5$ for hyperparameter variants (boxplots). Lower medians indicate more accurate and sharper conditional distributions; narrower spreads indicate more consistent performance.}
+  \label{fig:f5_crps_box_ablation}
+\end{figure}
+
 
 
 \subsection{Qualitative Analysis of User Targets}

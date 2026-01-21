@@ -281,7 +281,7 @@ behave like a meaningful conditional distribution over decisions.
 
 Objective-space attainment evaluates how well a candidate set can match a target after checking.
 Given checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$, attainment is summarised using
-discrepancy scores computed in standardised objective space, so that distances are comparable across
+discrepancy scores computed in standardized objective space, so that distances are comparable across
 dimensions.
 
 \subsubsection{Discrepancy metrics: $D_{\min}$ and $D_{\mathrm{med}}$}\label{sec:eval_discrepancy}
@@ -459,7 +459,7 @@ We evaluate probabilistic accuracy using the continuous ranked probability score
 In simple terms, CRPS asks the following in our setting:
 did the candidate distribution put mass near the observed design value $x_{i,d}$, and did it
 avoid spreading samples out more than needed? This targets usefulness rather than only
-long-run percentile behaviour. \cite{GneitingRaftery2007,Hersbach2000}
+long-run percentile behavior. \cite{GneitingRaftery2007,Hersbach2000}
 
 For each held-out test case $i$ and decision dimension $d$, CRPS compares the sampled
 distribution to the ground truth $x_{i,d}$. In expectation form,
@@ -477,33 +477,20 @@ where $X$ and $X'$ are independent draws from the predictive distribution repres
 candidate samples. The first expectation, $\mathbb{E}[\,|X-x_{i,d}|\,]$, measures typical
 distance to the ground truth and therefore captures accuracy: it is smaller when the sampled
 distribution is centered near $x_{i,d}$. The second expectation, $\mathbb{E}[\,|X-X'|\,]$,
-measures typical distance between two independent draws and therefore captures dispersion:
+measures typical distance between samples and therefore captures dispersion:
 it is larger when the predictive distribution is wide. Because this dispersion term is
 subtracted (with factor $1/2$), a distribution that is unnecessarily diffuse increases the
 overall CRPS. Low CRPS therefore indicates candidate sets that place mass near the ground
 truth without inflating spread. \cite{GneitingRaftery2007}
 
 
-In experiments, the expectations in \eqref{eq:crps_expectation} are estimated using the
-standard sample-based form derived from the $K$ candidate samples:
-\begin{equation}
-  \widehat{\mathrm{CRPS}}_{i,d}
-  \;=\;
-  \frac{1}{K}\sum_{k=1}^{K}\left|\widehat{x}^{(k)}_{i,d}-x_{i,d}\right|
-  \;-\;
-  \frac{1}{2K^{2}}\sum_{k=1}^{K}\sum_{\ell=1}^{K}\left|\widehat{x}^{(k)}_{i,d}-\widehat{x}^{(\ell)}_{i,d}\right|.
-  \label{eq:crps_samples}
-\end{equation}
-We aggregate scores across decision dimensions and test cases (for example by reporting the
-mean over $(i,d)$). Lower CRPS corresponds to candidate sets that are both close to the ground
-truth and not unnecessarily wide. \cite{Hersbach2000}
 
 PIT and CRPS diagnose different failure modes. PIT can appear acceptable even when samples
 are extremely wide, because it is driven by ranks. CRPS will penalize such diffuseness.
 Conversely, a very sharp sampler can achieve good CRPS on easy cases while still being
 systematically overconfident across the dataset, which PIT will expose through U-shaped
-departures from the diagonal. Reporting both diagnostics therefore makes the honesty--usefulness
-trade-off explicit for candidate-based inversion. \cite{Diebold1998,GneitingRaftery2007}
+departures from the diagonal. For example, a model may achieve strong best-of-$K$ target matching yet be systematically overconfident (sharp but miscalibrated), or it may be reliable but too diffuse to support decisive exploration.
+Reporting both diagnostics makes these trade-offs explicit and supports the interpretation of the comparative results \cite{Diebold1998,GneitingRaftery2007}
 
 
 %-------------------------------------------------------------------------------
@@ -514,7 +501,7 @@ trade-off explicit for candidate-based inversion. \cite{Diebold1998,GneitingRaft
 
 Model training follows a repeatable routine that keeps preprocessing and model selection
 consistent across problems. Algorithm~\ref{alg:train_pipeline} summarizes the procedure.
-We compute fixed normalisation transforms, split the data for validation-based selection,
+We compute fixed normalization transforms, split the data for validation-based selection,
 and train multiple estimator configurations under a fixed search budget.
 Rather than selecting models purely by training loss, we select the final estimator using
 design-space uncertainty diagnostics computed on held-out paired data:

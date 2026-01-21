@@ -4,42 +4,157 @@
 
 \chapter{Discussion}\label{chap:discussion}
 
-This chapter interprets the empirical results, states the overall conclusions, and outlines targeted recommendations for subsequent research and deployment.
+This chapter synthesizes the empirical findings from Chapter~\ref{chap:experiments}, relates them to
+the evaluation criteria introduced in Chapter~\ref{chap:methodology}, and discusses implications,
+limitations, and directions for future work.
 
-\section{Interpreting the Findings}
 
-Across the COCO/bbob-biobj benchmarks and the real-world signal-processing case, the central result is that an inverse mapping learned from representative $(\mathbf{x},\mathbf{y})$ pairs can reliably translate a user target $\mathbf{y}^{\ast}$ into a decision $\widehat{\mathbf{x}}$ whose forward evaluation $\mathbf{f}(\widehat{\mathbf{x}})$ closely tracks the target. This statement is supported by the primary indicators—outcome-space error $\mathcal{E}_{\mathcal{Y}}$ and tolerance success $\mathrm{Succ}_{\epsilon}$—reported per problem and per dataset split. The consistency of these indicators across instances suggests that inverse mapping is a viable route to target-conditioned design, provided the training archive is representative of the reachable region.
+\section{Interpreting the Findings and Implications}\label{sec:discussion_interpretation}
 
-Three patterns recur. First, \emph{problem structure matters}: separable and gently conditioned biobjective problems tend to yield lower $\mathcal{E}_{\mathcal{Y}}$ and higher $\mathrm{Succ}_{\epsilon}$ than highly multimodal combinations, reflecting the increased complexity of the inverse relation. This aligns with established observations in the COCO suite regarding how separability, conditioning, and multimodality shape optimisation difficulty, which in turn affects any learned surrogate built from those samples. 
+The inverse models studied in this work are evaluated as conditional samplers that support
+target-driven design under a propose--check loop. The experiments in Chapter~\ref{chap:experiments}
+indicate that, when the training archive is representative of the reachable outcome region, learned
+inverse mappings can translate a user-specified target $\vect{y}^{\ast}$ into decision candidates whose
+forward evaluations approach that target within a finite candidate budget. This result should be
+interpreted operationally: the inverse model provides a practical interface for exploration by
+producing a short list of plausible decisions conditioned on a desired outcome, rather than
+guaranteeing a unique or physically realizable design.
 
-Second, \emph{data sufficiency is consequential}: increasing the number of training pairs reduces median error and narrows the IQR, indicating both improved accuracy and stability. This is consistent with expectations for supervised models whose bias–variance trade-off benefits from broader coverage of the objective space.
 
-Third, \emph{metric choice influences interpretation}: when outcomes are measured on heterogeneous scales or exhibit correlation, Mahalanobis distance offers a more faithful notion of “closeness” than raw Euclidean distance, as it accounts for covariance structure estimated on held-out data; this is standard practice in multivariate assessment. 
+A first theme is the distinction between attainment and uncertainty quality. Budgeted outcome-space
+discrepancy is intentionally optimistic: it quantifies whether the sampler can produce at least one
+good match within $K$ draws, which matches the user-facing notion of success under limited inspection.
+However, attainment alone cannot determine whether the candidate set constitutes a trustworthy
+conditional distribution. Decision-space diagnostics therefore play a distinct role: they separate
+reliability under repeated conditioning from practical usefulness, and they prevent over-interpreting
+``good hits'' that arise from chance or from overly aggressive sampling variance.
 
-Finally, the cross-problem ranking with nonparametric tests (Friedman with Nemenyi post-hoc) provides an aggregate view of which modelling choices are consistently strong versus problem-specific, following recommended procedures for multi-dataset comparisons. 
+A second theme is that model comparison depends on the candidate budget $K$. Changes in attainment as a
+function of $K$ reflect how each model allocates probability mass under the conditional distribution:
+some models concentrate mass and saturate quickly, while others distribute mass more broadly and
+continue to benefit from additional samples. This interaction is central in one-to-many inverse
+problems, where multiple distinct decisions can map to similar outcomes. Accordingly, the preferred
+model depends on whether the intended workflow prioritizes rapid attainment with small $K$ or broader
+coverage that improves with additional candidates.
 
-\section{Implications}
+These interpretations imply a practical evaluation and selection stance. Outcome-space attainment
+should be treated as a budgeted utility measure: it answers whether the system can deliver at least
+one actionable proposal within a fixed budget, and it should therefore be reported explicitly as a
+function of $K$. Decision-space diagnostics should be treated as distribution-quality indicators: when
+candidate dispersion informs downstream exploration or uncertainty must be interpretable, calibration
+and CRPS-based assessment justify whether the sampled set can be treated as a meaningful conditional
+distribution rather than a collection of independent guesses. Taken together, the combined reporting
+format supports a workflow in which attainment establishes feasibility under a given $K$, and
+reliability and probabilistic accuracy determine whether the resulting candidate set supports informed
+exploration rather than ad hoc trial-and-error.
 
-Methodologically, the results validate a \emph{target-attainment} evaluation stance for inverse design: reporting $\mathcal{E}_{\mathcal{Y}}$ (how close to the target) together with $\mathrm{Succ}_{\epsilon}$ (meets a meaningful tolerance) yields compact, decision-oriented evidence. Practically, this enables interactive workflows: users nominate $\mathbf{y}^{\ast}$, obtain one or several proposals, and immediately see whether the proposals land within pre-defined tolerances. For benchmarking, coupling inverse metrics with standard COCO post-processing (e.g., reference fronts, archive handling) makes results comparable and reproducible across instances and function groups. :contentReference[oaicite:3]{index=3}
 
-\section{Limitations}
+%-------------------------------------------------------------------------------
+\section{Limitations and Assumptions}\label{sec:discussion_limits}
+%-------------------------------------------------------------------------------
 
-Three limitations deserve emphasis. (i) \emph{Archive representativeness}: if training pairs undersample parts of the reachable set, the learned inverse will underperform on targets drawn from those regions. (ii) \emph{Forward-model reliance}: when a surrogate $\widehat{\mathbf{f}}$ is used for verification, evaluation quality is bounded by surrogate fidelity; periodic spot-checks against the true simulator would mitigate compounding errors. (iii) \emph{Metric dependence}: conclusions can shift with the chosen distance and scaling; reporting both Euclidean and covariance-aware distances (and documenting the covariance estimate) reduces ambiguity. :contentReference[oaicite:4]{index=4}
-
-\section{Future Work}
-
-Building on these findings, we outline concrete, study-aligned directions:
+The evaluation framework defined in Section~\ref{sec:evaluation} provides a rigorous statistical basis
+for assessing inverse models. However, interpreting these results in a physical materials-discovery
+setting requires assumptions and comes with limitations that reflect the gap between computational
+attainment and experimental reality.
 
 \begin{itemize}
-    \item \textbf{Apply tandem loss.} 
-    
-  \item \textbf{Coverage-aware reporting.} Augment $\mathcal{E}_{\mathcal{Y}}$ and $\mathrm{Succ}_{\epsilon}$ with conformal prediction sets in outcome space (split-conformal on residuals of $\mathbf{f}(g(\cdot))$), yielding finite-sample coverage guarantees for “achieved outcome within a calibrated ball around $\mathbf{y}^{\ast}$.” This adds a statistically principled reliability layer without re-training the inverse model. :contentReference[oaicite:5]{index=5}
-  \item \textbf{Instance-generalisation on COCO.} Evaluate cross-instance transfer (train on a subset of instances, test on held-out instances) and cross-suite robustness (e.g., varying dimension), leveraging COCO’s standardised instance machinery and post-processing tools for rigorous comparison. :contentReference[oaicite:6]{index=6}
-  \item \textbf{Distance calibration and scaling.} Systematise the choice between Euclidean and Mahalanobis distances via validated scaling protocols (e.g., covariance from a calibration split), and report sensitivity analyses so practitioners can match $d(\cdot,\cdot)$ to domain semantics. :contentReference[oaicite:7]{index=7}
-  \item \textbf{Real-data validation loops.} For the signal-processing case, schedule small, periodic batches of ground-truth forward evaluations to (a) check surrogate drift, and (b) re-calibrate tolerances. This operationalises reliability without altering your core modelling approach.
-  \item \textbf{Benchmarking alignment.} Complement inverse-specific indicators with COCO’s native performance summaries (e.g., archive-based reference sets) when comparing pipelines, improving external validity and reusability of results. :contentReference[oaicite:8]{index=8}
+  \item \textbf{Fidelity of the forward checker.}
+  The propose--check contract assumes that the evaluator $\mathcal{E}$ functions as a reliable
+  ground-truth proxy (e.g., a DFT simulator, an FEA routine, or a high-fidelity surrogate).
+  We assume that $\mathcal{E}$ captures the essential physics required to validate the objective
+  vector $\vect{y}$. A limitation is that low attainment certifies validity only with respect to the
+  checker: if $\mathcal{E}$ omits relevant physical constraints (e.g., thermal stability, oxidation,
+  or degradation mechanisms), a design that appears successful computationally may still fail in
+  experimental synthesis. In this case, the reported attainment reflects internal consistency rather
+  than physical certainty.
+
+  \item \textbf{Completeness of the design space representation $\mathcal{X}$.}
+  The framework treats the decision vector $\vect{x}$ as a complete description of the material or
+  artifact under design. We assume that the variables included in $\mathcal{X}$ (e.g., elemental
+  composition, lattice parameters) are sufficient to determine the properties in $\mathcal{Y}$.
+  A limitation is that real-world performance can depend on latent factors not captured in standard
+  datasets, such as microstructure, grain boundaries, or explicit synthesis pathways (e.g., cooling
+  rates). An inverse model may propose a valid $\vect{x}$ under the dataset’s mapping, yet the
+  corresponding physical realization may be underdetermined without the associated processing
+  conditions.
+
+  \item \textbf{Representativeness of Pareto-optimal targets.}
+  By focusing evaluation on the Pareto frontier, the experiments target the limits of known
+  performance in the available data. We assume that the observed Pareto frontier in the training data
+  serves as a localized approximation of the true physical boundary. A limitation is that targets far
+  beyond the observed Pareto front are inherently extrapolative: while attainment metrics can identify
+  such targets as difficult or unattainable under the checker, decision-space diagnostics (PIT and
+  CRPS) become harder to interpret when the conditional distribution $p(\vect{x}\mid\vect{y})$ is
+  weakly supported by data. In such regimes, apparent miscalibration may reflect genuine epistemic
+  uncertainty rather than a correctable model defect.
+
+  \item \textbf{Impact of the candidate budget $K$.}
+  Outcome-space attainment metrics such as best-of-$K$ discrepancy are explicit functions of the
+  candidate budget $K$. We treat $K$ as a proxy for experimental bandwidth, representing how many
+  candidate designs can be evaluated or synthesized. A limitation is that best-of-$K$ attainment can
+  reward high-variance samplers that occasionally hit a target by chance, thereby reducing discrepancy
+  through sampling luck rather than learned conditional structure. This motivates joint reporting with
+  decision-space diagnostics: PIT-based calibration checks whether uncertainty is statistically
+  consistent across repeated conditioning, and CRPS penalizes unnecessary diffuseness.
 \end{itemize}
 
-\section{Conclusion}
 
-Learning an inverse map from outcomes to decisions is a practical and effective way to support target-driven design. On bbob-biobj functions and a real signal-processing dataset, the approach achieves low outcome-space errors and high tolerance success when trained on representative archives, with clear benefits from sufficient data and carefully chosen outcome metrics. The proposed reporting protocol---pairing $\mathcal{E}_{\mathcal{Y}}$ with $\mathrm{Succ}_{\epsilon}$ and documenting scaling---is simple to reproduce and to interpret. By adding coverage-aware reporting, testing cross-instance generalisation, and tightening metric calibration, future studies can make inverse decision mapping even more dependable and transferable.
+
+\section{Future Work}\label{sec:future_work}
+
+Building on the findings in Chapters~\ref{chap:methodology}--\ref{chap:experiments}, several concrete
+extensions could strengthen training stability and improve the reliability of target-driven inverse
+querying.
+
+\begin{itemize}
+  \item Tandem loss for outcome-consistent training.
+  Augment inverse-model training with a tandem objective that penalizes forward inconsistency of
+  generated candidates. Concretely, the inverse model is trained not only to fit paired data, but also
+  to minimize a forward discrepancy term of the form
+  $d\!\big(\mathbf{f}(\widehat{\mathbf{x}}),\,\mathbf{y}\big)$ for sampled
+  $\widehat{\mathbf{x}}\sim \widehat{q}(\mathbf{x}\mid\mathbf{y})$.
+  This encourages candidates to remain outcome-consistent with the conditioning target and can reduce
+  the gap between likelihood-based training and downstream attainment.
+
+  \item Conformal checking before candidate generation.
+  Introduce a lightweight conformal layer that quantifies whether a requested target $\mathbf{y}^\ast$
+  is supported by the training distribution before sampling candidates. Using a calibration split, one
+  can build a split-conformal acceptance region in outcome space (e.g., based on residuals or distances
+  to a reference set) and reject or flag targets that fall outside the calibrated region. This would
+  prevent overconfident querying in unsupported regimes and would provide an explicit, finite-sample
+  notion of target plausibility prior to running the inverse sampler.
+
+  \item Pareto-distance aware evaluation of generated outcomes.
+  Augment evaluation by measuring how far generated outcomes lie from the empirical Pareto front.
+  Concretely, after forward-checking candidates to obtain $\widehat{\vect{y}}^{(k)}$, report the
+  distance from $\widehat{\vect{y}}^{(k)}$ to a reference approximation of the Pareto front (e.g.,
+  nearest-point distance in objective space, optionally under the same scaling used for
+  $\mathcal{E}_{\mathcal{Y}}$). This provides an additional lens aligned with the intended use case:
+  beyond matching a single target, it quantifies whether generated candidates remain Pareto-relevant
+  (near the trade-off boundary) or drift into dominated regions. It also supports extrapolation-aware
+  reporting by distinguishing errors that remain near the front from those that move far away from the
+  achievable trade-off set.
+\end{itemize}
+
+
+\section{Conclusion}\label{sec:conclusion}
+
+This thesis studied inverse decision mapping for target-driven design, treating inverse models as
+conditional samplers that return a finite candidate set for a user-specified outcome target. The
+experiments show that budgeted objective-space attainment can be achieved on Pareto-relevant COCO
+benchmarks when the training archive is representative, but that attainment alone is not sufficient to
+characterize model behaviour in one-to-many regimes. Decision-space diagnostics based on PIT
+calibration and CRPS provide essential complementary evidence by distinguishing reliable uncertainty
+from diffuse or overconfident candidate generation.
+
+The main methodological outcome is an evaluation protocol that separates two questions: whether a
+method can reach a target within a fixed candidate budget, and whether the resulting candidate set can
+be interpreted as a trustworthy and informative conditional distribution. This separation clarifies
+comparisons across inverse model families and supports model selection that is aligned with practical
+inverse-design workflows.
+
+Future work should focus on strengthening this propose--check interface by improving training
+objectives (e.g., tandem losses), adding pre-query plausibility checks (e.g., conformal screening of
+targets), and extending evaluation with Pareto-distance measures to ensure generated outcomes remain
+trade-off relevant.
