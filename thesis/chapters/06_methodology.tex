@@ -276,7 +276,7 @@ matched under the declared checker, while design-space diagnostics quantify whet
 behave like a meaningful conditional distribution over decisions.
 
 %-------------------------------------------------------------------------------
-\subsection{Objective-space attainment under the checker}\label{sec:eval_objective}
+\subsection{Objective-space plausibility diagnostics}\label{sec:eval_objective}
 %-------------------------------------------------------------------------------
 
 Objective-space attainment evaluates how well a candidate set can match a target after checking.
@@ -284,12 +284,14 @@ Given checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$, attainment is s
 discrepancy scores computed in standardized objective space, so that distances are comparable across
 dimensions.
 
-\subsubsection{Discrepancy metrics: $D_{\min}$ and $D_{\mathrm{med}}$}\label{sec:eval_discrepancy}
+%-------------------------------------------------------------------------------
+\subsubsection{Standardized discrepancy contract}\label{sec:eval_discrepancy_contract}
+%-------------------------------------------------------------------------------
 
 Let $\widetilde{\vect{y}}$ denote objectives after standardization using statistics computed on the
-training split. Euclidean distance in the standardized space provides a transparent default.
-\cite{Mahalanobis1936} When objective dimensions exhibit strong correlation, a
-Mahalanobis discrepancy incorporates covariance structure,
+training split. Euclidean distance in the standardized space provides a transparent default. When
+objective dimensions exhibit strong correlation, a Mahalanobis discrepancy incorporates covariance
+structure,
 \begin{equation}
   d_{\mathrm{Mah}}(\vect{u},\vect{v})
   \;=\;
@@ -308,7 +310,211 @@ Given a target $\vect{y}^{\star}$, each candidate receives a checked discrepancy
   \label{eq:per_candidate_discrepancy}
 \end{equation}
 where $\widetilde{\mathcal{E}}(\cdot)$ denotes evaluation followed by standardization in objective
-space. The set of scores $\{s^{(k)}(\vect{y}^{\star})\}_{k=1}^{K}$ is summarized using two statistics.
+space. The discrepancy $d$ and the checker $\mathcal{E}$ together define the evaluation contract: all
+attainment statements in this section are made with respect to the declared $(\mathcal{E},d)$ pair.
+
+%-------------------------------------------------------------------------------
+\subsubsection{Standardized residuals}\label{sec:eval_plausibility_z}
+%-------------------------------------------------------------------------------
+
+While $s^{(k)}(\vect{y}^{\star})$ is convenient for ranking candidates, its absolute magnitude is still
+hard to interpret without introducing a domain-specific acceptance radius. To provide a user-centric
+view that remains consistent across objective types, we express per-objective mismatch in standardized
+units relative to variability estimated from the training split.
+
+Let $\mathbf{Y}_{\mathrm{tr}}\in\mathbb{R}^{N_{\mathrm{tr}}\times m}$ denote the training-split objective
+matrix with entries $y_{i,j}$, where $i\in\{1,\dots,N_{\mathrm{tr}}\}$ indexes training samples and
+$j\in\{1,\dots,m\}$ indexes objective components (objective dimensions). For a user target
+$\vect{y}^{\star}\in\mathbb{R}^{m}$ and the checked outcome of the $k$-th candidate
+$\widehat{\vect{y}}^{(k)}\in\mathbb{R}^{m}$, define a target-centered standardized residual using a
+training-derived scale $\tau_j>0$ as
+\begin{equation}
+  r_j^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \frac{\widehat{y}^{(k)}_j - y^{\star}_j}{\tau_j}.
+  \label{eq:target_centered_residual}
+\end{equation}
+Here $\widehat{y}^{(k)}_j$ is the $j$-th objective value of candidate $k$, $y^{\star}_j$ is the $j$-th
+component of the user target, and $\tau_j$ is a scale estimated from the training outcomes of objective
+$j$.
+
+Collect components into the residual vector
+\begin{equation}
+  \vect{r}^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \big(r_1^{(k)}(\vect{y}^{\star}),\dots,r_m^{(k)}(\vect{y}^{\star})\big)\in\mathbb{R}^{m}.
+  \label{eq:target_centered_residual_vector}
+\end{equation}
+Here $m$ is the number of objectives, and $\vect{r}^{(k)}$ measures how far candidate $k$ deviates from
+the target in unitless training-derived units, component by component.
+
+When $d$ is Euclidean in the coordinate-wise standardized space, the checked discrepancy score can be
+written directly in terms of the residual vector as
+\begin{equation}
+  s^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \big\lVert \vect{r}^{(k)}(\vect{y}^{\star}) \big\rVert_2.
+  \label{eq:discrepancy_residual_euclid}
+\end{equation}
+Here $\lVert\cdot\rVert_2$ is the Euclidean norm, and $s^{(k)}$ is the scalar used to rank candidates
+for the given target $\vect{y}^{\star}$.
+
+Under a Mahalanobis discrepancy in standardized coordinates, the corresponding score is
+\begin{equation}
+  s^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \sqrt{
+  \big(\vect{r}^{(k)}(\vect{y}^{\star})\big)^{\top}
+  \boldsymbol{\Sigma}^{-1}
+  \big(\vect{r}^{(k)}(\vect{y}^{\star})\big)}.
+  \label{eq:discrepancy_residual_mahal}
+\end{equation}
+Here $\boldsymbol{\Sigma}\in\mathbb{R}^{m\times m}$ is the covariance matrix of standardized objectives
+estimated on a reference split (and regularized for inversion), and $\boldsymbol{\Sigma}^{-1}$ accounts
+for correlation between objective components.
+
+The scale choice enters only through $\tau_j$. The following three options are used depending on the
+shape of the training marginal for objective $j$.
+
+The SD-based scale is the default when the training marginal for objective $j$ is approximately
+symmetric and unimodal. Define the training-split mean and standard deviation as
+\begin{equation}
+  \mu_j \;=\; \frac{1}{N_{\mathrm{tr}}}\sum_{i=1}^{N_{\mathrm{tr}}} y_{i,j},
+  \qquad
+  \sigma_j \;=\; \sqrt{\frac{1}{N_{\mathrm{tr}}-1}\sum_{i=1}^{N_{\mathrm{tr}}}(y_{i,j}-\mu_j)^2 }.
+  \label{eq:train_mean_sd}
+\end{equation}
+Here $\mu_j$ and $\sigma_j$ are computed from the $j$-th column of $\mathbf{Y}_{\mathrm{tr}}$.
+
+With $\tau_j=\sigma_j$, the residual in \eqref{eq:target_centered_residual} becomes the SD-based
+objective-centered $z$ residual
+\begin{equation}
+  z_j^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \frac{\widehat{y}^{(k)}_j - y^{\star}_j}{\sigma_j}.
+  \label{eq:z_sd_def}
+\end{equation}
+Here $z_j^{(k)}$ is dimensionless and reports deviation from the target in units of one training
+standard deviation for objective $j$.
+
+This SD choice is equivalent to measuring the difference between standardized coordinates. Define the
+standardization map
+\begin{equation}
+  \mathrm{Std}_j(u_j) \;=\; \frac{u_j-\mu_j}{\sigma_j},
+  \qquad
+  \mathrm{Std}(\vect{u}) \;=\; \big(\mathrm{Std}_1(u_1),\dots,\mathrm{Std}_m(u_m)\big).
+  \label{eq:std_map_sd}
+\end{equation}
+Here $\vect{u}\in\mathbb{R}^{m}$ is any objective vector, and $\mathrm{Std}(\vect{u})$ standardizes each
+component using the training statistics $(\mu_j,\sigma_j)$.
+
+Let $\widetilde{\vect{y}}^{(k)}=\mathrm{Std}(\widehat{\vect{y}}^{(k)})$ and
+$\widetilde{\vect{y}}^{\star}=\mathrm{Std}(\vect{y}^{\star})$. Then for each component $j$,
+\begin{equation}
+  \widetilde{y}^{(k)}_j - \widetilde{y}^{\star}_j
+  \;=\;
+  \frac{\widehat{y}^{(k)}_j-\mu_j}{\sigma_j} - \frac{y^{\star}_j-\mu_j}{\sigma_j}
+  \;=\;
+  \frac{\widehat{y}^{(k)}_j-y^{\star}_j}{\sigma_j}
+  \;=\;
+  z_j^{(k)}(\vect{y}^{\star}).
+  \label{eq:z_sd_equals_std_difference}
+\end{equation}
+Here $\widetilde{y}^{(k)}_j$ and $\widetilde{y}^{\star}_j$ are the standardized coordinates of the
+candidate and target in objective component $j$, and the training mean cancels because the comparison
+is centered at the target.
+
+When the training outcomes are skewed or heavy-tailed, SD scaling can be dominated by rare extremes.
+In such cases, $\sigma_j$ may be inflated by outliers, and SD-based residuals can understate mismatch
+for typical targets. Robust scales provide a more stable measurement unit by focusing on the central
+mass of the training distribution.
+
+The MAD-based scale is appropriate when outliers are plausible but should not define the measurement
+unit for typical deviation. Let $\mathrm{med}_j=\mathrm{median}_{i}\,y_{i,j}$ and define
+\begin{equation}
+  \mathrm{MAD}_j \;=\; \mathrm{median}_{i}\, \big|y_{i,j}-\mathrm{med}_j\big|.
+  \label{eq:mad_def}
+\end{equation}
+Here $\mathrm{med}_j$ is the median of the $j$-th training objective column, and $\mathrm{MAD}_j$ is a
+robust spread estimator.
+
+To keep MAD-based units comparable to a standard deviation under a normal reference, use the fact that
+for $Z\sim\mathcal{N}(0,1)$ the median of $|Z|$ satisfies
+\begin{equation}
+  \mathbb{P}(|Z|\le c)=0.5
+  \;\Longrightarrow\;
+  2\Phi(c)-1=0.5
+  \;\Longrightarrow\;
+  c=\Phi^{-1}(0.75)\approx 0.67449,
+  \label{eq:mad_normal_quantile}
+\end{equation}
+where $\Phi(\cdot)$ is the standard normal cumulative distribution function and $\Phi^{-1}(\cdot)$ is
+its inverse.
+
+Hence, for a normal reference distribution, $\mathrm{MAD}\approx \Phi^{-1}(0.75)\,\sigma$, and an
+SD-comparable MAD scale is
+\begin{equation}
+  \sigma^{\mathrm{MAD}}_j
+  \;=\;
+  \frac{\mathrm{MAD}_j}{\Phi^{-1}(0.75)}
+  \;\approx\;
+  1.4826\,\mathrm{MAD}_j.
+  \label{eq:mad_scale}
+\end{equation}
+Here $\sigma^{\mathrm{MAD}}_j$ is used as $\tau_j$ in \eqref{eq:target_centered_residual} when the
+objective is heavy-tailed or contaminated by outliers.
+
+The IQR-based scale is appropriate when the training marginal is noticeably skewed and the mid-spread
+captures typical variability more faithfully than squared deviations. Let $Q_{0.25,j}$ and $Q_{0.75,j}$
+denote the 25th and 75th percentiles of $\{y_{i,j}\}_{i=1}^{N_{\mathrm{tr}}}$ and define
+\begin{equation}
+  \mathrm{IQR}_j \;=\; Q_{0.75,j}-Q_{0.25,j}.
+  \label{eq:iqr_def}
+\end{equation}
+Here $\mathrm{IQR}_j$ measures the spread of the central 50\% of the training outcomes for objective $j$.
+
+For a normal reference with $Y=\mu+\sigma Z$ and $Z\sim\mathcal{N}(0,1)$, quantiles satisfy
+$Q_p(Y)=\mu+\sigma\Phi^{-1}(p)$, so
+\begin{equation}
+  \mathrm{IQR}
+  \;=\;
+  \sigma\big(\Phi^{-1}(0.75)-\Phi^{-1}(0.25)\big)
+  \;=\;
+  2\sigma\,\Phi^{-1}(0.75)
+  \;\approx\;
+  1.349\,\sigma,
+  \label{eq:iqr_normal_relation}
+\end{equation}
+using symmetry $\Phi^{-1}(0.25)=-\Phi^{-1}(0.75)$.
+
+An SD-comparable IQR scale is therefore
+\begin{equation}
+  \sigma^{\mathrm{IQR}}_j
+  \;=\;
+  \frac{\mathrm{IQR}_j}{2\,\Phi^{-1}(0.75)}
+  \;\approx\;
+  \frac{\mathrm{IQR}_j}{1.349}.
+  \label{eq:iqr_scale}
+\end{equation}
+Here $\sigma^{\mathrm{IQR}}_j$ is used as $\tau_j$ in \eqref{eq:target_centered_residual} when the
+objective distribution is skewed and a quantile-based spread is preferred.
+
+Across SD, MAD, and IQR scaling, the same evaluation logic is preserved: the target-centered residual
+vector in \eqref{eq:target_centered_residual_vector} expresses mismatch in unitless training-derived
+units, scalar discrepancy scores are computed using \eqref{eq:discrepancy_residual_euclid} or
+\eqref{eq:discrepancy_residual_mahal}, and the same residual vectors are also the inputs to the
+candidate-cloud diagnostics. Consequently, $b(\vect{y}^{\star})$ and $v(\vect{y}^{\star})$ measure
+systematic offset and within-set spread in the standardized units induced by the selected scale
+estimator.
+
+
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{Attainment under budget $K$}\label{sec:eval_discrepancy}
+%-------------------------------------------------------------------------------
+
+The set of scores $\{s^{(k)}(\vect{y}^{\star})\}_{k=1}^{K}$ is summarized using two statistics.
 The first is the minimum checked discrepancy within the candidate set,
 \begin{equation}
   D_{\min}^{(K)}(\vect{y}^{\star})
@@ -323,6 +529,14 @@ and the second is the median checked discrepancy across candidates,
   \mathrm{median}_{k\in\{1,\dots,K\}} \; s^{(k)}(\vect{y}^{\star}).
   \label{eq:Dmed}
 \end{equation}
+Optionally, the gap
+\begin{equation}
+  \Delta^{(K)}(\vect{y}^{\star})
+  \;=\;
+  D_{\mathrm{med}}^{(K)}(\vect{y}^{\star}) - D_{\min}^{(K)}(\vect{y}^{\star})
+  \label{eq:Dgap}
+\end{equation}
+summarizes how strongly attainment relies on rare outliers rather than typical candidates.
 
 $D_{\min}^{(K)}$ measures attainment under a finite candidate budget. It answers the direct question
 posed by a candidate-based interface: after generating $K$ alternatives and checking them, how close
@@ -339,27 +553,103 @@ indicates that many candidates concentrate near the target, which is desirable w
 is used for exploration or when repeated querying is expected. A large $D_{\mathrm{med}}^{(K)}$ indicates
 that most candidates are not well aligned, and that success may rely on occasional lucky draws.
 
-Interpreting the two statistics jointly separates attainment from typical set behavior. The following
-cases provide a direct reading of candidate-set behavior under the fixed budget $K$:
-\begin{itemize}
-  \item Small $D_{\min}^{(K)}$ and large $D_{\mathrm{med}}^{(K)}$: outlier-driven attainment. The method
-  occasionally produces an excellent candidate, but most candidates are not well aligned with the
-  target.
-  \item Moderate $D_{\min}^{(K)}$ and moderate $D_{\mathrm{med}}^{(K)}$: consistent targeting with limited
-  sharpness. The method places many candidates in a reasonable region, but rarely achieves very small
-  discrepancy.
-  \item Small $D_{\min}^{(K)}$ and small $D_{\mathrm{med}}^{(K)}$: accurate and reliable candidate sets.
-  Many candidates concentrate near the target, and the best candidate is also close.
-  \item Large $D_{\min}^{(K)}$ and large $D_{\mathrm{med}}^{(K)}$: weak attainment under the declared
-  checker and discrepancy. The candidate set does not align well with the target.
-\end{itemize}
+Interpreting $D_{\min}^{(K)}$ and $D_{\mathrm{med}}^{(K)}$ jointly separates best-case attainment from
+typical-set behavior under the fixed candidate budget $K$. Table~\ref{tab:joint_reading_dmin_dmed}
+summarizes the corresponding regimes. The quadrant with high $D_{\min}^{(K)}$ and low
+$D_{\mathrm{med}}^{(K)}$ is excluded since $D_{\min}^{(K)} \le D_{\mathrm{med}}^{(K)}$ by definition.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\linewidth}{@{} l l >{\raggedright\arraybackslash}p{0.32\linewidth} >{\raggedright\arraybackslash}X @{}}
+\toprule
+$D_{\min}^{(K)}$ & $D_{\mathrm{med}}^{(K)}$ & Regime \& Interpretation & Diagnostic Reading (Fixed Budget $K$) \\
+\midrule
+Low & Low &
+\textbf{Ideal}: Accurate and Precise. &
+The candidate set is sharp and correctly centered. Most designs land near the target, indicating a reliable and high-quality inverse mapping. \\
+
+Low & High &
+\textbf{Unstable}: Accurate but Imprecise. &
+Attainment is outlier-driven. The model can produce a valid hit, but the set is diffuse. Success is stochastic and requires a large budget $K$ to catch rare successful draws. \\
+
+High & High &
+\textbf{Weak Attainment}: Inaccurate (Biased/Failed). &
+The set fails to align with the target. Small $\Delta^{(K)}$ indicates systematic bias, while a large spread indicates a total failure to produce coherent designs. \\
+\bottomrule
+\end{tabularx}
+\caption{Joint interpretation of best-case attainment ($D_{\min}^{(K)}$) and typical-set behavior ($D_{\mathrm{med}}^{(K)}$) under a fixed candidate budget $K$.}
+\label{tab:joint_reading_dmin_dmed}
+\end{table}
+
+%-------------------------------------------------------------------------------
+\subsubsection{Candidate-cloud plausibility}\label{sec:eval_candidate_cloud}
+%-------------------------------------------------------------------------------
+
+While the set-level summaries in Section~\ref{sec:eval_discrepancy} support model comparison under a
+fixed candidate budget $K$, the objective-centered residuals also provide a direct plausibility view
+for user-facing decision support. In particular, standardized residuals enable tolerance rules stated
+in comparable units across objectives, such as $\max_j |z_j^{(k)}(\vect{y}^{\star})| < 1.0$.
+
+Beyond selecting a single design, the aggregate behavior of the checked outcomes
+$\{ \widehat{\vect{y}}^{(1)}, \dots, \widehat{\vect{y}}^{(K)} \}$ provides a user-facing plausibility
+signal. Working in the objective-centered $z$-space, the scatter of the candidate cloud around
+$\vect{y}^{\star}$ indicates whether the model is both centered and precise, centered but diffuse, or
+systematically offset.
+
+For each target $\vect{y}^{\star}$, let
+$\bar{\vect{z}}(\vect{y}^{\star}) = \frac{1}{K}\sum_{k=1}^{K}\vect{z}^{(k)}(\vect{y}^{\star})$
+denote the mean residual vector. We summarize offset and dispersion using
+\begin{equation}
+  b(\vect{y}^{\star}) \;=\; \frac{\lVert \bar{\vect{z}}(\vect{y}^{\star}) \rVert_2}{\sqrt{m}},
+  \qquad
+  v(\vect{y}^{\star}) \;=\; \mathrm{median}_{k}\;
+  \frac{\big\lVert \vect{z}^{(k)}(\vect{y}^{\star})-\bar{\vect{z}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}},
+  \label{eq:z_bias_var}
+\end{equation}
+where $b$ measures systematic offset from the target and $v$ measures within-set spread in standardized
+units. These summaries support informed rejection: rather than guessing whether a raw distance is
+acceptable, a user can apply consistent tolerances in standardized units and prioritize high-fidelity
+verification when the candidate cloud is diffuse or biased.
+
+Table~\ref{tab:user_decision_scenarios} summarizes three primary user-facing scenarios for interpreting
+the candidate cloud in objective-centered standardized units.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{0.25\linewidth} l X @{}}
+\toprule
+Scenario & $z$-cloud profile & User interpretation and action \\
+\midrule
+\textbf{The Bullseye} & Low $b$, Low $v$ &
+\textbf{High confidence:} The model is both accurate and certain. Candidates are consistent and on-target; any sample from the set is likely a valid design. \\
+
+\textbf{The Shotgun} & Low $b$, High $v$ &
+\textbf{Conditional trust:} The model can produce valid hits, but the set is diffuse. The user should select the best candidate and use high-fidelity verification to ensure success. \\
+
+\textbf{The Systematic Bias} & High $b$, Low $v$ &
+\textbf{Informed rejection:} The model is certain but misses the target. This signals that the objective $\vect{y}^{\star}$ may be physically unattainable (e.g., beyond the Pareto front) or is out-of-distribution. \\
+\bottomrule
+\end{tabularx}
+\caption{User-centric scenarios for evaluating candidate scatter relative to the target objective. Standardized residuals enable consistent tolerance rules across diverse objective types without requiring a universal domain-specific success radius.}
+\label{tab:user_decision_scenarios}
+\end{table}
 
 Across a target set $\mathcal{T}$, results are summarized using robust statistics of
 $D_{\min}^{(K)}$ and $D_{\mathrm{med}}^{(K)}$, including the median and interquartile range, with the mean
 reported when informative. The candidate budget $K$ is treated as part of the evaluation interface.
 Increasing $K$ can reduce $D_{\min}^{(K)}$ by providing more opportunities to draw a close candidate even
 without changing the underlying conditional model. For this reason, comparisons fix $K$ within an
-experiment and report results separately for each $K$ used.
+experiment and report results separately for each $K$ used. For the plausibility diagnostics, the same
+summaries are reported for $b(\vect{y}^{\star})$ and $v(\vect{y}^{\star})$ to distinguish systematic
+offset from diffuse candidate clouds under the declared checker.
+
+
 
 %-------------------------------------------------------------------------------
 \subsection{Design-space uncertainty diagnostics}\label{sec:eval_design}
@@ -422,16 +712,29 @@ $u\mapsto u$ provides a direct baseline for perfect calibration. This view is co
 practice because it summarizes miscalibration without relying on histogram bin choices and
 it supports direct visual comparison across inverse models and sampling schemes. \cite{Diebold1998}
 
-Systematic departures from the diagonal have interpretable signatures:
-\begin{itemize}
-  \item Overconfidence: PIT values concentrate near $0$ and $1$, meaning the candidates are
-  too narrow and the truth falls in the tails too often.
-  \item Underconfidence: PIT values concentrate near $0.5$, meaning the candidates are too
-  wide and the truth falls near the centre too often.
-  \item Bias: PIT values show persistent skew, meaning the conditional mapping is shifted
-  and the truth tends to fall preferentially on one side of the sampled distribution.
-\end{itemize}
+Systematic departures from the diagonal have interpretable signatures, as summarized in Table~\ref{tab:pit_signatures}:
 
+
+\begin{table}[h]
+\centering
+\small
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\linewidth}{@{} l >{\raggedright\arraybackslash}p{0.25\linewidth} >{\raggedright\arraybackslash}X @{}}
+\toprule
+Signature & PIT Distribution & Interpretation \\
+\midrule
+\textbf{Overconfident} & U-shaped (peaks at 0 and 1) & The candidate distribution is too narrow (low variance). The ground truth falls in the tails more often than predicted, indicating underestimated uncertainty. \\
+
+\textbf{Underconfident} & Hump-shaped (peak at 0.5) & The candidate distribution is too wide (high variance). The ground truth falls near the center too often, indicating overestimated uncertainty or an overly diffuse model. \\
+
+\textbf{Biased / Skewed} & Triangular or Skewed (peak at 0 or 1) & The conditional mapping is systematically shifted. The ground truth consistently falls on one side of the sampled distribution, indicating a prediction bias. \\
+
+\textbf{Well-Calibrated} & Flat / Uniform & The sampler is "honest" about its uncertainty. The ground truth percentiles match the predicted distribution across the test set. \\
+\bottomrule
+\end{tabularx}
+\caption{Interpretive signatures of Systematic departures from the diagonal in PIT calibration curves.}
+\label{tab:pit_signatures}
+\end{table}
 For compact reporting, we summarize deviation from the diagonal using a scalar calibration
 error:
 \begin{equation}
