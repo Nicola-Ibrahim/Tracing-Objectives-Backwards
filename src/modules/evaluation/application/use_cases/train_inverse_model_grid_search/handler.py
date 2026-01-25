@@ -4,8 +4,8 @@ from modules.dataset.domain.interfaces.base_repository import BaseDatasetReposit
 from modules.modeling.domain.entities.model_artifact import ModelArtifact
 from modules.modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
 from modules.modeling.domain.services.cross_validation import CrossValidationTrainer
-from ...factories.estimator import EstimatorFactory
-from ...factories.mertics import MetricFactory
+from modules.modeling.application.factories.estimator import EstimatorFactory
+from modules.modeling.application.factories.metrics import MetricFactory
 from .command import TrainInverseModelGridSearchCommand
 
 

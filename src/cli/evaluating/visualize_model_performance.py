@@ -3,11 +3,11 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.visualize_model_performance import (
+from ...modules.evaluation.application.use_cases.visualize_model_performance import (
     VisualizeModelPerformanceCommand,
     VisualizeModelPerformanceCommandHandler,
 )
-from ...modules.evaluation.infrastructure.visualization.vis_2d.visualizer import (
+from ...modules.evaluation.infrastructure.visualization.model_performance_2d.visualizer import (
     ModelPerformance2DVisualizer,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum

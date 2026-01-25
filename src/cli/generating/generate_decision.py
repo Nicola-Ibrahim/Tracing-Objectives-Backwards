@@ -15,7 +15,7 @@ from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from ...modules.modeling.infrastructure.visualization import (
+from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (
     DecisionGenerationComparisonVisualizer,
 )
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger

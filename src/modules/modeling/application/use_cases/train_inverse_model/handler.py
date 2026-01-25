@@ -1,18 +1,18 @@
-from ....dataset.domain.entities.dataset import Dataset
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....shared.domain.interfaces.base_logger import BaseLogger
-from ...domain.entities.model_artifact import ModelArtifact
-from ...domain.interfaces.base_estimator import (
+from .....dataset.domain.entities.dataset import Dataset
+from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from .....shared.domain.interfaces.base_logger import BaseLogger
+from ....domain.entities.model_artifact import ModelArtifact
+from ....domain.interfaces.base_estimator import (
     DeterministicEstimator,
     ProbabilisticEstimator,
 )
-from ...domain.interfaces.base_repository import (
+from ....domain.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
-from ...domain.services.deterministic import DeterministicModelTrainer
-from ...domain.services.probabilistic import ProbabilisticModelTrainer
-from ..factories.estimator import EstimatorFactory
-from ..factories.metrics import MetricFactory
+from ....domain.services.deterministic import DeterministicModelTrainer
+from ....domain.services.probabilistic import ProbabilisticModelTrainer
+from ...factories.estimator import EstimatorFactory
+from ...factories.metrics import MetricFactory
 from .command import TrainInverseModelCommand
 
 

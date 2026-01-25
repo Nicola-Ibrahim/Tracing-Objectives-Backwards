@@ -6,10 +6,10 @@ from modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
 )
-from modules.modeling.application.train_inverse_model_grid_search.command import (
+from modules.evaluation.application.train_inverse_model_grid_search.command import (
     TrainInverseModelGridSearchCommand,
 )
-from modules.modeling.application.train_inverse_model_grid_search.handler import (
+from modules.evaluation.application.train_inverse_model_grid_search.handler import (
     TrainInverseModelGridSearchCommandHandler,
 )
 from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum

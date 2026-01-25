@@ -1,25 +1,23 @@
 import click
 
-from modules.modeling.application.factories.estimator import EstimatorFactory
-from modules.modeling.application.factories.metrics import MetricFactory
-from modules.modeling.application.registry import (
+from ...modules.dataset.infrastructure.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
+)
+from ...modules.modeling.application.factories.estimator import EstimatorFactory
+from ...modules.modeling.application.factories.metrics import MetricFactory
+from ...modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
 )
-from modules.modeling.application.train_inverse_model.command import (
+from ...modules.modeling.application.use_cases.train_inverse_model import (
     TrainInverseModelCommand,
-)
-from modules.modeling.application.train_inverse_model.handler import (
     TrainInverseModelCommandHandler,
 )
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.dataset.infrastructure.repositories.dataset_repository import (
-    FileSystemDatasetRepository,
-)
-from modules.modeling.infrastructure.repositories.model_artifact_repo import (
+from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
 @click.command(help="Train inverse model using a single train/test split")

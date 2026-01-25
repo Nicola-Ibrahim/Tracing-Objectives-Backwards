@@ -3,7 +3,7 @@ from typing import Any
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ...modules.shared.domain.interfaces.base_visualizer import BaseVisualizer
+from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
 from .color_utils import get_model_colors
 from .panels.calibration_plot import add_calibration_plot
 from .panels.error_boxplot import add_error_boxplot

@@ -1,11 +1,11 @@
 import click
 
-from modules.evaluation.application.calibrate_decision_validation.command import (
+from modules.evaluation.application.use_cases.calibrate_decision_validation import (
     CalibrateDecisionValidationCommand,
     ConformalValidatorParams,
     OODValidatorParams,
 )
-from modules.evaluation.application.calibrate_decision_validation.handler import (
+from modules.evaluation.application.use_cases.calibrate_decision_validation import (
     CalibrateDecisionValidationCommandHandler,
 )
 from modules.modeling.application.registry import ESTIMATOR_PARAM_REGISTRY
