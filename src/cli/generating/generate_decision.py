@@ -1,24 +1,24 @@
 import click
 
-from modules.modeling.application.command import (
-    GenerateDecisionCommand,
-    InverseEstimatorCandidate,
-)
-from modules.modeling.application.handler import (
-    GenerateDecisionCommandHandler,
-)
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.dataset.infrastructure.repositories.dataset_repository import (
+from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from modules.modeling.infrastructure.repositories.model_artifact_repo import (
+from ...modules.evaluation.application.inverse_generator_comparator import (
+    InverseGeneratorComparator,
+)
+from ...modules.modeling.application.generate_decision import (
+    GenerateDecisionCommand,
+    GenerateDecisionCommandHandler,
+    InverseEstimatorCandidate,
+)
+from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
-from modules.modeling.infrastructure.visualization.decision_generation import (
+from ...modules.modeling.infrastructure.visualization import (
     DecisionGenerationComparisonVisualizer,
 )
-from modules.evaluation.application.inverse_generator_comparator import InverseGeneratorComparator
+from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
 @click.command(help="Generate decision candidates for a target objective.")

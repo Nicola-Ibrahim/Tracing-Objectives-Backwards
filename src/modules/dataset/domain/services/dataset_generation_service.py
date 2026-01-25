@@ -2,11 +2,11 @@ from typing import Any
 
 from sklearn.model_selection import train_test_split
 
+from ....modeling.domain.interfaces.base_normalizer import BaseNormalizer
 from ..entities.dataset import Dataset
 from ..entities.processed_data import ProcessedData
 from ..interfaces.base_optimizer import BaseOptimizer
 from ..value_objects.pareto import Pareto
-from ..modeling.interfaces.base_normalizer import BaseNormalizer
 
 
 class DatasetGenerationService:

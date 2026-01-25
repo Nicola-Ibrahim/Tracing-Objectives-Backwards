@@ -1,14 +1,14 @@
-from modules.shared.domain.interfaces.base_logger import BaseLogger
-from modules.shared.domain.interfaces.base_visualizer import BaseVisualizer
-from modules.dataset.domain.entities.dataset import Dataset
-from modules.dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from modules.modeling.domain.interfaces.base_estimator import (
+from ....dataset.domain.entities.dataset import Dataset
+from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ....evaluation.application.inverse_model_comparison import InverseModelComparator
+from ....modeling.application.factories.estimator import EstimatorFactory
+from ....modeling.domain.interfaces.base_estimator import (
     BaseEstimator,
     ProbabilisticEstimator,
 )
-from modules.modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
-from modules.evaluation.application.inverse_model_comparison import InverseModelComparator
-from ...factories.estimator import EstimatorFactory
+from ....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
+from ....shared.domain.interfaces.base_logger import BaseLogger
+from ....shared.domain.interfaces.base_visualizer import BaseVisualizer
 from .command import CompareInverseModelsCommand, InverseEstimatorCandidate
 
 

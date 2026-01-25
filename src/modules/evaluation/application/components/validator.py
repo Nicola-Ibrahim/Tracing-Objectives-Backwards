@@ -1,9 +1,9 @@
 import numpy as np
 
-from modules.evaluation.domain.decision_validation.interfaces.base_conformal_calibrator import (
+from ....evaluation.domain.decision_validation.interfaces.base_conformal_calibrator import (
     BaseConformalValidator,
 )
-from modules.evaluation.domain.decision_validation.interfaces.base_ood_calibrator import (
+from ....evaluation.domain.decision_validation.interfaces.base_ood_calibrator import (
     BaseOODValidator,
 )
 

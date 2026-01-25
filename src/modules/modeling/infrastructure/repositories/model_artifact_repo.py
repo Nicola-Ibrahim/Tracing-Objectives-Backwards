@@ -2,19 +2,21 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from .....shared.config import ROOT_PATH
-from modules.modeling.application.factories.estimator import EstimatorFactory
-from modules.modeling.application.registry import ESTIMATOR_PARAM_REGISTRY
-from modules.modeling.domain.entities.model_artifact import ModelArtifact
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.modeling.domain.interfaces.base_estimator import BaseEstimator
-from modules.modeling.domain.interfaces.base_repository import (
+from ....shared.config import ROOT_PATH
+from ....shared.infrastructure.processing.files.json import JsonFileHandler
+from ....shared.infrastructure.processing.files.safetensors import (
+    SafeTensorsFileHandler,
+)
+from ....shared.infrastructure.processing.files.toml import TomlFileHandler
+from ...application.factories.estimator import EstimatorFactory
+from ...application.registry import ESTIMATOR_PARAM_REGISTRY
+from ...domain.entities.model_artifact import ModelArtifact
+from ...domain.enums.estimator_type import EstimatorTypeEnum
+from ...domain.interfaces.base_estimator import BaseEstimator
+from ...domain.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
-from modules.modeling.domain.value_objects.estimator_params import EstimatorParamsBase
-from ...processing.files.json import JsonFileHandler
-from ...processing.files.safetensors import SafeTensorsFileHandler
-from ...processing.files.toml import TomlFileHandler
+from ...domain.value_objects.estimator_params import EstimatorParamsBase
 
 
 class VersionManager:

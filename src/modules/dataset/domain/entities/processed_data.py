@@ -3,7 +3,7 @@ from typing import Self
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
-from modules.modeling.domain.interfaces.base_normalizer import BaseNormalizer
+from ....modeling.domain.interfaces.base_normalizer import BaseNormalizer
 
 
 class ProcessedData(BaseModel):

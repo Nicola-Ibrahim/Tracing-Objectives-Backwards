@@ -1,6 +1,6 @@
 import numpy as np
 
-from modules.modeling.domain.interfaces.base_estimator import BaseEstimator
+from ...domain.interfaces.base_estimator import BaseEstimator
 
 
 class ForwardSimulator:

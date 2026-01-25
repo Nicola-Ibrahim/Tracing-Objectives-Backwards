@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Any
 
-from modules.dataset.domain.entities.dataset import Dataset
-from modules.dataset.domain.entities.processed_data import ProcessedData
-from modules.dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from modules.dataset.domain.value_objects.pareto import Pareto
-from ...processing.files.json import JsonFileHandler
-from ...processing.files.pickle import PickleFileHandler
+from ....shared.infrastructure.processing.files.json import JsonFileHandler
+from ....shared.infrastructure.processing.files.pickle import PickleFileHandler
+from ...domain.entities.dataset import Dataset
+from ...domain.entities.processed_data import ProcessedData
+from ...domain.interfaces.base_repository import BaseDatasetRepository
+from ...domain.value_objects.pareto import Pareto
 
 
 class FileSystemDatasetRepository(BaseDatasetRepository):
@@ -144,9 +144,7 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
     def _load_processed_part(self, name: str) -> ProcessedData:
         directory = self._processed_dir(name)
         if not directory.exists():
-            raise FileNotFoundError(
-                f"Processed data directory for '{name}' not found."
-            )
+            raise FileNotFoundError(f"Processed data directory for '{name}' not found.")
 
         dataset_pkl = directory / "dataset"
         decisions_norm_pkl = directory / "decisions_normalizer"

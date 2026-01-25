@@ -2,14 +2,18 @@ from typing import Any
 
 import numpy as np
 
-from modules.shared.domain.interfaces.base_logger import BaseLogger
-from modules.shared.domain.interfaces.base_visualizer import BaseVisualizer
-from modules.dataset.domain.entities.dataset import Dataset
-from modules.dataset.domain.entities.processed_data import ProcessedData
-from modules.dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from modules.modeling.domain.interfaces.base_estimator import BaseEstimator
-from modules.modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
-from modules.evaluation.application.inverse_generator_comparator import InverseGeneratorComparator
+from ....dataset.domain.entities.dataset import Dataset
+from ....dataset.domain.entities.processed_data import ProcessedData
+from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ....evaluation.application.inverse_generator_comparator import (
+    InverseGeneratorComparator,
+)
+from ....shared.domain.interfaces.base_logger import BaseLogger
+from ....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from ...domain.interfaces.base_estimator import BaseEstimator
+from ...domain.interfaces.base_repository import (
+    BaseModelArtifactRepository,
+)
 from .command import GenerateDecisionCommand, InverseEstimatorCandidate
 
 

@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from sklearn.preprocessing import MinMaxScaler
 
-from modules.modeling.domain.interfaces.base_normalizer import BaseNormalizer
+from ..domain.interfaces.base_normalizer import BaseNormalizer
 
 
 class MinMaxScalerNormalizer(BaseNormalizer):

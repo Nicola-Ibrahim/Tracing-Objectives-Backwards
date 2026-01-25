@@ -2,9 +2,9 @@ import cocoex
 import numpy as np
 from cocoex import Problem as COCOProblem
 
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.modeling.domain.interfaces.base_estimator import DeterministicEstimator
-from modules.modeling.domain.value_objects.estimator_params import COCOEstimatorParams
+from ....domain.enums.estimator_type import EstimatorTypeEnum
+from ....domain.interfaces.base_estimator import DeterministicEstimator
+from ....domain.value_objects.estimator_params import COCOEstimatorParams
 
 
 class COCOEstimator(DeterministicEstimator):

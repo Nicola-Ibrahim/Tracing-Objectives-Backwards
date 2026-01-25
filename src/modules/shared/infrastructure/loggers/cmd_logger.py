@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from modules.shared.domain.interfaces.base_logger import BaseLogger
+from ....shared.domain.interfaces.base_logger import BaseLogger
 
 
 # Define ANSI color codes

@@ -3,7 +3,7 @@ import numpy as np
 from cocoex import Problem as COCOProblem
 from pydantic import BaseModel, Field
 
-from modules.dataset.domain.interfaces.base_problem import BaseProblem
+from ...domain.interfaces.base_problem import BaseProblem
 
 
 def get_coco_problem(

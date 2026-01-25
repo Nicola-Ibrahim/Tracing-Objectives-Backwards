@@ -1,15 +1,15 @@
 import click
 
-from ...application.visualizing.visualize_dataset.command import (
+from ...modules.dataset.application.visualizing import (
     VisualizeDatasetCommand,
-)
-from ...application.visualizing.visualize_dataset.handler import (
     VisualizeDatasetCommandHandler,
 )
-from modules.dataset.infrastructure.repositories.dataset_repository import (
+from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from modules.modeling.infrastructure.visualization.datasets.visualizer import PlotlyDatasetVisualizer
+from ...modules.dataset.infrastructure.visualization import (
+    PlotlyDatasetVisualizer,
+)
 
 
 @click.command(help="Visualize a processed dataset")

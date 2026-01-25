@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from .....shared.config import ROOT_PATH
+from ....shared.config import ROOT_PATH
 from ..entities.dataset import Dataset
 
 

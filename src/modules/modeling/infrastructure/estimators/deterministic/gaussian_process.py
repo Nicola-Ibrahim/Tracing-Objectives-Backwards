@@ -8,10 +8,10 @@ from sklearn.gaussian_process.kernels import (
     Matern,
 )
 
-from modules.modeling.domain.interfaces.base_estimator import (
+from ....domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from modules.modeling.domain.value_objects.estimator_params import (
+from ....domain.value_objects.estimator_params import (
     GaussianProcessEstimatorParams,
 )
 

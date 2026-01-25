@@ -1,20 +1,20 @@
 import click
 
-from modules.evaluation.application.compare_inverse_models import (
+from ...modules.dataset.infrastructure.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
+)
+from ...modules.evaluation.application.compare_inverse_models import (
     CompareInverseModelsCommand,
     CompareInverseModelsHandler,
     InverseEstimatorCandidate,
 )
-from modules.modeling.application.factories.estimator import EstimatorFactory
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.dataset.infrastructure.repositories.dataset_repository import (
-    FileSystemDatasetRepository,
-)
-from modules.modeling.infrastructure.repositories.model_artifact_repo import (
+from ...modules.modeling.application.factories.estimator import EstimatorFactory
+from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
 )
-from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
-from modules.modeling.infrastructure.visualization.comparison.visualizer import (
+from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from ..visualizing.visualizer import (
     InverseComparisonVisualizer,
 )
 

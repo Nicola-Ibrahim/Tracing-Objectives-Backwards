@@ -37,9 +37,9 @@ from numpy.typing import NDArray
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.modeling.domain.interfaces.base_estimator import ProbabilisticEstimator
-from modules.modeling.domain.value_objects.estimator_params import CVAEEstimatorParams
+from ....domain.enums.estimator_type import EstimatorTypeEnum
+from ....domain.interfaces.base_estimator import ProbabilisticEstimator
+from ....domain.value_objects.estimator_params import CVAEEstimatorParams
 
 LOG2PI = float(np.log(2.0 * np.pi))
 

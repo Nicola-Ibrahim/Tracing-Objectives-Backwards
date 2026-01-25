@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from modules.modeling.domain.value_objects.estimator_params import (
+from ...domain.value_objects.estimator_params import (
     EstimatorParams,
     ValidationMetricConfig,
 )

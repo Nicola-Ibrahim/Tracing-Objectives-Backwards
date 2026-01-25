@@ -1,6 +1,6 @@
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.modeling.domain.enums.metric_key import DefaultValidationMetricEnum
-from modules.modeling.domain.value_objects.estimator_params import (
+from ...modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ...modeling.domain.enums.metric_key import DefaultValidationMetricEnum
+from ...modeling.domain.value_objects.estimator_params import (
     COCOEstimatorParams,
     CVAEEstimatorParams,
     EstimatorParamsBase,

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 
 
 class VisualizeModelPerformanceCommand(BaseModel):

@@ -2,15 +2,12 @@ from typing import Any
 
 import numpy as np
 
-from modules.modeling.domain.interfaces.base_estimator import BaseEstimator
-from modules.modeling.domain.interfaces.base_normalizer import BaseNormalizer
-
-from .components import (
-    CandidateSelector,
-    CandidateValidator,
-    DecisionSampler,
-    ForwardSimulator,
-)
+from ...modeling.application.components.sampler import DecisionSampler
+from ...modeling.application.components.selector import CandidateSelector
+from ...modeling.application.components.simulator import ForwardSimulator
+from ...modeling.domain.interfaces.base_estimator import BaseEstimator
+from ...modeling.domain.interfaces.base_normalizer import BaseNormalizer
+from .components.validator import CandidateValidator
 
 
 class InverseGeneratorComparator:

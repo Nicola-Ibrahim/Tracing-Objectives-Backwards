@@ -44,9 +44,9 @@ from torch.distributions import (
 from torch.utils.data import DataLoader, TensorDataset
 from umap import UMAP
 
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.modeling.domain.interfaces.base_estimator import ProbabilisticEstimator
-from modules.modeling.domain.value_objects.estimator_params import (
+from ....domain.enums.estimator_type import EstimatorTypeEnum
+from ....domain.interfaces.base_estimator import ProbabilisticEstimator
+from ....domain.value_objects.estimator_params import (
     ActivationFunctionEnum,
     DistributionFamilyEnum,
     MDNEstimatorParams,

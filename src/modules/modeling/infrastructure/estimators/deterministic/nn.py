@@ -1,4 +1,3 @@
-# Neural Network Mapper
 from typing import Tuple
 
 import numpy as np
@@ -6,10 +5,10 @@ import torch
 import torch.nn as nn
 from numpy.typing import NDArray
 
-from modules.modeling.domain.interfaces.base_estimator import (
+from .....modeling.domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from modules.modeling.domain.value_objects.estimator_params import (
+from .....modeling.domain.value_objects.estimator_params import (
     NeuralNetworkEstimatorParams,
 )
 

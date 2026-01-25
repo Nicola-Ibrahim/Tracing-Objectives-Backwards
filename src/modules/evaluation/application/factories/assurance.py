@@ -1,25 +1,25 @@
 from typing import Callable, Dict, Sequence, Type
 
-from modules.evaluation.domain.decision_validation.interfaces import (
+from ....evaluation.domain.decision_validation.interfaces import (
     BaseConformalValidator,
     BaseOODValidator,
 )
-from modules.evaluation.domain.feasibility.interfaces.diversity import (
+from ....evaluation.domain.feasibility.interfaces.diversity import (
     BaseDiversityStrategy,
 )
-from modules.evaluation.domain.feasibility.interfaces.scoring import (
+from ....evaluation.domain.feasibility.interfaces.scoring import (
     BaseFeasibilityScoringStrategy,
 )
-from modules.evaluation.infrastructure.decision_validation.validators import (
+from ....evaluation.infrastructure.decision_validation.validators import (
     MahalanobisOODValidator,
     SplitConformalL2Validator,
 )
-from modules.evaluation.infrastructure.diversity import (
+from ....evaluation.infrastructure.diversity import (
     ClosestPointsDiversityStrategy,
     KMeansDiversityStrategy,
     MaxMinDistanceDiversityStrategy,
 )
-from modules.evaluation.infrastructure.scoring import (
+from ....evaluation.infrastructure.scoring import (
     ConvexHullScoreStrategy,
     KDEScoreStrategy,
     LocalSphereScoreStrategy,

@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from pymoo.optimize import minimize
 from pymoo.termination import get_termination
 
-from modules.dataset.domain.interfaces.base_optimizer import ProblemAwareOptimizer
+from ...domain.interfaces.base_optimizer import ProblemAwareOptimizer
 from .result import OptimizationResult
 
 

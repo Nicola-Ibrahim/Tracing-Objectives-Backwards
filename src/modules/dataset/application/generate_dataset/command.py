@@ -2,8 +2,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from modules.modeling.domain.enums.normalizer_type import NormalizerTypeEnum
-from modules.modeling.domain.value_objects.estimator_params import NormalizerConfig
+from ....modeling.domain.enums.normalizer_type import NormalizerTypeEnum
+from ....modeling.domain.value_objects.estimator_params import NormalizerConfig
 
 
 class ProblemType(str, Enum):

@@ -2,10 +2,10 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import NearestNDInterpolator
 
-from modules.modeling.domain.interfaces.base_estimator import (
+from ....domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from modules.modeling.domain.value_objects.estimator_params import (
+from ....domain.value_objects.estimator_params import (
     NearestNeighborsEstimatorParams,
 )
 

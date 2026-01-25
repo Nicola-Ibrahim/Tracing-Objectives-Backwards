@@ -1,26 +1,26 @@
 from typing import Any, Callable, Dict
 
-from modules.modeling.application.registry import ESTIMATOR_PARAM_REGISTRY
-from modules.modeling.domain.enums.estimator_type import (
+from ...application.registry import ESTIMATOR_PARAM_REGISTRY
+from ...domain.enums.estimator_type import (
     EstimatorTypeEnum,
 )
-from modules.modeling.domain.interfaces.base_estimator import (
+from ...domain.interfaces.base_estimator import (
     BaseEstimator,
 )
-from modules.modeling.domain.value_objects.estimator_params import (
+from ...domain.value_objects.estimator_params import (
     COCOEstimatorParams,
     EstimatorParamsBase,
 )
-from modules.modeling.infrastructure.estimators.deterministic import (
+from ...infrastructure.estimators.deterministic import (
     GaussianProcessEstimator,
     NearestNDEstimator,
     NNEstimator,
     RBFEstimator,
 )
-from modules.modeling.infrastructure.estimators.deterministic.coco_biobj_function import (
+from ...infrastructure.estimators.deterministic.coco_biobj_function import (
     COCOEstimator,
 )
-from modules.modeling.infrastructure.estimators.probabilistic import (
+from ...infrastructure.estimators.probabilistic import (
     CVAEEstimator,
     INNEstimator,
     MDNEstimator,

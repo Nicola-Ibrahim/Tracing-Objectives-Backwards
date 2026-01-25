@@ -1,6 +1,6 @@
-from modules.shared.domain.interfaces.base_visualizer import BaseVisualizer
-from modules.dataset.domain.entities.dataset import Dataset
-from modules.dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from ...domain.entities.dataset import Dataset
+from ...domain.interfaces.base_repository import BaseDatasetRepository
 from .command import VisualizeDatasetCommand
 
 

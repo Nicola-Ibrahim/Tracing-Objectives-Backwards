@@ -1,10 +1,12 @@
 import click
 
-from modules.dataset.application.factories.algorithm import AlgorithmFactory
-from modules.modeling.application.factories.normalizer import NormalizerFactory
-from modules.dataset.application.factories.optimizer import OptimizerFactory
-from modules.dataset.application.factories.problem import ProblemFactory
-from modules.dataset.application.command import (
+from ...modules.dataset.application.factories.algorithm import AlgorithmFactory
+from ...modules.dataset.application.factories.optimizer import OptimizerFactory
+from ...modules.dataset.application.factories.problem import ProblemFactory
+from ...modules.dataset.application.generate_dataset import (
+    GenerateDatasetCommandHandler,
+)
+from ...modules.dataset.application.generate_dataset.command import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
@@ -13,16 +15,14 @@ from modules.dataset.application.command import (
     OptimizerType,
     ProblemType,
 )
-from modules.modeling.domain.enums.normalizer_type import NormalizerTypeEnum
-from modules.modeling.domain.value_objects.estimator_params import NormalizerConfig
-from modules.dataset.application.handler import (
-    GenerateDatasetCommandHandler,
-)
-from modules.dataset.domain.services import DatasetGenerationService
-from modules.dataset.infrastructure.repositories.dataset_repository import (
+from ...modules.dataset.domain.services import DatasetGenerationService
+from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from ...modules.modeling.application.factories.normalizer import NormalizerFactory
+from ...modules.modeling.domain.enums.normalizer_type import NormalizerTypeEnum
+from ...modules.modeling.domain.value_objects.estimator_params import NormalizerConfig
+from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
 @click.command()

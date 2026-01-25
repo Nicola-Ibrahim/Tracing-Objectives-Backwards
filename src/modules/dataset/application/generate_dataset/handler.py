@@ -1,14 +1,13 @@
 from pathlib import Path
 
-from modules.dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from modules.dataset.domain.services import DatasetGenerationService
-from modules.shared.domain.interfaces.base_logger import BaseLogger
-
-from .command import GenerateDatasetCommand
+from ....modeling.application.factories.normalizer import NormalizerFactory
+from ....shared.domain.interfaces.base_logger import BaseLogger
+from ...domain.interfaces.base_repository import BaseDatasetRepository
+from ...domain.services import DatasetGenerationService
 from ..factories.algorithm import AlgorithmFactory
-from ..factories.normalizer import NormalizerFactory
 from ..factories.optimizer import OptimizerFactory
 from ..factories.problem import ProblemFactory
+from .command import GenerateDatasetCommand
 
 
 class GenerateDatasetCommandHandler:

@@ -1,20 +1,18 @@
 import click
 
-from ...application.visualizing.visualize_model_performance.command import (
-    VisualizeModelPerformanceCommand,
-)
-from ...application.visualizing.visualize_model_performance.handler import (
-    VisualizeModelPerformanceCommandHandler,
-)
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.dataset.infrastructure.repositories.dataset_repository import (
+from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.evaluation.application.visualize_model_performance import (
+    VisualizeModelPerformanceCommand,
+    VisualizeModelPerformanceCommandHandler,
 )
-from modules.modeling.infrastructure.visualization.diagnostics.vis_2d.visualizer import (
+from ...modules.evaluation.infrastructure.visualization.vis_2d.visualizer import (
     ModelPerformance2DVisualizer,
+)
+from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
+    FileSystemModelArtifactRepository,
 )
 
 

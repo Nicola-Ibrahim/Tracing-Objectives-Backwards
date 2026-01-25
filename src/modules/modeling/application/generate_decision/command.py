@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from ...domain.enums.estimator_type import EstimatorTypeEnum
 
 
 class InverseEstimatorCandidate(BaseModel):

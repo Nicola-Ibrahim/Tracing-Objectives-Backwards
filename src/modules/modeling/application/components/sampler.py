@@ -1,7 +1,7 @@
 import numpy as np
 
-from modules.modeling.domain.interfaces.base_estimator import BaseEstimator
-from modules.modeling.domain.interfaces.base_normalizer import BaseNormalizer
+from ...domain.interfaces.base_estimator import BaseEstimator
+from ...domain.interfaces.base_normalizer import BaseNormalizer
 
 
 class DecisionSampler:
