@@ -2,10 +2,10 @@ from typing import Any
 
 import numpy as np
 
-from ...modeling.domain.interfaces.base_estimator import (
+from .....modeling.domain.interfaces.base_estimator import (
     BaseEstimator,
 )
-from ...modeling.domain.interfaces.base_normalizer import BaseNormalizer
+from .....modeling.domain.interfaces.base_normalizer import BaseNormalizer
 
 
 class InverseModelEvaluator:

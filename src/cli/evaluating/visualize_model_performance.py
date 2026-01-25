@@ -4,8 +4,8 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ...modules.evaluation.application.use_cases.visualize_model_performance import (
-    VisualizeModelPerformanceCommand,
-    VisualizeModelPerformanceCommandHandler,
+    CheckModelPerformanceCommand,
+    CheckModelPerformanceCommandHandler,
 )
 from ...modules.evaluation.infrastructure.visualization.model_performance_2d.visualizer import (
     ModelPerformance2DVisualizer,
@@ -48,12 +48,12 @@ def main(
     model_number: int | None,
     dataset_name: str,
 ) -> None:
-    handler = VisualizeModelPerformanceCommandHandler(
+    handler = CheckModelPerformanceCommandHandler(
         model_artificat_repo=FileSystemModelArtifactRepository(),
         processed_dataset_repo=FileSystemDatasetRepository(),
         visualizer=ModelPerformance2DVisualizer(),
     )
-    command = VisualizeModelPerformanceCommand(
+    command = CheckModelPerformanceCommand(
         dataset_name=dataset_name,
         data_file_name=dataset_name,
         processed_file_name=dataset_name,

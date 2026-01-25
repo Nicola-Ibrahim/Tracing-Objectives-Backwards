@@ -2,10 +2,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ....modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 
 
-class VisualizeModelPerformanceCommand(BaseModel):
+class CheckModelPerformanceCommand(BaseModel):
     dataset_name: str = Field(
         ...,
         description="Dataset identifier associated with the model.",

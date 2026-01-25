@@ -123,17 +123,25 @@ model-train-forward:  # Train a forward model (decisions -> objectives) using a 
 	@echo "$(GREEN)Forward model training complete.$(RESET)"
 
 
-.PHONY: model-generate-decision
-model-generate-decision:  # Use a trained model to generate a decision for a target objective
+.PHONY: model-generate-candidates
+model-generate-candidates:  # Use a trained model to generate a decision for a target objective
 	@echo "$(BLUE)Generating decision from a trained model...$(RESET)"
-	$(PYTHON) -m src.cli.generating.generate_decision
+	$(PYTHON) -m src.cli.generating.generate_candidates
 	@echo "$(GREEN)Decision generation complete.$(RESET)"
 
-.PHONY: model-compare-inverse
-model-compare-inverse:  # Compare multiple inverse models
+
+.PHONY: model-compare-inverse-candidates-generation
+model-compare-inverse-candidates-generation:  # Compare multiple inverse models
 	@echo "$(BLUE)Comparing inverse models...$(RESET)"
-	$(PYTHON) -m src.cli.evaluating.compare_inverse_models
+	$(PYTHON) -m src.cli.evaluating.compare_inverse_models_candidates_generation
 	@echo "$(GREEN)Inverse model comparison complete.$(RESET)"
+
+
+.PHONY: model-diagnose-inverse
+model-diagnose-inverse:  # Diagnose multiple inverse models
+	@echo "$(BLUE)Diagnosing inverse models...$(RESET)"
+	$(PYTHON) -m src.cli.evaluating.diagnose_inverse_models
+	@echo "$(GREEN)Inverse model diagnosis complete.$(RESET)"
 
 .PHONY: assurance-calibrate-validation
 assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation

@@ -1,18 +1,18 @@
-from ....dataset.domain.entities.dataset import Dataset
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....evaluation.application.inverse_model_comparison import InverseModelComparator
-from ....modeling.application.factories.estimator import EstimatorFactory
-from ....modeling.domain.interfaces.base_estimator import (
+from .....dataset.domain.entities.dataset import Dataset
+from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from .....modeling.application.factories.estimator import EstimatorFactory
+from .....modeling.domain.interfaces.base_estimator import (
     BaseEstimator,
     ProbabilisticEstimator,
 )
-from ....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
-from ....shared.domain.interfaces.base_logger import BaseLogger
-from ....shared.domain.interfaces.base_visualizer import BaseVisualizer
-from .command import CompareInverseModelsCommand, InverseEstimatorCandidate
+from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
+from .....shared.domain.interfaces.base_logger import BaseLogger
+from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
+from .inverse_model_comparison import InverseModelComparator
 
 
-class CompareInverseModelsHandler:
+class DiagnoseInverseModelsCommandHandler:
     """
     Compares inverse model candidates against a forward model (simulator).
     """
@@ -31,7 +31,7 @@ class CompareInverseModelsHandler:
         self._estimator_factory = estimator_factory
         self._visualizer = visualizer
 
-    def execute(self, command: CompareInverseModelsCommand) -> dict[str, dict]:
+    def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, dict]:
         """
         Coordinates the comparison of multiple inverse model candidates on a single dataset.
         """

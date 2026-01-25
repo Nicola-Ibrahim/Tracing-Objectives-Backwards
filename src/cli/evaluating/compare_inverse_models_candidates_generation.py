@@ -3,20 +3,20 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.inverse_generator_comparator import (
+from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates import (
+    CompareInverseModelCandidatesCommand,
+    CompareInverseModelCandidatesCommandHandler,
+    InverseEstimatorCandidate,
+)
+from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates.inverse_generator_comparator import (
     InverseGeneratorComparator,
 )
-from ...modules.modeling.application.generate_decision import (
-    GenerateDecisionCommand,
-    GenerateDecisionCommandHandler,
-    InverseEstimatorCandidate,
+from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (
+    DecisionGenerationComparisonVisualizer,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
-)
-from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (
-    DecisionGenerationComparisonVisualizer,
 )
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
@@ -28,7 +28,7 @@ def main():
     """
 
     # Create the command object using the provided estimator and hardcoded target
-    command = GenerateDecisionCommand(
+    command = CompareInverseModelCandidatesCommand(
         dataset_name="cocoex_f5",
         inverse_estimators=[
             InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=1),
@@ -51,7 +51,7 @@ def main():
     )
 
     # Initialize the handler with pre-built services
-    handler = GenerateDecisionCommandHandler(
+    handler = CompareInverseModelCandidatesCommandHandler(
         comparator=InverseGeneratorComparator(),
         model_repository=FileSystemModelArtifactRepository(),
         data_repository=FileSystemDatasetRepository(),

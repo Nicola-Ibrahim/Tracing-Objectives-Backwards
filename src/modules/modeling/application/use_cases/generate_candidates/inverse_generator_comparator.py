@@ -2,12 +2,12 @@ from typing import Any
 
 import numpy as np
 
-from ...modeling.application.components.sampler import DecisionSampler
-from ...modeling.application.components.selector import CandidateSelector
-from ...modeling.application.components.simulator import ForwardSimulator
-from ...modeling.domain.interfaces.base_estimator import BaseEstimator
-from ...modeling.domain.interfaces.base_normalizer import BaseNormalizer
-from .components.validator import CandidateValidator
+from .....modeling.domain.interfaces.base_estimator import (
+    BaseEstimator,
+    DeterministicEstimator,
+    ProbabilisticEstimator,
+)
+from .....modeling.domain.interfaces.base_normalizer import BaseNormalizer
 
 
 class InverseGeneratorComparator:
@@ -24,20 +24,16 @@ class InverseGeneratorComparator:
 
     def __init__(
         self,
-        sampler: DecisionSampler | None = None,
-        simulator: ForwardSimulator | None = None,
-        validator: CandidateValidator | None = None,
-        selector: CandidateSelector | None = None,
-    ) -> None:
-        self._sampler = sampler or DecisionSampler()
-        self._simulator = simulator or ForwardSimulator()
-        self._validator = validator  # Can be None if no validation is desired
-        self._selector = selector or CandidateSelector()
+        validators: list[BaseValidator],
+    ):
+        self._validators = validators
 
     def compare(
         self,
         *,
-        inverse_estimators: dict[str, BaseEstimator],
+        inverse_estimators: dict[
+            str, BaseEstimator | ProbabilisticEstimator | DeterministicEstimator
+        ],
         forward_estimator: BaseEstimator,
         target_objective_norm: np.ndarray,
         target_objective_raw: np.ndarray,
@@ -57,18 +53,19 @@ class InverseGeneratorComparator:
 
         for name, estimator in inverse_estimators.items():
             # 1. Sample (Normalized space -> Physical space)
-            candidates_norm = self._sampler.sample(
+
+            candidates_norm = self._sample(
                 estimator=estimator,
                 target_objective_norm=target_objective_norm,
                 n_samples=n_samples,
             )
-            candidates_raw = self._sampler.denormalize(
+            candidates_raw = self._denormalize(
                 candidates_norm=candidates_norm,
                 normalizer=decisions_normalizer,
             )
 
             # 2. Simulate (Predict outcomes)
-            predicted_objectives = self._simulator.predict(
+            predicted_objectives = self._simulate(
                 forward_estimator=forward_estimator,
                 candidates_raw=candidates_raw,
             )
@@ -124,3 +121,47 @@ class InverseGeneratorComparator:
             "results_map": results_map,
             "generator_runs": generator_runs,
         }
+
+    def _sample(
+        self,
+        estimator: BaseEstimator | ProbabilisticEstimator,
+        target_objective_norm: np.ndarray,
+        n_samples: int,
+    ) -> np.ndarray:
+        """
+        Samples candidate decisions from the inverse estimator.
+        """
+        candidates = estimator.sample(
+            X=target_objective_norm,
+            n_samples=n_samples,
+        )
+
+        # Convert returned candidates set from 3D to 2D: (n_candidates, x_dim).
+        if candidates.ndim == 3:
+            candidates = candidates.reshape(-1, candidates.shape[-1])
+
+        return candidates
+
+    def _normalize(
+        self, candidates_norm: np.ndarray, normalizer: BaseNormalizer
+    ) -> np.ndarray:
+        """
+        Normalizes candidate decisions from the physical space to the normalized space.
+        """
+        return normalizer.transform(candidates_norm)
+
+    def _denormalize(
+        self, candidates_norm: np.ndarray, normalizer: BaseNormalizer
+    ) -> np.ndarray:
+        """
+        Denormalizes candidate decisions from the normalized space to the physical space.
+        """
+        return normalizer.inverse_transform(candidates_norm)
+
+    def _simulate(
+        self, forward_estimator: DeterministicEstimator, candidates_raw: np.ndarray
+    ) -> np.ndarray:
+        """
+        Simulates the forward estimator with the candidate decisions.
+        """
+        return forward_estimator.predict(candidates_raw)

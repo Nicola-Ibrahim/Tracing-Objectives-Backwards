@@ -1,12 +1,12 @@
-from ....dataset.domain.entities.dataset import Dataset
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....modeling.domain.entities.model_artifact import ModelArtifact
-from ....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
-from ....shared.domain.interfaces.base_visualizer import BaseVisualizer
-from .command import VisualizeModelPerformanceCommand
+from .....dataset.domain.entities.dataset import Dataset
+from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from .....modeling.domain.entities.model_artifact import ModelArtifact
+from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
+from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from .command import CheckModelPerformanceCommand
 
 
-class VisualizeModelPerformanceCommandHandler:
+class CheckModelPerformanceCommandHandler:
     def __init__(
         self,
         model_artificat_repo: BaseModelArtifactRepository,
@@ -17,7 +17,7 @@ class VisualizeModelPerformanceCommandHandler:
         self._processed_repo = processed_dataset_repo
         self._visualizer = visualizer
 
-    def execute(self, command: VisualizeModelPerformanceCommand) -> None:
+    def execute(self, command: CheckModelPerformanceCommand) -> None:
         # 1) Load raw data and model artifact from repository
         dataset_name = command.dataset_name
         if command.model_number:

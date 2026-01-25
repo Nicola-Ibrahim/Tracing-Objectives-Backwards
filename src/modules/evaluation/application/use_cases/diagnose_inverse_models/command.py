@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from ....modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 
 
 class InverseEstimatorCandidate(BaseModel):
@@ -17,7 +17,7 @@ class InverseEstimatorCandidate(BaseModel):
     )
 
 
-class CompareInverseModelsCommand(BaseModel):
+class DiagnoseInverseModelsCommand(BaseModel):
     """Command payload for comparing inverse model candidates on a single dataset."""
 
     dataset_name: str = Field(

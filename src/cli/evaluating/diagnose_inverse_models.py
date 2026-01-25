@@ -3,9 +3,9 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.compare_inverse_models import (
-    CompareInverseModelsCommand,
-    CompareInverseModelsHandler,
+from ...modules.evaluation.application.use_cases.diagnose_inverse_models import (
+    DiagnoseInverseModelsCommand,
+    DiagnoseInverseModelsCommandHandler,
     InverseEstimatorCandidate,
 )
 from ...modules.evaluation.infrastructure.visualization.inverse_comparison.visualizer import (
@@ -21,7 +21,7 @@ from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 @click.command(help="Compare inverse model candidates against a forward simulator")
 def cli():
-    handler = CompareInverseModelsHandler(
+    handler = DiagnoseInverseModelsCommandHandler(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="InverseComparisonLogger"),
@@ -41,7 +41,7 @@ def cli():
         InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
     ]
 
-    command = CompareInverseModelsCommand(
+    command = DiagnoseInverseModelsCommand(
         dataset_name="cocoex_f5",
         candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,

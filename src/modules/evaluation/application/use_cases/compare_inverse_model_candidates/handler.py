@@ -2,22 +2,20 @@ from typing import Any
 
 import numpy as np
 
-from ....dataset.domain.entities.dataset import Dataset
-from ....dataset.domain.entities.processed_data import ProcessedData
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....evaluation.application.inverse_generator_comparator import (
-    InverseGeneratorComparator,
-)
-from ....shared.domain.interfaces.base_logger import BaseLogger
-from ....shared.domain.interfaces.base_visualizer import BaseVisualizer
-from ...domain.interfaces.base_estimator import BaseEstimator
-from ...domain.interfaces.base_repository import (
+from .....dataset.domain.entities.dataset import Dataset
+from .....dataset.domain.entities.processed_data import ProcessedData
+from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from .....modeling.domain.interfaces.base_estimator import BaseEstimator
+from .....modeling.domain.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
-from .command import GenerateDecisionCommand, InverseEstimatorCandidate
+from .....shared.domain.interfaces.base_logger import BaseLogger
+from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from .command import CompareInverseModelCandidatesCommand, InverseEstimatorCandidate
+from .inverse_generator_comparator import InverseGeneratorComparator
 
 
-class GenerateDecisionCommandHandler:
+class CompareInverseModelCandidatesCommandHandler:
     """
     Generate Design Candidates (X) for a requested Objective (Y).
 
@@ -40,7 +38,7 @@ class GenerateDecisionCommandHandler:
         self._logger = logger
         self._visualizer = visualizer
 
-    def execute(self, command: GenerateDecisionCommand) -> dict[str, Any]:
+    def execute(self, command: CompareInverseModelCandidatesCommand) -> dict[str, Any]:
         """
         Coordinates the generation of decision candidates using multiple inverse models.
         """
