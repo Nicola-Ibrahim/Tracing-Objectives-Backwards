@@ -11,7 +11,7 @@ from modules.evaluation.application.use_cases.calibrate_decision_validation impo
 from modules.modeling.application.registry import ESTIMATOR_PARAM_REGISTRY
 from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from modules.modeling.domain.value_objects.estimator_params import EstimatorParams
-from modules.evaluation.application.factories.assurance import (
+from modules.evaluation.application.factories.ood_validator import (
     ConformalValidatorFactory,
     OODValidatorFactory,
 )

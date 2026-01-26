@@ -18,13 +18,13 @@ class InverseEstimatorCandidate(BaseModel):
 
 
 class DiagnoseInverseModelsCommand(BaseModel):
-    """Command payload for comparing inverse model candidates on a single dataset."""
+    """
+    Command for the full evaluation suite including
+    Objective-Space Accuracy and Decision-Space Reliability.
+    Supports comparing multiple inverse model candidates.
+    """
 
-    dataset_name: str = Field(
-        ...,
-        description="Dataset identifier to use for comparison.",
-        examples=["dataset"],
-    )
+    dataset_name: str = Field(..., examples=["cocoex_f5"])
 
     candidates: list[InverseEstimatorCandidate] = Field(
         ...,
@@ -33,13 +33,12 @@ class DiagnoseInverseModelsCommand(BaseModel):
     )
 
     forward_estimator_type: EstimatorTypeEnum = Field(
-        ...,
-        description="Type of the forward estimator (simulator) to use for validation.",
-        examples=[EstimatorTypeEnum.MDN.value],
+        ..., examples=[EstimatorTypeEnum.COCO]
     )
 
-    num_samples: int = Field(
-        ...,
-        description="Number of samples to draw from the inverse model for each target.",
-        examples=[250],
-    )
+    num_samples: int = Field(default=200, description="K candidates per target")
+    random_state: int = 42
+
+    scale_method: str = Field(default="sd", description="sd | mad | iqr")
+    bias_threshold: float = 0.5
+    dispersion_threshold: float = 0.5

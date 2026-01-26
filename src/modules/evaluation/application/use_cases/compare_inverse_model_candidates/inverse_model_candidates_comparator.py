@@ -22,7 +22,7 @@ class SelectionResult:
     all_distances: np.ndarray  # For visualization
 
 
-class InverseGeneratorComparator:
+class InverseModelsCandidatesComparator:
     """
     Compares multiple inverse estimators by observing how each generates
     candidate decisions for a target objective.

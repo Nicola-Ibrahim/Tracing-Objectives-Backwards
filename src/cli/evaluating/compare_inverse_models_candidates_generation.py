@@ -8,7 +8,7 @@ from ...modules.evaluation.application.use_cases.compare_inverse_model_candidate
     CompareInverseModelCandidatesCommandHandler,
     InverseEstimatorCandidate,
 )
-from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates.inverse_generator_comparator import (
+from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates.inverse_model_candidates_comparator import (
     InverseGeneratorComparator,
 )
 from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (

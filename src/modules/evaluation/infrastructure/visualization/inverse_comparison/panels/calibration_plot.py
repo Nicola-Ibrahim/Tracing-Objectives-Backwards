@@ -28,7 +28,7 @@ def add_calibration_plot(
     )
 
     for model_name, res in results_map.items():
-        calibration_curve = res.get("calibration", {}).get("curve")
+        calibration_curve = res.get("reliability", {}).get("calibration_curve")
         if calibration_curve is None:
             continue
 

@@ -1,6 +1,8 @@
-from .....dataset.domain.entities.dataset import Dataset
+from typing import Any
+
+import numpy as np
+
 from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from .....modeling.application.factories.estimator import EstimatorFactory
 from .....modeling.domain.interfaces.base_estimator import (
     BaseEstimator,
     ProbabilisticEstimator,
@@ -8,75 +10,175 @@ from .....modeling.domain.interfaces.base_estimator import (
 from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
 from .....shared.domain.interfaces.base_logger import BaseLogger
 from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from ....domain.accuracy import plausibility, residuals, scaling
+from ....domain.entities.diagnostic_result import (
+    AccuracyLens,
+    AccuracySummary,
+    CalibrationCurve,
+    DiagnosticResult,
+    ReliabilityLens,
+    ReliabilitySummary,
+    SpatialCandidates,
+)
+from ....domain.reliability import calibration, distribution_stats
 from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
-from .inverse_model_comparison import InverseModelComparator
 
 
-class DiagnoseInverseModelsCommandHandler:
+class DiagnoseInverseModelsHandler:
     """
-    Compares inverse model candidates against a forward model (simulator).
+    Orchestrator for the Thesis-aligned evaluation suite.
+    Supports multi-model comparison and dual-lens (Accuracy + Reliability) diagnostics.
     """
 
     def __init__(
         self,
-        processed_data_repository: BaseDatasetRepository,
         model_repository: BaseModelArtifactRepository,
+        data_repository: BaseDatasetRepository,
         logger: BaseLogger,
-        estimator_factory: EstimatorFactory,
         visualizer: BaseVisualizer | None = None,
-    ) -> None:
-        self._data_repository = processed_data_repository
-        self._model_repository = model_repository
+    ):
+        self._model_repo = model_repository
+        self._data_repo = data_repository
         self._logger = logger
-        self._estimator_factory = estimator_factory
         self._visualizer = visualizer
 
-    def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, dict]:
-        """
-        Coordinates the comparison of multiple inverse model candidates on a single dataset.
-        """
+    def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, Any]:
         self._logger.log_info(
-            f"Starting inverse model comparison on '{command.dataset_name}'. "
-            f"Candidates: {[(c.type.value, c.version) for c in command.candidates]}, "
-            f"Forward: {command.forward_estimator_type.value}"
+            f"Starting Diagnose Inverse Models for candidates: "
+            f"{[(c.type.value, c.version) for c in command.candidates]}"
         )
 
-        # 1. Load context: dataset and forward model
-        dataset: Dataset = self._data_repository.load(name=command.dataset_name)
+        # 1. Load context
+        dataset = self._data_repo.load(command.dataset_name)
         if not dataset.processed:
-            raise ValueError(
-                f"Dataset '{dataset.name}' has no processed data for validation."
-            )
+            raise ValueError("Dataset has no processed data.")
 
-        forward_estimator = self._model_repository.get_latest_version(
-            estimator_type=command.forward_estimator_type.value,
-            mapping_direction="forward",
-            dataset_name=command.dataset_name,
-        ).estimator
+        proc = dataset.processed
 
-        # 2. Initialize inverse estimators using private helper
+        # Load Forward Estimator
+        forward_art = self._model_repo.get_latest_version(
+            command.forward_estimator_type.value, "forward", command.dataset_name
+        )
+        forward_estimator = forward_art.estimator
+
+        # 2. Extract Scaling τ from training marginals
+        tau = self._get_scale_vector(proc.objectives_train, command.scale_method)
+        self._logger.log_info(f"Scale τ ({command.scale_method}): {tau.tolist()}")
+
+        # 3. Initialize inverse estimators
         inverse_estimators = self._initialize_estimators(
             candidates=command.candidates, dataset_name=command.dataset_name
         )
 
-        # 3. Run comparison workflow
-        comparator = InverseModelComparator()
-        results_map = comparator.compare(
-            forward_estimator=forward_estimator,
-            inverse_estimators=inverse_estimators,
-            test_objectives=dataset.processed.objectives_test,
-            decision_normalizer=dataset.processed.decisions_normalizer,
-            objective_normalizer=dataset.processed.objectives_normalizer,
-            test_decisions=dataset.processed.decisions_test,
-            num_samples=command.num_samples,
-        )
+        # 4. Run comparison workflow
+        comparison_results = {}
+        for display_name, inverse_estimator in inverse_estimators.items():
+            self._logger.log_info(f"Evaluating {display_name}...")
 
-        # 4. Generate comparison plots
-        if self._visualizer and results_map:
+            # Sampling
+            y_test_norm = proc.objectives_test
+            samples = inverse_estimator.sample(
+                y_test_norm, n_samples=command.num_samples
+            )
+            if samples.ndim == 2:
+                samples = samples[:, np.newaxis, :]
+
+            # Forward Simulate
+            n_test, k_samples, x_dim = samples.shape
+            samples_flat = samples.reshape(-1, x_dim)
+            samples_phys = proc.decisions_normalizer.inverse_transform(samples_flat)
+
+            pred_obj_phys = forward_estimator.predict(samples_phys)
+            pred_obj_norm = proc.objectives_normalizer.transform(pred_obj_phys)
+            y_pred = pred_obj_norm.reshape(n_test, k_samples, -1)
+
+            # Accuracy Domain (Objective Space - Standardized Lens)
+            y_target = proc.objectives_test
+            z_resid = residuals.compute_z_residuals(y_pred, y_target, tau)
+            s_scores = residuals.compute_discrepancy_scores(z_resid)
+
+            z_bar = plausibility.compute_mean_residual_vector(z_resid)
+            bias_b = plausibility.compute_systematic_bias(z_bar)
+            disp_v = plausibility.compute_cloud_dispersion(z_resid, z_bar)
+
+            scenarios = [
+                plausibility.classify_scenario(
+                    b, v, command.bias_threshold, command.dispersion_threshold
+                )
+                for b, v in zip(bias_b, disp_v)
+            ]
+
+            # Reliability Domain (Decision Space - Probabilistic Lens)
+            x_truth = proc.decisions_test
+            pit_values = calibration.compute_pit_values(samples, x_truth)
+            mace = calibration.compute_calibration_error(pit_values)
+            crps = calibration.compute_crps(samples, x_truth)
+
+            diversity = distribution_stats.compute_diversity(samples)
+            intervals = distribution_stats.compute_interval_width(samples)
+
+            # Spatial Information (Ranked candidates)
+            ranked_candidates = self._rank_candidates_by_residuals(
+                sampled_candidates=samples,
+                residuals=s_scores,
+            )
+
+            # --- DUAL-LENS SCHEMA ---
+            best_shot = np.min(s_scores, axis=1)  # Best accuracy per target
+
+            comparison_results[display_name] = DiagnosticResult(
+                accuracy=AccuracyLens(
+                    discrepancy_scores=s_scores,
+                    best_shot_residuals=best_shot,
+                    systematic_bias=bias_b,
+                    cloud_dispersion=disp_v,
+                    scenarios=[s.value for s in scenarios],
+                    summary=AccuracySummary(
+                        mean_best_shot=float(np.mean(best_shot)),
+                        median_best_shot=float(np.median(best_shot)),
+                        mean_bias=float(np.mean(bias_b)),
+                        mean_dispersion=float(np.mean(disp_v)),
+                    ),
+                ),
+                reliability=ReliabilityLens(
+                    pit_values=pit_values,
+                    calibration_error=mace,
+                    crps=crps,
+                    diversity=diversity,
+                    interval_width=intervals,
+                    summary=ReliabilitySummary(
+                        mean_crps=crps,
+                        mean_diversity=float(np.mean(diversity)),
+                        mean_interval_width=float(np.mean(intervals)),
+                    ),
+                    calibration_curve=CalibrationCurve(
+                        pit_values=np.sort(pit_values),
+                        cdf_y=np.arange(1, len(pit_values) + 1) / len(pit_values),
+                    ),
+                ),
+                candidates=SpatialCandidates(
+                    ordered=ranked_candidates,
+                    median=np.median(samples, axis=1),
+                    std=np.std(samples, axis=1),
+                ),
+            ).dict()
+
+        # 5. Generate comparison plots
+        if self._visualizer and comparison_results:
             self._logger.log_info("Generating comparison plots...")
-            self._visualizer.plot({"results_map": results_map})
+            self._visualizer.plot({"results_map": comparison_results})
 
-        return results_map
+        self._logger.log_info("Comprehensive Diagnostic complete.")
+        return comparison_results
+
+    def _get_scale_vector(self, y_train: np.ndarray, method: str) -> np.ndarray:
+        if method == "sd":
+            return scaling.compute_sd_scale(y_train)
+        if method == "mad":
+            return scaling.compute_mad_scale(y_train)
+        if method == "iqr":
+            return scaling.compute_iqr_scale(y_train)
+        raise ValueError(f"Unknown scale method: {method}")
 
     def _initialize_estimators(
         self, candidates: list[InverseEstimatorCandidate], dataset_name: str
@@ -96,7 +198,7 @@ class DiagnoseInverseModelsCommandHandler:
             )
 
             # Resolve from repository
-            artifact = self._model_repository.get_version_by_number(
+            artifact = self._model_repo.get_version_by_number(
                 estimator_type=inverse_type,
                 version=version,
                 mapping_direction="inverse",
@@ -105,10 +207,21 @@ class DiagnoseInverseModelsCommandHandler:
 
             # Sanity check for probabilistic properties
             if not isinstance(artifact.estimator, ProbabilisticEstimator):
-                self._logger.log_warning(
+                self._logger.log_info(
                     f"Estimator {display_name} is not probabilistic. Statistical metrics might be unreliable."
                 )
 
             inverse_estimators[display_name] = artifact.estimator
 
         return inverse_estimators
+
+    def _rank_candidates_by_residuals(
+        self, sampled_candidates: np.ndarray, residuals: np.ndarray
+    ) -> np.ndarray:
+        """
+        Sorts generated candidates for each test point from closest to farthest from target.
+        """
+        sort_indices = np.argsort(residuals, axis=1)
+        n_test_samples, n_samples, x_dim = sampled_candidates.shape
+        row_indices = np.arange(n_test_samples)[:, np.newaxis]
+        return sampled_candidates[row_indices, sort_indices]

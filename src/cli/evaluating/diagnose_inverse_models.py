@@ -5,13 +5,12 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
 )
 from ...modules.evaluation.application.use_cases.diagnose_inverse_models import (
     DiagnoseInverseModelsCommand,
-    DiagnoseInverseModelsCommandHandler,
+    DiagnoseInverseModelsHandler,
     InverseEstimatorCandidate,
 )
 from ...modules.evaluation.infrastructure.visualization.inverse_comparison.visualizer import (
     InverseComparisonVisualizer,
 )
-from ...modules.modeling.application.factories.estimator import EstimatorFactory
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
     FileSystemModelArtifactRepository,
@@ -19,13 +18,14 @@ from ...modules.modeling.infrastructure.repositories.model_artifact_repo import 
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
-@click.command(help="Compare inverse model candidates against a forward simulator")
+@click.command(
+    help="Run comprehensive diagnostics (Accuracy + Reliability) for inverse models"
+)
 def cli():
-    handler = DiagnoseInverseModelsCommandHandler(
-        processed_data_repository=FileSystemDatasetRepository(),
+    handler = DiagnoseInverseModelsHandler(
+        data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
-        logger=CMDLogger(name="InverseComparisonLogger"),
-        estimator_factory=EstimatorFactory(),
+        logger=CMDLogger(name="DiagnoseInverseModelsLogger"),
         visualizer=InverseComparisonVisualizer(),
     )
 
@@ -47,6 +47,7 @@ def cli():
         forward_estimator_type=EstimatorTypeEnum.COCO,
         num_samples=300,
         random_state=42,
+        scale_method="sd",
     )
 
     handler.execute(command)

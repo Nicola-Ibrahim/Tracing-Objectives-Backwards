@@ -19,13 +19,13 @@ def add_metrics_bar_plots(
     # 1. Calibration Residual (Row 1, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            calibration = results_map[model_name]["calibration"]
+            reliability = results_map[model_name]["reliability"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[calibration.get("calibration_error", 0)],
+                    y=[reliability.get("calibration_error", 0)],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
@@ -41,13 +41,13 @@ def add_metrics_bar_plots(
     # 2. CRPS (Row 1, Col 3)
     for model_name in model_names:
         if model_name in results_map:
-            calibration = results_map[model_name]["calibration"]
+            reliability = results_map[model_name]["reliability"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[calibration.get("mean_crps", 0)],
+                    y=[reliability.get("crps", 0)],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
@@ -63,13 +63,13 @@ def add_metrics_bar_plots(
     # 3. Mean Lowest Residual (Row 2, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            performance = results_map[model_name]["performance"]
+            accuracy_summary = results_map[model_name]["accuracy"]["summary"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[performance["mean_lowest_residual"]],
+                    y=[accuracy_summary["mean_best_shot"]],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
@@ -85,13 +85,13 @@ def add_metrics_bar_plots(
     # 4. Mean Reliability (Row 2, Col 3)
     for model_name in model_names:
         if model_name in results_map:
-            performance = results_map[model_name]["performance"]
+            accuracy_summary = results_map[model_name]["accuracy"]["summary"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[performance.get("mean_reliability", 0)],
+                    y=[accuracy_summary.get("median_best_shot", 0)],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
@@ -107,13 +107,13 @@ def add_metrics_bar_plots(
     # 5. Diversity (Row 3, Col 1)
     for model_name in model_names:
         if model_name in results_map:
-            performance = results_map[model_name]["performance"]
+            reliability_summary = results_map[model_name]["reliability"]["summary"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[performance["mean_diversity"]],
+                    y=[reliability_summary["mean_diversity"]],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),
@@ -129,13 +129,13 @@ def add_metrics_bar_plots(
     # 6. Interval Width (Row 3, Col 2)
     for model_name in model_names:
         if model_name in results_map:
-            performance = results_map[model_name]["performance"]
+            reliability_summary = results_map[model_name]["reliability"]["summary"]
             color = color_map.get(model_name, "gray")
 
             fig.add_trace(
                 go.Bar(
                     x=[model_name],
-                    y=[performance.get("mean_interval_width", 0)],
+                    y=[reliability_summary.get("mean_interval_width", 0)],
                     marker=dict(
                         color=color,
                         line=dict(color=darken_rgba(color), width=1.5),

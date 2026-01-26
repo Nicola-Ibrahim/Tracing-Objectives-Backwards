@@ -12,7 +12,7 @@ from .....modeling.domain.interfaces.base_repository import (
 from .....shared.domain.interfaces.base_logger import BaseLogger
 from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
 from .command import CompareInverseModelCandidatesCommand, InverseEstimatorCandidate
-from .inverse_generator_comparator import InverseGeneratorComparator
+from .inverse_model_candidates_comparator import InverseModelsCandidatesComparator
 
 
 class CompareInverseModelCandidatesCommandHandler:
@@ -26,7 +26,7 @@ class CompareInverseModelCandidatesCommandHandler:
 
     def __init__(
         self,
-        comparator: InverseGeneratorComparator,
+        comparator: InverseModelsCandidatesComparator,
         model_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,

@@ -5,18 +5,10 @@ from typing import Any
 import numpy as np
 
 
-class BaseValidator(ABC):
-    @abstractmethod
-    def fit(self, y_pred: np.ndarray, y_true: np.ndarray) -> None:
-        """
-        Fit the conformal validator from calibration predictions and ground-truth.
-        Shapes:
-          - y_pred: (n, d_y)
-          - y_true: (n, d_y)
-        """
+   
 
 
-class BaseConformalValidator(BaseValidator):
+class BaseConformalValidator(ABC):
     """
     Base contract for conformal validators operating on already predicted objectives.
 
@@ -58,6 +50,16 @@ class BaseConformalValidator(BaseValidator):
 
     def describe(self) -> dict[str, Any]:
         return self.to_json()
+
+
+    @abstractmethod
+    def fit(self, y_pred: np.ndarray, y_true: np.ndarray) -> None:
+        """
+        Fit the conformal validator from calibration predictions and ground-truth.
+        Shapes:
+          - y_pred: (n, d_y)
+          - y_true: (n, d_y)
+        """
 
     # ----------------------------- abstract API ----------------------------- #
 
@@ -106,7 +108,7 @@ class BaseConformalValidator(BaseValidator):
         return str(value)
 
 
-class BaseOODValidator(BaseValidator):
+class BaseOODValidator(ABC):  
     """
     Base contract for OOD validators.
 
