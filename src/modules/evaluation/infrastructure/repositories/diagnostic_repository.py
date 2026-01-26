@@ -33,7 +33,7 @@ class RunNumberManager:
 class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
     """
     Persists DiagnosticResult entities as JSON using sequential run numbering.
-    Location: ROOT/diagnostics/<direction>/<dataset>/<type>/v<version>/run<N>-<date>/
+    Location: ROOT/diagnostics/<dataset>/<direction>/<type>/v<version>/run<N>-<date>/
     """
 
     def __init__(self, base_path: str = "diagnostics"):
@@ -51,8 +51,8 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
     ) -> Path:
         return (
             self._base_storage_path
-            / mapping_direction
             / dataset_name
+            / mapping_direction
             / estimator_type
             / f"v{version}"
         )

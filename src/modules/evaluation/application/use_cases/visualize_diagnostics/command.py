@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 
 
-class EstimatorDiagnosticRequest(BaseModel):
-    """Identifies a specific diagnostic run to visualize."""
+class InverseEstimatorCandidate(BaseModel):
+    """Identifies a specific inverse estimator run to visualize."""
 
     type: EstimatorTypeEnum = Field(..., description="The type of estimator evaluated.")
     version: int = Field(..., description="The specific version of the model.")
@@ -14,8 +14,8 @@ class EstimatorDiagnosticRequest(BaseModel):
     )
 
 
-class VisualizeDiagnosticsCommand(BaseModel):
-    """Command payload for visualizing saved diagnostic results."""
+class VisualizeInverseEstimatorDiagnosticCommand(BaseModel):
+    """Command payload for visualizing inverse estimator diagnostic results."""
 
     dataset_name: str = Field(
         ...,
@@ -23,8 +23,16 @@ class VisualizeDiagnosticsCommand(BaseModel):
         examples=["cocoex_f5"],
     )
 
-    requests: list[EstimatorDiagnosticRequest] = Field(
+    requests: list[InverseEstimatorCandidate] = Field(
         ...,
-        description="List of specific evaluation runs to load and compare.",
-        examples=[[{"type": "mdn", "version": 1, "run_number": 1}]],
+        description="List of specific inverse estimator runs to load and compare.",
+        examples=[
+            [
+                {
+                    "type": "mdn",
+                    "version": 1,
+                    "run_number": 1,
+                }
+            ]
+        ],
     )

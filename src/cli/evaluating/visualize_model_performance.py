@@ -3,7 +3,7 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.visualize_model_performance import (
+from ...modules.evaluation.application.use_cases.check_model_performance import (
     CheckModelPerformanceCommand,
     CheckModelPerformanceCommandHandler,
 )

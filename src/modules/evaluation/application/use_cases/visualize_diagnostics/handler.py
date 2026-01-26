@@ -3,10 +3,10 @@ from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
 from ....domain.interfaces.base_diagnostic_repository import (
     BaseDiagnosticRepository,
 )
-from .command import VisualizeDiagnosticsCommand
+from .command import VisualizeInverseEstimatorDiagnosticCommand
 
 
-class VisualizeDiagnosticsCommandHandler:
+class VisualizeInverseEstimatorDiagnosticCommandHandler:
     """
     Orchestrator for loading and rendering previously computed diagnostics.
     Enables re-visualizing any historical evaluation run.
@@ -22,7 +22,7 @@ class VisualizeDiagnosticsCommandHandler:
         self._visualizer = visualizer
         self._logger = logger
 
-    def execute(self, command: VisualizeDiagnosticsCommand) -> None:
+    def execute(self, command: VisualizeInverseEstimatorDiagnosticCommand) -> None:
         self._logger.log_info(
             f"Loading diagnostic results for visualization on '{command.dataset_name}'..."
         )
