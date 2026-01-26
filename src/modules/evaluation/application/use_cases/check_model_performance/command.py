@@ -1,8 +1,20 @@
-from typing import Literal
-
 from pydantic import BaseModel, Field
 
 from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
+
+
+class InverseEstimatorCandidate(BaseModel):
+    """Represents a specific inverse estimator candidate (type and optional version)."""
+
+    type: EstimatorTypeEnum = Field(
+        ...,
+        examples=[EstimatorTypeEnum.MDN.value],
+    )
+    version: int = Field(
+        default=1,
+        description="Specific integer version number (e.g., 1). If None, latest is used.",
+        examples=[1],
+    )
 
 
 class CheckModelPerformanceCommand(BaseModel):
@@ -11,31 +23,16 @@ class CheckModelPerformanceCommand(BaseModel):
         description="Dataset identifier associated with the model.",
         examples=["dataset"],
     )
-    data_file_name: str = Field(
+    estimator: InverseEstimatorCandidate = Field(
         ...,
-        description="Raw dataset file identifier (CLI-provided).",
-        examples=["dataset"],
+        description="Estimator type and optional version number (e.g., 1). If None, latest is used.",
+        examples=[InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=1)],
     )
-    processed_file_name: str = Field(
-        ...,
-        description="Processed dataset file identifier (CLI-provided).",
-        examples=["dataset"],
-    )
-    estimator_type: EstimatorTypeEnum = Field(
-        ...,
-        description="Name of the interpolator to load.",
-        examples=[EstimatorTypeEnum.MDN.value],
-    )
-    mapping_direction: Literal["inverse", "forward"] = Field(
-        ...,
-        description="Which mapping direction ('inverse' or 'forward') to visualize.",
-        examples=["inverse"],
-    )
-    model_number: int | None = Field(
-        ...,
+    n_samples: int = Field(
+        default=2,
         ge=1,
-        description="Nth most recent model to visualize (1 = latest).",
-        examples=[1],
+        description="Number of samples to generate for visualization.",
+        examples=[50],
     )
 
     class Config:

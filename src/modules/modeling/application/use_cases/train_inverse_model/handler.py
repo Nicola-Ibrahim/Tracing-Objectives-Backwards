@@ -47,6 +47,7 @@ class TrainInverseModelCommandHandler:
         y_train = processed_data.decisions_train
         X_test = processed_data.objectives_test
         y_test = processed_data.decisions_test
+
         mapping_direction = "inverse"
 
         estimator_params = command.estimator_params

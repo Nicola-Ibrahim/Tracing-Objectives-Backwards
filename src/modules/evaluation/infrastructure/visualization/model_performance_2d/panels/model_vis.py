@@ -7,11 +7,9 @@ def add_model_visualization(
     row: int,
     estimator,
     X_grid: np.ndarray,
-    GX1: np.ndarray,
-    GX2: np.ndarray,
     input_symbol: str,
     output_symbol: str,
-    grid_res: int,
+    n_samples: int,
 ):
     """Plots Ghost 3D Scatter for probabilistic models.
 
@@ -20,7 +18,6 @@ def add_model_visualization(
     """
 
     # Sample from probabilistic estimator
-    n_samples = 50
     Y_samples = estimator.sample(X_grid, n_samples=n_samples)
 
     out_dim = Y_samples.shape[-1]

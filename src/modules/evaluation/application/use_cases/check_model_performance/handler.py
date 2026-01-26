@@ -2,7 +2,7 @@ from .....dataset.domain.entities.dataset import Dataset
 from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
 from .....modeling.domain.entities.model_artifact import ModelArtifact
 from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
-from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .command import CheckModelPerformanceCommand
 
 
@@ -18,73 +18,35 @@ class CheckModelPerformanceCommandHandler:
         self._visualizer = visualizer
 
     def execute(self, command: CheckModelPerformanceCommand) -> None:
-        # 1) Load raw data and model artifact from repository
-        dataset_name = command.dataset_name
-        if command.model_number:
-            all_versions = self._model_artificat_repo.get_all_versions(
-                estimator_type=command.estimator_type,
-                mapping_direction=command.mapping_direction,
-                dataset_name=dataset_name,
+        model_artificat: ModelArtifact = (
+            self._model_artificat_repo.get_version_by_number(
+                estimator_type=command.estimator.type.value,
+                mapping_direction="inverse",
+                dataset_name=command.dataset_name,
+                version=command.estimator.version,
             )
-            if not all_versions:
-                raise FileNotFoundError(
-                    f"No model versions found for type: '{command.estimator_type}' "
-                    f"and mapping_direction: '{command.mapping_direction}'"
-                )
-            index = command.model_number - 1
-            if index >= len(all_versions):
-                raise IndexError(
-                    f"Requested model number {command.model_number} exceeds "
-                    f"available versions ({len(all_versions)})."
-                )
-            model_artificat: ModelArtifact = all_versions[index]
-        else:
-            model_artificat = self._model_artificat_repo.get_latest_version(
-                estimator_type=command.estimator_type,
-                mapping_direction=command.mapping_direction,
-                dataset_name=dataset_name,
-            )
+        )
 
         # Load dataset
-        dataset: Dataset = self._processed_repo.load(name=dataset_name)
+        dataset: Dataset = self._processed_repo.load(name=command.dataset_name)
         if not dataset.processed:
             raise ValueError(
                 f"Dataset '{dataset.name}' has no processed data available for visualization."
             )
-        processed = dataset.processed
-
-        if command.mapping_direction == "inverse":
-            X_train = processed.objectives_train
-            y_train = processed.decisions_train
-            X_test = processed.objectives_test
-            y_test = processed.decisions_test
-            X_normalizer = processed.objectives_normalizer
-            y_normalizer = processed.decisions_normalizer
-            mapping_label = "inverse"
-        else:
-            # forward
-            X_train = processed.decisions_train
-            y_train = processed.objectives_train
-            X_test = processed.decisions_test
-            y_test = processed.objectives_test
-            X_normalizer = processed.decisions_normalizer
-            y_normalizer = processed.objectives_normalizer
-            mapping_label = "forward"
 
         # 2) Visualize the model performance and fitted curve
         payload = {
             "estimator": model_artificat.estimator,
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-            "X_normalizer": X_normalizer,
-            "y_normalizer": y_normalizer,
+            "X_train": dataset.processed.objectives_train,
+            "y_train": dataset.processed.decisions_train,
+            "X_test": dataset.processed.objectives_test,
+            "y_test": dataset.processed.decisions_test,
+            "X_normalizer": dataset.processed.objectives_normalizer,
+            "y_normalizer": dataset.processed.decisions_normalizer,
             "non_linear": False,  # or True to try UMAP if installed
-            "n_samples": 300,
-            "title": f"Fitted {model_artificat.estimator.type} ({mapping_label} mapping)",
+            "n_samples": command.n_samples,
+            "title": f"Fitted {model_artificat.estimator.type} (inverse mapping)",
             "training_history": model_artificat.training_history,
-            "mapping_direction": command.mapping_direction,
             "dataset_name": dataset.name,
         }
 

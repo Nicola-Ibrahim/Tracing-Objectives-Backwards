@@ -48,6 +48,18 @@ def cli():
                 type=EstimatorTypeEnum.MDN, version=7, run_number=1
             ),
             InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=8, run_number=1
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=9, run_number=1
+            ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=10, run_number=1
+            ),  
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=11, run_number=1
+            ),
+            InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.CVAE, version=1, run_number=1
             ),
             InverseEstimatorCandidate(

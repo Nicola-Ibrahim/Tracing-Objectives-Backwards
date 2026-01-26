@@ -27,8 +27,8 @@ class Dataset(BaseModel):
         ..., description="Pareto set and front associated with the raw data"
     )
 
-    # Processed part (Optional)
-    processed: Optional[ProcessedData] = Field(
+    # Processed part
+    processed: ProcessedData | None = Field(
         None, description="Processed version of the data (split/normalized)"
     )
 

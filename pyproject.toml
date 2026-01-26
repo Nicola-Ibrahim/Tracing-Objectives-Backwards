@@ -42,78 +42,86 @@ dev = [
 [tool.poe.tasks]
 
 # ====================================================================================
-# Data Pipeline
+# 1. Data Pipeline
 # ====================================================================================
 
 [tool.poe.tasks.data-gen]
 shell = "python -m src.cli.generating.generate_dataset --function-id $fid"
-help = "GENERATE: Creates synthetic Pareto front data using COCO benchmark functions."
+help = "GENERATE: Create synthetic Pareto data. Usage: --fid 5"
   [[tool.poe.tasks.data-gen.args]]
   name = "fid"
-  positional = true
+  options = ["--fid"]
   default = "5"
-  choices = ["1", "2", "3", "5", "10", "20"]
-  help = "The COCO Function ID to evaluate (e.g., 5 for f5, 10 for f10)."
 
 [tool.poe.tasks.data-viz]
 shell = "python -m src.cli.visualizing.visualize_dataset --dataset-name $data"
-help = "VISUALIZE: Plots the generated decision and objective space for inspection."
+help = "DATA VIZ: View generated data space. Usage: --data cocoex_f5"
   [[tool.poe.tasks.data-viz.args]]
   name = "data"
-  positional = true
+  options = ["--data"]
   default = "cocoex_f5"
-  help = "The specific dataset folder name in src/data/raw/."
 
 # ====================================================================================
-# Training Pipeline
+# 2. Training Pipeline
 # ====================================================================================
 
 [tool.poe.tasks.train-inv]
 shell = "python -m src.cli.training.train_inverse_model_standard --estimator $est --dataset-name $data"
-help = "TRAIN INVERSE: Maps Objective Space -> Decision Space (Standard train/test split)."
+help = "TRAIN INVERSE: Usage: uv run poe train-inv --est mdn --data cocoex_f5"
   [[tool.poe.tasks.train-inv.args]]
   name = "est"
-  positional = true
+  options = ["--est"]
   default = "mdn"
   choices = ["mdn", "cvae", "inn", "gan"]
-  help = "The architecture used to handle the one-to-many mapping."
   [[tool.poe.tasks.train-inv.args]]
   name = "data"
-  positional = true
+  options = ["--data"]
   default = "cocoex_f5"
-  help = "The dataset used for training."
 
 [tool.poe.tasks.train-fwd]
 shell = "python -m src.cli.training.train_forward_model standard --estimator $est --dataset-name $data"
-help = "TRAIN FORWARD: Maps Decision Space -> Objective Space (Surrogate simulator)."
+help = "TRAIN FORWARD: Usage: uv run poe train-fwd --est mdn --data cocoex_f5"
   [[tool.poe.tasks.train-fwd.args]]
   name = "est"
-  positional = true
+  options = ["--est"]
   default = "mdn"
   choices = ["mdn", "mlp", "rf"]
-  help = "The regression model used as the simulator."
   [[tool.poe.tasks.train-fwd.args]]
   name = "data"
-  positional = true
+  options = ["--data"]
   default = "cocoex_f5"
 
+
 # ====================================================================================
-# Evaluation (The Auditor)
+# 3. Generation & Candidates
+# ====================================================================================
+
+[tool.poe.tasks.gen-candidates]
+cmd = "python -m src.cli.generating.generate_candidates"
+help = "CANDIDATES: Generate decisions for target objectives."
+
+[tool.poe.tasks.compare-candidates]
+cmd = "python -m src.cli.evaluating.compare_inverse_models_candidates_generation"
+help = "COMPARE: Benchmarks candidate generation across models."
+
+# ====================================================================================
+# 4. Evaluation (The Auditor)
 # ====================================================================================
 
 [tool.poe.tasks.diagnose]
 cmd = "python -m src.cli.evaluating.diagnose_inverse_models"
-help = "DIAGNOSE: Computes PIT, MACE, and Diversity metrics; saves results to diagnostics/."
+help = "DIAGNOSE: Run model diagnostics (PIT, MACE, Diversity) and save JSON."
 
 [tool.poe.tasks.viz-diagnostics]
 cmd = "python -m src.cli.evaluating.visualize_diagnostics"
-help = "REPORT: Generates the Master Analysis Dashboard from saved JSON diagnostics."
+help = "REPORT: Visualize historical diagnostics from the auditor."
 
-[tool.poe.tasks.calibrate]
-shell = "python -m src.cli.evaluating.calibrate_decision_validation --dataset-name $data"
-help = "CALIBRATE: Fits Assurance Gates to validate if generated decisions are plausible."
-  [[tool.poe.tasks.calibrate.args]]
-  name = "data"
-  positional = true
-  default = "cocoex_f5"
 
+# ====================================================================================
+# 5. Performance Visualization (Specific Lenses)
+# ====================================================================================
+
+[tool.poe.tasks.viz-perf-inv]
+shell = "python -m src.cli.evaluating.visualize_model_performance"
+help = "VIZ PERF INVERSE: Detailed plots for a run. Usage: uv run poe"
+  

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Self
+from typing import Any, Self
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -17,7 +17,6 @@ class AccuracyLens(BaseModel):
     best_shot_residuals: Any  # np.ndarray
     systematic_bias: Any  # np.ndarray
     cloud_dispersion: Any  # np.ndarray
-    scenarios: List[str]
     summary: AccuracySummary
 
     class Config:

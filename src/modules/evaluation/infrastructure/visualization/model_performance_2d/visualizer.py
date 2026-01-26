@@ -34,9 +34,6 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
 
     def _prepare_data(self, data: dict) -> dict:
         """Extract and format data for visualization."""
-        mapping_direction = data.get("mapping_direction", "inverse")
-        input_symbol = "x" if mapping_direction == "forward" else "y"
-        output_symbol = "y" if mapping_direction == "forward" else "x"
 
         return {
             "estimator": data["estimator"],
@@ -52,8 +49,9 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             "title": data.get(
                 "title", f"Model fit ({type(data['estimator']).__name__})"
             ),
-            "input_symbol": input_symbol,
-            "output_symbol": output_symbol,
+            "input_symbol": "y",
+            "output_symbol": "x",
+            "n_samples": data.get("n_samples"),
         }
 
     def _initialize_figure(self, data: dict) -> go.Figure:
@@ -87,6 +85,7 @@ class ModelPerformance2DVisualizer(BaseVisualizer):
             y_test=data["y_test"],
             input_symbol=data["input_symbol"],
             output_symbol=data["output_symbol"],
+            n_samples=data["n_samples"],
         )
 
         # Row 3: Loss curves

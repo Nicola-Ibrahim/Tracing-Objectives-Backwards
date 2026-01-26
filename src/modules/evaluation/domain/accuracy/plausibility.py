@@ -58,25 +58,3 @@ def compute_cloud_dispersion(z_residuals: np.ndarray, z_bar: np.ndarray) -> np.n
     return np.median(norms, axis=1)
 
 
-def classify_scenario(
-    bias: float,
-    dispersion: float,
-    bias_threshold: float = 0.5,
-    dispersion_threshold: float = 0.5,
-) -> PlausibilityScenario:
-    """
-    Categorize the result into accuracy scenarios based on Bias (b) and Dispersion (v).
-
-    Scenarios:
-    - **The Bullseye**: Low b, Low v. Accurate and precise predictions.
-    - **The Shotgun**: Low b, High v. Accurate on average, but high variance (diffuse).
-    - **The Systematic Bias**: High b, Low v. Precise but off-target.
-    """
-    if bias < bias_threshold and dispersion < dispersion_threshold:
-        return PlausibilityScenario.BULLSEYE
-    if bias < bias_threshold and dispersion >= dispersion_threshold:
-        return PlausibilityScenario.SHOTGUN
-    if bias >= bias_threshold and dispersion < dispersion_threshold:
-        return PlausibilityScenario.SYSTEMATIC_BIAS
-
-    return PlausibilityScenario.UNDETERMINED

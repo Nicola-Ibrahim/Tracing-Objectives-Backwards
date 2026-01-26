@@ -50,10 +50,15 @@ class DiagnoseInverseModelsHandler:
 
         # 1. Load context
         dataset = self._data_repo.load(command.dataset_name)
+
+        self._logger.log_info(
+            f"original decisions shape: {dataset.pareto.set.shape}, min: {dataset.pareto.set.min()}, max: {dataset.pareto.set.max()}"
+        )
+        self._logger.log_info(
+            f"original objectives shape: {dataset.pareto.front.shape}, min: {dataset.pareto.front.min()}, max: {dataset.pareto.front.max()}"
+        )
         if not dataset.processed:
             raise ValueError("Dataset has no processed data.")
-
-        proc = dataset.processed
 
         # Load Forward Estimator
         forward_art = self._model_repo.get_latest_version(
@@ -62,7 +67,9 @@ class DiagnoseInverseModelsHandler:
         forward_estimator = forward_art.estimator
 
         # 2. Extract Scaling τ from training marginals
-        tau = self._get_scale_vector(proc.objectives_train, command.scale_method)
+        tau = self._get_scale_vector(
+            dataset.processed.objectives_train, command.scale_method
+        )
         self._logger.log_info(f"Scale τ ({command.scale_method}): {tau.tolist()}")
 
         # 3. Initialize inverse estimators
@@ -82,24 +89,49 @@ class DiagnoseInverseModelsHandler:
             self._logger.log_info(f"Computing diagnostics for {display_name}...")
 
             # Sampling
-            y_test_norm = proc.objectives_test
-            samples = inverse_estimator.sample(
+            y_test_norm = dataset.processed.objectives_test
+
+            # put the log in one formatted line
+            self._logger.log_info(
+                f"y_test_norm shape: {y_test_norm.shape}, min: {y_test_norm.min()}, max: {y_test_norm.max()}"
+            )
+            samples_X = inverse_estimator.sample(
                 y_test_norm, n_samples=command.num_samples
             )
-            if samples.ndim == 2:
-                samples = samples[:, np.newaxis, :]
+
+            self._logger.log_info(
+                f"samples_X shape: {samples_X.shape}, min: {samples_X.min()}, max: {samples_X.max()}"
+            )
+            if samples_X.ndim == 2:
+                samples_X = samples_X[:, np.newaxis, :]
 
             # Forward Simulate
-            n_test, k_samples, x_dim = samples.shape
-            samples_flat = samples.reshape(-1, x_dim)
-            samples_phys = proc.decisions_normalizer.inverse_transform(samples_flat)
+            n_test, k_samples, x_dim = samples_X.shape
+            samples_X_flat = samples_X.reshape(-1, x_dim)
+            samples_X_phys = dataset.processed.decisions_normalizer.inverse_transform(
+                samples_X_flat
+            )
 
-            pred_obj_phys = forward_estimator.predict(samples_phys)
-            pred_obj_norm = proc.objectives_normalizer.transform(pred_obj_phys)
+            self._logger.log_info(
+                f"samples_X_phys shape: {samples_X_phys.shape}, min: {samples_X_phys.min()}, max: {samples_X_phys.max()}"
+            )
+
+            pred_obj_phys = forward_estimator.predict(samples_X_phys)
+            pred_obj_norm = dataset.processed.objectives_normalizer.transform(
+                pred_obj_phys
+            )
             y_pred = pred_obj_norm.reshape(n_test, k_samples, -1)
 
+            self._logger.log_info(
+                f"y_pred shape: {y_pred.shape}, min: {y_pred.min()}, max: {y_pred.max()}"
+            )
+
             # Accuracy Domain (Objective Space - Standardized Lens)
-            y_target = proc.objectives_test
+            y_target = dataset.processed.objectives_test
+            self._logger.log_info(
+                f"y_target shape: {y_target.shape}, min: {y_target.min()}, max: {y_target.max()}"
+            )
+
             z_resid = residuals.compute_z_residuals(y_pred, y_target, tau)
             s_scores = residuals.compute_discrepancy_scores(z_resid)
 
@@ -107,25 +139,18 @@ class DiagnoseInverseModelsHandler:
             bias_b = plausibility.compute_systematic_bias(z_bar)
             disp_v = plausibility.compute_cloud_dispersion(z_resid, z_bar)
 
-            scenarios = [
-                plausibility.classify_scenario(
-                    b, v, command.bias_threshold, command.dispersion_threshold
-                )
-                for b, v in zip(bias_b, disp_v)
-            ]
-
             # Reliability Domain (Decision Space - Probabilistic Lens)
-            x_truth = proc.decisions_test
-            pit_values = calibration.compute_pit_values(samples, x_truth)
+            x_truth = dataset.processed.decisions_test
+            pit_values = calibration.compute_pit_values(samples_X, x_truth)
             mace = calibration.compute_calibration_error(pit_values)
-            crps = calibration.compute_crps(samples, x_truth)
+            crps = calibration.compute_crps(samples_X, x_truth)
 
-            diversity = distribution_stats.compute_diversity(samples)
-            intervals = distribution_stats.compute_interval_width(samples)
+            diversity = distribution_stats.compute_diversity(samples_X)
+            intervals = distribution_stats.compute_interval_width(samples_X)
 
             # Spatial Information (Ranked candidates)
             ranked_candidates = self._rank_candidates_by_residuals(
-                sampled_candidates=samples,
+                sampled_candidates=samples_X,
                 residuals=s_scores,
             )
 
@@ -141,7 +166,6 @@ class DiagnoseInverseModelsHandler:
                     best_shot_residuals=np.min(s_scores, axis=1),
                     systematic_bias=bias_b,
                     cloud_dispersion=disp_v,
-                    scenarios=[s.value for s in scenarios],
                     summary=AccuracySummary(
                         mean_best_shot=float(np.mean(np.min(s_scores, axis=1))),
                         median_best_shot=float(np.median(np.min(s_scores, axis=1))),
@@ -167,8 +191,8 @@ class DiagnoseInverseModelsHandler:
                 ),
                 candidates=SpatialCandidates(
                     ordered=ranked_candidates,
-                    median=np.median(samples, axis=1),
-                    std=np.std(samples, axis=1),
+                    median=np.median(samples_X, axis=1),
+                    std=np.std(samples_X, axis=1),
                 ),
             )
 
