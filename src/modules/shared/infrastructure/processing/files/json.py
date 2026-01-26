@@ -3,17 +3,26 @@ import json
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from .base import BaseFileHandler
 
 
-class DateTimeEncoder(json.JSONEncoder):
+class SciDataEncoder(json.JSONEncoder):
     """
-    Custom JSONEncoder to serialize datetime objects to ISO 8601 format.
+    Custom JSONEncoder to serialize:
+    1. datetime objects to ISO 8601 format.
+    2. numpy arrays to lists.
+    3. numpy scalars to Python primitives.
     """
 
     def default(self, obj):
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
         return super().default(obj)
 
 
@@ -27,7 +36,7 @@ class JsonFileHandler(BaseFileHandler):
         """Saves a Python object to a specified file path using JSON."""
         try:
             with open(file_path, "w") as f:
-                json.dump(obj, f, indent=4, cls=DateTimeEncoder)
+                json.dump(obj, f, indent=4, cls=SciDataEncoder)
         except Exception as e:
             raise IOError(f"Failed to save object to {file_path}: {e}") from e
 

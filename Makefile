@@ -138,10 +138,16 @@ model-compare-inverse-candidates-generation:  # Compare multiple inverse models
 
 
 .PHONY: model-diagnose-inverse
-model-diagnose-inverse:  # Diagnose multiple inverse models
-	@echo "$(BLUE)Diagnosing inverse models...$(RESET)"
+model-diagnose-inverse:  # Diagnose multiple inverse models and save to auditor
+	@echo "$(BLUE)Diagnosing inverse models (computation phase)...$(RESET)"
 	$(PYTHON) -m src.cli.evaluating.diagnose_inverse_models
-	@echo "$(GREEN)Inverse model diagnosis complete.$(RESET)"
+	@echo "$(GREEN)Inverse model diagnosis complete. Results saved to diagnostics/$(RESET)"
+
+.PHONY: model-visualize-diagnostics
+model-visualize-diagnostics:  # Visualize historical inverse model diagnostic runs
+	@echo "$(BLUE)Visualizing historical diagnostic results...$(RESET)"
+	$(PYTHON) -m src.cli.evaluating.visualize_diagnostics --dataset-name $(DATASET_NAME) $(DIAG_ESTIMATOR_FLAGS)
+	@echo "$(GREEN)Visualization complete.$(RESET)"
 
 .PHONY: assurance-calibrate-validation
 assurance-calibrate-validation:  # Fit and persist assurance calibrators for decision validation

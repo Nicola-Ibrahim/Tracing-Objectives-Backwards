@@ -8,8 +8,8 @@ from ...modules.evaluation.application.use_cases.diagnose_inverse_models import 
     DiagnoseInverseModelsHandler,
     InverseEstimatorCandidate,
 )
-from ...modules.evaluation.infrastructure.visualization.inverse_comparison.visualizer import (
-    InverseComparisonVisualizer,
+from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
+    FileSystemDiagnosticRepository,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
@@ -18,15 +18,13 @@ from ...modules.modeling.infrastructure.repositories.model_artifact_repo import 
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
-@click.command(
-    help="Run comprehensive diagnostics (Accuracy + Reliability) for inverse models"
-)
+@click.command(help="Run diagnostic computation and persist results to the auditor")
 def cli():
     handler = DiagnoseInverseModelsHandler(
         data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
+        diagnostic_repository=FileSystemDiagnosticRepository(),
         logger=CMDLogger(name="DiagnoseInverseModelsLogger"),
-        visualizer=InverseComparisonVisualizer(),
     )
 
     candidates = [

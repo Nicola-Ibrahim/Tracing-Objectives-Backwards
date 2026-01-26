@@ -1,5 +1,3 @@
-from typing import Any
-
 import numpy as np
 
 from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
@@ -9,7 +7,6 @@ from .....modeling.domain.interfaces.base_estimator import (
 )
 from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
 from .....shared.domain.interfaces.base_logger import BaseLogger
-from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
 from ....domain.accuracy import plausibility, residuals, scaling
 from ....domain.entities.diagnostic_result import (
     AccuracyLens,
@@ -20,6 +17,9 @@ from ....domain.entities.diagnostic_result import (
     ReliabilitySummary,
     SpatialCandidates,
 )
+from ....domain.interfaces.base_diagnostic_repository import (
+    BaseDiagnosticRepository,
+)
 from ....domain.reliability import calibration, distribution_stats
 from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
 
@@ -27,24 +27,24 @@ from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
 class DiagnoseInverseModelsHandler:
     """
     Orchestrator for the Thesis-aligned evaluation suite.
-    Supports multi-model comparison and dual-lens (Accuracy + Reliability) diagnostics.
+    Computes diagnostics and persists them via the Diagnostic Repository.
     """
 
     def __init__(
         self,
         model_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
+        diagnostic_repository: BaseDiagnosticRepository,
         logger: BaseLogger,
-        visualizer: BaseVisualizer | None = None,
     ):
         self._model_repo = model_repository
         self._data_repo = data_repository
+        self._diag_repo = diagnostic_repository
         self._logger = logger
-        self._visualizer = visualizer
 
-    def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, Any]:
+    def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, int]:
         self._logger.log_info(
-            f"Starting Diagnose Inverse Models for candidates: "
+            f"Starting Diagnostic Compute for: "
             f"{[(c.type.value, c.version) for c in command.candidates]}"
         )
 
@@ -70,10 +70,16 @@ class DiagnoseInverseModelsHandler:
             candidates=command.candidates, dataset_name=command.dataset_name
         )
 
-        # 4. Run comparison workflow
-        comparison_results = {}
+        # 4. Run diagnostic workflow
+        run_registration = {}
         for display_name, inverse_estimator in inverse_estimators.items():
-            self._logger.log_info(f"Evaluating {display_name}...")
+            # Get version for metadata
+            # display_name format: "type (v1)"
+            type_str = display_name.split(" (")[0]
+            version_str = display_name.split("(v")[1].replace(")", "")
+            version = int(version_str) if version_str != "latest" else -1
+
+            self._logger.log_info(f"Computing diagnostics for {display_name}...")
 
             # Sampling
             y_test_norm = proc.objectives_test
@@ -123,19 +129,22 @@ class DiagnoseInverseModelsHandler:
                 residuals=s_scores,
             )
 
-            # --- DUAL-LENS SCHEMA ---
-            best_shot = np.min(s_scores, axis=1)  # Best accuracy per target
-
-            comparison_results[display_name] = DiagnosticResult(
+            # Create Diagnostic Result Aggregate
+            result = DiagnosticResult.create(
+                estimator_type=type_str,
+                estimator_version=version,
+                dataset_name=command.dataset_name,
+                num_samples=command.num_samples,
+                scale_method=command.scale_method,
                 accuracy=AccuracyLens(
                     discrepancy_scores=s_scores,
-                    best_shot_residuals=best_shot,
+                    best_shot_residuals=np.min(s_scores, axis=1),
                     systematic_bias=bias_b,
                     cloud_dispersion=disp_v,
                     scenarios=[s.value for s in scenarios],
                     summary=AccuracySummary(
-                        mean_best_shot=float(np.mean(best_shot)),
-                        median_best_shot=float(np.median(best_shot)),
+                        mean_best_shot=float(np.mean(np.min(s_scores, axis=1))),
+                        median_best_shot=float(np.median(np.min(s_scores, axis=1))),
                         mean_bias=float(np.mean(bias_b)),
                         mean_dispersion=float(np.mean(disp_v)),
                     ),
@@ -161,15 +170,14 @@ class DiagnoseInverseModelsHandler:
                     median=np.median(samples, axis=1),
                     std=np.std(samples, axis=1),
                 ),
-            ).dict()
+            )
 
-        # 5. Generate comparison plots
-        if self._visualizer and comparison_results:
-            self._logger.log_info("Generating comparison plots...")
-            self._visualizer.plot({"results_map": comparison_results})
+            # Persist Result
+            run_number = self._diag_repo.save(result)
+            run_registration[display_name] = run_number
+            self._logger.log_info(f"Saved {display_name} as run {run_number}.")
 
-        self._logger.log_info("Comprehensive Diagnostic complete.")
-        return comparison_results
+        return run_registration
 
     def _get_scale_vector(self, y_train: np.ndarray, method: str) -> np.ndarray:
         if method == "sd":
