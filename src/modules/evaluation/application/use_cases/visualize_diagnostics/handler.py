@@ -1,8 +1,8 @@
 from .....shared.domain.interfaces.base_logger import BaseLogger
-from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
 from ....domain.interfaces.base_diagnostic_repository import (
     BaseDiagnosticRepository,
 )
+from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .command import VisualizeInverseEstimatorDiagnosticCommand
 
 

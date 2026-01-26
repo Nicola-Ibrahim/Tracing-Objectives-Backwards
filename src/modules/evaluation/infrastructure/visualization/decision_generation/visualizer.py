@@ -1,7 +1,7 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .panels.layout_config import (
     DEFAULT_WIDTH,
     select_palette,
