@@ -3,7 +3,7 @@ from typing import Any
 
 from ....shared.config import ROOT_PATH
 from ....shared.infrastructure.processing.files.json import JsonFileHandler
-from ...domain.entities.diagnostic_result import DiagnosticResult
+from ...domain.aggregates.diagnostic_result import DiagnosticResult
 from ...domain.interfaces.base_diagnostic_repository import BaseDiagnosticRepository
 
 
@@ -69,10 +69,10 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
     def save(self, result: DiagnosticResult) -> int:
         meta = result.metadata
         version_dir = self._compute_version_directory(
-            meta.mapping_direction,
+            meta.estimator.mapping_direction,
             meta.dataset_name,
-            meta.estimator_type,
-            meta.estimator_version,
+            meta.estimator.type,
+            meta.estimator.version,
         )
         version_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
@@ -26,7 +28,7 @@ class DiagnoseInverseModelsCommand(BaseModel):
 
     dataset_name: str = Field(..., examples=["cocoex_f5"])
 
-    candidates: list[InverseEstimatorCandidate] = Field(
+    inverse_estimator_candidates: list[InverseEstimatorCandidate] = Field(
         ...,
         description="List of model candidates to compare.",
         examples=[[{"type": EstimatorTypeEnum.MDN.value, "version": 1}]],
@@ -39,6 +41,8 @@ class DiagnoseInverseModelsCommand(BaseModel):
     num_samples: int = Field(default=200, description="K candidates per target")
     random_state: int = 42
 
-    scale_method: str = Field(default="sd", description="sd | mad | iqr")
+    scale_method: Literal["sd", "mad", "iqr"] = Field(
+        default="sd", description="sd | mad | iqr"
+    )
     bias_threshold: float = 0.5
     dispersion_threshold: float = 0.5

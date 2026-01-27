@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ..entities.diagnostic_result import DiagnosticResult
+from ..aggregates.diagnostic_result import DiagnosticResult
 
 
 class BaseDiagnosticRepository(ABC):

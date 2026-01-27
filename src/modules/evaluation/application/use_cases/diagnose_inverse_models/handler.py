@@ -7,20 +7,24 @@ from .....modeling.domain.interfaces.base_estimator import (
 )
 from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
 from .....shared.domain.interfaces.base_logger import BaseLogger
-from ....domain.accuracy import plausibility, residuals, scaling
-from ....domain.entities.diagnostic_result import (
-    AccuracyLens,
-    AccuracySummary,
-    CalibrationCurve,
-    DiagnosticResult,
-    ReliabilityLens,
-    ReliabilitySummary,
-    SpatialCandidates,
-)
+from ....domain.accuracy import scaling
+from ....domain.aggregates.diagnostic_result import DiagnosticResult
+from ....domain.entities.accuracy_lens import AccuracyLens
+from ....domain.entities.reliability_lens import ReliabilityLens
 from ....domain.interfaces.base_diagnostic_repository import (
     BaseDiagnosticRepository,
 )
-from ....domain.reliability import calibration, distribution_stats
+from ....domain.services.generative_distribution_auditor import (
+    GenerativeDistributionAuditor,
+)
+from ....domain.services.spatial_candidate_auditor import (
+    SpatialCandidateAuditor,
+)
+from ....domain.value_objects.accuracy_summary import AccuracySummary
+from ....domain.value_objects.calibration_curve import CalibrationCurve
+from ....domain.value_objects.estimator import Estimator
+from ....domain.value_objects.reliability_summary import ReliabilitySummary
+from ....domain.value_objects.spatial_candidates import SpatialCandidates
 from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
 
 
@@ -32,12 +36,12 @@ class DiagnoseInverseModelsHandler:
 
     def __init__(
         self,
-        model_repository: BaseModelArtifactRepository,
+        model_artifact_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         diagnostic_repository: BaseDiagnosticRepository,
         logger: BaseLogger,
     ):
-        self._model_repo = model_repository
+        self._model_artifact_repo = model_artifact_repository
         self._data_repo = data_repository
         self._diag_repo = diagnostic_repository
         self._logger = logger
@@ -45,192 +49,166 @@ class DiagnoseInverseModelsHandler:
     def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, int]:
         self._logger.log_info(
             f"Starting Diagnostic Compute for: "
-            f"{[(c.type.value, c.version) for c in command.candidates]}"
+            f"{[(c.type.value, c.version) for c in command.inverse_estimator_candidates]}"
         )
 
         # 1. Load context
         dataset = self._data_repo.load(command.dataset_name)
 
-        self._logger.log_info(
-            f"original decisions shape: {dataset.pareto.set.shape}, min: {dataset.pareto.set.min()}, max: {dataset.pareto.set.max()}"
-        )
-        self._logger.log_info(
-            f"original objectives shape: {dataset.pareto.front.shape}, min: {dataset.pareto.front.min()}, max: {dataset.pareto.front.max()}"
-        )
-        if not dataset.processed:
-            raise ValueError("Dataset has no processed data.")
-
         # Load Forward Estimator
-        forward_art = self._model_repo.get_latest_version(
+        forward_estimator = self._model_artifact_repo.get_latest_version(
             command.forward_estimator_type.value, "forward", command.dataset_name
-        )
-        forward_estimator = forward_art.estimator
+        ).estimator
 
         # 2. Extract Scaling τ from training marginals
+        # TODO: Move to be factory
         tau = self._get_scale_vector(
-            dataset.processed.objectives_train, command.scale_method
+            vector=dataset.processed.objectives_train,
+            method=command.scale_method,
         )
+
         self._logger.log_info(f"Scale τ ({command.scale_method}): {tau.tolist()}")
 
         # 3. Initialize inverse estimators
         inverse_estimators = self._initialize_estimators(
-            candidates=command.candidates, dataset_name=command.dataset_name
+            inverse_estimator_candidates=command.inverse_estimator_candidates,
+            dataset_name=command.dataset_name,
         )
 
         # 4. Run diagnostic workflow
-        run_registration = {}
-        for display_name, inverse_estimator in inverse_estimators.items():
-            # Get version for metadata
-            # display_name format: "type (v1)"
-            type_str = display_name.split(" (")[0]
-            version_str = display_name.split("(v")[1].replace(")", "")
-            version = int(version_str) if version_str != "latest" else -1
 
-            self._logger.log_info(f"Computing diagnostics for {display_name}...")
-
+        for version, inverse_estimator in inverse_estimators:
             # Sampling
             y_test_norm = dataset.processed.objectives_test
 
-            # put the log in one formatted line
-            self._logger.log_info(
-                f"y_test_norm shape: {y_test_norm.shape}, min: {y_test_norm.min()}, max: {y_test_norm.max()}"
-            )
-            samples_X = inverse_estimator.sample(
+            samples_X_norm = inverse_estimator.sample(
                 y_test_norm, n_samples=command.num_samples
             )
 
-            self._logger.log_info(
-                f"samples_X shape: {samples_X.shape}, min: {samples_X.min()}, max: {samples_X.max()}"
-            )
-            if samples_X.ndim == 2:
-                samples_X = samples_X[:, np.newaxis, :]
+            if samples_X_norm.ndim == 2:
+                samples_X_norm = samples_X_norm[:, np.newaxis, :]
 
-            # Forward Simulate
-            n_test, k_samples, x_dim = samples_X.shape
-            samples_X_flat = samples_X.reshape(-1, x_dim)
+            n_test, k_samples, x_dim = samples_X_norm.shape
+
+            # Reshape the X-normalized-space samples to a flat array
+            samples_X_norm_flat = samples_X_norm.reshape(-1, x_dim)
+
+            # Denormalize the X-normalized-space samples
             samples_X_phys = dataset.processed.decisions_normalizer.inverse_transform(
-                samples_X_flat
+                samples_X_norm_flat
             )
 
-            self._logger.log_info(
-                f"samples_X_phys shape: {samples_X_phys.shape}, min: {samples_X_phys.min()}, max: {samples_X_phys.max()}"
-            )
-
+            # Forward simulate the X-space samples
             pred_obj_phys = forward_estimator.predict(samples_X_phys)
+
+            # Normalize the y-space predictions
             pred_obj_norm = dataset.processed.objectives_normalizer.transform(
                 pred_obj_phys
             )
-            y_pred = pred_obj_norm.reshape(n_test, k_samples, -1)
 
-            self._logger.log_info(
-                f"y_pred shape: {y_pred.shape}, min: {y_pred.min()}, max: {y_pred.max()}"
-            )
+            # Reshape the y-space predictions to match the test set shape
+            y_pred = pred_obj_norm.reshape(n_test, k_samples, -1)
 
             # Accuracy Domain (Objective Space - Standardized Lens)
             y_target = dataset.processed.objectives_test
-            self._logger.log_info(
-                f"y_target shape: {y_target.shape}, min: {y_target.min()}, max: {y_target.max()}"
+
+            spatial_audit = SpatialCandidateAuditor.audit(
+                candidates=y_pred,
+                reference=y_target,
+                tau=tau,
             )
-
-            z_resid = residuals.compute_z_residuals(y_pred, y_target, tau)
-            s_scores = residuals.compute_discrepancy_scores(z_resid)
-
-            z_bar = plausibility.compute_mean_residual_vector(z_resid)
-            bias_b = plausibility.compute_systematic_bias(z_bar)
-            disp_v = plausibility.compute_cloud_dispersion(z_resid, z_bar)
 
             # Reliability Domain (Decision Space - Probabilistic Lens)
             x_truth = dataset.processed.decisions_test
-            pit_values = calibration.compute_pit_values(samples_X, x_truth)
-            mace = calibration.compute_calibration_error(pit_values)
-            crps = calibration.compute_crps(samples_X, x_truth)
-
-            diversity = distribution_stats.compute_diversity(samples_X)
-            intervals = distribution_stats.compute_interval_width(samples_X)
-
-            # Spatial Information (Ranked candidates)
-            ranked_candidates = self._rank_candidates_by_residuals(
-                sampled_candidates=samples_X,
-                residuals=s_scores,
+            generative_audit = GenerativeDistributionAuditor.audit(
+                samples=samples_X_norm,
+                truth=x_truth,
             )
 
             # Create Diagnostic Result Aggregate
             result = DiagnosticResult.create(
-                estimator_type=type_str,
-                estimator_version=version,
+                estimator=Estimator(
+                    type=inverse_estimator.type,
+                    version=version,
+                    mapping_direction="inverse",
+                ),
                 dataset_name=command.dataset_name,
                 num_samples=command.num_samples,
                 scale_method=command.scale_method,
                 accuracy=AccuracyLens(
-                    discrepancy_scores=s_scores,
-                    best_shot_residuals=np.min(s_scores, axis=1),
-                    systematic_bias=bias_b,
-                    cloud_dispersion=disp_v,
+                    discrepancy_scores=spatial_audit.discrepancy_scores,
+                    best_shot_residuals=np.min(
+                        spatial_audit.discrepancy_scores, axis=1
+                    ),
+                    systematic_bias=spatial_audit.bias,
+                    cloud_dispersion=spatial_audit.dispersion,
                     summary=AccuracySummary(
-                        mean_best_shot=float(np.mean(np.min(s_scores, axis=1))),
-                        median_best_shot=float(np.median(np.min(s_scores, axis=1))),
-                        mean_bias=float(np.mean(bias_b)),
-                        mean_dispersion=float(np.mean(disp_v)),
+                        mean_best_shot=float(
+                            np.mean(np.min(spatial_audit.discrepancy_scores, axis=1))
+                        ),
+                        median_best_shot=float(
+                            np.median(np.min(spatial_audit.discrepancy_scores, axis=1))
+                        ),
+                        mean_bias=float(np.mean(spatial_audit.bias)),
+                        mean_dispersion=float(np.mean(spatial_audit.dispersion)),
                     ),
                 ),
                 reliability=ReliabilityLens(
-                    pit_values=pit_values,
-                    calibration_error=mace,
-                    crps=crps,
-                    diversity=diversity,
-                    interval_width=intervals,
+                    pit_values=generative_audit.pit_values,
+                    calibration_error=generative_audit.calibration_error,
+                    crps=generative_audit.crps,
+                    diversity=generative_audit.diversity,
+                    interval_width=generative_audit.interval_width,
                     summary=ReliabilitySummary(
-                        mean_crps=crps,
-                        mean_diversity=float(np.mean(diversity)),
-                        mean_interval_width=float(np.mean(intervals)),
+                        mean_crps=generative_audit.crps,
+                        mean_diversity=float(np.mean(generative_audit.diversity)),
+                        mean_interval_width=float(
+                            np.mean(generative_audit.interval_width)
+                        ),
                     ),
                     calibration_curve=CalibrationCurve(
-                        pit_values=np.sort(pit_values),
-                        cdf_y=np.arange(1, len(pit_values) + 1) / len(pit_values),
+                        pit_values=np.sort(generative_audit.pit_values),
+                        cdf_y=np.arange(1, len(generative_audit.pit_values) + 1)
+                        / len(generative_audit.pit_values),
                     ),
                 ),
                 candidates=SpatialCandidates(
-                    ordered=ranked_candidates,
-                    median=np.median(samples_X, axis=1),
-                    std=np.std(samples_X, axis=1),
+                    ordered=samples_X_norm[
+                        np.arange(n_test)[:, np.newaxis], spatial_audit.rank_indices
+                    ],
+                    median=np.median(samples_X_norm, axis=1),
+                    std=np.std(samples_X_norm, axis=1),
                 ),
             )
 
             # Persist Result
-            run_number = self._diag_repo.save(result)
-            run_registration[display_name] = run_number
-            self._logger.log_info(f"Saved {display_name} as run {run_number}.")
+            self._diag_repo.save(result)
 
-        return run_registration
-
-    def _get_scale_vector(self, y_train: np.ndarray, method: str) -> np.ndarray:
+    def _get_scale_vector(self, vector: np.ndarray, method: str) -> np.ndarray:
         if method == "sd":
-            return scaling.compute_sd_scale(y_train)
+            return scaling.compute_sd_scale(vector)
         if method == "mad":
-            return scaling.compute_mad_scale(y_train)
+            return scaling.compute_mad_scale(vector)
         if method == "iqr":
-            return scaling.compute_iqr_scale(y_train)
+            return scaling.compute_iqr_scale(vector)
         raise ValueError(f"Unknown scale method: {method}")
 
     def _initialize_estimators(
-        self, candidates: list[InverseEstimatorCandidate], dataset_name: str
-    ) -> dict[str, BaseEstimator]:
+        self,
+        inverse_estimator_candidates: list[InverseEstimatorCandidate],
+        dataset_name: str,
+    ) -> list[tuple[str, int], BaseEstimator]:
         """
         Initializes inverse estimator instances from the repository.
         """
-        inverse_estimators: dict[str, BaseEstimator] = {}
+        inverse_estimators: list[tuple[str, int], BaseEstimator] = []
 
-        for candidate in candidates:
+        for candidate in inverse_estimator_candidates:
             inverse_type = candidate.type.value
             version = candidate.version
-            display_name = (
-                f"{inverse_type} (v{version})"
-                if version
-                else f"{inverse_type} (latest)"
-            )
 
             # Resolve from repository
-            artifact = self._model_repo.get_version_by_number(
+            artifact = self._model_artifact_repo.get_version_by_number(
                 estimator_type=inverse_type,
                 version=version,
                 mapping_direction="inverse",
@@ -240,20 +218,9 @@ class DiagnoseInverseModelsHandler:
             # Sanity check for probabilistic properties
             if not isinstance(artifact.estimator, ProbabilisticEstimator):
                 self._logger.log_info(
-                    f"Estimator {display_name} is not probabilistic. Statistical metrics might be unreliable."
+                    f"Estimator {inverse_type} (v{version}) is not probabilistic. Statistical metrics might be unreliable."
                 )
 
-            inverse_estimators[display_name] = artifact.estimator
+            inverse_estimators.append((version, artifact.estimator))
 
         return inverse_estimators
-
-    def _rank_candidates_by_residuals(
-        self, sampled_candidates: np.ndarray, residuals: np.ndarray
-    ) -> np.ndarray:
-        """
-        Sorts generated candidates for each test point from closest to farthest from target.
-        """
-        sort_indices = np.argsort(residuals, axis=1)
-        n_test_samples, n_samples, x_dim = sampled_candidates.shape
-        row_indices = np.arange(n_test_samples)[:, np.newaxis]
-        return sampled_candidates[row_indices, sort_indices]
