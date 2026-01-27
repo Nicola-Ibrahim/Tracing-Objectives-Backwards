@@ -8,8 +8,8 @@ from ...modules.evaluation.application.use_cases.visualize_diagnostics import (
 from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
     FileSystemDiagnosticRepository,
 )
-from ...modules.evaluation.infrastructure.visualization.inverse_comparison.visualizer import (
-    InverseComparisonVisualizer,
+from ...modules.evaluation.infrastructure.visualization.inverse_models_comparison.visualizer import (
+    InverseModelsComparisonVisualizer,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
@@ -55,7 +55,7 @@ def cli():
             ),
             InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.MDN, version=10, run_number=1
-            ),  
+            ),
             InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.MDN, version=11, run_number=1
             ),
@@ -70,7 +70,7 @@ def cli():
 
     handler = VisualizeInverseEstimatorDiagnosticCommandHandler(
         diagnostic_repository=FileSystemDiagnosticRepository(),
-        visualizer=InverseComparisonVisualizer(),
+        visualizer=InverseModelsComparisonVisualizer(),
         logger=logger,
     )
 

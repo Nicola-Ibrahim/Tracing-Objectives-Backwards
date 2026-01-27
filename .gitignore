@@ -35,6 +35,7 @@ MANIFEST
 data/
 models/ 
 diagnostics/
+reports/
 
 # Dependency Management Lock Files
 # It is generally recommended to include these in version control for reproducibility.
