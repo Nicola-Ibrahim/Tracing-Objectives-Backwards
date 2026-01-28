@@ -7,7 +7,6 @@ from ..entities.accuracy_lens import AccuracyLens
 from ..entities.reliability_lens import ReliabilityLens
 from ..value_objects.diagnostic_run_metadata import DiagnosticRunMetadata
 from ..value_objects.estimator import Estimator
-from ..value_objects.spatial_candidates import SpatialCandidates
 
 
 class DiagnosticResult(BaseModel):
@@ -19,7 +18,6 @@ class DiagnosticResult(BaseModel):
     metadata: DiagnosticRunMetadata
     accuracy: AccuracyLens
     reliability: ReliabilityLens
-    candidates: SpatialCandidates
 
     class Config:
         arbitrary_types_allowed = True
@@ -35,7 +33,6 @@ class DiagnosticResult(BaseModel):
         scale_method: str,
         accuracy: AccuracyLens,
         reliability: ReliabilityLens,
-        candidates: SpatialCandidates,
     ) -> Self:
         """
         Factory for new diagnostic results.
@@ -50,7 +47,6 @@ class DiagnosticResult(BaseModel):
             ),
             accuracy=accuracy,
             reliability=reliability,
-            candidates=candidates,
         )
 
     @classmethod
@@ -59,12 +55,10 @@ class DiagnosticResult(BaseModel):
         metadata: dict[str, Any],
         accuracy: dict[str, Any],
         reliability: dict[str, Any],
-        candidates: dict[str, Any],
     ) -> Self:
         """Factory for deserializing from stored data blocks."""
         return cls(
             metadata=DiagnosticRunMetadata(**metadata),
             accuracy=AccuracyLens(**accuracy),
             reliability=ReliabilityLens(**reliability),
-            candidates=SpatialCandidates(**candidates),
         )

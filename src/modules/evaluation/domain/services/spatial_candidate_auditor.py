@@ -1,83 +1,151 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal
 
 import numpy as np
+
+from ..value_objects.accuracy_summary import AccuracySummary
+
+DistanceType = Literal["euclidean", "mahalanobis"]
 
 
 @dataclass(frozen=True)
 class SpatialAudit:
-    """The immutable value object representing the outcome of a spatial audit."""
+    """Immutable result of the objective-space audit (normalized objective space)."""
 
-    residuals: np.ndarray  # r_j^(k): (N, K, M)
-    discrepancy_scores: np.ndarray  # s^(k): (N, K)
-    rank_indices: np.ndarray  # Sorted indices (N, K)
+    residuals: np.ndarray  # r^(k)(y*): (N, K, M)  = y_hat^(k) - y*
+    discrepancy_scores: np.ndarray  # s^(k)(y*): (N, K)
+    best_shot_scores: np.ndarray  # min_k(s): (N,)
+    rank_indices: np.ndarray  # argsort(s): (N, K), ascending (best first)
     bias: np.ndarray  # b(y*): (N,)
     dispersion: np.ndarray  # v(y*): (N,)
+    summary: AccuracySummary
 
     @property
     def best_index(self) -> np.ndarray:
-        """Helper to identify the 'winner' for each test point."""
+        """Index of the best-ranked candidate per target (shape: (N,))."""
         return self.rank_indices[:, 0]
 
 
 class SpatialCandidateAuditor:
     """
-    Domain Service: Implements the Standardized Discrepancy Contract.
-    Calculates residuals, rankings, and cloud-plausibility diagnostics.
+    Domain Service: Discrepancy contract in *normalized* objective space.
+
+    Assumption:
+      - candidates and reference live in the same normalized objective space
+        (e.g., HypercubeNormalizer [0,1] using training-fitted min/max).
+      - Because objectives are already on a common scale, residuals are defined
+        as simple differences (no additional tau scaling).
+
+    Policy (simple, defensible):
+      - Euclidean discrepancy is the default.
+      - Mahalanobis discrepancy is optional and estimated from the training
+        objective archive in the same normalized space.
     """
 
     @staticmethod
     def audit(
+        training_objectives: np.ndarray,
         candidates: np.ndarray,
         reference: np.ndarray,
-        tau: np.ndarray,
-        precision_matrix: Optional[np.ndarray] = None,
+        distance: DistanceType = "euclidean",
+        ridge: float = 1e-6,
     ) -> SpatialAudit:
         """
-        Processes a cloud of candidates relative to a reference (target or truth).
-
         Args:
-            candidates: (N, K, M) array of predicted outcomes.
-            reference: (N, M) array of targets.
-            tau: (M,) scale vector (SD, MAD, or IQR).
-            precision_matrix: (M, M) Inverse Covariance (Sigma^-1) for Mahalanobis.
+            training_objectives: (N_tr, M) training outcomes in the same normalized space.
+            candidates: (N, K, M) checked candidate outcomes (y_hat) in normalized space.
+            reference: (N, M) target outcomes (y*) in normalized space.
+            distance: "euclidean" | "mahalanobis".
+            ridge: nonnegative diagonal regularizer added to covariance before inversion.
         """
-        n_points, k_samples, m_dims = candidates.shape
-
-        # 1. STANDARDIZED RESIDUALS (Subtract and Divide)
-        # r = (y_hat - y_star) / tau
-        residuals = (candidates - reference[:, np.newaxis, :]) / tau
-
-        # 2. DISCREPANCY SCORING (The Contract)
-        if precision_matrix is not None:
-            # Mahalanobis: sqrt( r.T * Sigma^-1 * r )
-            # We use einsum for efficient batch matrix multiplication
-            # 'nkm,mj,nkj->nk' handles (N, K, M) dots (M, M) dots (N, K, M)
-            sq_dist = np.einsum(
-                "nkm,mj,nkj->nk", residuals, precision_matrix, residuals
+        # -----------------------------
+        # 0) Basic shape checks
+        # -----------------------------
+        if candidates.ndim != 3:
+            raise ValueError(f"candidates must be (N,K,M), got {candidates.shape}")
+        if reference.ndim != 2:
+            raise ValueError(f"reference must be (N,M), got {reference.shape}")
+        if training_objectives.ndim != 2:
+            raise ValueError(
+                f"training_objectives must be (N_tr,M), got {training_objectives.shape}"
             )
-            discrepancy_scores = np.sqrt(np.maximum(sq_dist, 0))
+        if ridge < 0:
+            raise ValueError("ridge must be nonnegative.")
+
+        n_points, k_samples, m_dims = candidates.shape
+        if reference.shape != (n_points, m_dims):
+            raise ValueError(
+                f"reference must have shape (N,M)=({n_points},{m_dims}), got {reference.shape}"
+            )
+        if training_objectives.shape[1] != m_dims:
+            raise ValueError(
+                f"training_objectives must have M={m_dims} columns, got {training_objectives.shape[1]}"
+            )
+
+        distance = str(distance).lower().strip()
+
+        # -----------------------------
+        # 1) Residuals in normalized space (no tau)
+        #    r^(k)(y*) = y_hat^(k) - y*
+        # -----------------------------
+        residuals = candidates - reference[:, np.newaxis, :]  # (N, K, M)
+
+        # -----------------------------
+        # 2) Discrepancy scores for ranking
+        #    - Euclidean: ||r||_2
+        #    - Mahalanobis: sqrt( r^T Sigma^{-1} r ), Sigma estimated from training
+        # -----------------------------
+        if distance == "euclidean":
+            discrepancy_scores = np.linalg.norm(residuals, axis=2)  # (N, K)
+
+        elif distance == "mahalanobis":
+            # 2a) Estimate covariance in normalized space and regularize
+            sigma_mat = np.cov(training_objectives, rowvar=False, bias=False)  # (M, M)
+            sigma_mat = 0.5 * (sigma_mat + sigma_mat.T)  # symmetry
+            sigma_mat_reg = sigma_mat + ridge * np.eye(m_dims)
+
+            # 2b) Invert to get precision and compute quadratic form
+            precision = np.linalg.inv(sigma_mat_reg)
+            sq_dist = np.einsum("nkm,mj,nkj->nk", residuals, precision, residuals)
+            discrepancy_scores = np.sqrt(np.maximum(sq_dist, 0.0))
+
         else:
-            # Euclidean Default: L2 Norm of residuals
-            discrepancy_scores = np.linalg.norm(residuals, axis=2)
+            raise ValueError(f"Unknown distance: {distance!r}")
 
-        # 3. RANKING
-        rank_indices = np.argsort(discrepancy_scores, axis=1)
+        # -----------------------------
+        # 3) Ranking
+        # -----------------------------
+        best_shot_scores = np.min(discrepancy_scores, axis=1)  # (N,)
+        rank_indices = np.argsort(discrepancy_scores, axis=1)  # (N, K)
 
-        # 4. CLOUD DIAGNOSTICS (Bias and Dispersion)
-        # Systematic Bias: Magnitude of mean residual vector / sqrt(m)
-        mean_residual = np.mean(residuals, axis=1)
-        bias = np.linalg.norm(mean_residual, axis=1) / np.sqrt(m_dims)
+        # -----------------------------
+        # 4) Candidate-cloud diagnostics (bias and dispersion)
+        #    b(y*) = ||mean_r||_2 / sqrt(M)
+        #    v(y*) = median_k ||r^(k) - mean_r||_2 / sqrt(M)
+        # -----------------------------
+        mean_residual = np.mean(residuals, axis=1)  # (N, M)
+        bias = np.linalg.norm(mean_residual, axis=1) / np.sqrt(m_dims)  # (N,)
 
-        # Cloud Dispersion: Median distance from the mean residual / sqrt(m)
-        centered_residuals = residuals - mean_residual[:, np.newaxis, :]
-        dist_to_mean = np.linalg.norm(centered_residuals, axis=2)
-        dispersion = np.median(dist_to_mean, axis=1) / np.sqrt(m_dims)
+        centered_residuals = residuals - mean_residual[:, np.newaxis, :]  # (N, K, M)
+        dist_to_mean = np.linalg.norm(centered_residuals, axis=2)  # (N, K)
+        dispersion = np.median(dist_to_mean, axis=1) / np.sqrt(m_dims)  # (N,)
+
+        # -----------------------------
+        # 5) Summary and spatial reporting
+        # -----------------------------
+        summary = AccuracySummary(
+            mean_best_shot=float(np.mean(best_shot_scores)),
+            median_best_shot=float(np.median(best_shot_scores)),
+            mean_bias=float(np.mean(bias)),
+            mean_dispersion=float(np.mean(dispersion)),
+        )
 
         return SpatialAudit(
             residuals=residuals,
             discrepancy_scores=discrepancy_scores,
+            best_shot_scores=best_shot_scores,
             rank_indices=rank_indices,
             bias=bias,
             dispersion=dispersion,
+            summary=summary,
         )

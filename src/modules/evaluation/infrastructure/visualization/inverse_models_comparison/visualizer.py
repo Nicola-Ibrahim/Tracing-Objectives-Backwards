@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from .....shared.config import ROOT_PATH
 from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .color_utils import get_model_colors
+from .panels.accuracy_ecdf_plot import add_accuracy_ecdf_plot
 from .panels.calibration_plot import add_calibration_plot
 from .panels.error_boxplot import add_error_boxplot
 from .panels.metrics_bar_plot import add_metric_bar_plot
@@ -53,6 +54,7 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
         )
 
         # 3. Accuracy Metrics
+        self._save_accuracy_ecdf(results_map, color_map, model_names)
         self._save_error_boxplot(results_map, color_map, model_names)
         self._save_metric_bar(
             results_map,
@@ -106,6 +108,21 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
             showlegend=True,
         )
         self._save_fig(fig, "pit_calibration_curve")
+
+    def _save_accuracy_ecdf(self, results_map, color_map, model_names):
+        fig = make_subplots(rows=1, cols=1)
+        add_accuracy_ecdf_plot(fig, 1, 1, results_map, color_map)
+        fig.update_layout(
+            title="Model Attainment: ECDF of Best-Shot Discrepancy",
+            xaxis_title="Best-shot discrepancy (min over K)",
+            yaxis_title="Fraction of targets",
+            yaxis_range=[0, 1.05],
+            template="plotly_white",
+            height=800,
+            width=1000,
+            showlegend=True,
+        )
+        self._save_fig(fig, "accuracy_ecdf_best_shot")
 
     def _save_error_boxplot(self, results_map, color_map, model_names):
         fig = make_subplots(rows=1, cols=1)

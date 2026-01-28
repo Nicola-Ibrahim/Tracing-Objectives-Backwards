@@ -117,7 +117,6 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
             metadata=data["metadata"],
             accuracy=data["accuracy"],
             reliability=data["reliability"],
-            candidates=data["candidates"],
         )
 
     def get_all_runs(

@@ -44,5 +44,3 @@ class DiagnoseInverseModelsCommand(BaseModel):
     scale_method: Literal["sd", "mad", "iqr"] = Field(
         default="sd", description="sd | mad | iqr"
     )
-    bias_threshold: float = 0.5
-    dispersion_threshold: float = 0.5

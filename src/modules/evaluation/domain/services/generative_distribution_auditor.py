@@ -2,6 +2,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from ..value_objects.calibration_curve import CalibrationCurve
+from ..value_objects.reliability_summary import ReliabilitySummary
+
 
 @dataclass(frozen=True)
 class GenerativeAudit:
@@ -12,6 +15,8 @@ class GenerativeAudit:
     crps: float
     diversity: np.ndarray  # (N_test,)
     interval_width: np.ndarray  # (N_test, x_dim)
+    summary: ReliabilitySummary
+    calibration_curve: CalibrationCurve
 
 
 class GenerativeDistributionAuditor:
@@ -48,12 +53,26 @@ class GenerativeDistributionAuditor:
         q05 = np.percentile(samples, q_low * 100, axis=1)
         intervals = q95 - q05
 
+        # 4. SUMMARY and CURVES
+        summary = ReliabilitySummary(
+            mean_crps=crps,
+            mean_diversity=float(np.mean(diversity)),
+            mean_interval_width=float(np.mean(intervals)),
+        )
+
+        calibration_curve = CalibrationCurve(
+            pit_values=np.sort(pit_values),
+            cdf_y=np.arange(1, len(pit_values) + 1) / len(pit_values),
+        )
+
         return GenerativeAudit(
             pit_values=pit_values,
             calibration_error=mace,
             crps=crps,
             diversity=diversity,
             interval_width=intervals,
+            summary=summary,
+            calibration_curve=calibration_curve,
         )
 
     @staticmethod

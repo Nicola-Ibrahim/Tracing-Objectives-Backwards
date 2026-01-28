@@ -19,7 +19,7 @@ def add_error_boxplot(
         if model_name in results_map:
             res = results_map[model_name]
             # Use pre-calculated residuals distributions from the accuracy lens
-            best_shots = res["accuracy"]["best_shot_residuals"]
+            best_shots = res["accuracy"]["best_shot_scores"]
 
             color = color_map.get(model_name, "gray")
 

@@ -7,7 +7,6 @@ from .....modeling.domain.interfaces.base_estimator import (
 )
 from .....modeling.domain.interfaces.base_repository import BaseModelArtifactRepository
 from .....shared.domain.interfaces.base_logger import BaseLogger
-from ....domain.accuracy import scaling
 from ....domain.aggregates.diagnostic_result import DiagnosticResult
 from ....domain.entities.accuracy_lens import AccuracyLens
 from ....domain.entities.reliability_lens import ReliabilityLens
@@ -20,11 +19,7 @@ from ....domain.services.generative_distribution_auditor import (
 from ....domain.services.spatial_candidate_auditor import (
     SpatialCandidateAuditor,
 )
-from ....domain.value_objects.accuracy_summary import AccuracySummary
-from ....domain.value_objects.calibration_curve import CalibrationCurve
 from ....domain.value_objects.estimator import Estimator
-from ....domain.value_objects.reliability_summary import ReliabilitySummary
-from ....domain.value_objects.spatial_candidates import SpatialCandidates
 from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
 
 
@@ -60,15 +55,6 @@ class DiagnoseInverseModelsHandler:
             command.forward_estimator_type.value, "forward", command.dataset_name
         ).estimator
 
-        # 2. Extract Scaling τ from training marginals
-        # TODO: Move to be factory
-        tau = self._get_scale_vector(
-            vector=dataset.processed.objectives_train,
-            method=command.scale_method,
-        )
-
-        self._logger.log_info(f"Scale τ ({command.scale_method}): {tau.tolist()}")
-
         # 3. Initialize inverse estimators
         inverse_estimators = self._initialize_estimators(
             inverse_estimator_candidates=command.inverse_estimator_candidates,
@@ -76,7 +62,6 @@ class DiagnoseInverseModelsHandler:
         )
 
         # 4. Run diagnostic workflow
-
         for version, inverse_estimator in inverse_estimators:
             # Sampling
             y_test_norm = dataset.processed.objectives_test
@@ -113,9 +98,10 @@ class DiagnoseInverseModelsHandler:
             y_target = dataset.processed.objectives_test
 
             spatial_audit = SpatialCandidateAuditor.audit(
+                training_objectives=dataset.processed.objectives_train,
                 candidates=y_pred,
                 reference=y_target,
-                tau=tau,
+                distance="euclidean",
             )
 
             # Reliability Domain (Decision Space - Probabilistic Lens)
@@ -137,21 +123,11 @@ class DiagnoseInverseModelsHandler:
                 scale_method=command.scale_method,
                 accuracy=AccuracyLens(
                     discrepancy_scores=spatial_audit.discrepancy_scores,
-                    best_shot_residuals=np.min(
-                        spatial_audit.discrepancy_scores, axis=1
-                    ),
+                    best_shot_scores=spatial_audit.best_shot_scores,
+                    rank_indices=spatial_audit.rank_indices,
                     systematic_bias=spatial_audit.bias,
                     cloud_dispersion=spatial_audit.dispersion,
-                    summary=AccuracySummary(
-                        mean_best_shot=float(
-                            np.mean(np.min(spatial_audit.discrepancy_scores, axis=1))
-                        ),
-                        median_best_shot=float(
-                            np.median(np.min(spatial_audit.discrepancy_scores, axis=1))
-                        ),
-                        mean_bias=float(np.mean(spatial_audit.bias)),
-                        mean_dispersion=float(np.mean(spatial_audit.dispersion)),
-                    ),
+                    summary=spatial_audit.summary,
                 ),
                 reliability=ReliabilityLens(
                     pit_values=generative_audit.pit_values,
@@ -159,39 +135,13 @@ class DiagnoseInverseModelsHandler:
                     crps=generative_audit.crps,
                     diversity=generative_audit.diversity,
                     interval_width=generative_audit.interval_width,
-                    summary=ReliabilitySummary(
-                        mean_crps=generative_audit.crps,
-                        mean_diversity=float(np.mean(generative_audit.diversity)),
-                        mean_interval_width=float(
-                            np.mean(generative_audit.interval_width)
-                        ),
-                    ),
-                    calibration_curve=CalibrationCurve(
-                        pit_values=np.sort(generative_audit.pit_values),
-                        cdf_y=np.arange(1, len(generative_audit.pit_values) + 1)
-                        / len(generative_audit.pit_values),
-                    ),
-                ),
-                candidates=SpatialCandidates(
-                    ordered=samples_X_norm[
-                        np.arange(n_test)[:, np.newaxis], spatial_audit.rank_indices
-                    ],
-                    median=np.median(samples_X_norm, axis=1),
-                    std=np.std(samples_X_norm, axis=1),
+                    summary=generative_audit.summary,
+                    calibration_curve=generative_audit.calibration_curve,
                 ),
             )
 
             # Persist Result
             self._diag_repo.save(result)
-
-    def _get_scale_vector(self, vector: np.ndarray, method: str) -> np.ndarray:
-        if method == "sd":
-            return scaling.compute_sd_scale(vector)
-        if method == "mad":
-            return scaling.compute_mad_scale(vector)
-        if method == "iqr":
-            return scaling.compute_iqr_scale(vector)
-        raise ValueError(f"Unknown scale method: {method}")
 
     def _initialize_estimators(
         self,

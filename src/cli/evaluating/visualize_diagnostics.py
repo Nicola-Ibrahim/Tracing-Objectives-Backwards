@@ -26,36 +26,36 @@ def cli():
     command = VisualizeInverseEstimatorDiagnosticCommand(
         dataset_name="cocoex_f5",
         requests=[
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=1, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=2, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=3, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=4, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=5, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=6, run_number=1
-            ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=1, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=2, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=3, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=4, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=5, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=6, run_number=1
+            # ),
             InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.MDN, version=7, run_number=1
             ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=8, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=9, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=10, run_number=1
-            ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=8, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=9, run_number=1
+            # ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=10, run_number=1
+            # ),
             InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.MDN, version=11, run_number=1
             ),
