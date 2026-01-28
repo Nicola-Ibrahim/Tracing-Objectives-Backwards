@@ -1,0 +1,88 @@
+\begin{tikzpicture}[font=\sffamily, scale=1]
+
+% --- Define Styles ---
+\tikzset{
+    axis/.style={->, >=stealth, line width=0.6pt, gray!80},
+    target/.style={circle, fill=red, inner sep=1.5pt, label={[red, font=\tiny]above:$\vect{y}^\star$}},
+    candidate/.style={circle, fill=blue!60, opacity=0.6, inner sep=1pt},
+    cloud_mean/.style={cross out, draw=black, line width=0.8pt, inner sep=1.5pt},
+    bias_arrow/.style={->, >=stealth, line width=1pt, blue!80!black},
+    dispersion_circle/.style={dashed, blue!40, line width=0.8pt}
+}
+
+% ================= 1. THE BULLSEYE (Low b, Low v) =================
+\begin{scope}[shift={(0,0)}]
+    \draw[axis] (-2,0) -- (2,0);
+    \draw[axis] (0,-2) -- (0,2);
+    \node[anchor=south] at (0,2.2) {(Low $b$, Low $v$)};
+    
+    % Target
+    \node[target] (T1) at (0,0) {};
+    
+    % Candidate Cloud - tight and centered
+    \foreach \i in {1,...,20}
+        \node[candidate] at (0.2*rand, 0.2*rand) {};
+        
+    \node[draw, fill=white, font=\tiny, align=left] at (1.1,-1.3) {Accurate \& \\ Precise};
+\end{scope}
+
+% ================= 2. THE SHOTGUN (Low b, High v) =================
+\begin{scope}[shift={(6,0)}]
+    \draw[axis] (-2,0) -- (2,0);
+    \draw[axis] (0,-2) -- (0,2);
+    \node[anchor=south] at (0,2.2) {(Low $b$, High $v$)};
+    
+    % Target
+    \node[target] (T2) at (0,0) {};
+    
+    % Candidate Cloud - centered but diffuse
+    \draw[dispersion_circle] (0,0) circle (1.2);
+    \foreach \i in {1,...,35}
+        \node[candidate] at (0.8*rand, 0.8*rand) {};
+        
+    \node[draw, fill=white, font=\tiny, align=left] at (1.1,-1.3) {Centered but \\ Diffuse};
+\end{scope}
+
+% ================= 3. SYSTEMATIC BIAS (High b, Low v) =================
+\begin{scope}[shift={(0,-6)}]
+    \draw[axis] (-2,0) -- (2,0);
+    \draw[axis] (0,-2) -- (0,2);
+    \node[anchor=south] at (0,2.2) {(High $b$, Low $v$)};
+    
+    % Target
+    \node[target] (T3) at (0,0) {};
+    
+    % Bias Vector
+    \draw[bias_arrow] (0,0) -- (1.3,1.3) node[midway, left, black, font=\tiny] {$b$};
+    
+    % Cloud Mean
+    \node[cloud_mean] (M3) at (1.3,1.3) {};
+    
+    % Candidate Cloud - tight but shifted
+    \foreach \i in {1,...,20}
+        \node[candidate] at (1.3 + 0.2*rand, 1.3 + 0.2*rand) {};
+        
+    \node[draw, fill=white, font=\tiny, align=left] at (1.1,-1.3) {Concentrated \\ but Shifted};
+\end{scope}
+
+% ================= 4. UNRELIABLE (High b, High v) =================
+\begin{scope}[shift={(6,-6)}]
+    \draw[axis] (-2,0) -- (2,0);
+    \draw[axis] (0,-2) -- (0,2);
+    \node[anchor=south] at (0,2.2) {(High $b$, High $v$)};
+    
+    % Target
+    \node[target] (T4) at (0,0) {};
+    
+    % Bias Vector
+    \draw[bias_arrow] (0,0) -- (1.2,1.2);
+    
+    % Candidate Cloud - shifted and diffuse
+    \draw[dispersion_circle] (1.2,1.2) circle (0.8) node[below right, black, font=\tiny] {$v$};
+    \foreach \i in {1,...,35}
+        \node[candidate] at (1.2 + 0.6*rand, 1.2 + 0.6*rand) {};
+        
+    \node[draw, fill=white, font=\tiny, align=left] at (1.1,-1.3) {Poor Quality \\ Overall};
+\end{scope}
+
+\end{tikzpicture}

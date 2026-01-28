@@ -89,135 +89,449 @@ Pareto-relevant region while still probing generalization beyond the exact train
 \subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
 %-------------------------------------------------------------------------------
 
-\subsubsection{Hyperparameter ablation and model selection}\label{subsubsec:ablation_objective}
+Objective-space diagnostics evaluate inverse estimators as conditional samplers used in a
+propose--check loop. For a requested target outcome $\vect{y}^{\star}$, an inverse model generates a
+set of $K$ decision candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$. Each candidate is then checked
+with the forward evaluator $\mathcal{E}$ to obtain outcomes
+$\widehat{\vect{y}}^{(k)}=\mathcal{E}(\widehat{\vect{x}}^{(k)})$. Because the output is a set rather
+than a single point, objective-space evaluation must specify how individual candidates are scored,
+how attainment is summarized under a fixed candidate budget, and how the full candidate cloud behaves
+around the target.
 
-Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the
-number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the
-number of coupling layers (and corresponding subnet capacity). To avoid attributing performance
-differences to under- or over-parameterized settings, we run an ablation study within each model
-family and select a single configuration for downstream comparison.
+All objective-space computations are performed in a common normalized objective
+coordinate system induced by the preprocessing pipeline. The same fitted normalizer is applied to the
+training archive, the user targets, and the checked outcomes, so that discrepancy magnitudes are
+comparable across objectives and consistent across estimators.
 
-To keep the analysis focused and interpretable, the objective-space results in this section are
-reported for a single representative bi-objective problem derived from COCO BBOB $f_5$
-(Linear Slope). This function exhibits strong directionality and boundary effects, which makes it a
-useful stress test for target attainment while remaining simple enough to isolate the impact of model
-capacity and sampling protocol.
+%-------------------------------------------------------------------------------
+\subsubsection{Scoring contract in normalized objective space}\label{subsubsec:objective_contract}
+%-------------------------------------------------------------------------------
 
-Following the objective-space evaluation defined in Section~\ref{sec:eval_objective}, target
-attainment is summarized using the outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$, computed by
-forward-evaluating candidates and measuring distance to the requested target outcome. Because inverse
-exploration is one-to-many, we report best-of-$K$ discrepancy: for each target we draw $K$ candidates
-and retain the candidate that minimizes discrepancy. Lower values therefore indicate that the sampler
-can reach the requested outcome region within a fixed candidate budget, while larger values indicate
-that even the best candidate among $K$ samples remains far from the target.
+Let $\vect{y}^{\star}\in\mathbb{R}^{m}$ denote the requested objective vector and let
+$\widehat{\vect{y}}^{(k)}\in\mathbb{R}^{m}$ denote the checked outcome of the $k$-th candidate, both in
+the declared normalized objective space. Candidate mismatch is expressed through the target-centered
+residual vector
+\begin{equation}
+  \vect{r}^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \widehat{\vect{y}}^{(k)} - \vect{y}^{\star},
+  \qquad k=1,\dots,K,
+  \label{eq:objective_residual_vector}
+\end{equation}
+where $m$ is the number of objectives, $K$ is the candidate budget, and $\vect{r}^{(k)}$ measures
+signed deviation from the target component-wise. The $j$-th component is
+\begin{equation}
+  r^{(k)}_{j}(\vect{y}^{\star})
+  \;=\;
+  \widehat{y}^{(k)}_{j} - y^{\star}_{j},
+  \qquad j=1,\dots,m,
+  \label{eq:objective_residual_component}
+\end{equation}
+so $r^{(k)}_{j}>0$ indicates that the candidate is above the target on objective $j$ in the normalized
+coordinates, while $r^{(k)}_{j}<0$ indicates that it is below.
 
-\paragraph{Median best-of-$K$ discrepancy (single sampling run).}
-Table~\ref{tab:ablation_f5_median} reports the median best-of-$K$ discrepancy over the target set for a
-representative subset of configurations, evaluated on $f_5$. Here, $K=50$ is used to reduce variance in
-the best-of-$K$ estimate and to reflect a moderate candidate budget in objective-space search. The
-median emphasizes typical target attainment under the sampling protocol, while remaining robust to a
-small number of difficult targets. In this table, a lower entry indicates that the configuration
-generates candidate sets whose closest member more consistently aligns with the intended outcome.
+A scalar discrepancy score is obtained by applying a distance in this same normalized space. We use
+the Euclidean norm as the default scoring rule,
+\begin{equation}
+  s^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \big\lVert \vect{r}^{(k)}(\vect{y}^{\star}) \big\rVert_{2}
+  \;=\;
+  \sqrt{\sum_{j=1}^{m}\Big(r^{(k)}_{j}(\vect{y}^{\star})\Big)^{2}},
+  \label{eq:objective_candidate_score}
+\end{equation}
+where $\lVert\cdot\rVert_2$ denotes the Euclidean norm. The score $s^{(k)}$ supports ranking within a
+candidate set for a fixed target: smaller values correspond to checked outcomes that land closer to
+$\vect{y}^{\star}$ in the declared objective coordinates.
 
-\begin{table}[!htbp]
-    \centering
-    \caption{Ablation on COCO $f_5$ (objective space): Median best-of-$K$ outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ over targets, with $K=50$ candidates per target. Lower is better. The best-in-class setting per model family is marked with $\star$.}
-    \label{tab:ablation_f5_median}
-    \rarray{1.2}
-    \begin{tabular}{ll c}
-        \toprule
-        \textbf{Model} & \textbf{Configuration} & \textbf{Median $\mathcal{E}_{\mathcal{Y}}$ (best-of-$K$, $K=50$)} \\
-        \midrule
-        \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- \\
-                              & $z=8, \text{layers}=4$ ($\star$) & -- \\
-                              & $z=16, \text{layers}=4$ & -- \\
-        \midrule
-        \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- \\
-                              & $M=5, H=128$ & -- \\
-                              & $M=10, H=256$ ($\star$) & -- \\
-                              & $M=20, H=256$ & -- \\
-        \midrule
-        \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- \\
-                              & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- \\
-                              & $\text{layers}=12, \text{subnet}=256$ & -- \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+A small numerical example illustrates the calculation. Consider a bi-objective case ($m=2$) in which
+the user target in normalized space is
+$\vect{y}^{\star}=(0.40,\,0.70)$ and one checked candidate outcome is
+$\widehat{\vect{y}}^{(k)}=(0.45,\,0.62)$. The residual vector is
+\begin{equation}
+  \vect{r}^{(k)}(\vect{y}^{\star})
+  \;=\;
+  (0.45-0.40,\; 0.62-0.70)
+  \;=\;
+  (0.05,\; -0.08),
+  \label{eq:objective_example_residual}
+\end{equation}
+which shows that the candidate overshoots the target by $0.05$ in the first objective and undershoots
+by $0.08$ in the second objective. The discrepancy score is then
+\begin{equation}
+  s^{(k)}(\vect{y}^{\star})
+  \;=\;
+  \sqrt{0.05^{2}+(-0.08)^{2}}
+  \;=\;
+  \sqrt{0.0025+0.0064}
+  \;=\;
+  \sqrt{0.0089}
+  \;\approx\;
+  0.094,
+  \label{eq:objective_example_score}
+\end{equation}
+and candidates can be ranked by comparing their $s^{(k)}(\vect{y}^{\star})$ values, with the smallest
+score ranked as the closest match under the declared contract.
 
-\paragraph{Robustness across repeated candidate sets (median-of-medians).}
-Best-of-$K$ attainment depends on stochastic sampling: even for a fixed target, different draws can
-yield slightly different minimum discrepancy. To separate systematic differences between model
-configurations from sampling noise, we repeat the candidate generation multiple times per target. For
-each target, we draw $K=50$ candidates independently for $R=10$ repetitions, compute the best-of-$K$
-discrepancy within each repetition, and then summarize each target by the median across repetitions.
-We then aggregate across targets by reporting the median of these per-target medians. This ``median of
-medians'' provides a more stable measure of typical attainment for a fixed sampling budget.
+The candidate budget $K$ is part of the evaluation interface. Increasing $K$ can improve attainment by
+providing more opportunities to sample a close candidate even if the underlying conditional model is
+unchanged. Therefore, all objective-space comparisons fix $K$ within an experiment, and results are
+reported separately when $K$ changes.
 
-Table~\ref{tab:ablation_f5_mom} reports this robustness-adjusted summary on $f_5$ for the same
-configuration grid. Differences between Table~\ref{tab:ablation_f5_median} and
-Table~\ref{tab:ablation_f5_mom} are informative: configurations whose performance improves substantially
-under repeated sampling tend to exhibit higher sampling variance (occasional strong hits), whereas
-configurations that remain strong under the median-of-medians tend to deliver more consistent
-attainment from one candidate set to the next.
 
-\begin{table}[!htbp]
-    \centering
-    \caption{Ablation on COCO $f_5$ (objective space): Robust target attainment under repeated sampling. Reported is the median across targets of the per-target median best-of-$K$ discrepancy over $R=10$ independent candidate sets (each with $K=50$). Lower is better. The best-in-class setting per model family is marked with $\star$.}
-    \label{tab:ablation_f5_mom}
-    \rarray{1.2}
-    \begin{tabular}{ll c}
-        \toprule
-        \textbf{Model} & \textbf{Configuration} & \textbf{Median-of-medians $\mathcal{E}_{\mathcal{Y}}$ ($K=50$, $R=10$)} \\
-        \midrule
-        \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- \\
-                              & $z=8, \text{layers}=4$ ($\star$) & -- \\
-                              & $z=16, \text{layers}=4$ & -- \\
-        \midrule
-        \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- \\
-                              & $M=5, H=128$ & -- \\
-                              & $M=10, H=256$ ($\star$) & -- \\
-                              & $M=20, H=256$ & -- \\
-        \midrule
-        \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- \\
-                              & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- \\
-                              & $\text{layers}=12, \text{subnet}=256$ & -- \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+%-------------------------------------------------------------------------------
+\subsubsection{Best-shot attainment and ECDF reporting}\label{subsubsec:objective_ecdf}
+%-------------------------------------------------------------------------------
 
-\subsubsection{Effect of sampling budget $K$}\label{subsubsec:objective_budget}
+Because inverse samplers return a set, target attainment is summarized per target by the best-shot
+score,
+\begin{equation}
+  s_{\min}(\vect{y}^{\star})
+  \;=\;
+  \min_{k\in\{1,\dots,K\}} s^{(k)}(\vect{y}^{\star}),
+  \label{eq:objective_best_shot}
+\end{equation}
+which captures the closest checked outcome the model can deliver under budget $K$. Here
+$s^{(k)}(\vect{y}^{\star})$ is the per-candidate discrepancy defined by the scoring contract in
+Section~\ref{subsubsec:objective_contract}, and $K$ is the number of candidates generated for the
+target $\vect{y}^{\star}$. Evaluating a target set
+$\mathcal{T}=\{\vect{y}^{\star}_i\}_{i=1}^{N}$ yields the best-shot vector
+$\{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{N}$, with one value per target.
 
-Best-of-$K$ performance is fundamentally a search-within-the-sampler metric: increasing $K$ provides
-more opportunities for the model to draw a candidate that lands close to the target. Studying how
-$\mathcal{E}_{\mathcal{Y}}$ improves as a function of $K$ therefore reveals how each inverse model
-allocates probability mass over outcome-relevant regions. A method that improves markedly with larger
-$K$ tends to distribute probability mass across multiple regions (so additional samples help discover a
-good match), whereas a method that saturates early tends to concentrate sampling around a smaller
-region of decision space.
+Reporting only a single aggregate statistic of $\{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{N}$, such as a
+mean or median, can hide important structure. In particular, two estimators can have similar central
+tendency but differ substantially in how often they achieve very small discrepancies or in how large
+their failures are on hard targets. To make the full attainment profile visible, we report the
+empirical cumulative distribution function (ECDF) of best-shot scores across the target set,
+\begin{equation}
+  \widehat{F}(t)
+  \;=\;
+  \frac{1}{N}\sum_{i=1}^{N}\mathbb{I}\!\left[s_{\min}(\vect{y}^{\star}_i)\le t\right],
+  \label{eq:objective_ecdf}
+\end{equation}
+where $N$ is the number of targets in $\mathcal{T}$, $t\ge 0$ is a discrepancy threshold expressed in
+the same normalized objective space as $s_{\min}$, and $\mathbb{I}[\cdot]$ is an indicator function
+that equals 1 when the condition holds and 0 otherwise. The ECDF therefore maps each threshold $t$ to
+a proportion: $\widehat{F}(t)$ is the fraction of targets whose best-shot discrepancy is at most $t$.
 
-To quantify this effect, we repeat the objective-space evaluation on $f_5$ for
-$K\in\{1,5,10,20\}$. Table~\ref{tab:f5_budget_curve} reports the median best-of-$K$ discrepancy over
-targets for each model family at each budget (using the best-in-class configuration from the ablation
-above). A steeper improvement curve indicates that the method benefits strongly from additional draws,
-consistent with broader mode coverage in the conditional sampler. Earlier saturation indicates that
-additional candidates provide limited benefit, consistent with a more concentrated sampling behaviour.
+The ECDF supports a direct, budget-aware reading of attainment. Fix a discrepancy threshold $t$ on the
+$x$-axis. The corresponding $y$-value $\widehat{F}(t)$ reports what proportion of targets are solved
+to within that accuracy under budget $K$. Curves that rise faster and lie higher at small $t$ indicate
+that an estimator produces close matches more frequently. Conversely, a slow rise and a long right
+tail indicate that a subset of targets remains difficult even after taking the best of $K$ samples.
+
+A small numerical example clarifies the calculation. Suppose $N=5$ targets yield best-shot scores
+\begin{equation}
+  \{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{5} = \{0.01,\; 0.04,\; 0.02,\; 0.10,\; 0.03\}.
+  \label{eq:ecdf_example_scores}
+\end{equation}
+Sorting gives $\{0.01, 0.02, 0.03, 0.04, 0.10\}$. For threshold $t=0.03$, four of the five values are
+at most $0.03$, so
+\begin{equation}
+  \widehat{F}(0.03) = \frac{4}{5} = 0.8.
+  \label{eq:ecdf_example_value}
+\end{equation}
+For threshold $t=0.015$, only one value is at most $0.015$, so $\widehat{F}(0.015)=1/5=0.2$. As $t$
+increases, $\widehat{F}(t)$ increases in steps until it reaches 1 at $t\ge 0.10$. In the plotted ECDF,
+the $x$-axis spans the range of thresholds and the $y$-axis reports the cumulative fraction of targets
+whose best-shot discrepancy falls below each threshold, which matches the interpretation used in the
+objective-space figures in this chapter.
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{Candidate-cloud geometry: bias and dispersion}\label{subsubsec:objective_cloud}
+%-------------------------------------------------------------------------------
+
+Best-shot attainment summarizes whether a candidate set contains at least one close match, but it does
+not describe how the full set behaves around the target. For decision support, the geometry of the
+checked outcome cloud
+$\{\widehat{\vect{y}}^{(1)},\dots,\widehat{\vect{y}}^{(K)}\}$ matters because it indicates whether the
+inverse sampler produces a concentrated, target-centered set of alternatives or a diffuse or
+systematically shifted cloud.
+
+We compute candidate-cloud diagnostics in the same residual space used for scoring. For a fixed target
+$\vect{y}^{\star}$, define the within-set mean residual vector
+\begin{equation}
+  \bar{\vect{r}}(\vect{y}^{\star})
+  \;=\;
+  \frac{1}{K}\sum_{k=1}^{K}\vect{r}^{(k)}(\vect{y}^{\star}),
+  \label{eq:objective_mean_residual_cloud}
+\end{equation}
+which represents the average offset of the candidate cloud from the target. Candidate-cloud geometry
+is summarized using two set-level statistics: systematic offset of the cloud from the target and
+within-set dispersion around the cloud mean,
+\begin{equation}
+  b(\vect{y}^{\star})
+  \;=\;
+  \frac{\big\lVert \bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}},
+  \qquad
+  v(\vect{y}^{\star})
+  \;=\;
+  \mathrm{median}_{k}\;
+  \frac{\big\lVert \vect{r}^{(k)}(\vect{y}^{\star})-\bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}}.
+  \label{eq:objective_bias_dispersion}
+\end{equation}
+Here $b(\vect{y}^{\star})$ reports the magnitude of the mean residual in average per-objective units,
+and $v(\vect{y}^{\star})$ reports a robust within-set spread measured as the median distance of
+residuals to the cloud mean, again normalized by $\sqrt{m}$ to make values comparable across problems
+with different numbers of objectives. The median aggregation in $v$ reduces sensitivity to a small
+number of extreme samples and reflects typical within-set variability.
+
+Across a target set $\mathcal{T}$, bias and dispersion yield one value per target, producing vectors
+$\{b(\vect{y}^{\star}_i)\}_{i=1}^{N}$ and $\{v(\vect{y}^{\star}_i)\}_{i=1}^{N}$. We report these using
+distributional summaries analogous to best-shot attainment. In particular, ECDF curves of $b$ and $v$
+support comparisons of how often each estimator produces target-centered clouds and how often it
+produces concentrated candidate sets under the declared budget.
+
+%-------------------------------------------------------------------------------
+\subsubsection{Ablation protocol and selection criteria}\label{subsubsec:objective_ablation_protocol}
+%-------------------------------------------------------------------------------
+
+Inverse decision mapping is sensitive to model capacity. For MDNs, capacity is governed primarily by
+the number of mixture components; for CVAEs by latent dimensionality and decoder capacity; and for
+INNs by the number of coupling layers and subnet capacity. To avoid attributing performance
+differences to under- or over-parameterized settings, we perform an ablation study within each model
+family and select one configuration per family for downstream comparison.
+
+The ablation is reported on a representative bi-objective problem derived from COCO BBOB $f_5$
+(Linear Slope). For each configuration, we evaluate attainment and candidate-cloud geometry under the
+same candidate budget $K$ using the scoring contract defined in
+Section~\ref{subsubsec:objective_contract}. Each configuration is evaluated over the same target set
+$\mathcal{T}$, producing best-shot scores $\{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{N}$ and cloud
+statistics $\{b(\vect{y}^{\star}_i)\}_{i=1}^{N}$ and $\{v(\vect{y}^{\star}_i)\}_{i=1}^{N}$.
+
+Hyperparameters are selected using the ECDF profile of best-shot attainment. A configuration is
+preferred when its ECDF lies above alternatives at small thresholds, indicating stronger near-target
+attainment for a larger fraction of targets. To make comparisons easy to report, we also use
+ECDF-derived summaries at fixed thresholds. For two thresholds $t_1<t_2$ chosen in the same normalized
+objective space, $\widehat{F}(t_1)$ emphasizes high-precision attainment, while $\widehat{F}(t_2)$
+captures broader near-target success. When ECDF curves cross, the selection prioritizes the threshold
+regime most relevant to downstream use and is supported by tail-sensitive summaries such as the upper
+quantiles of the best-shot distribution.
+
+Candidate-cloud statistics are reported for interpretation rather than used as the primary selection
+criterion. In particular, $b$ distinguishes systematic offset from the target, while $v$ distinguishes
+diffuse candidate clouds from concentrated sets. These quantities support diagnosing whether a strong
+best-shot curve is achieved by consistently target-centered samples or by occasional lucky hits within
+a diffuse cloud.
+
+%-------------------------------------------------------------------------------
+\subsubsection{Ablation results and selected configurations}\label{subsubsec:objective_ablation_results}
+%-------------------------------------------------------------------------------
+
+Figure~\ref{fig:ablation_ecdf_f5} compares ablated configurations across all three model families using
+ECDF curves of best-shot discrepancy $s_{\min}(\vect{y}^{\star})$ under fixed candidate budget $K$.
+Each curve represents one configuration. For a threshold $t$, the ECDF value $\widehat{F}(t)$ reports
+the fraction of targets for which that configuration produces at least one checked candidate within
+discrepancy $t$. Curves that rise more rapidly and lie higher at small $t$ indicate stronger
+near-target attainment under the same sampling budget.
+
+\begin{figure}[!htbp]
+  \centering
+  % Replace filename with your actual exported figure path
+  \includegraphics[width=0.92\linewidth]{figures/accuracy_ecdf_best_shot_f5.pdf}
+  \caption{COCO $f_5$ objective-space ablation: ECDF of best-shot discrepancy
+  $s_{\min}(\vect{y}^{\star})$ under fixed budget $K$. For threshold $t$, $\widehat{F}(t)$ gives the
+  fraction of targets for which a configuration produces at least one checked candidate within
+  discrepancy $t$. Curves that lie higher at small $t$ indicate stronger near-target attainment.}
+  \label{fig:ablation_ecdf_f5}
+\end{figure}
+
+Table~\ref{tab:ablation_f5_ecdf_summary} reports ECDF-derived scalar summaries at two fixed thresholds
+and two quantiles. The threshold summaries can be read directly from the ECDF at $t_1$ and $t_2$ and
+provide an interpretable account of how often each configuration achieves a declared accuracy level.
+The quantiles summarize typical attainment and tail behavior. Together, the figure and table support
+selecting one configuration per family for downstream comparison.
 
 \begin{table}[!htbp]
   \centering
-  \caption{COCO $f_5$ (objective space): Effect of the sampling budget $K$ on target attainment. Reported is the median best-of-$K$ outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ over targets for $K\in\{1,5,10,20\}$ using the best-in-class configuration per model family. Lower is better.}
-  \label{tab:f5_budget_curve}
-  \rarray{1.25}
-  \begin{tabular}{c C{2.6cm} C{2.6cm} C{2.6cm}}
+  \caption{COCO $f_5$ objective-space ablation: ECDF-based summaries of best-shot discrepancy
+  $s_{\min}(\vect{y}^{\star})$ under fixed budget $K$. Here, $\widehat{F}(t)$ is the fraction of
+  targets with best-shot discrepancy at most $t$, and $q_p$ denotes the $p$-th quantile of the
+  best-shot distribution across targets. Higher $\widehat{F}(\cdot)$ and lower quantiles are better.}
+  \label{tab:ablation_f5_ecdf_summary}
+  \rarray{1.2}
+  \begin{tabular}{ll c c c c}
     \toprule
-    $K$ & CVAE & MDN & INN \\
+    \textbf{Model} & \textbf{Configuration}
+    & $\widehat{F}(t_1)$ & $\widehat{F}(t_2)$ & $q_{0.50}$ & $q_{0.90}$ \\
     \midrule
-    1  & -- & -- & -- \\
-    5  & -- & -- & -- \\
-    10 & -- & -- & -- \\
-    20 & -- & -- & -- \\
+    \multirow{3}{*}{CVAE}
+      & $z=2, \text{layers}=3$ & -- & -- & -- & -- \\
+      & $z=8, \text{layers}=4$ & -- & -- & -- & -- \\
+      & $z=16, \text{layers}=4$ & -- & -- & -- & -- \\
+    \midrule
+    \multirow{4}{*}{MDN}
+      & $M=1, H=64$ & -- & -- & -- & -- \\
+      & $M=5, H=128$ & -- & -- & -- & -- \\
+      & $M=10, H=256$ & -- & -- & -- & -- \\
+      & $M=20, H=256$ & -- & -- & -- & -- \\
+    \midrule
+    \multirow{3}{*}{INN}
+      & $\text{layers}=4, \text{subnet}=64$ & -- & -- & -- & -- \\
+      & $\text{layers}=8, \text{subnet}=128$ & -- & -- & -- & -- \\
+      & $\text{layers}=12, \text{subnet}=256$ & -- & -- & -- & -- \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+Table~\ref{tab:ablation_f5_selected} records the selected configuration per family that is carried
+forward into the remaining objective-space comparisons. These selections reflect the ECDF dominance at
+small discrepancy thresholds together with stable tail behavior in the best-shot distribution.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Selected hyperparameter setting per model family from the ECDF-based ablation on COCO $f_5$.
+  Selection is based on the attainment profile in Figure~\ref{fig:ablation_ecdf_f5} together with the
+  ECDF-derived summaries in Table~\ref{tab:ablation_f5_ecdf_summary}.}
+  \label{tab:ablation_f5_selected}
+  \rarray{1.15}
+  \begin{tabular}{l l}
+    \toprule
+    \textbf{Model family} & \textbf{Selected configuration} \\
+    \midrule
+    CVAE & -- \\
+    MDN  & -- \\
+    INN  & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+
+% %-------------------------------------------------------------------------------
+% \subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
+% %-------------------------------------------------------------------------------
+
+% \subsubsection{Hyperparameter ablation and model selection}\label{subsubsec:ablation_objective}
+
+% Inverse decision mapping is sensitive to model capacity: for MDNs this is governed primarily by the
+% number of mixture components $M$, for CVAEs by the latent dimensionality $z$, and for INNs by the
+% number of coupling layers (and corresponding subnet capacity). To avoid attributing performance
+% differences to under- or over-parameterized settings, we run an ablation study within each model
+% family and select a single configuration for downstream comparison.
+
+% To keep the analysis focused and interpretable, the objective-space results in this section are
+% reported for a single representative bi-objective problem derived from COCO BBOB $f_5$
+% (Linear Slope). This function exhibits strong directionality and boundary effects, which makes it a
+% useful stress test for target attainment while remaining simple enough to isolate the impact of model
+% capacity and sampling protocol.
+
+% Following the objective-space evaluation defined in Section~\ref{sec:eval_objective}, target
+% attainment is summarized using the outcome-space discrepancy $\mathcal{E}_{\mathcal{Y}}$, computed by
+% forward-evaluating candidates and measuring distance to the requested target outcome. Because inverse
+% exploration is one-to-many, we report best-of-$K$ discrepancy: for each target we draw $K$ candidates
+% and retain the candidate that minimizes discrepancy. Lower values therefore indicate that the sampler
+% can reach the requested outcome region within a fixed candidate budget, while larger values indicate
+% that even the best candidate among $K$ samples remains far from the target.
+
+% \paragraph{Median best-of-$K$ discrepancy (single sampling run).}
+% Table~\ref{tab:ablation_f5_median} reports the median best-of-$K$ discrepancy over the target set for a
+% representative subset of configurations, evaluated on $f_5$. Here, $K=50$ is used to reduce variance in
+% the best-of-$K$ estimate and to reflect a moderate candidate budget in objective-space search. The
+% median emphasizes typical target attainment under the sampling protocol, while remaining robust to a
+% small number of difficult targets. In this table, a lower entry indicates that the configuration
+% generates candidate sets whose closest member more consistently aligns with the intended outcome.
+
+% \begin{table}[!htbp]
+%     \centering
+%     \caption{Ablation on COCO $f_5$ (objective space): Median best-of-$K$ outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ over targets, with $K=50$ candidates per target. Lower is better. The best-in-class setting per model family is marked with $\star$.}
+%     \label{tab:ablation_f5_median}
+%     \rarray{1.2}
+%     \begin{tabular}{ll c}
+%         \toprule
+%         \textbf{Model} & \textbf{Configuration} & \textbf{Median $\mathcal{E}_{\mathcal{Y}}$ (best-of-$K$, $K=50$)} \\
+%         \midrule
+%         \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- \\
+%                               & $z=8, \text{layers}=4$ ($\star$) & -- \\
+%                               & $z=16, \text{layers}=4$ & -- \\
+%         \midrule
+%         \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- \\
+%                               & $M=5, H=128$ & -- \\
+%                               & $M=10, H=256$ ($\star$) & -- \\
+%                               & $M=20, H=256$ & -- \\
+%         \midrule
+%         \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- \\
+%                               & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- \\
+%                               & $\text{layers}=12, \text{subnet}=256$ & -- \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+% \paragraph{Robustness across repeated candidate sets (median-of-medians).}
+% Best-of-$K$ attainment depends on stochastic sampling: even for a fixed target, different draws can
+% yield slightly different minimum discrepancy. To separate systematic differences between model
+% configurations from sampling noise, we repeat the candidate generation multiple times per target. For
+% each target, we draw $K=50$ candidates independently for $R=10$ repetitions, compute the best-of-$K$
+% discrepancy within each repetition, and then summarize each target by the median across repetitions.
+% We then aggregate across targets by reporting the median of these per-target medians. This ``median of
+% medians'' provides a more stable measure of typical attainment for a fixed sampling budget.
+
+% Table~\ref{tab:ablation_f5_mom} reports this robustness-adjusted summary on $f_5$ for the same
+% configuration grid. Differences between Table~\ref{tab:ablation_f5_median} and
+% Table~\ref{tab:ablation_f5_mom} are informative: configurations whose performance improves substantially
+% under repeated sampling tend to exhibit higher sampling variance (occasional strong hits), whereas
+% configurations that remain strong under the median-of-medians tend to deliver more consistent
+% attainment from one candidate set to the next.
+
+% \begin{table}[!htbp]
+%     \centering
+%     \caption{Ablation on COCO $f_5$ (objective space): Robust target attainment under repeated sampling. Reported is the median across targets of the per-target median best-of-$K$ discrepancy over $R=10$ independent candidate sets (each with $K=50$). Lower is better. The best-in-class setting per model family is marked with $\star$.}
+%     \label{tab:ablation_f5_mom}
+%     \rarray{1.2}
+%     \begin{tabular}{ll c}
+%         \toprule
+%         \textbf{Model} & \textbf{Configuration} & \textbf{Median-of-medians $\mathcal{E}_{\mathcal{Y}}$ ($K=50$, $R=10$)} \\
+%         \midrule
+%         \multirow{3}{*}{CVAE} & $z=2, \text{layers}=3$ & -- \\
+%                               & $z=8, \text{layers}=4$ ($\star$) & -- \\
+%                               & $z=16, \text{layers}=4$ & -- \\
+%         \midrule
+%         \multirow{4}{*}{MDN}  & $M=1, H=64$ & -- \\
+%                               & $M=5, H=128$ & -- \\
+%                               & $M=10, H=256$ ($\star$) & -- \\
+%                               & $M=20, H=256$ & -- \\
+%         \midrule
+%         \multirow{3}{*}{INN}  & $\text{layers}=4, \text{subnet}=64$ & -- \\
+%                               & $\text{layers}=8, \text{subnet}=128$ ($\star$) & -- \\
+%                               & $\text{layers}=12, \text{subnet}=256$ & -- \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+% \subsubsection{Effect of sampling budget $K$}\label{subsubsec:objective_budget}
+
+% Best-of-$K$ performance is fundamentally a search-within-the-sampler metric: increasing $K$ provides
+% more opportunities for the model to draw a candidate that lands close to the target. Studying how
+% $\mathcal{E}_{\mathcal{Y}}$ improves as a function of $K$ therefore reveals how each inverse model
+% allocates probability mass over outcome-relevant regions. A method that improves markedly with larger
+% $K$ tends to distribute probability mass across multiple regions (so additional samples help discover a
+% good match), whereas a method that saturates early tends to concentrate sampling around a smaller
+% region of decision space.
+
+% To quantify this effect, we repeat the objective-space evaluation on $f_5$ for
+% $K\in\{1,5,10,20\}$. Table~\ref{tab:f5_budget_curve} reports the median best-of-$K$ discrepancy over
+% targets for each model family at each budget (using the best-in-class configuration from the ablation
+% above). A steeper improvement curve indicates that the method benefits strongly from additional draws,
+% consistent with broader mode coverage in the conditional sampler. Earlier saturation indicates that
+% additional candidates provide limited benefit, consistent with a more concentrated sampling behaviour.
+
+% \begin{table}[!htbp]
+%   \centering
+%   \caption{COCO $f_5$ (objective space): Effect of the sampling budget $K$ on target attainment. Reported is the median best-of-$K$ outcome discrepancy $\mathcal{E}_{\mathcal{Y}}$ over targets for $K\in\{1,5,10,20\}$ using the best-in-class configuration per model family. Lower is better.}
+%   \label{tab:f5_budget_curve}
+%   \rarray{1.25}
+%   \begin{tabular}{c C{2.6cm} C{2.6cm} C{2.6cm}}
+%     \toprule
+%     $K$ & CVAE & MDN & INN \\
+%     \midrule
+%     1  & -- & -- & -- \\
+%     5  & -- & -- & -- \\
+%     10 & -- & -- & -- \\
+%     20 & -- & -- & -- \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
 
 
 
