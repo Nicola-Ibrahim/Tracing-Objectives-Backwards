@@ -1,77 +1,64 @@
+# 🏗️ Inverse Mapping System Design
 
-# 🧠 AI Inverse Mapping System Design
-
-## Purpose
-
-This system enables inverse mapping from objective values (Y) to decision variables (X) using AI models, leveraging historical Pareto-optimal data, interpolation, and generative techniques.
+This document outlines the architectural principles, design decisions, and system capabilities of the inverse mapping framework.
 
 ---
 
-## Main Architecture (Mermaid Diagram)
+## 🎯 Purpose & Vision
 
-```mermaid
-flowchart TD
-    subgraph Domain Layer
-        D1[Entities]
-        D2[Value Objects]
-        D3[Domain Services]
-        D4[Business Rules]
-    end
-    subgraph Application Layer
-        A1[Use Cases]
-        A2[Orchestration]
-    end
-    subgraph Infrastructure Layer
-        I1[Persistence]
-        I2[External APIs]
-        I3[Visualization]
-    end
-    D1 --> A1
-    D2 --> A1
-    D3 --> A1
-    D4 --> A1
-    A1 --> I1
-    A1 --> I2
-    A1 --> I3
-```
+The system is designed to provide a robust bridge between **exploratory research** and **stable software engineering**. It supports the inverse mapping from objective values (Y) back to decision variables (X), prioritizing modularity so that new models and validation strategies can be tested without disrupting the core pipeline.
 
 ---
 
-## Architectural Overview
+## 🏛️ Architectural Style
 
-- **Domain-Driven Design (DDD):**
-  - Separation of domain, application, and infrastructure layers.
-  - Domain layer contains entities, value objects, services, and business rules.
-- **Inverse Mapping Pipeline:**
-  1. User specifies target objective Y*.
-  2. System normalizes Y*.
-  3. Feasibility check (LSNF).
-  4. Predict X* via inverse interpolator.
-  5. Denormalize X*.
-  6. Evaluate f(X*).
-  7. If infeasible, suggest alternatives.
-- **Feasibility Checking:**
-  - Local Spherical Neighborhood Feasibility (LSNF): A point is feasible if it lies within any sphere around normalized Pareto points.
-- **Modeling Approaches:**
-  - Deterministic: Clough-Tocher, Kriging, Linear, NN, RBF, Spline, SVR.
-  - Probabilistic: Gaussian Process, Conditional VAE.
-- **Visualization:**
-  - Interactive metrics and results using Plotly.
-- **Diagrams:**
-  - C4 diagrams for system process, VAE training/testing, interpolation.
+### 1. Modular Monolith
+The codebase is organized into independent modules under `src/modules/`. This allows us to keep the project easy to deploy and manage while maintaining high internal cohesion.
+
+### 2. Domain-Driven Design (DDD)
+We use a layered approach to isolate business logic from technical details:
+- **Domain**: Pure business rules (e.g., Pareto dominance, feasibility logic).
+- **Application**: Use cases that coordinate actions (e.g., "Train a Model").
+- **Infrastructure**: Concrete implementations (e.g., PyTorch trainers, JSON storage).
+
+### 3. Ports & Adapters (Hexagonal)
+The domain layer defines **Interfaces** (Ports), and the infrastructure layer provides **Implementations** (Adapters). This makes the system "pluggable" — we can swap a scikit-learn model for a PyTorch one by simply changing the adapter.
 
 ---
 
-## Key Design Principles
+## 🛠️ Layer Responsibilities
 
-- Modularity, maintainability, and testability.
-- Extensibility for new models and validation strategies.
-- Clear separation of business logic and technical concerns.
+| Layer | Responsibility | Key Components |
+|-------|----------------|----------------|
+| **Domain** | Core logic & abstractions | `InverseEstimator` base, `FeasibilityChecker`, `ParetoFront` |
+| **Application** | Orchestration & Use Cases | `TrainModelHandler`, `GenerateDecisionHandler` |
+| **Infrastructure** | Technical implementation | `MDNAdapter`, `NPZRepository`, `PlotlyVisualizer` |
+| **CLI** | User interaction | `click` commands for training and generation |
+| **Workflows** | End-to-end pipelines | `DecisionGenerationWorkflow` |
 
 ---
 
-## Additional Information
+## 🔄 Research-to-Production Path
 
-- **Technologies:** Python, Plotly, scikit-learn, PyTorch/TensorFlow, Mermaid.
-- **Data:** Historical Pareto-optimal datasets, synthetic benchmarks.
-- **Extensibility:** Designed for easy integration of new models, validation strategies, and visualization tools.
+One of the project's key strengths is its ability to handle different levels of stability:
+
+1.  **Notebooks (`/notebooks`)**: Used for "scratchpad" research, initial data exploration, and messy prototyping.
+2.  **Infrastructure Overrides**: Once a prototype works, it's moved into an Infrastructure adapter.
+3.  **Core Domain**: Only the most stable, mathematically verified logic resides in the Domain layer.
+
+---
+
+## 🚀 Key Capabilities
+
+- **Hybrid Modeling**: Supports both deterministic regressors and probabilistic generative models.
+- **Strict Feasibility Gates**: Implements multi-stage target validation (bounds + proximity).
+- **Automated Verification**: Forward-checks proposed designs to verify they match target objectives.
+- **Reproducible CLI**: Every research step is captures as a versionable CLI command.
+
+---
+
+## 📈 Future Evolution
+
+The design is intentionally "open-closed":
+- **Open for Extension**: New estimators can be added by implementing the `InverseEstimator` interface.
+- **Closed for Modification**: Adding a new model doesn't require changing the training orchestrator or the CLI handlers.

@@ -1,235 +1,87 @@
 # 🧭 Domain-Driven Design Layering Guide
 
-This guide helps you apply **Domain-Driven Design (DDD)** and **Clean Architecture** in real projects by clearly distinguishing **what goes where**. It ensures your system is **modular, maintainable, testable**, and **future-proof**.
+This guide helps you apply **Domain-Driven Design (DDD)** and **Clean Architecture** in this project by clearly distinguishing **what goes where**.
 
 ---
 
 ## 📚 Overview of Architectural Layers
 
-A well-structured system separates responsibilities across **three main layers**:
-
-| Layer           | Responsibility                                   | Knows About              | Doesn't Know About         |
-|------------------|--------------------------------------------------|---------------------------|-----------------------------|
-| **Domain**       | Business logic, core rules, behaviors            | Itself                    | Web, DB, APIs, CLI          |
-| **Application**  | Orchestration of domain logic for use cases     | Domain                    | UI, persistence details     |
-| **Infrastructure**| External systems and frameworks integration     | Everything                | (Nothing, it's the lowest)  |
+| Layer | Responsibility | Knows About | Doesn't Know About | Project Example |
+|-------|----------------|-------------|---------------------|-----------------|
+| **Domain** | Core mapping rules, business logic | Itself | I/O, CLI, ML Libs | `src/modules/optimization_engine/domain/services/inverse_validator.py` |
+| **Application**| Coordinating data & models | Domain | UI, DB internals | `src/modules/optimization_engine/application/use_cases/train_inverse_model.py` |
+| **Infrastructure**| External tools & I/O | Everything | (Lowest layer) | `src/modules/optimization_engine/infrastructure/modeling/adapters/mdn.py` |
 
 ---
 
-## 🧠 1. Domain Layer – “The Core”
+## 🧠 1. Domain Layer – “The Heart”
 
-> "The heart of the system. It knows the business, not the technology."
+> "The heart of the system. It knows the inverse design theory, not the technology."
 
 ### ✅ What belongs here
+- **Base Interfaces**: `BaseInverseEstimator`, `BaseRepository`.
+- **Domain Services**: `InverseModelValidator`, `FeasibilityChecker`.
+- **Entities & Value Objects**: `Point`, `Bounds`, `DatasetMetadata`.
 
-- **Entities**: Domain objects with identity and lifecycle  
-  _e.g., `User`, `OptimizationRun`, `Experiment`_
-- **Value Objects**: Immutable, equality-based types  
-  _e.g., `Coordinate`, `Range`, `Bounds`_
-- **Domain Services**: Stateless logic that doesn’t belong to an entity  
-  _e.g., `DistanceCalculator`, `Normalizer`, `Evaluator`_
-- **Business Rules**: Core constraints, rules, and strategies  
-  _e.g., how solutions are validated, or dominance is defined_
-- **Base Classes & Interfaces for Domain Strategies**  
-  _e.g., `BaseAlgorithm`, `BaseOptimizer`, `BaseProblem` — when these define domain **behaviors**, not I/O_
-
-### ✅ Allowed Dependencies
-
-- Pure Python, `numpy`, `scipy`, or math libs
-- Modeling helpers like `sklearn.BaseEstimator` (only internal)
-- No I/O, no file access, no frameworks
-
-### ❓ Ask Yourself
-
-- Does this code **express business rules** or **core logic**?
-- Can I run this logic **without a web server, database, or external system**?
-- Would a **domain expert** understand this without knowing Python?
+**Example:**
+The logic for checking if a target objective is "close enough" to the Pareto front is a domain rule. It shouldn't care if the data comes from a JSON file or a database.
 
 ---
 
-## ⚙️ 2. Application Layer – “The Use Cases”
+## ⚙️ 2. Application Layer – “The Orchestrator”
 
-> "What the system does for the user. It coordinates domain logic."
+> "The 'glue' that coordinates domain logic to serve a user's goal."
 
 ### ✅ What belongs here
+- **Command Handlers**: `TrainInverseModelHandler`, `GenerateDecisionHandler`.
+- **Port Interfaces**: Definitions for how we log or plot.
 
-- **Use Case Classes**  
-  _e.g., `RunOptimization`, `EvaluateSolution`, `TrainModel`_
-- **Orchestrators / Coordinators**  
-  _e.g., pulling an algorithm, fitting it, evaluating results, logging them_
-- **Port Interfaces** (for external dependencies)  
-  _e.g., `PlottingInterface`, `RepositoryInterface`, `LoggerInterface`_
-- **Pipelines / Batch Jobs / CLI Commands**  
-  _Tasks that call domain logic to do something real for the user_
-
-### ❓ Ask Yourself
-
-- Does this code **coordinate multiple components**?
-- Is it **dependent on the domain**, but **independent of external frameworks**?
-- Would this logic survive if we switched the database or UI?
+**Example:**
+A handler that pulls a dataset from a repository, feeds it to an estimator for training, and then logs the results to the dashboard.
 
 ---
 
-## 🧩 3. Infrastructure Layer – “The Outside World”
+## 🧩 3. Infrastructure Layer – “The Implementation”
 
 > "Implements the technical details that change most often."
 
 ### ✅ What belongs here
+- **Model Adapters**: `PytorchCVAEAdapter`, `SklearnRBFAdapter`.
+- **Repositories**: `NPZDatasetRepository`.
+- **Visualizers**: `PlotlyDiagnosticVisualizer`.
 
-- **Framework Adapters**  
-  _e.g., FastAPI endpoints, Typer CLI commands_
-- **Repositories / File Systems**  
-  _e.g., JSONLoader, CSVWriter, SQLAlchemy models_
-- **Plotters / Visualizations**  
-  _e.g., Plotly, Matplotlib, Seaborn tools_
-- **ML Framework Adapters**  
-  _e.g., `SklearnModelAdapter`, `PytorchTrainer`_
-- **Logging / Monitoring / Metrics**  
-  _e.g., `WandbLogger`, `TensorBoardLogger`_
-
-### ❓ Ask Yourself
-
-- Does this code **talk to the outside world**?
-- Is it based on a **framework, library, or tool**?
-- Would this code need to change if I switched tool X to Y?
+**Example:**
+The actual code that calls `torch.nn.Module` or `sklearn.fit()` lives here. If we switch from PyTorch to JAX, we only change this layer.
 
 ---
 
-## 🧪 Practical Examples
+## 🧱 Project Directory Mapping
 
-| Module/Component             | Belongs In      | Reason |
-|-----------------------------|------------------|--------|
-| `ParetoFrontCalculator`     | Domain           | Pure logic, no I/O |
-| `BaseOptimizer`             | Domain           | Encodes strategy, not I/O |
-| `TrainModelUseCase`         | Application      | Orchestrates model training |
-| `WandbLogger`               | Infrastructure   | External logging tool |
-| `PlotlyParetoPlotter`       | Infrastructure   | Depends on external lib (Plotly) |
-| `FastAPIController`         | Infrastructure   | Web adapter |
-| `CLI entrypoint (Typer)`    | Infrastructure   | User interface adapter |
-| `DataRepositoryInterface`   | Application      | Defines boundary, implemented in Infra |
-| `JSONExperimentLoader`      | Infrastructure   | I/O-specific implementation |
-| `HypercubeNormalizer`       | Domain           | Math logic, reusable across problems |
+```plaintext
+src/modules/optimization_engine/
+├── domain/
+│   ├── services/    # e.g., inverse_validator.py
+│   └── entities/    # e.g., dataset_metadata.py
+├── application/
+│   ├── use_cases/   # e.g., train_inverse_model.py
+│   └── handlers/    # e.g., train_handler.py
+├── infrastructure/
+│   ├── modeling/    # e.g., mdn_adapter.py
+│   └── repositories/# e.g., npz_repository.py
+└── cli/             # e.g., train_command.py
+```
 
 ---
 
 ## ✅ Rule of Thumb
 
-> 🟢 **If it expresses business logic or rules, it's Domain**  
-> 🟡 **If it coordinates components and actions, it's Application**  
-> 🔴 **If it touches frameworks or the outside world, it's Infrastructure**
+> 🟢 **If it expresses the 'Math' or 'Rules' of inverse design, it's Domain.**  
+> 🟡 **If it 'Coordinates' multiple steps to achieve a task, it's Application.**  
+> 🔴 **If it imports a 'Library' like Torch, Sklearn, or Plotly, it's Infrastructure.**
 
 ---
-
-## 🧠 Bonus Heuristics
-
-Ask these questions when in doubt:
-
-| Question | Likely Layer |
-|----------|--------------|
-| "Would a business analyst care about this logic?" | Domain |
-| "Would this break if I changed my database or CLI tool?" | Infrastructure |
-| "Does this pull logic together from multiple parts?" | Application |
-| "Does this need internet, disk, or external service?" | Infrastructure |
-| "Can I unit test this without mocking external systems?" | Domain or Application |
-
----
-
-## 🧱 Directory Example (Recommended)
-
-```plaintext
-my_app/
-├── domain/
-│   ├── models/             # Entities, value objects (e.g., Solution, Coordinates)
-│   ├── services/           # Pure logic (e.g., BaseAlgorithm, Optimizer, Problem, Evaluator)
-│   └── interfaces/         # Abstract base classes (e.g., RepositoryInterface, LoggerInterface)
-├── application/
-│   ├── use_cases/          # Business workflows (e.g., RunOptimization, TrainModel)
-│   ├── orchestrators/      # High-level coordinators or pipelines
-│   └── cli/                # CLI commands (Typer command definitions)
-├── infrastructure/
-│   ├── visualizers/           # Framework-specific visualizers (e.g., PlotlyParetoPlotter)
-│   ├── repositories/       # File/DB adapters (e.g., JSONLoader, CSVWriter)
-│   └── loggers/            # External logger implementations (e.g., WandbLogger)
-├── main.py                 # Entrypoint (e.g., CLI launcher or server start)
-└── pyproject.toml          # Project config and dependencies
-sql
-Copy
-Edit
-```
-
-## 🗺 Mermaid Architecture Diagram
-
-```mermaid
-%%{init: {
-  "theme": "default",
-  "themeVariables": { "primaryColor": "#E3F2FD", "fontFamily": "Inter, Arial, sans-serif", "fontSize": "27px" },
-  "flowchart": { "nodeSpacing": 150, "rankSpacing": 150 }
-}}%%
-
-flowchart TD
-    classDef domain fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:#1B5E20
-    classDef application fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#E65100
-    classDef infrastructure fill:#FFEBEE,stroke:#E53935,stroke-width:2px,color:#B71C1C
-    classDef presentation fill:#E1F5FE,stroke:#039BE5,stroke-width:2px,color:#01579B
-
-    subgraph P["🖥️ Presentation"]
-        P1["Controllers/Handlers<br>(API, CLI, UI)"]
-        P2["User Interfaces<br>(Web, Mobile, etc.)"]
-        P3["Composition / Bootstrap<br>(DI container, wiring)"]
-    end
-
-    subgraph A["⚙️ Application"]
-      A1["Use Cases / Handlers"]
-      A2["Application Ports / Commands / Queries"]
-      A1 <--> A2
-    end
-
-
-    subgraph D["🏛 Domain"]
-        D1["Entities / ValueObjects"]
-        D2["Domain Services"]
-        D3["Domain Interfaces (Repo, Visualizer, Metric, Mapper, ...)"]
-    end
-
-    subgraph I["🌐 Infrastructure"]
-        I1["Repositories (NPZ, SQL, S3)"]
-        I2["Visualizers (Plotly, Matplotlib)"]
-        I3["Metrics / Mappers (sklearn, torch, custom)"]
-        I4["Adapters & Connectors"]
-    end
-
-    P1 -->|invoke| A1
-    A1 -->|depends on| D3
-    I1 -->|implements| D3
-    I2 -->|implements| D3
-    I3 -->|implements| D3
-    I4 -->|implements| D3
-    P3 -->|constructs & injects| I1
-    P3 -->|constructs & injects| I2
-    P3 -->|constructs & injects| I3
-    P3 -->|wires handlers| A1
-
-    class P presentation
-    class A application
-    class D domain
-    class I infrastructure
-
-    L_I1_D3_0@{ animation: slow }
-    L_I2_D3_0@{ animation: slow }
-    L_I3_D3_0@{ animation: slow }
-    L_I4_D3_0@{ animation: slow }
-    L_P1_A1_0@{ animation: slow }
-    L_A1_D3_0@{ animation: slow }
-    L_P3_I1_0@{ animation: slow }
-    L_P3_I2_0@{ animation: slow }
-    L_P3_I3_0@{ animation: slow }
-    L_P3_A1_0@{ animation: slow }
-    L_A1_A2_0@{ animation: slow }
-    
-
-```
 
 ## 💡 Final Thought
 
-> **"Code should scream the domain." — Eric Evans**  
-Structure your code so its intent and logic are obvious. Don’t let technology dictate design — let the problem domain lead.
+> **"Code should scream the domain."** — Eric Evans  
+Structure your code so its intent is obvious. When you look at `src/`, you should see "Optimization Engine" and "Inverse Mapping", not just "Python scripts".

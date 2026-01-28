@@ -30,3 +30,98 @@ dependencies = [
     "umap-learn>=0.5.9.post2",
     "wandb>=0.20.1",
 ]
+
+
+[dependency-groups]
+dev = [
+    "poethepoet>=0.40.0",
+]
+
+
+
+[tool.poe.tasks]
+
+# ====================================================================================
+# 1. Data Pipeline
+# ====================================================================================
+
+[tool.poe.tasks.data-gen]
+shell = "python -m src.cli.generating.generate_dataset --function-id $fid"
+help = "GENERATE: Create synthetic Pareto data. Usage: --fid 5"
+  [[tool.poe.tasks.data-gen.args]]
+  name = "fid"
+  options = ["--fid"]
+  default = "5"
+
+[tool.poe.tasks.data-viz]
+shell = "python -m src.cli.visualizing.visualize_dataset --dataset-name $data"
+help = "DATA VIZ: View generated data space. Usage: --data cocoex_f5"
+  [[tool.poe.tasks.data-viz.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+# ====================================================================================
+# 2. Training Pipeline
+# ====================================================================================
+
+[tool.poe.tasks.train-inv]
+shell = "python -m src.cli.training.train_inverse_model_standard --estimator $est --dataset-name $data"
+help = "TRAIN INVERSE: Usage: uv run poe train-inv --est mdn --data cocoex_f5"
+  [[tool.poe.tasks.train-inv.args]]
+  name = "est"
+  options = ["--est"]
+  default = "mdn"
+  choices = ["mdn", "cvae", "inn", "gan"]
+  [[tool.poe.tasks.train-inv.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+[tool.poe.tasks.train-fwd]
+shell = "python -m src.cli.training.train_forward_model standard --estimator $est --dataset-name $data"
+help = "TRAIN FORWARD: Usage: uv run poe train-fwd --est mdn --data cocoex_f5"
+  [[tool.poe.tasks.train-fwd.args]]
+  name = "est"
+  options = ["--est"]
+  default = "mdn"
+  choices = ["mdn", "mlp", "rf"]
+  [[tool.poe.tasks.train-fwd.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+
+# ====================================================================================
+# 3. Generation & Candidates
+# ====================================================================================
+
+[tool.poe.tasks.gen-candidates]
+cmd = "python -m src.cli.generating.generate_candidates"
+help = "CANDIDATES: Generate decisions for target objectives."
+
+[tool.poe.tasks.compare-candidates]
+cmd = "python -m src.cli.evaluating.compare_inverse_models_candidates_generation"
+help = "COMPARE: Benchmarks candidate generation across models."
+
+# ====================================================================================
+# 4. Evaluation (The Auditor)
+# ====================================================================================
+
+[tool.poe.tasks.diagnose]
+cmd = "python -m src.cli.evaluating.diagnose_inverse_models"
+help = "DIAGNOSE: Run model diagnostics (PIT, MACE, Diversity) and save JSON."
+
+[tool.poe.tasks.viz-diagnostics]
+cmd = "python -m src.cli.evaluating.visualize_diagnostics"
+help = "REPORT: Visualize historical diagnostics from the auditor."
+
+
+# ====================================================================================
+# 5. Performance Visualization (Specific Lenses)
+# ====================================================================================
+
+[tool.poe.tasks.viz-perf-inv]
+shell = "python -m src.cli.evaluating.visualize_model_performance"
+help = "VIZ PERF INVERSE: Detailed plots for a run. Usage: uv run poe"
+  
