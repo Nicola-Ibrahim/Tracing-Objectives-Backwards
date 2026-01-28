@@ -6,17 +6,19 @@
         \definecolor{colSelect}{RGB}{247, 127, 0} 
         \definecolor{colSuccess}{RGB}{43, 147, 72} 
         \definecolor{colTrain}{RGB}{100, 100, 100}
+        \definecolor{colNorm}{RGB}{142, 68, 173}
     },
     % --- Styles ---
     >=Stealth, thick,
-    node distance=1cm and 1.2cm,
-    base/.style={font=\sffamily\footnotesize, align=center, minimum height=0.75cm, draw, line width=0.7pt, rounded corners=3pt},
+    node distance=0.7cm and 1.2cm,
+    base/.style={font=\sffamily\footnotesize, align=center, minimum height=0.7cm, draw, line width=0.7pt, rounded corners=3pt},
     data/.style={base, draw=colTrain, fill=colTrain!5, dashed, minimum width=2.8cm},
+    norm/.style={base, draw=colNorm, fill=colNorm!10, text=colNorm!80!black, minimum width=2.8cm},
     inverse/.style={base, draw=colInv, fill=colInv!10, text=colInv, font=\sffamily\bfseries\footnotesize, minimum width=3.4cm},
-    forward/.style={base, draw=colFwd, fill=colFwd!10, text=colFwd, minimum width=3.4cm},
+    forward/.style={base, draw=colFwd, fill=colFwd!10, text=colFwd, minimum width=3.2cm},
     target/.style={base, fill=white, draw=black, minimum width=2.6cm, double, double distance=1pt},
-    policy/.style={base, shape=trapezium, trapezium left angle=75, trapezium right angle=75, draw=colSelect, fill=colSelect!10, text=colSelect!80!black, minimum width=3cm},
-    check/.style={base, shape=diamond, aspect=1.8, inner sep=0pt, draw=colSuccess, fill=colSuccess!10, text=colSuccess!80!black, minimum width=3.6cm},
+    ranking/.style={base, draw=colSelect, fill=colSelect!10, text=colSelect!80!black, minimum width=3.4cm},
+    check/.style={base, shape=diamond, aspect=1.8, inner sep=0pt, draw=colFwd, fill=colFwd!5, text=colFwd!80!black, minimum width=3.6cm},
     result/.style={base, fill=colSuccess, draw=colSuccess!70!black, text=white, font=\sffamily\bfseries\footnotesize, minimum width=3.4cm},
     titleStyle/.style={font=\sffamily\bfseries\small\color{black!50}, anchor=north}
 ]
@@ -25,63 +27,58 @@
     % PHASE 1: OFFLINE (Model Synthesis)
     % =============================================================================
     \begin{scope}[local bounding box=OfflineScope]
-
-    
-        % Title Node (at the top with a gap)
         \node[titleStyle] (Title1) at (0, 0.8) {MODEL SYNTHESIS};
 
-        % Functional Nodes
-        \node[data, below=0.6cm of Title1] (Pairs) {Paired Examples $\mathcal{D}$\\$\{(x_i, y_i)\}_{i=1}^N$};
-        \node[inverse, below=of Pairs] (InverseModel) {Inverse Model\\$q_\theta(x|y)$};
-        \node[forward, below=of InverseModel] (ForwardSurr) {Forward Surrogate\\$\hat{f}(x)$};
+        \node[data, below=0.5cm of Title1] (RawData) {Raw Examples $\mathcal{D}_{raw}$};
+        \node[norm, below=of RawData] (Preprocessing) {Normalization \&\\Preprocessing};
+        \node[inverse, below=of Preprocessing] (InverseModel) {Inverse Model\\$q_\theta(x|y)$};
 
-        % Internal Connections
-        \draw[->, colTrain] (Pairs) -- node[right, font=\tiny] {Fit Generator} (InverseModel);
-        \draw[->, colTrain] (Pairs.west) -- ++(-0.5,0) |- (ForwardSurr.west) 
-            node[pos=0.75, left, font=\tiny] {Learn Physics};
-        \draw[<->, colFwd, line width=1pt] (InverseModel) -- node[right, font=\tiny\itshape] {Alignment} (ForwardSurr);
+        \draw[->, colTrain] (RawData) -- (Preprocessing);
+        \draw[->, colTrain] (Preprocessing) -- node[right, font=\tiny] {Fit Generator} (InverseModel);
 
-        % Encapsulated Container (fit includes the Title node)
         \begin{scope}[on background layer]
-            \node[draw=black!10, fill=black!2, dashed, rounded corners=12pt, inner sep=15pt, fit=(Title1) (ForwardSurr)] (Box1) {};
+            \node[draw=black!10, fill=black!2, dashed, rounded corners=12pt, inner sep=15pt, fit=(Title1) (InverseModel)] (Box1) {};
         \end{scope}
     \end{scope}
 
     % =============================================================================
     % PHASE 2: ONLINE (Interactive Exploration)
     % =============================================================================
-    \begin{scope}[xshift=7cm, local bounding box=OnlineScope]
-        % Title Node (at the top with a gap)
-        \node[titleStyle] (Title2) at (0, 0.8) {INTERACTIVE EXPLORATION};
+    \begin{scope}[xshift=7.5cm, local bounding box=OnlineScope]
+        \node[titleStyle] (Title2) at (0.8, 0.8) {INTERACTIVE EXPLORATION};
 
-        % Functional Nodes
-        \node[target, below=0.6cm of Title2] (Target) {Target Outcome\\$y^\star \in \mathcal{Y}$};
+        % Functional Flow
+        \node[target, below=0.5cm of Title2] (Target) {Target Outcome\\$y^\star \in \mathcal{Y}$};
         \node[inverse, below=of Target] (Propose) {Proposal Mechanism\\Generate $\{\hat{x}^{(k)}\}_{k=1}^K$};
-        \node[policy, below=of Propose] (Selection) {Selection Rule\\Filter \& Rank Candidates};
-        \node[check, below=of Selection] (Check) {Consistency Check\\$\hat{f}(\hat{x}^{(k)}) \approx y^\star$};
-        \node[result, below=0.8cm of Check] (Decision) {Validated Decision $\hat{x}$};
+        
+        % Forward Surrogate INSIDE the scope
+        \node[forward, right=1cm of Propose] (Surrogate) {Forward Surrogate\\$\hat{f}(x)$};
+        
+        % Forward Check receiving from both Propose and Surrogate
+        \node[check, below=0.8cm of Propose] (Check) {Forward Check\\$\hat{f}(\hat{x}^{(k)}) \approx y^\star$};
+        
+        % Ranking receiving insights
+        \node[ranking, below=0.8cm of Check] (Ranking) {Selection \& Ranking\\Score by Discrepancy};
+        
+        \node[result, below=0.8cm of Ranking] (Decision) {Validated Decision $\hat{x}$};
 
         % Internal Connections
         \draw[->] (Target) -- (Propose);
-        \draw[->] (Propose) -- (Selection);
-        \draw[->] (Selection) -- (Check);
-        \draw[->] (Check) -- node[right, font=\scriptsize\bfseries, colSuccess] {Success} (Decision);
+        \draw[->] (Propose) -- node[right, font=\tiny] {Candidate Cloud} (Check);
+        \draw[->, colFwd] (Surrogate) |- (Check);
+        \draw[->] (Check) -- node[right, font=\tiny] {Insights} (Ranking);
+        \draw[->] (Ranking) -- node[right, font=\scriptsize\bfseries, colSuccess] {Success} (Decision);
 
-        % Encapsulated Container (fit includes the Title node)
+        % Online Container
         \begin{scope}[on background layer]
-            \node[draw=black!10, fill=black!2, dashed, rounded corners=12pt, inner sep=15pt, fit=(Title2) (Decision)] (Box2) {};
+            \node[draw=black!10, fill=black!2, dashed, rounded corners=12pt, inner sep=15pt, fit=(Title2) (Decision) (Surrogate)] (Box2) {};
         \end{scope}
     \end{scope}
 
     % =============================================================================
-    % CROSS-PHASE DEPLOYMENT CONNECTIONS
+    % CROSS-PHASE DEPLOYMENT
     % =============================================================================
-    % Deployed Inverse Model (Offline -> Online)
-    \draw[->, colInv, dotted, line width=1.4pt] (InverseModel.east) -- (Propose.west) 
-        node[midway, above, font=\tiny\bfseries] {Deployed};
-
-    % Grounding Reference (Forward Surrogate -> Online Verification)
-    \draw[->, colFwd, dashed, line width=1pt] (ForwardSurr.east) -- ++(1.2,0) |- (Check.west)
-        node[pos=0.25, right, font=\tiny\bfseries] {Grounding Reference};
+    \draw[->, colInv, dotted, line width=1.4pt] (InverseModel.east) -- ++(0.8,0) |- (Propose.west)
+        node[pos=0.25, above, font=\tiny\bfseries] {Deployed};
 
 \end{tikzpicture}
