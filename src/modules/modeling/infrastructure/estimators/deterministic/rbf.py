@@ -2,19 +2,11 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RBFInterpolator
 
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/modeling/estimators/deterministic/rbf.py
-from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from .....domain.modeling.interfaces.base_estimator import (
-    DeterministicEstimator,
-)
-from .....domain.modeling.value_objects.estimator_params import RBFEstimatorParams
-========
 from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from .....modeling.domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 from .....modeling.domain.value_objects.estimator_params import RBFEstimatorParams
->>>>>>>> dev:src/modules/modeling/infrastructure/estimators/deterministic/rbf.py
 
 
 class RBFEstimator(DeterministicEstimator):

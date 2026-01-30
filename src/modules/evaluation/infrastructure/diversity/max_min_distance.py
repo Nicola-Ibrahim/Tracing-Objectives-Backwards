@@ -3,11 +3,7 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
-<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/assurance/diversity/max_min_distance.py
-from ....domain.assurance.feasibility.interfaces.diversity import BaseDiversityStrategy
-=======
 from modules.evaluation.domain.feasibility.interfaces.diversity import BaseDiversityStrategy
->>>>>>> dev:src/modules/evaluation/infrastructure/diversity/max_min_distance.py
 
 
 class MaxMinDistanceDiversityStrategy(BaseDiversityStrategy):

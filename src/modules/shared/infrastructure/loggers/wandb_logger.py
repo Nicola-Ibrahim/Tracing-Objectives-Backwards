@@ -5,11 +5,7 @@ from typing import Any, Dict, Optional
 
 import wandb
 
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/shared/loggers/wandb_logger.py
-from ....domain.common.interfaces.base_logger import BaseLogger
-========
 from modules.shared.domain.interfaces.base_logger import BaseLogger
->>>>>>>> dev:src/modules/shared/infrastructure/loggers/wandb_logger.py
 
 
 class WandbLogger(BaseLogger):

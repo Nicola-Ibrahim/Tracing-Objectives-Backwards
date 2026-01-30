@@ -5,17 +5,10 @@ import torch
 import torch.nn as nn
 from numpy.typing import NDArray
 
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/modeling/estimators/deterministic/nn.py
-from .....domain.modeling.interfaces.base_estimator import (
-    DeterministicEstimator,
-)
-from .....domain.modeling.value_objects.estimator_params import (
-========
 from .....modeling.domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
 from .....modeling.domain.value_objects.estimator_params import (
->>>>>>>> dev:src/modules/modeling/infrastructure/estimators/deterministic/nn.py
     NeuralNetworkEstimatorParams,
 )
 

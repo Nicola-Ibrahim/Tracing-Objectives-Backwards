@@ -1,11 +1,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/shared/loggers/cmd_logger.py
-from ....domain.common.interfaces.base_logger import BaseLogger
-========
 from ....shared.domain.interfaces.base_logger import BaseLogger
->>>>>>>> dev:src/modules/shared/infrastructure/loggers/cmd_logger.py
 
 
 # Define ANSI color codes

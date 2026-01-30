@@ -286,11 +286,7 @@ class ProbabilisticEstimator(BaseEstimator):
     def sample(
         self,
         X: npt.NDArray[np.float64],
-<<<<<<< HEAD:src/modules/optimization_engine/domain/modeling/interfaces/base_estimator.py
-        n_samples: int = 50,
-=======
         n_samples: int,
->>>>>>> dev:src/modules/modeling/domain/interfaces/base_estimator.py
         seed: int = 42,
         **kwargs,
     ) -> npt.NDArray[np.float64]:

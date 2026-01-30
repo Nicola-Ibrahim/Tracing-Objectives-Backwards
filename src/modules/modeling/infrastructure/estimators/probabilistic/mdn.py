@@ -44,15 +44,9 @@ from torch.distributions import (
 from torch.utils.data import DataLoader, TensorDataset
 from umap import UMAP
 
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/modeling/estimators/probabilistic/mdn.py
-from .....domain.modeling.enums.estimator_type import EstimatorTypeEnum
-from .....domain.modeling.interfaces.base_estimator import ProbabilisticEstimator
-from .....domain.modeling.value_objects.estimator_params import (
-========
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.value_objects.estimator_params import (
->>>>>>>> dev:src/modules/modeling/infrastructure/estimators/probabilistic/mdn.py
     ActivationFunctionEnum,
     DistributionFamilyEnum,
     MDNEstimatorParams,
@@ -471,11 +465,7 @@ class MDNEstimator(ProbabilisticEstimator):
     def sample(
         self,
         X: npt.NDArray[np.float64],
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/modeling/estimators/probabilistic/mdn.py
-        n_samples: int = 1,
-========
         n_samples: int,
->>>>>>>> dev:src/modules/modeling/infrastructure/estimators/probabilistic/mdn.py
         seed: int = 42,
         temperature: float = 0.5,  # component spread temperature
         tau_pi: float = 0.5,  # mixture-weight (softmax) temperature
