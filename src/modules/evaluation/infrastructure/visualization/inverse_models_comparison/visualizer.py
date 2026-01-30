@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from .....shared.config import ROOT_PATH
 from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .color_utils import get_model_colors
+from .panels.accuracy_bias_dispersion_plot import add_accuracy_bias_dispersion_plot
 from .panels.accuracy_ecdf_plot import add_accuracy_ecdf_plot
 from .panels.calibration_plot import add_calibration_plot
 from .panels.error_boxplot import add_error_boxplot
@@ -57,6 +58,7 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
 
         # 3. Accuracy Metrics
         self._save_accuracy_ecdf(results_map, color_map, model_names)
+        self._save_accuracy_bias_dispersion(results_map, color_map, model_names)
         self._save_error_boxplot(results_map, color_map, model_names)
         self._save_metric_bar(
             results_map=results_map,
@@ -127,6 +129,24 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
             showlegend=True,
         )
         self._save_fig(fig, "accuracy_ecdf_best_shot")
+
+    def _save_accuracy_bias_dispersion(self, results_map, color_map, model_names):
+        """
+        Creates a high-resolution "Comparative Error Diagnosis" plot using a Grouped Box Plot.
+        """
+        fig = go.Figure()
+
+        add_accuracy_bias_dispersion_plot(
+            fig=fig, results_map=results_map, model_names=model_names
+        )
+
+        fig.update_layout(
+            title="<b>Model Diagnosis: Systematic Bias vs. Statistical Dispersion</b>",
+            height=800,
+            width=1200,
+        )
+
+        self._save_fig(fig, "accuracy_bias_dispersion_density")
 
     def _save_error_boxplot(self, results_map, color_map, model_names):
         fig = make_subplots(rows=1, cols=1)

@@ -45,8 +45,5 @@ class VisualizeInverseEstimatorDiagnosticCommandHandler:
         }
 
         # 3. Generate plots
-        if results_map:
-            self._logger.log_info(f"Rendering plots for {len(results_map)} models...")
-            self._visualizer.plot({"results_map": results_map})
-        else:
-            self._logger.log_warning("No diagnostic results found to visualize.")
+        self._logger.log_info(f"Rendering plots for {len(results_map)} models...")
+        self._visualizer.plot({"results_map": results_map})
