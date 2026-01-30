@@ -28,7 +28,6 @@ class VisualizeInverseEstimatorDiagnosticCommandHandler:
         )
 
         # 1. Fetch requested runs using repository batch logic
-        # Note: the repository.get_batch expects our request objects directly
         try:
             results_map_entities = self._diag_repo.get_batch(
                 requests=command.requests,
@@ -38,15 +37,10 @@ class VisualizeInverseEstimatorDiagnosticCommandHandler:
             self._logger.log_error(f"Failed to load diagnostic results: {e}")
             raise
 
-        # 2. Extract dict representation for the visualizer
-        # The visualizer expects {model_name: result_dict}
-        results_map = {
-            name: result.dict() for name, result in results_map_entities.items()
-        }
-
-        # 3. Generate plots
-        if results_map:
-            self._logger.log_info(f"Rendering plots for {len(results_map)} models...")
-            self._visualizer.plot({"results_map": results_map})
+        # 2. Generate plots
+        if results_map_entities:
+            results_list = list(results_map_entities.values())
+            self._logger.log_info(f"Rendering plots for {len(results_list)} models...")
+            self._visualizer.plot(results_list)
         else:
             self._logger.log_warning("No diagnostic results found to visualize.")

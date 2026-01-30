@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
 
 from ....shared.config import ROOT_PATH
+from ..aggregates.diagnostic_result import DiagnosticResult
 
 
 class BaseVisualizer(ABC):
@@ -11,6 +11,6 @@ class BaseVisualizer(ABC):
         self.save_path.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
-    def plot(self, data: Any) -> None:
-        """Visualize the Pareto set and front."""
+    def plot(self, results: list[DiagnosticResult]) -> None:
+        """Visualize diagnostic results."""
         raise NotImplementedError("Subclasses must implement this method.")
