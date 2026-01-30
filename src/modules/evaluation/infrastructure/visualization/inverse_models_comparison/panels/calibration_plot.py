@@ -49,22 +49,22 @@ def add_calibration_plot(
             col=col,
         )
 
-    # Annotations
-    fig.add_annotation(
-        x=0.8,
-        y=0.2,
-        text="Overconfident",
-        showarrow=False,
-        font=dict(size=10, color="gray"),
-        row=row,
-        col=col,
-    )
-    fig.add_annotation(
-        x=0.2,
-        y=0.8,
-        text="Underconfident",
-        showarrow=False,
-        font=dict(size=10, color="gray"),
-        row=row,
-        col=col,
-    )
+    # # Annotations
+    # fig.add_annotation(
+    #     x=0.8,
+    #     y=0.2,
+    #     text="Overconfident",
+    #     showarrow=False,
+    #     font=dict(size=10, color="gray"),
+    #     row=row,
+    #     col=col,
+    # )
+    # fig.add_annotation(
+    #     x=0.2,
+    #     y=0.8,
+    #     text="Underconfident",
+    #     showarrow=False,
+    #     font=dict(size=10, color="gray"),
+    #     row=row,
+    #     col=col,
+    # )

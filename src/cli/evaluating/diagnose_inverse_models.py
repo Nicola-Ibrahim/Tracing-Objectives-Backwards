@@ -31,7 +31,7 @@ def cli():
         dataset_name="cocoex_f5",
         inverse_estimator_candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
-        num_samples=300,
+        num_samples=500,
         random_state=42,
         scale_method="iqr",
     )
