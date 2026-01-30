@@ -17,14 +17,13 @@
     inverse/.style={base, draw=colInv, fill=colInv!10, text=colInv, font=\sffamily\bfseries\footnotesize, minimum width=3.4cm},
     forward/.style={base, draw=colFwd, fill=colFwd!10, text=colFwd, minimum width=3.2cm},
     target/.style={base, fill=white, draw=black, minimum width=2.6cm, double, double distance=1pt},
-    ranking/.style={base, draw=colSelect, fill=colSelect!10, text=colSelect!80!black, minimum width=3.4cm},
-    check/.style={base, shape=diamond, aspect=1.8, inner sep=0pt, draw=colFwd, fill=colFwd!5, text=colFwd!80!black, minimum width=3.6cm},
-    result/.style={base, fill=colSuccess, draw=colSuccess!70!black, text=white, font=\sffamily\bfseries\footnotesize, minimum width=3.4cm},
+    ranking/.style={base, draw=colSelect, fill=colSelect!10, text=colSelect!80!black, minimum width=3.8cm},
+    result/.style={base, fill=colSuccess, draw=colSuccess!70!black, text=white, font=\sffamily\bfseries\footnotesize, minimum width=3.8cm},
     titleStyle/.style={font=\sffamily\bfseries\small\color{black!50}, anchor=north}
 ]
 
     % =============================================================================
-    % PHASE 1: OFFLINE (Model Synthesis)
+    % PHASE 1: MODEL SYNTHESIS (Offline)
     % =============================================================================
     \begin{scope}[local bounding box=OfflineScope]
         \node[titleStyle] (Title1) at (0, 0.8) {MODEL SYNTHESIS};
@@ -42,7 +41,7 @@
     \end{scope}
 
     % =============================================================================
-    % PHASE 2: ONLINE (Interactive Exploration)
+    % PHASE 2: INTERACTIVE EXPLORATION (Online)
     % =============================================================================
     \begin{scope}[xshift=7.5cm, local bounding box=OnlineScope]
         \node[titleStyle] (Title2) at (0.8, 0.8) {INTERACTIVE EXPLORATION};
@@ -51,23 +50,22 @@
         \node[target, below=0.5cm of Title2] (Target) {Target Outcome\\$y^\star \in \mathcal{Y}$};
         \node[inverse, below=of Target] (Propose) {Proposal Mechanism\\Generate $\{\hat{x}^{(k)}\}_{k=1}^K$};
         
-        % Forward Surrogate INSIDE the scope
-        \node[forward, right=1cm of Propose] (Surrogate) {Forward Surrogate\\$\hat{f}(x)$};
+        % Forward Surrogate
+        \node[forward, right=1.2cm of Propose] (Surrogate) {Forward Surrogate\\$\hat{f}(x)$};
         
-        % Forward Check receiving from both Propose and Surrogate
-        \node[check, below=0.8cm of Propose] (Check) {Forward Check\\$\hat{f}(\hat{x}^{(k)}) \approx y^\star$};
+        % Unified Evaluation & Analysis Block
+        \node[ranking, below=1.2cm of Propose] (Evaluation) {Evaluation \& Analysis\\$\hat{f}(\hat{x}^{(k)}) \to$ Rank by Discrepancy};
         
-        % Ranking receiving insights
-        \node[ranking, below=0.8cm of Check] (Ranking) {Selection \& Ranking\\Score by Discrepancy};
-        
-        \node[result, below=0.8cm of Ranking] (Decision) {Validated Decision $\hat{x}$};
+        % Final Decision Node
+        \node[result, below=1.2cm of Evaluation] (Decision) {Validated Decision $\hat{x}$\\\& Insights};
 
         % Internal Connections
         \draw[->] (Target) -- (Propose);
-        \draw[->] (Propose) -- node[right, font=\tiny] {Candidate Cloud} (Check);
-        \draw[->, colFwd] (Surrogate) |- (Check);
-        \draw[->] (Check) -- node[right, font=\tiny] {Insights} (Ranking);
-        \draw[->] (Ranking) -- node[right, font=\scriptsize\bfseries, colSuccess] {Success} (Decision);
+        \draw[->] (Propose) -- node[right, font=\tiny] {Candidate Cloud} (Evaluation);
+        \draw[->, colFwd] (Surrogate) |- (Evaluation);
+        
+        % Highlighting the output of the evaluation
+        \draw[->] (Evaluation) -- node[right, font=\scriptsize\bfseries, align=left] {Ranked Candidates\\\& Insights} (Decision);
 
         % Online Container
         \begin{scope}[on background layer]
