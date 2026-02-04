@@ -20,40 +20,40 @@
     },
     modelBox/.style={
         rectangle, draw=#1, line width=1pt, rounded corners=4pt, 
-        fill=#1!5, inner sep=8pt, align=center
+        fill=#1!5, inner sep=6pt, align=center
     },
     arrowMain/.style={->, line width=1.2pt, draw=colTrain!70},
     arrowCheck/.style={->, line width=0.8pt, dashed, draw=colFwd!60},
-    labelSpace/.style={font=\bfseries\small, text=#1}
+    labelSpace/.style={font=\bfseries\scriptsize, text=#1}
 ]
 
 % =================================================================================
-% TOP PANEL: FORWARD PROBLEM
+% LEFT PANEL: FORWARD PROBLEM
 % =================================================================================
 
-\begin{scope}[yshift=4cm]
+\begin{scope}[xshift=-5.5cm]
 
 % Background Panel
 \node[draw=black!5, fill=black!2, rounded corners=10pt,
-      minimum width=10.5cm, minimum height=6.5cm] (PanelL) at (0,0) {};
-\node[anchor=north west, font=\large\bfseries, text=colTrain]
-      at ([xshift=8pt,yshift=-8pt]PanelL.north west) {FORWARD PROBLEM};
+      minimum width=10cm, minimum height=7.5cm] (PanelL) at (0,0) {};
+\node[anchor=north, font=\large\bfseries, text=colTrain]
+      at ([yshift=-10pt]PanelL.north) {FORWARD PROBLEM};
 
 % Decision Space X (Left)
-\draw[spaceBlob=colInv] (-3.2,-0.4) ellipse (1.6cm and 2.1cm);
-\node[labelSpace=colInv] at (-3.2, 2.0) {Decision Space $\mathcal{X}$};
+\draw[spaceBlob=colInv] (-3.0,-0.4) ellipse (1.4cm and 1.8cm);
+\node[labelSpace=colInv] at (-3.0, 1.8) {Decision Space $\mathcal{X}$};
 
 % Objective Space Y (Right)
-\draw[spaceBlob=colFwd] (3.2,-0.4) ellipse (1.6cm and 2.1cm);
-\node[labelSpace=colFwd] at (3.2, 2.0) {Objective Space $\mathcal{Y}$};
+\draw[spaceBlob=colFwd] (3.0,-0.4) ellipse (1.4cm and 1.8cm);
+\node[labelSpace=colFwd] at (3.0, 1.8) {Objective Space $\mathcal{Y}$};
 
 % Mapping points
-\node[point=colInv, label={left:\small $x$}] (x_fwd) at (-3.2, 0.4) {};
-\node[point=colFwd, label={right:\small $y$}] (y_fwd) at (3.2, 0.4) {};
+\node[point=colInv, label={left:\small $x$}] (x_fwd) at (-3.0, 0.4) {};
+\node[point=colFwd, label={right:\small $y$}] (y_fwd) at (3.0, 0.4) {};
 
 % Function Box
-\node[modelBox=colTrain, font=\small, minimum width=2.5cm] (f_func) at (0, 0.4)
-      {$f(\mathbf{x})$\\{\scriptsize Simulator / Physics}};
+\node[modelBox=colTrain, font=\small, minimum width=2.2cm] (f_func) at (0, 0.4)
+      {$f(\mathbf{x})$\\{\scriptsize Simulator}};
 
 % Arrows
 \draw[arrowMain] (x_fwd) -- (f_func);
@@ -65,68 +65,62 @@
 \end{scope}
 
 % =================================================================================
-% BOTTOM PANEL: INVERSE PROBLEM
+% RIGHT PANEL: INVERSE PROBLEM
 % =================================================================================
 
-\begin{scope}[yshift=-4cm]
+\begin{scope}[xshift=5.5cm]
 
 % Background Panel
 \node[draw=black!5, fill=black!2, rounded corners=10pt,
-      minimum width=10.5cm, minimum height=8cm] (PanelR) at (0,0) {};
-\node[anchor=north west, font=\large\bfseries, text=colTrain]
-      at ([xshift=8pt,yshift=-8pt]PanelR.north west) {INVERSE PROBLEM};
+      minimum width=10cm, minimum height=7.5cm] (PanelR) at (0,0) {};
+\node[anchor=north, font=\large\bfseries, text=colTrain]
+      at ([yshift=-10pt]PanelR.north) {INVERSE PROBLEM};
 
-% Objective/Target Space Y (Left)
-\draw[spaceBlob=colFwd] (-3.2,-0.4) ellipse (1.6cm and 2.1cm);
-\node[labelSpace=colFwd] at (-3.2, 2.0) {Objective Space $\mathcal{Y}$};
+% Objective Space Y (Left)
+\draw[spaceBlob=colFwd] (-3.0,-0.4) ellipse (1.4cm and 1.8cm);
+\node[labelSpace=colFwd] at (-3.0, 1.8) {Objective Space $\mathcal{Y}$};
 
 % Decision/Candidate Space X (Right)
-\draw[spaceBlob=colInv] (3.2,-0.4) ellipse (1.6cm and 2.1cm);
-\node[labelSpace=colInv] at (3.2, 2.0) {Decision Space $\mathcal{X}$};
+\draw[spaceBlob=colInv] (3.0,-0.4) ellipse (1.4cm and 1.8cm);
+\node[labelSpace=colInv] at (3.0, 1.8) {Decision Space $\mathcal{X}$};
 
 % Target point
-\node[point=colFwd, label={left:\small $y^\star$}] (target) at (-3.2, 0.8) {};
+\node[point=colFwd, label={left:\small $y^\star$}] (target) at (-3.0, 0.8) {};
 
 % Inverse Model
-\node[modelBox=colInv, minimum width=3.0cm] (inv_model) at (0, 0.8)
+\node[modelBox=colInv, minimum width=2.5cm] (inv_model) at (0, 0.8)
       {$\hat{g}(\mathbf{y})$\\{\scriptsize Inverse Model}};
 
 % Data Input
 \node[cylinder, shape border rotate=90, draw=colTrain, fill=white,
-      aspect=0.25, minimum height=0.8cm, minimum width=0.8cm,
-      font=\tiny] (db) at (0, 2.4) {$\mathcal{D}$};
-\draw[->, colTrain, dotted] (db) -- (inv_model)
-      node[midway, right, font=\tiny] {Learning};
+      aspect=0.25, minimum height=0.6cm, minimum width=0.6cm,
+      font=\tiny] (db) at (0, 2.2) {$\mathcal{D}$};
+\draw[->, colTrain, dotted] (db) -- (inv_model);
 
-% One-to-many outputs
-\node[point=colInv, label={right:\scriptsize $x^{(1)}$}] (c1) at (3.0, 1.2) {};
-\node[point=colInv, label={right:\scriptsize $x^{(2)}$}] (c2) at (3.4, 0.1) {};
+% Candidates
+\node[point=colInv, label={right:\scriptsize $x^{(1)}$}] (c1) at (2.8, 1.2) {};
+\node[point=colInv, label={right:\scriptsize $x^{(2)}$}] (c2) at (3.1, 0.2) {};
 
 % Arrows Forward
 \draw[arrowMain] (target) -- (inv_model);
 \draw[arrowMain] (inv_model.east) -- (c1.west);
 \draw[arrowMain] (inv_model.east) -- (c2.west);
 
-% Feedback Loop (Forward Consistency)
-\node[modelBox=colFwd, scale=0.8, fill=white, minimum width=3.3cm]
-      (f_check) at (0, -1.8)
-      {Forward Surrogate $\hat{f}(\mathbf{x})$};
+% Feedback Loop
+\node[modelBox=colFwd, scale=0.8, fill=white, minimum width=2.8cm]
+      (f_check) at (0, -1.8) {Forward Check $\hat{f}(\mathbf{x})$};
 
-% Paths for feedback
 \draw[arrowCheck] (c1.south) to[out=250,in=5] (f_check.east);
 \draw[arrowCheck] (c2.south) to[out=260,in=5] (f_check.east);
 
-% Result of check
-\node[point=colResult, label={left:\scriptsize $\hat{y}$}] (y_hat) at (-3.0, -1.8) {};
+\node[point=colResult, label={left:\scriptsize $\hat{y}$}] (y_hat) at (-2.8, -1.8) {};
 \draw[arrowCheck] (f_check) -- (y_hat);
 
-% Comparison Line
 \draw[<->, densely dotted, line width=1.5pt, colSelect] (target) -- (y_hat)
-  node[midway, left, font=\tiny\bfseries, align=right, xshift=-2pt] {Consistency\\Error};
+  node[midway, left, font=\tiny\bfseries] {Error};
 
 \node[align=center, font=\scriptsize, text=colTrain, anchor=north]
-      at (0, -3.2)
-      {Ill-posed (One-to-Many)\\Requires \textbf{Forward Consistency Check}};
+      at (0, -3.0) {Ill-posed (One-to-Many)\\Requires Consistency Check};
 
 \end{scope}
 

@@ -1,100 +1,95 @@
 \begin{tikzpicture}[
-    node distance=1.8cm and 2.0cm,
+    % --- Global Configuration via tikzset ---
+    node distance=2.0cm and 2.5cm,
     font=\sffamily,
     >=Stealth,
-    thick,
-    % --- Standard TikZ Styles ---
-    goal/.style={
-        draw=blue,
-        fill=blue!10,
-        text=black,
-        rectangle,
-        rounded corners=5pt,
-        minimum width=2.5cm,
-        minimum height=1.2cm,
-        align=center,
-        font=\sffamily\bfseries\footnotesize
-    },
-    engine/.style={
-        draw=orange,
-        fill=orange!10,
-        text=black,
-        rectangle,
-        rounded corners=10pt,
-        minimum width=3.2cm,
-        minimum height=1.5cm,
-        align=center,
-        font=\sffamily\bfseries\small
-    },
-    env/.style={
-        draw=black,
-        fill=gray!15,
-        text=black,
-        ellipse,
-        minimum width=3.2cm,
-        minimum height=1.5cm,
-        align=center,
-        font=\sffamily\bfseries\small
-    },
-    candidate/.style={
-        draw=green!50!black,
-        fill=green!10,
-        text=black,
-        rectangle,
-        rounded corners=5pt,
-        minimum width=2.5cm,
-        minimum height=1.2cm,
-        align=center,
-        font=\sffamily\bfseries\footnotesize
-    },
-    connector/.style={
-        ->,
-        color=gray,
-        line width=1.2pt
-    },
-    label_font/.style={font=\sffamily\tiny\itshape, text=gray}
 ]
 
-% ================= The Exploration Flow =================
+\tikzset{
+    % Node Base Styles
+    base/.style={
+        rectangle, rounded corners=6pt, align=center,
+        line width=0.8pt, drop shadow={opacity=0.1, shadow xshift=1pt, shadow yshift=-1pt}
+    },
+    % Specific Component Styles (No Bold)
+    goalNode/.style={
+        base, draw=blue!40, top color=white, bottom color=blue!5, 
+        text=blue!70!black, minimum width=2.6cm, minimum height=1.3cm, font=\sffamily\small
+    },
+    engineNode/.style={
+        base, draw=orange!50, top color=white, bottom color=orange!5, 
+        text=orange!70!black, rounded corners=12pt, minimum width=3.4cm, minimum height=1.6cm, font=\sffamily\small
+    },
+    envNode/.style={
+        draw=black!40, ellipse, fill=gray!5, text=black!70,
+        minimum width=3.4cm, minimum height=1.6cm, align=center, font=\sffamily\small, line width=0.8pt,
+        drop shadow={opacity=0.05, shadow xshift=1pt, shadow yshift=-1pt}
+    },
+    candidateNode/.style={
+        base, draw=green!40!black!50, top color=white, bottom color=green!5, 
+        text=green!50!black, minimum width=2.6cm, minimum height=1.3cm, font=\sffamily\small
+    },
+    % Connection Styles
+    connector/.style={
+        ->, color=gray!60, line width=1.1pt, shorten >=2pt, shorten <=2pt
+    },
+    loopLabel/.style={
+        font=\sffamily\tiny\itshape, text=gray!80, align=center
+    },
+    callout/.style={
+        font=\sffamily\tiny, text=#1, inner sep=2pt
+    }
+}
 
-% 1. Input/Goals
-\node[goal] (goals) {Design Space\\Constraints \& Goals\\(Sparse Labels)};
+% ================= 1. Placement of Main Nodes =================
 
-% 2. The Explorer Engine
-\node[engine, right=of goals] (engine) {Exploration Engine\\(RL Agent, MCTS,\\or Heuristic PSO)};
+% Input/Goals
+\node[goalNode] (goals) {Design Space\\Constraints \& Goals\\(Sparse Labels)};
 
-% 3. The Environment/Simulator
-\node[env, below=1.5cm of engine] (simulator) {Environment /\\Physics Simulator};
+% Explorer Engine (Central)
+\node[engineNode, right=of goals] (engine) {Exploration Engine\\(RL Agent, MCTS,\\or Heuristic PSO)};
 
-% 4. Output/Candidates
-\node[candidate, right=of engine] (output) {Diverse High-Scoring\\Candidate Designs};
+% Environment/Simulator (Below)
+\node[envNode, below=1.8cm of engine] (simulator) {Environment /\\Physics Simulator};
 
-% ================= Loop & Connections =================
+% Output/Candidates
+\node[candidateNode, right=of engine] (output) {Diverse High-Scoring\\Candidate Designs};
 
-% Initial Trigger
+% ================= 2. Connections & Loops =================
+
+% Trigger Flow
 \draw[connector] (goals) -- (engine);
 
-% RL/Interaction Loop
-\draw[connector, bend left=40] (engine.east) to node[right, label_font] {Action (Design Selection)} (simulator.east);
-\draw[connector, bend left=40] (simulator.west) to node[left, label_font] {Observation / Reward (Property)} (engine.west);
+% Active Exploration Loop
+\draw[connector, bend left=45] (engine.east) to 
+    node[right, loopLabel, xshift=3pt] {Action\\(Design Selection)} (simulator.east);
 
-% Final Discovery
-\draw[connector] (engine) -- node[above, label_font] {Discovery} (output);
+\draw[connector, bend left=45] (simulator.west) to 
+    node[left, loopLabel, xshift=-3pt] {Observation / Reward\\(Property)} (engine.west);
 
-% ================= Annotations =================
+% Discovery Path
+\draw[connector] (engine) -- node[above, loopLabel, yshift=2pt] {Discovery} (output);
 
-% Method descriptions
-\node[below=0.2cm of engine, font=\tiny, text width=3.2cm, align=center] {Iteratively optimizes sequences of decisions};
-\node[below=0.2cm of simulator, font=\tiny, text width=3.5cm, align=center] {Provides feedback where\\gradients may be unavailable};
+% ================= 3. Annotations & Background =================
 
-% Background highlights
-\begin{pgfonlayer}{background}
-    \node[fill=orange!5, rounded corners=12pt, draw=orange!20, dashed, fit=(engine) (simulator), inner sep=15pt] (loop_bg) {};
-    \node[above right, font=\sffamily\bfseries\tiny, text=orange] at (loop_bg.south west) {Active Exploration Loop};
-\end{pgfonlayer}
+% Background Highlight for the Loop
+\begin{scope}[on background layer]
+    \node[fill=orange!2, rounded corners=18pt, draw=orange!15, 
+          line width=1pt, densely dashed, fit=(engine) (simulator), inner sep=20pt] (loop_bg) {};
+    
+    \node[anchor=south, callout=orange!80, yshift=2pt] 
+          at (loop_bg.south) {Active Exploration Loop};
+\end{scope}
 
-% Key Strength Callouts
-\node[above=0.3cm of engine, text=blue!80!black, font=\tiny\bfseries] {High Exploration Efficiency};
-\node[above=0.3cm of output, text=green!50!black, font=\tiny\bfseries] {Population Diversity};
+% Method Sub-descriptions
+\node[below=0.1cm of engine, callout=gray!80, text width=3cm] 
+    {Iteratively optimizes\\sequences of decisions};
+
+\node[below=0.1cm of simulator, callout=gray!80, text width=3.5cm] 
+    {Provides feedback where\\gradients may be unavailable};
+
+% Strength Callouts
+\node[above=0.2cm of engine, callout=blue!60] {High Exploration Efficiency};
+\node[above=0.2cm of output, callout=green!50!black] {Population Diversity};
 
 \end{tikzpicture}

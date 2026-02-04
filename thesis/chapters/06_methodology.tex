@@ -950,7 +950,7 @@ the ground-truth value $x_{i,d}$. Equivalently, it is the percentile rank of $x_
 samples: for example, $z_{i,d}=0.1$ means roughly 10\% of sampled values lie below $x_{i,d}$.
 If the conditional sampler is calibrated for component $d$, then these ranks aggregated over
 test cases are approximately uniform on $[0,1]$. Systematic departures from uniformity therefore
-diagnose distorted uncertainty under repeated conditioning. \cite{Diebold1998}
+diagnose distorted uncertainty under repeated conditioning. 
 
 
 PIT is intentionally based on ranks rather than distances. It can therefore look acceptable
@@ -963,29 +963,38 @@ of the aggregated PIT values. Let $\{z_{\ell}\}_{\ell=1}^{L}$ denote the pooled 
 selected dimensions, where $L$ is the total number of PIT values included. Plotting the empirical CDF of $\{z_{(\ell)}\}$ against the diagonal
 $u\mapsto u$ provides a direct baseline for perfect calibration. This view is convenient in
 practice because it summarizes miscalibration without relying on histogram bin choices and
-it supports direct visual comparison across inverse models and sampling schemes. \cite{Diebold1998}
+it supports direct visual comparison across inverse models and sampling schemes. \cite{dawid1984statistical}
 
-Systematic departures from the diagonal have interpretable signatures, as summarized in Table~\ref{tab:pit_signatures}:
 
+Systematic departures from the diagonal have interpretable signatures, as summarized in Table~\ref{tab:pit_signatures} and Figure~\ref{fig:pit_signatures}. These signatures are fundamentally driven by the relationship between the PIT histogram's density and the slope of the calibration curve (the CDF). Because the calibration curve is the cumulative integral of the PIT values, its slope at any point is directly proportional to the height of the histogram at that specific percentile:
+
+\begin{itemize}
+    \item High Histogram Density (Peaks): When many ground truth observations fall within a specific percentile range, the calibration curve "sprints" or rises rapidly. For instance, a peak at $PIT \approx 0$ causes the curve to shoot above the diagonal immediately.
+    \item Low Histogram Density (Valleys): When few observations fall within a range, the calibration curve "crawls" or flattens out. If the histogram is empty near $PIT \approx 0$, the curve lags, falling below the diagonal.
+\end{itemize}
 
 \begin{table}[!htbp]
 \centering
 \small
-\renewcommand{\arraystretch}{1.5}
-\begin{tabularx}{\linewidth}{@{} l >{\raggedright\arraybackslash}p{0.25\linewidth} >{\raggedright\arraybackslash}X @{}}
+% Adjust the thickness of top/bottom (heavy) and middle (light) rules
+\setlength{\heavyrulewidth}{0.12em} 
+\setlength{\lightrulewidth}{0.05em}
+\renewcommand{\arraystretch}{1.6}
+
+\begin{tabularx}{\linewidth}{@{} l >{\raggedright\arraybackslash}p{0.25\linewidth} X @{}}
 \toprule
 Signature & PIT Distribution & Interpretation \\
 \midrule
-\textbf{Overconfident} & U-shaped (peaks at 0 and 1) & The candidate distribution is too narrow (low variance). The ground truth falls in the tails more often than predicted, indicating underestimated uncertainty. \\
+Overconfident & U-shaped (peaks at 0 and 1) & Under-dispersed: Variance is too low; ground truth falls in tails more often than predicted. Visualized by a sigmoid CDF. \\
 
-\textbf{Underconfident} & Hump-shaped (peak at 0.5) & The candidate distribution is too wide (high variance). The ground truth falls near the center too often, indicating overestimated uncertainty or an overly diffuse model. \\
+Underconfident & Hump-shaped (peak at 0.5) & Over-dispersed: Variance is too high; ground truth falls in the center too often. Visualized by an inverse-sigmoid CDF. \\
 
-\textbf{Biased / Skewed} & Triangular or Skewed (peak at 0 or 1) & The conditional mapping is systematically shifted. The ground truth consistently falls on one side of the sampled distribution, indicating a prediction bias. \\
+Biased / Skewed & Skewed (peak at 0 or 1) & Systematic Shift: The model over-predicts (concave CDF, peak at 0) or under-predicts (convex CDF, peak at 1). \\
 
-\textbf{Well-Calibrated} & Flat / Uniform & The sampler is "honest" about its uncertainty. The ground truth percentiles match the predicted distribution across the test set. \\
+Well-Calibrated & Flat / Uniform & Ideal Sampler: The sampler perfectly matches the true distribution; ground truth percentiles are uniformly distributed. \\
 \bottomrule
 \end{tabularx}
-\caption{Interpretive signatures of Systematic departures from the diagonal in PIT calibration curves.}
+\caption{Interpretive signatures of systematic departures from the diagonal in PIT calibration curves.}
 \label{tab:pit_signatures}
 \end{table}
 
