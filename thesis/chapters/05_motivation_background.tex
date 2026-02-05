@@ -4,19 +4,15 @@
 
 \chapter{Background and Motivation}\label{chap:Background}
 
+The Related Work chapter reviewed a range of approaches that, despite differing in mechanism, confront the same underlying difficulty: the mapping from decisions to objectives is comparatively easy to evaluate, while the reverse direction is generally not a well-behaved inversion. Inverse decision mapping begins with this asymmetry. Forward models can be executed by analysis, simulation, or experiment; in contrast, recovering decisions from specified outcomes must contend with non-uniqueness, sensitivity to perturbations, and, in some cases, unattainable targets \cite{Stuart2010}. The consequence is practical as well as theoretical: inverse design is more naturally treated as an inference task than as an algebraic operation \cite{Arridge2019}.
 
-The Related Work chapter reviewed a range of approaches that, despite differing in mechanism, confront the same underlying difficulty: the mapping from decisions to objectives is comparatively easy to evaluate, while the reverse direction is generally not a well-behaved inversion. Inverse decision mapping begins with this asymmetry. Forward models can be executed by analysis, simulation, or experiment; in contrast, recovering decisions from specified outcomes must contend with non-uniqueness, sensitivity to perturbations, and, in some cases, unattainable targets~\cite{Stuart2010}. The consequence is practical as well as theoretical: inverse design is more naturally treated as an inference task than as an algebraic operation.
-
-
-Classical inverse-problems theory addresses this ill-posedness by injecting additional information that stabilizes the reconstruction, for example through explicit regularization or Bayesian formulations that encode admissible structure and temper sensitivity to noise and modeling mismatch~\cite{Stuart2010}. In design settings, this viewpoint clarifies why inverse answers depend on modeling choices: the solution is determined not only by the specified outcome but also by the assumptions used to restrict, prioritize, or stabilize candidate decisions.
-
-
-Recent work shifts how these assumptions are represented in practice. Rather than encoding all structure through handcrafted analytic penalties alone, learning-based approaches use collections of observed decision--outcome pairs to capture recurring patterns in feasible designs and to support fast inverse querying at deployment~\cite{Liu2025Review}. Reviews of data-driven inversion consistently emphasize hybrid pipelines, where a learned component proposes candidate decisions while a trusted forward operator anchors validity by enforcing data consistency and enabling post-hoc verification~\cite{Liu2025Review}. In a multi-objective setting, this forward anchoring has an additional role: it defines how candidate decisions are judged against a user target in objective space, which provides a common basis for ranking and selection even when the inverse model is imperfect.
+Classical inverse-problems theory addresses this ill-posedness by injecting additional information that stabilizes the reconstruction, for example through explicit regularization or Bayesian formulations that encode admissible structure and temper sensitivity to noise and modeling mismatch \cite{BenningBurger2018}. In design settings, this viewpoint clarifies why inverse answers depend on modeling choices: the solution is determined not only by the specified outcome but also by the assumptions used to restrict, prioritize, or stabilize candidate decisions.
 
 
 
-This propose-and-verify perspective is especially important when the inverse relationship is one-to-many. Multiple distinct decisions may satisfy the same specification exactly, or satisfy it approximately with different trade-offs, so reporting a single decision can hide relevant ambiguity. A more operational objective is therefore to produce a set of diverse candidates for a given target and to let forward verification identify which candidates meet the target under the chosen discrepancy measure~\cite{Liu2025Review}. This requirement, in turn, places pressure on the data used to support inverse querying: paired examples $(\vect{x},\vect{y})$ must cover the outcome region where queries will be posed, because limited coverage forces extrapolation and can lead to unreliable candidates~\cite{Liu2025Review}. The remainder of this chapter builds the foundations needed for this setting and prepares the modeling and evaluation choices used in the subsequent methodology.
+Recent work shifts how these assumptions are represented in practice. Rather than encoding all structure through handcrafted analytic penalties alone, learning-based approaches use collections of observed decision--outcome pairs to capture recurring patterns in feasible designs and to support fast inverse querying at deployment \cite{Liu2025Review}. Reviews of data-driven inversion consistently emphasize hybrid pipelines, where a learned component proposes candidate decisions while a trusted forward operator anchors validity by enforcing data consistency and enabling post-hoc verification \cite{Liu2018}. In a multi-objective setting, this forward anchoring has an additional role: it defines how candidate decisions are judged against a user target in objective space, which provides a common basis for ranking and selection even when the inverse model is imperfect \cite{Xu2025}.
 
+This propose-and-verify perspective is especially important when the inverse relationship is one-to-many. Multiple distinct decisions may satisfy the same specification exactly, or satisfy it approximately with different trade-offs, so reporting a single decision can hide relevant ambiguity. A more operational objective is therefore to produce a set of diverse candidates for a given target and to let forward verification identify which candidates meet the target under the chosen discrepancy measure \cite{Ardizzone2019, Ma2019}. This requirement, in turn, places pressure on the data used to support inverse querying: paired examples $(\vect{x},\vect{y})$ must cover the outcome region where queries will be posed, because limited coverage forces extrapolation and can lead to unreliable candidates \cite{Tan2023}. The remainder of this chapter builds the foundations needed for this setting and prepares the modeling and evaluation choices used in the subsequent methodology.
 
 
 \section{Towards Inverse Design}\label{sec:inverse_data_eval}
@@ -39,6 +35,9 @@ where $q_\theta$ is trained on $\mathcal{D}$ to capture the observed relationshi
   \quad \text{subject to }\calF(\widehat{\vect{x}}^{(k)}).
   \label{eq:verify_select}
 \end{equation}
+In this selection rule, the index $\widehat{k}$ identifies the optimal candidate from the generated set $\{1, \dots, K\}$ based on its performance under the forward map $\vect{f}$. Here, $\vect{f}(\widehat{\vect{x}}^{(k)})$ represents the forward evaluation or surrogate approximation of the $k$-th proposed decision, while the deployment discrepancy $\mathcal{L}(\cdot, \vect{y}^\star)$—typically a norm or task-specific loss—quantifies the error between the predicted outcome and the user target $\vect{y}^\star$. The feasibility predicate $\calF(\widehat{\vect{x}}^{(k)})$ acts as a rigorous constraint that ensures only candidates adhering to the physical or design boundaries of $\calX$ are eligible for selection. By performing this minimization over a discrete set of samples, the framework acknowledges that while the inverse proposer $q_\theta$ directs the search, the forward operator $\vect{f}$ serves as the final arbiter of validity.
+
+
 This formulation makes responsibilities explicit. The inverse model $q_\theta(\vect{x}\mid\vect{y})$ is responsible for proposing diverse candidates that are consistent with patterns in $\mathcal{D}$, while $\vect{f}$, $\mathcal{L}$, and $\calF$ define what it means to satisfy the design intent at deployment.
 
 
@@ -63,7 +62,7 @@ A second challenge is that verification cannot automatically be treated as an or
 A third challenge is generalization under distribution shift. Training data typically covers only a subset of the joint behavior of decisions and outcomes, and changes in target regimes, operating conditions, or even the effective admissible region of $\calX$ can push queries outside the support where $q_\theta(\vect{x}\mid\vect{y})$ is reliable. Learned inverse-problem surveys highlight that such shifts can yield outputs that appear plausible while being systematically incorrect, particularly when the model has no mechanism to recognize extrapolation~\cite{Ongie2020}. This motivates treating the learned proposer as amortized guidance for exploration and relying on feasibility filtering and forward checks, together with targeted additional evaluation when necessary, to defend against out-of-distribution requests.
 
 
-Finally, representation and computation determine what inverse querying can deliver in practice. Candidate throughput depends on how $\calX$ is parameterized, how efficiently $q_\theta$ can generate candidates, and how expensive verification is, creating coupled trade-offs between expressivity, tractability, and fidelity. Probabilistic modeling perspectives make these trade-offs explicit: richer conditional mechanisms can better represent multi-modal inverse relations, but may increase sampling cost and complicate reliable selection~\cite{Papamakarios2021}. For this thesis, this motivates analyzing proposal quality, verifier fidelity, and sampling strategy jointly, since improvements in one component can be negated by bottlenecks in another.
+Finally, representation and computation determine what inverse querying can deliver in practice. Candidate throughput depends on how $\calX$ is parameterized, how efficiently $q_\theta$ can generate candidates, and how expensive verification is, creating coupled trade-offs between expressivity, tractability, and fidelity. Probabilistic modeling perspectives make these trade-offs explicit: richer conditional mechanisms can better represent multi-modal inverse relations, but may increase sampling cost and complicate reliable selection. For this thesis, this motivates analyzing proposal quality, verifier fidelity, and sampling strategy jointly, since improvements in one component can be negated by bottlenecks in another.
 
 Together, these challenges motivate organizing inverse-design methods by how they allocate inductive bias between proposal and verification, and by how they manage set-level utility, mismatch, generalization risk, uncertainty, and computational cost under realistic budgets.
 
@@ -92,7 +91,7 @@ Exploration-based strategies iteratively probe design regions to discover candid
   \label{fig:exploration_based_inverse}
 \end{figure}
 
-Reinforcement learning (RL) agents cast inverse design as sequential decision-making, where actions modify a design and rewards reflect forward-evaluated performance. Monte Carlo Tree Search (MCTS) provides look-ahead by expanding a decision tree of candidate modifications, and population heuristics such as Particle Swarm Optimisation (PSO) supply robust global search when gradients are unavailable. For photonic device geometry, Hwang et~al.\ combined an Advantage Actor--Critic agent (IDEA) with a critic-value-based branch tree (CVBT) to promote diversified high-performing candidates~\cite{Hwang2022_ASOC}. CASTING adapts MCTS to continuous actions for materials discovery, improving exploration efficiency in high-dimensional spaces~\cite{Banik2023_NPJCM}, and MCTS has also been used to accelerate copolymer sequence design under combinatorial growth of the search space~\cite{Patra2020_Nanoscale}. When physics solvers are expensive, or gradients are difficult to obtain, PSO remains a practical global optimizer; for example, PSO coupled with self-consistent field theory (SCFT) has been used to target bulk multiblock-copolymer morphologies that match prescribed patterns~\cite{Khadilkar2017_Macromolecules, Wang2018_SoftComput}. RL has likewise been used to guide rule-based combinatorial chemistry toward extreme-property targets that are challenging for distribution-learning approaches to reach reliably~\cite{Kim2024_ChemSci}.
+Reinforcement learning (RL) agents cast inverse design as sequential decision-making, where actions modify a design and rewards reflect forward-evaluated performance. Monte Carlo Tree Search (MCTS) provides look-ahead by expanding a decision tree of candidate modifications, and population heuristics such as Particle Swarm Optimization (PSO) supply robust global search when gradients are unavailable. For photonic device geometry, Hwang et~al.\ combined an Advantage Actor--Critic agent (IDEA) with a critic-value-based branch tree (CVBT) to promote diversified high-performing candidates~\cite{Hwang2022_ASOC}. CASTING adapts MCTS to continuous actions for materials discovery, improving exploration efficiency in high-dimensional spaces~\cite{Banik2023_NPJCM}, and MCTS has also been used to accelerate copolymer sequence design under combinatorial growth of the search space~\cite{Patra2020_Nanoscale}. When physics solvers are expensive, or gradients are difficult to obtain, PSO remains a practical global optimizer; for example, PSO coupled with self-consistent field theory (SCFT) has been used to target bulk multiblock-copolymer morphologies that match prescribed patterns~\cite{Khadilkar2017_Macromolecules, Wang2018_SoftComput}. RL has likewise been used to guide rule-based combinatorial chemistry toward extreme-property targets that are challenging for distribution-learning approaches to reach reliably~\cite{Kim2024_ChemSci}.
 
 A recurring strength of exploration-first methods is that they can operate without a bijective inverse map and can naturally generate diverse candidates; the main limitations are the number of forward evaluations required, sensitivity to reward or scoring design, and the need for additional mechanisms when hard constraints must be enforced.
 
@@ -172,7 +171,7 @@ Model-based
 \addlinespace[2pt]
 Optimization-based
 & Principled constraints and trade-offs; sample-efficient with BO; efficient with adjoint gradients
-& Surrogate/acquisition bias; local minima; requires differentiable solvers and stable parameterisations \\
+& Surrogate/acquisition bias; local minima; requires differentiable solvers and stable parameterizations \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -189,12 +188,12 @@ Learning-based inverse querying relies on paired examples
   \qquad \vect{x}_i\in\calX,\ \vect{y}_i\in\calY .
   \label{eq:database_forward}
 \end{equation}
-Here \(\vect{f}\) denotes the mechanism that produces objectives from decisions (for example a simulator, an analysis model, or an experimental evaluation protocol), and \(\boldsymbol{\varepsilon}_i\) collects measurement noise and any modelling discrepancy between the evaluator and the idealised forward relation. We treat \(\mathcal{D}\) as an empirical sample of the joint behaviour of decisions and outcomes, without committing to a single data-generation philosophy.
+Here \(\vect{f}\) denotes the mechanism that produces objectives from decisions (for example a simulator, an analysis model, or an experimental evaluation protocol), and \(\boldsymbol{\varepsilon}_i\) collects measurement noise and any modeling discrepancy between the evaluator and the idealized forward relation. We treat \(\mathcal{D}\) as an empirical sample of the joint behavior of decisions and outcomes, without committing to a single data-generation philosophy.
 
 In practice, suitable pairs arise from two broad channels:
 \begin{itemize}
   \item Curated datasets: historical logs, experimental archives, or precomputed simulation sets, including design-of-experiments sweeps aimed at broad coverage of \(\calX\) and the induced outcome region in \(\calY\).
-  \item Optimisation traces: decision--outcome pairs collected as a by-product of exploratory search, such as multi-objective optimisation runs, surrogate-assisted procedures, or Bayesian optimisation loops, which naturally sample trade-offs across objectives and constraints.
+  \item Optimization traces: decision--outcome pairs collected as a by-product of exploratory search, such as multi-objective optimization runs, surrogate-assisted procedures, or Bayesian optimization loops, which naturally sample trade-offs across objectives and constraints.
 \end{itemize}
 
 Because inverse decision mapping is typically one-to-many, diversity in \(\mathcal{D}\) is valuable. However, reliability is local in outcome space: a learned inverse model is most dependable when targets \(\vect{y}^\star\) lie within, or near, the outcome region represented by the data. When queries move outside this data-supported region, the proposer is forced to extrapolate and may return candidates that appear plausible but fail feasibility checks or do not attain the target under forward verification.
@@ -245,19 +244,15 @@ A persistent limitation remains independent of the chosen model class. Any learn
 
 A probabilistic view replaces single-point inverse predictions with conditional distributions over decisions, which makes non-uniqueness explicit and provides a direct mechanism for representing one-to-many inverse relations. This matters in inverse decision mapping because ambiguity is often structural: multiple distinct decisions can satisfy the same target outcome within the resolution implied by the task discrepancy, and small perturbations in the target or the forward evaluation can change which decisions appear preferable. Modeling a conditional distribution therefore avoids forcing an arbitrary single choice and instead supports the generation of multiple plausible candidates for the same query.
 
-Given paired observations $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^N$, a generic likelihood-based principle learns a conditional distribution by maximizing a regularized conditional log-likelihood,
+Given paired observations $\mathcal{D}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^N$, a generic likelihood-based principle learns a conditional distribution by maximizing the conditional log-likelihood over the dataset:
 \begin{equation}
   \widehat{\theta}
   \;\in\;
   \arg\max_{\theta}
-  \Bigg[
-    \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{x}_i \mid \vect{y}_i\big)
-    \;-\;
-    \gamma\,\mathcal{R}(\theta)
-  \Bigg],
-  \label{eq:prob_generic}
+  \sum_{i=1}^{N}\log p_{\theta}\!\big(\vect{x}_i \mid \vect{y}_i\big).
+  \label{eq:prob_mle}
 \end{equation}
-where $\mathcal{R}(\theta)$ controls complexity and encodes modelling assumptions, and $\gamma\ge 0$ balances fit and regularization~\cite{Murphy2022PML1}. The purpose of \eqref{eq:prob_generic} is not to prescribe a specific estimator, but to highlight the modeling consequence: the output of inference is a distribution over decisions conditioned on a target, rather than a single deterministic proposal.
+Under this view, the model parameters $\theta$ are estimated so that the distribution $p_\theta$ allocates high probability mass to the decision-outcome pairs observed in $\mathcal{D}$ \cite{Murphy2022PML1}. The purpose of \eqref{eq:prob_mle} is not to prescribe a specific architectural implementation, but to highlight the modeling consequence: the output of inference is a distribution over decisions conditioned on a target, rather than a single deterministic proposal. This allows the inverse mapping to be treated as a density estimation task where the model learns to capture the full landscape of feasible designs.
 
 This distributional output supports candidate-set generation through sampling. For a query $\vect{y}^{\star}$, one draws a collection of candidates,
 \begin{equation}
@@ -389,11 +384,7 @@ so the optimization target is the negative of the right-hand side summed over th
 
 Candidate generation follows directly from the generative structure. For a query $\vect{y}^\star$, sample $\vect{z}\sim p_\theta(\vect{z}\mid\vect{y}^\star)$ and then decode $\vect{x}\sim p_\theta(\vect{x}\mid\vect{y}^\star,\vect{z})$, repeating to obtain multiple candidates. Conditioning fixes the target context, while variation in $\vect{z}$ induces diversity in $\vect{x}$ under a fixed $\vect{y}^\star$.
 
-
-For implementation, it is convenient to write the bound per data point and then sum over the dataset, which yields the standard negative-ELBO training loss.
-
-
-To make the optimization explicit, define the per-sample ELBO
+For implementation, it is convenient to write the bound per data point and then sum over the dataset, which yields the standard negative-ELBO training loss. To make the optimization explicit, define the per-sample ELBO
 \[
   \mathcal{J}_i(\theta,\phi)
   \;=\;
@@ -401,7 +392,7 @@ To make the optimization explicit, define the per-sample ELBO
   \;-\;
   \mathrm{KL}\!\big(q_\phi(\vect{z}\mid\vect{x}_i,\vect{y}_i)\ \|\ p_\theta(\vect{z}\mid\vect{y}_i)\big),
 \]
-and the training problem
+where $\phi$ and $\theta$ represent the learnable weights of the encoder and decoder networks, respectively. Specifically, the encoder $q_\phi$ (inference model) learns to map observations to the latent space, while the decoder $p_\theta$ (generative model) learns to reconstruct the decision $\vect{x}$ from the latent variable $\vect{z}$ and the conditioning signal $\vect{y}$. The training problem is then
 \begin{equation}
   (\theta^\star,\phi^\star)
   \;=\;
@@ -423,11 +414,9 @@ where the negative-ELBO loss is
   \label{eq:cvae_loss}
 \end{equation}
 
-
-
 A standard parameterization uses a Gaussian encoder
 $q_\phi(\vect{z}\mid\vect{x},\vect{y})=\mathcal{N}(\boldsymbol{\mu}_\phi(\vect{x},\vect{y}),\mathrm{diag}(\boldsymbol{\sigma}^2_\phi(\vect{x},\vect{y})))$.
-Directly sampling $\vect{z}\sim q_\phi(\vect{z}\mid\vect{x},\vect{y})$ would make it difficult to differentiate the loss with respect to $\phi$, because the sampling operation introduces randomness inside the computation graph. The reparameterization trick resolves this by moving the randomness into an auxiliary noise variable that does not depend on $\phi$. Concretely, instead of viewing $\vect{z}$ as a random draw from a distribution whose parameters depend on $\phi$, we write $\vect{z}$ as a deterministic function of $(\vect{x},\vect{y})$ and a standard normal noise sample,
+Directly sampling $\vect{z}\sim q_\phi(\vect{z}\mid\vect{x},\vect{y})$ would make it impossible to compute gradients with respect to $\phi$ using standard backpropagation, because the sampling operation is a stochastic node that blocks the flow of derivatives. The reparameterization trick resolves this by "decoupling" the randomness from the parameters. Instead of viewing $\vect{z}$ as a random draw from a distribution whose parameters depend on $\phi$, we express $\vect{z}$ as a deterministic, differentiable function of $(\vect{x},\vect{y})$ and an external source of noise:
 \[
   \vect{z}
   \;=\;
@@ -437,8 +426,8 @@ Directly sampling $\vect{z}\sim q_\phi(\vect{z}\mid\vect{x},\vect{y})$ would mak
   \qquad
   \boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},\mathbf{I}).
 \]
-This representation is equivalent in distribution: drawing $\boldsymbol{\epsilon}$ and transforming it produces the same $\vect{z}$ distribution as sampling from the encoder. The practical benefit is that $\boldsymbol{\epsilon}$ is independent of the network parameters, so the stochasticity is injected from outside and the mapping from $(\vect{x},\vect{y})$ to $\vect{z}$ becomes differentiable with respect to $\phi$. As a result, the expectation in Eq.~\eqref{eq:cvae_loss} can be approximated by Monte Carlo samples of $\boldsymbol{\epsilon}$ while still allowing gradients to propagate through $\boldsymbol{\mu}_\phi$ and $\boldsymbol{\sigma}_\phi$ during backpropagation~\cite{Rezende2014VAE}. In practice, a small number of samples per data point is sufficient, and $(\theta,\phi)$ are optimized using stochastic gradient methods.
 
+This representation is equivalent in distribution, but mathematically distinct in its flow of information. Because the auxiliary noise $\boldsymbol{\epsilon}$ is independent of $\phi$, the stochasticity is effectively "pushed" to an input node. This makes the path from the loss function back to the encoder parameters $\boldsymbol{\mu}_\phi$ and $\boldsymbol{\sigma}_\phi$ fully differentiable. As a result, the expectation in Eq.~\eqref{eq:cvae_loss} can be approximated by Monte Carlo samples of $\boldsymbol{\epsilon}$ while still allowing the optimizer to update $\phi$ via stochastic gradient descent~\cite{Rezende2014VAE}. In practice, a small number of samples per data point is sufficient for stable convergence.
 
 % In inverse design problems, the property-to-decision relation is typically nonlinear and non-unique: distinct structures or process parameters can satisfy the same target property vector. CVAEs are attractive in this setting because they learn a structured latent representation that supports one-to-many conditional generation. Holding $\vect{y}^\star$ fixed while sampling $\vect{z}$ yields diverse candidates that remain tied to the target context, which supports inverse exploration by surfacing alternative design routes for downstream screening and constraint checking. As with other conditional generators, CVAE samples serve as proposals that are subsequently filtered and ranked by feasibility checks and forward verification under the deployment discrepancy.
 
@@ -530,4 +519,30 @@ Candidate generation is explicit and does not require approximate inference: for
 
 
 
-% In sum, $\mathcal{E}_{\mathcal{Y}}$ captures \emph{how close} we get to the target, while $\mathrm{Succ}_\epsilon$ captures \emph{whether} we satisfy a practically meaningful tolerance. Together they provide a concise, implementation-agnostic summary of decision quality that is easy to interpret and straightforward to reproduce.
+\subsection{Summary of Probabilistic Modeling Choices}
+
+The choice between mixture-based, variational, and invertible architectures depends on the complexity of the decision space $\calX$ and the desired properties of the candidate set. Table~\ref{tab:model_comparison} summarizes the trade-offs between these three families within the propose-and-verify framework. While MDNs offer the most explicit representation of multimodality, CVAEs provide a more scalable route for high-dimensional data by learning a compressed latent manifold. INNs sit at the intersection of these goals, providing a bijective mapping that ensures every latent sample corresponds to a unique candidate, thereby maximizing the diversity of the proposed set.
+
+\begin{table}[h]
+\centering
+\caption{Comparison of conditional generative models for inverse design.}
+\label{tab:model_comparison}
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{l X X}
+\toprule
+\textbf{Model Class} & \textbf{Key Advantage} & \textbf{Typical Limitation} \\
+\midrule
+\textbf{MDN} & Explicit mode parameters; easy to interpret solution families. & Scalability to high dimensions; prone to component collapse. \\
+\addlinespace[3pt]
+\textbf{CVAE} & Robust latent representation; handles high-dimensional, noisy data well. & Approximate inference; diversity can be limited by posterior collapse. \\
+\addlinespace[3pt]
+\textbf{INN} & Exact bijection; guaranteed one-to-one mapping between latent and design. & Architecture constraints (dimension matching); requires larger networks. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+
+These modeling perspectives establish the toolkit for the remainder of the thesis. In the subsequent chapters, we evaluate how these conditional proposal mechanisms interact with multi-objective trade-offs and forward verification to enable inverse design.

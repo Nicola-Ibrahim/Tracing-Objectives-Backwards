@@ -32,61 +32,45 @@ set (Pareto front approximation) together with a dominated region induced by a r
 
 \subsection{Problem and Data}\label{subsec:problem_data}
 
-We generate bi-objective datasets from the COCO BBOB benchmark suite via the \texttt{cocoex} Python
-interface, which exposes standardized test functions through deterministic problem instances. 
-In this chapter we focus on BBOB $f_5$ (Linear Slope) because its construction yields strong
-directionality and boundary effects: the optimum lies on the domain boundary and the per-coordinate
-slopes increase with index, which makes target attainment in objective space sensitive to where the
-inverse sampler places probability mass.  In COCO notation, the function includes an
-instance-dependent bias $f_{\mathrm{opt}}$ and an instance-specific optimum location
-$\vect{x}^{\mathrm{opt}}$, and the definition can be written as
-\[
-  f_{5}(\vect{x})
-  \;=\;
-  \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
-\]
-where $D$ is the decision dimension, $s_i$ are signed slope coefficients that scale across
-coordinates, and $z_i$ applies an instance-dependent saturation that creates flat behavior beyond the
-boundary-aligned optimum direction. 
+We generate bi-objective datasets from the COCO BBOB benchmark suite via the \texttt{cocoex} Python interface, which exposes standardized test functions through deterministic problem instances. In this chapter, we focus on BBOB $f_5$ (Linear Slope) because its construction yields strong directionality and boundary effects: the optimum lies on the domain boundary and the per-coordinate slopes increase with index, which makes target attainment in objective space sensitive to where the inverse sampler places probability mass. In COCO notation, the function includes an instance-dependent bias $f_{\mathrm{opt}}$ and an instance-specific optimum location $\vect{x}^{\mathrm{opt}}$, and the definition can be written as:
 
-To construct a bi-objective problem, we pair two deterministic instances of the same analytic
-function family:
-\[
-  \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
-\]
-with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations
-while preserving the underlying function definition, enabling reproducible variation under a fixed
-function index.  The decision domain follows the standard BBOB bounds
-(e.g., $[-5,5]^D$ for the continuous suite). 
+\begin{equation}
+    f_{5}(\vect{x}) = \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
+\end{equation}
 
-We approximate a Pareto-relevant archive for this constructed bi-objective $f_5$ problem using
-NSGA-II under a fixed evaluation budget and fixed random seeds. 
-Figure~\ref{fig:pareto_front} recalls Pareto dominance for bi-objective minimization: points on the
-Pareto front are non-dominated trade-offs, while points in the dominated region are strictly worse in
-both objectives.
+where $D$ is the decision dimension, $s_i$ are signed slope coefficients that scale across coordinates, and $z_i$ applies an instance-dependent saturation that creates flat behavior beyond the boundary-aligned optimum direction. 
+
+To construct a bi-objective problem, we pair two deterministic instances of the same analytic function family:
+
+\begin{equation}
+    \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
+\end{equation}
+
+with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations while preserving the underlying function definition, enabling reproducible variation under a fixed function index. The decision domain follows the standard BBOB bounds (e.g., $[-5,5]^D$ for the continuous suite). 
+
+We approximate a Pareto-relevant archive for this constructed bi-objective $f_5$ problem using NSGA-II under a fixed evaluation budget and fixed random seeds. Figure~\ref{fig:pareto_front} recalls Pareto dominance for bi-objective minimization: points on the Pareto front are non-dominated trade-offs, while points in the dominated region are strictly worse in both objectives.
 
 \begin{figure}[!htbp]
   \centering
   \begin{adjustbox}{width=\linewidth}
       \input{figures/pareto_front}
   \end{adjustbox}
-  \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an
-  example Pareto front (non-dominated set) for a bi-objective problem.}
+  \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
   \label{fig:pareto_front}
 \end{figure}
 
-Because Pareto-only archives can be small under limited budgets, we train on a larger
-optimizer-generated archive that includes both Pareto-relevant solutions and additional historically
-evaluated solutions produced during the NSGA-II search. Concretely, we record $8{,}000$ evaluated
-pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$ from the run history and split them into
-train/validation/test (80/10/10) with a fixed seed. The held-out test outcomes define inverse queries
-in objective space, and (when needed) we also use small perturbations near test outcomes to probe
-robustness while staying in a Pareto-relevant region.
+Because Pareto-only archives can be small under limited budgets, we train on a larger optimizer-generated archive that includes both Pareto-relevant solutions and additional historically evaluated solutions produced during the NSGA-II search. Concretely, we record $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$ from the run history and split them into train/validation/test (80/10/10) with a fixed seed. 
 
-Decision variables are scaled using the COCO domain bounds, and objective vectors are mapped into a
-declared normalized objective space using the same fitted normalizer that is later applied to
-user-specified targets. This keeps all scoring and ECDF reporting comparable across targets and
-across estimators because every discrepancy is measured in the same coordinate system.
+The resulting distribution of this collected data is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged Pareto-relevant set highlights the target regions our inverse model is designed to characterize.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=1\linewidth]{images/data_distribution.png}
+    \caption{Visual representation of the $f_5$ bi-objective dataset. The decision space (left) shows the parameter manifold of the Pareto set, while the objective space (right) illustrates the convergence toward the non-dominated Pareto front.}
+    \label{fig:data_distribution}
+\end{figure}
+
+The held-out test outcomes define inverse queries in objective space, and (when needed) we also use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. Decision variables are scaled using the COCO domain bounds, and objective vectors are mapped into a declared normalized objective space using the same fitted normalizer that is later applied to user-specified targets. This keeps all scoring and ECDF reporting comparable across targets and across estimators because every discrepancy is measured in the same coordinate system.
 
 
 %-------------------------------------------------------------------------------
