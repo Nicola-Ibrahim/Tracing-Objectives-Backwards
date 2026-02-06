@@ -30,7 +30,9 @@ set (Pareto front approximation) together with a dominated region induced by a r
 
 
 
+%-------------------------------------------------------------------------------
 \subsection{Problem and Data}\label{subsec:problem_data}
+%-------------------------------------------------------------------------------
 
 We generate bi-objective datasets from the COCO BBOB benchmark suite via the \texttt{cocoex} Python interface, which exposes standardized test functions through deterministic problem instances. In this chapter, we focus on BBOB $f_5$ (Linear Slope) because its construction yields strong directionality and boundary effects: the optimum lies on the domain boundary and the per-coordinate slopes increase with index, which makes target attainment in objective space sensitive to where the inverse sampler places probability mass. In COCO notation, the function includes an instance-dependent bias $f_{\mathrm{opt}}$ and an instance-specific optimum location $\vect{x}^{\mathrm{opt}}$, and the definition can be written as:
 
@@ -46,7 +48,7 @@ To construct a bi-objective problem, we pair two deterministic instances of the 
     \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
 \end{equation}
 
-with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations while preserving the underlying function definition, enabling reproducible variation under a fixed function index. The decision domain follows the standard BBOB bounds (e.g., $[-5,5]^D$ for the continuous suite). 
+with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations while preserving the underlying function definition, enabling reproducible variation under a fixed function index. 
 
 We approximate a Pareto-relevant archive for this constructed bi-objective $f_5$ problem using NSGA-II under a fixed evaluation budget and fixed random seeds. Figure~\ref{fig:pareto_front} recalls Pareto dominance for bi-objective minimization: points on the Pareto front are non-dominated trade-offs, while points in the dominated region are strictly worse in both objectives.
 
@@ -70,8 +72,7 @@ The resulting distribution of this collected data is visualized in Figure~\ref{f
     \label{fig:data_distribution}
 \end{figure}
 
-The held-out test outcomes define inverse queries in objective space, and (when needed) we also use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. Decision variables are scaled using the COCO domain bounds, and objective vectors are mapped into a declared normalized objective space using the same fitted normalizer that is later applied to user-specified targets. This keeps all scoring and ECDF reporting comparable across targets and across estimators because every discrepancy is measured in the same coordinate system.
-
+Data preparation strictly follows the protocol defined in Section~\ref{sec:normalization}. Instead, we apply the \texttt{HypercubeNormalizer} to the training split of the archive to estimate the transformation maps $T_x$ and $T_y$. This ensures that both the decision space and objective space are mapped into a consistent $[0,1]$ coordinate system based on the empirical range of the data. The held-out test outcomes define inverse queries in objective space, and (when needed) we use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. By using these same stored normalization maps for both training and testing, all scoring and ECDF reporting remain comparable across targets and estimators, as every discrepancy is measured within the same normalized coordinate system.
 
 %-------------------------------------------------------------------------------
 \subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
