@@ -7,8 +7,9 @@
 % This section follows a two-stage evaluation pipeline. First, we tune each inverse-model family with an intra-model ablation study, using outcome-space target matching to identify a best-performing configuration within that family. We then freeze these best-in-class configurations and compare models head-to-head under identical data splits, target sets, and sampling protocol.
 
 \section{bi-objective case}\label{sec:exp_coco}
+we have to write about why we chose this bi-objective case and its effect.
 
-\subsection{Multi-objective optimization}
+\subsection{Optimization process}
 A multi-objective optimisation problem (MOP) is defined by decision variables
 $\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector
 $\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. We consider minimization of all objectives.
@@ -74,310 +75,112 @@ The resulting distribution of this collected data is visualized in Figure~\ref{f
 
 Data preparation strictly follows the protocol defined in Section~\ref{sec:normalization}. Instead, we apply the \texttt{HypercubeNormalizer} to the training split of the archive to estimate the transformation maps $T_x$ and $T_y$. This ensures that both the decision space and objective space are mapped into a consistent $[0,1]$ coordinate system based on the empirical range of the data. The held-out test outcomes define inverse queries in objective space, and (when needed) we use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. By using these same stored normalization maps for both training and testing, all scoring and ECDF reporting remain comparable across targets and estimators, as every discrepancy is measured within the same normalized coordinate system.
 
-%-------------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------------
 \subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
 %-------------------------------------------------------------------------------
 
-Objective-space diagnostics evaluate inverse estimators as conditional samplers used in a
-propose--check loop. For a requested target outcome $\vect{y}^{\star}$, an inverse model generates a
-set of $K$ decision candidates $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$. Each candidate is then checked
-with the forward evaluator $\mathcal{E}$ to obtain outcomes
-$\widehat{\vect{y}}^{(k)}=\mathcal{E}(\widehat{\vect{x}}^{(k)})$. Because the output is a set rather
-than a single point, objective-space evaluation must specify how individual candidates are scored,
-how attainment is summarized under a fixed candidate budget, and how the full candidate cloud behaves
-around the target.
+Objective-space diagnostics evaluate inverse estimators as conditional samplers within the propose--check loop introduced in Section~\ref{sec:evaluation}. For a given target $\vect{y}^{\star}$, the model generates a candidate set $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$, which is subsequently mapped to the outcome space via the evaluator $\mathcal{E}$ to obtain checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$. This section assesses the accuracy of these outcomes and the geometric structure of the resulting candidate clouds.
 
-All objective-space computations are performed in a common normalized objective
-coordinate system induced by the preprocessing pipeline. The same fitted normalizer is applied to the
-training archive, the user targets, and the checked outcomes, so that discrepancy magnitudes are
-comparable across objectives and consistent across estimators.
+As established in the framework (Section~\ref{sec:framework}), all computations are performed in a common normalized coordinate system. This ensures that discrepancy magnitudes are comparable across objectives and that the performance metrics remain consistent across different estimator families.
 
 %-------------------------------------------------------------------------------
-\subsubsection{Scoring contract in normalized objective space}\label{subsubsec:objective_contract}
+\subsubsection{Scoring contract and best-shot attainment}\label{subsubsec:objective_contract}
 %-------------------------------------------------------------------------------
 
-Let $\vect{y}^{\star}\in\mathbb{R}^{m}$ denote the requested objective vector and let
-$\widehat{\vect{y}}^{(k)}\in\mathbb{R}^{m}$ denote the checked outcome of the $k$-th candidate, both in
-the declared normalized objective space. Candidate mismatch is expressed through the target-centered
-residual vector
+Following the evaluation framework defined in Section~\ref{sec:evaluation}, we quantify the performance of individual candidates using the target-centered residual vector $\vect{r}^{(k)}$ and the Euclidean discrepancy score $s^{(k)}$. As specified in Eq.~\ref{eq:discrepancy_residual_euclid}, these are defined as:
 \begin{equation}
-  \vect{r}^{(k)}(\vect{y}^{\star})
-  \;=\;
-  \widehat{\vect{y}}^{(k)} - \vect{y}^{\star},
-  \qquad k=1,\dots,K,
-  \label{eq:objective_residual_vector}
+  \vect{r}^{(k)}(\vect{y}^{\star}) \;=\; \widehat{\vect{y}}^{(k)} - \vect{y}^{\star}, \qquad s^{(k)}(\vect{y}^{\star}) \;=\; \lVert \vect{r}^{(k)}(\vect{y}^{\star}) \rVert_{2} = \sqrt{\sum_{j=1}^{m}\Big(r^{(k)}_{j}(\vect{y}^{\star})\Big)^{2}}.
 \end{equation}
-where $m$ is the number of objectives, $K$ is the candidate budget, and $\vect{r}^{(k)}$ measures
-signed deviation from the target component-wise. The $j$-th component is
-\begin{equation}
-  r^{(k)}_{j}(\vect{y}^{\star})
-  \;=\;
-  \widehat{y}^{(k)}_{j} - y^{\star}_{j},
-  \qquad j=1,\dots,m,
-  \label{eq:objective_residual_component}
-\end{equation}
-so $r^{(k)}_{j}>0$ indicates that the candidate is above the target on objective $j$ in the normalized
-coordinates, while $r^{(k)}_{j}<0$ indicates that it is below.
+The $j$-th component $r^{(k)}_{j} > 0$ indicates that the candidate overshoots the target on objective $j$, while $r^{(k)}_{j} < 0$ indicates an undershoot.
 
-A scalar discrepancy score is obtained by applying a distance in this same normalized space. We use
-the Euclidean norm as the default scoring rule,
-\begin{equation}
-  s^{(k)}(\vect{y}^{\star})
-  \;=\;
-  \big\lVert \vect{r}^{(k)}(\vect{y}^{\star}) \big\rVert_{2}
-  \;=\;
-  \sqrt{\sum_{j=1}^{m}\Big(r^{(k)}_{j}(\vect{y}^{\star})\Big)^{2}},
-  \label{eq:objective_candidate_score}
-\end{equation}
-where $\lVert\cdot\rVert_2$ denotes the Euclidean norm. The score $s^{(k)}$ supports ranking within a
-candidate set for a fixed target: smaller values correspond to checked outcomes that land closer to
-$\vect{y}^{\star}$ in the declared objective coordinates.
-
-A small numerical example illustrates the calculation. Consider a bi-objective case ($m=2$) in which
-the user target in normalized space is
-$\vect{y}^{\star}=(0.40,\,0.70)$ and one checked candidate outcome is
-$\widehat{\vect{y}}^{(k)}=(0.45,\,0.62)$. The residual vector is
-\begin{equation}
-  \vect{r}^{(k)}(\vect{y}^{\star})
-  \;=\;
-  (0.45-0.40,\; 0.62-0.70)
-  \;=\;
-  (0.05,\; -0.08),
-  \label{eq:objective_example_residual}
-\end{equation}
-which shows that the candidate overshoots the target by $0.05$ in the first objective and undershoots
-by $0.08$ in the second objective. The discrepancy score is then
+To illustrate the application of this contract, consider a bi-objective scenario ($m=2$) where the user requests a target $\vect{y}^{\star}=(0.40,\,0.70)$. If a checked candidate outcome is $\widehat{\vect{y}}^{(k)}=(0.45,\,0.62)$, the residual vector is $\vect{r}^{(k)} = (0.05, -0.08)$. The resulting scalar discrepancy score is:
 \begin{equation}
   s^{(k)}(\vect{y}^{\star})
   \;=\;
   \sqrt{0.05^{2}+(-0.08)^{2}}
   \;=\;
-  \sqrt{0.0025+0.0064}
-  \;=\;
   \sqrt{0.0089}
   \;\approx\;
-  0.094,
-  \label{eq:objective_example_score}
+  0.094.
 \end{equation}
-and candidates can be ranked by comparing their $s^{(k)}(\vect{y}^{\star})$ values, with the smallest
-score ranked as the closest match under the declared contract.
 
-The candidate budget $K$ is part of the evaluation interface. Increasing $K$ can improve attainment by
-providing more opportunities to sample a close candidate even if the underlying conditional model is
-unchanged. Therefore, all objective-space comparisons fix $K$ within an experiment, and results are
-reported separately when $K$ changes.
-
-
-%-------------------------------------------------------------------------------
-\subsubsection{Best-shot attainment and ECDF reporting}\label{subsubsec:objective_ecdf}
-%-------------------------------------------------------------------------------
-
-Because inverse samplers return a set, target attainment is summarized per target by the best-shot
-score,
+Since inverse samplers return a set rather than a point, we summarize attainment per target using the best-shot score:
 \begin{equation}
-  s_{\min}(\vect{y}^{\star})
-  \;=\;
-  \min_{k\in\{1,\dots,K\}} s^{(k)}(\vect{y}^{\star}),
+  s_{\min}(\vect{y}^{\star}) 
+  \;=\; 
+  \min_{k\in\{1,\dots,K\}} s^{(k)}(\vect{y}^{\star}).
   \label{eq:objective_best_shot}
 \end{equation}
-which captures the closest checked outcome the model can deliver under budget $K$. Here
-$s^{(k)}(\vect{y}^{\star})$ is the per-candidate discrepancy defined by the scoring contract in
-Section~\ref{subsubsec:objective_contract}, and $K$ is the number of candidates generated for the
-target $\vect{y}^{\star}$. Evaluating a target set
-$\mathcal{T}=\{\vect{y}^{\star}_i\}_{i=1}^{N}$ yields the best-shot vector
-$\{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{N}$, with one value per target.
+This score identifies the most accurate match within the budget $K$. Because increasing $K$ provides more opportunities to sample a close candidate, all comparative experiments in this chapter fix $K$ to ensure a fair evaluation of the models' underlying conditional distributions.
 
-Reporting only a single aggregate statistic of $\{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{N}$, such as a
-mean or median, can hide important structure. In particular, two estimators can have similar central
-tendency but differ substantially in how often they achieve very small discrepancies or in how large
-their failures are on hard targets. To make the full attainment profile visible, we report the
-empirical cumulative distribution function (ECDF) of best-shot scores across the target set,
+%-------------------------------------------------------------------------------
+\subsubsection{Empirical Cumulative Distribution Functions (ECDF)}\label{subsubsec:objective_ecdf}
+%-------------------------------------------------------------------------------
+
+To provide a complete profile of estimator reliability across a target set $\mathcal{T}$, we employ the Empirical Cumulative Distribution Function (ECDF). For a set of $N$ targets, the ECDF is defined as:
 \begin{equation}
-  \widehat{F}(t)
-  \;=\;
+  \widehat{F}(t) 
+  \;=\; 
   \frac{1}{N}\sum_{i=1}^{N}\mathbb{I}\!\left[s_{\min}(\vect{y}^{\star}_i)\le t\right],
-  \label{eq:objective_ecdf}
+  \label{eq:objective_ecdf_definition}
 \end{equation}
-where $N$ is the number of targets in $\mathcal{T}$, $t\ge 0$ is a discrepancy threshold expressed in
-the same normalized objective space as $s_{\min}$, and $\mathbb{I}[\cdot]$ is an indicator function
-that equals 1 when the condition holds and 0 otherwise. The ECDF therefore maps each threshold $t$ to
-a proportion: $\widehat{F}(t)$ is the fraction of targets whose best-shot discrepancy is at most $t$.
-
-The ECDF supports a direct, budget-aware reading of attainment. Fix a discrepancy threshold $t$ on the
-$x$-axis. The corresponding $y$-value $\widehat{F}(t)$ reports what proportion of targets are solved
-to within that accuracy under budget $K$. Curves that rise faster and lie higher at small $t$ indicate
-that an estimator produces close matches more frequently. Conversely, a slow rise and a long right
-tail indicate that a subset of targets remains difficult even after taking the best of $K$ samples.
-
-A small numerical example clarifies the calculation. Suppose $N=5$ targets yield best-shot scores
-\begin{equation}
-  \{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{5} = \{0.01,\; 0.04,\; 0.02,\; 0.10,\; 0.03\}.
-  \label{eq:ecdf_example_scores}
-\end{equation}
-Sorting gives $\{0.01, 0.02, 0.03, 0.04, 0.10\}$. For threshold $t=0.03$, four of the five values are
-at most $0.03$, so
-\begin{equation}
-  \widehat{F}(0.03) = \frac{4}{5} = 0.8.
-  \label{eq:ecdf_example_value}
-\end{equation}
-For threshold $t=0.015$, only one value is at most $0.015$, so $\widehat{F}(0.015)=1/5=0.2$. As $t$
-increases, $\widehat{F}(t)$ increases in steps until it reaches 1 at $t\ge 0.10$. In the plotted ECDF,
-the $x$-axis spans the range of thresholds and the $y$-axis reports the cumulative fraction of targets
-whose best-shot discrepancy falls below each threshold, which matches the interpretation used in the
-objective-space figures in this chapter.
+where $t \ge 0$ is a discrepancy threshold and $\mathbb{I}[\cdot]$ is the indicator function. The value $\widehat{F}(t)$ reports the proportion of targets solved to within accuracy $t$ under budget $K$. For example, if $N=5$ targets yield sorted best-shot scores $\{0.01, 0.02, 0.03, 0.04, 0.10\}$, the ECDF at threshold $t=0.03$ is $\widehat{F}(0.03) = 4/5 = 0.8$.
 
 
-%-------------------------------------------------------------------------------
-\subsubsection{Candidate-cloud geometry: bias and dispersion}\label{subsubsec:objective_cloud}
-%-------------------------------------------------------------------------------
 
-Best-shot attainment summarizes whether a candidate set contains at least one close match, but it does
-not describe how the full set behaves around the target. For decision support, the geometry of the
-checked outcome cloud
-$\{\widehat{\vect{y}}^{(1)},\dots,\widehat{\vect{y}}^{(K)}\}$ matters because it indicates whether the
-inverse sampler produces a concentrated, target-centered set of alternatives or a diffuse or
-systematically shifted cloud.
-
-We compute candidate-cloud diagnostics in the same residual space used for scoring. This subsection
-instantiates, for the experimental setting of this chapter, the candidate-cloud plausibility
-definitions introduced in the evaluation methodology (Section~\ref{sec:eval_candidate_cloud}). In
-particular, we reuse the target-centered residual representation and its associated set-level
-summaries to quantify whether the generated outcomes concentrate around $\vect{y}^{\star}$ or exhibit
-systematic offset and diffuse sampling behavior.
-
-For a fixed target $\vect{y}^{\star}$, define the within-set mean residual vector
-\begin{equation}
-  \bar{\vect{r}}(\vect{y}^{\star})
-  \;=\;
-  \frac{1}{K}\sum_{k=1}^{K}\vect{r}^{(k)}(\vect{y}^{\star}),
-  \label{eq:objective_mean_residual_cloud}
-\end{equation}
-which represents the average offset of the candidate cloud from the target. Here
-$\vect{r}^{(k)}(\vect{y}^{\star})=\widehat{\vect{y}}^{(k)}-\vect{y}^{\star}$ is the target-centered
-residual vector defined in Section~\ref{subsubsec:objective_contract}, and $K$ is the candidate budget.
-
-Candidate-cloud geometry is summarized using two set-level statistics, following the bias and
-dispersion quantities defined in Section~\ref{sec:eval_candidate_cloud}: systematic offset of the
-cloud from the target and within-set dispersion around the cloud mean,
-\begin{equation}
-  b(\vect{y}^{\star})
-  \;=\;
-  \frac{\big\lVert \bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}},
-  \qquad
-  v(\vect{y}^{\star})
-  \;=\;
-  \mathrm{median}_{k}\;
-  \frac{\big\lVert \vect{r}^{(k)}(\vect{y}^{\star})-\bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}}.
-  \label{eq:objective_bias_dispersion}
-\end{equation}
-Here $m$ is the number of objectives, $\lVert\cdot\rVert_2$ is the Euclidean norm, $b(\vect{y}^{\star})$
-measures the magnitude of the mean residual vector in average per-objective units, and
-$v(\vect{y}^{\star})$ measures a robust within-set spread computed as the median distance of residuals
-to the cloud mean. The normalization by $\sqrt{m}$ reports an average per-objective magnitude rather
-than a dimension-dependent norm, which keeps values comparable across problems with different numbers
-of objectives. The median aggregation in $v$ reduces sensitivity to a small number of extreme samples
-and reflects typical within-set variability.
-
-Across a target set $\mathcal{T}$, bias and dispersion yield one value per target, producing vectors
-$\{b(\vect{y}^{\star}_i)\}_{i=1}^{N}$ and $\{v(\vect{y}^{\star}_i)\}_{i=1}^{N}$. We report these using
-distributional summaries analogous to best-shot attainment, which enables estimator comparisons at the
-level of target coverage rather than only central tendency. In particular, ECDF curves of $b$ and $v$
-summarize how frequently each estimator produces target-centered clouds (low $b$) and how frequently
-it produces concentrated candidate sets (low $v$) under the declared sampling budget.
-
-
-%-------------------------------------------------------------------------------
-\subsubsection{ECDF-based hyperparameter ablation and model selection}\label{subsubsec:objective_ablation}
-%-------------------------------------------------------------------------------
-
-Inverse decision mapping is sensitive to model capacity. For MDNs, capacity is governed primarily by
-the number of mixture components; for CVAEs by latent dimensionality and decoder capacity; and for
-INNs by the number of coupling layers and subnet capacity. To avoid attributing performance
-differences to under- or over-parameterized settings, we perform an ablation study within each model
-family and select one configuration per family for downstream comparison.
-
-The ablation is reported on the representative bi-objective problem derived from COCO BBOB $f_5$
-(Linear Slope). For each configuration, we evaluate objective-space attainment under a fixed
-candidate budget $K$ using the scoring contract defined in Section~\ref{subsubsec:objective_contract}.
-For each target $\vect{y}^{\star}\in\mathcal{T}$ we score the $K$ checked outcomes
-$\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$, and summarize attainment by the best-shot score
-$s_{\min}(\vect{y}^{\star})=\min_{k} s^{(k)}(\vect{y}^{\star})$. Evaluating all targets produces a
-best-shot vector $\{s_{\min}(\vect{y}^{\star}_i)\}_{i=1}^{N}$, one value per target. We then compare
-configurations using the empirical cumulative distribution function (ECDF) of these best-shot scores,
-as defined in \eqref{eq:objective_ecdf}. Under this reporting, a configuration is preferred when its
-ECDF rises rapidly and lies higher in the low-discrepancy region, which indicates that a larger
-fraction of targets are solved to high precision under the same sampling budget.
-
-Figure~\ref{fig:ablation_ecdf_f5} compares the ablated configurations across all three model families
-using ECDF curves of best-shot discrepancy $s_{\min}(\vect{y}^{\star})$ under fixed budget $K$. Each
-curve corresponds to one hyperparameter setting. For any threshold $t$ on the horizontal axis,
-$\widehat{F}(t)$ on the vertical axis reports the fraction of targets for which the configuration
-produces at least one checked candidate within discrepancy $t$. Curves that lie higher at small $t$
-therefore indicate stronger near-target attainment, while separation in the right tail indicates how
-often targets remain difficult even after selecting the best of $K$ samples.
+We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) problem to identify optimal configurations for the CVAE, MDN, and INN families. Figure~\ref{fig:ablation_ecdf_f5} presents the resulting ECDF curves. Visually, curves that rise faster (higher initial slope) indicate high precision, while the asymptotic behavior in the right tail indicates the fraction of targets that remain "hard" to solve.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/accuracy_ecdf_best_shot.png}
-  \caption{COCO $f_5$ objective-space ablation: ECDF of best-shot discrepancy
-  $s_{\min}(\vect{y}^{\star})$ under fixed budget $K$. For threshold $t$, $\widehat{F}(t)$ gives the
-  fraction of targets for which a configuration produces at least one checked candidate within
-  discrepancy $t$. Curves that lie higher at small $t$ indicate stronger near-target attainment under
-  the same sampling budget.}
+  \includegraphics[width=0.85\linewidth]{images/accuracy_ecdf_best_shot.png}
+  \caption{COCO $f_5$ objective-space ablation: ECDF of best-shot discrepancy $s_{\min}(\vect{y}^{\star})$. Curves that lie higher at small $t$ indicate stronger near-target attainment under budget $K$.}
   \label{fig:ablation_ecdf_f5}
 \end{figure}
 
-The ECDF view supports capacity selection in a way that is both target-wise and budget-aware. Within a
-model family, moving from a low-capacity setting to a moderate-capacity setting typically shifts the
-ECDF upward in the low-discrepancy regime, reflecting improved conditional expressivity and better
-placement of probability mass near the requested outcomes. Conversely, configurations that are too
-small often plateau early, indicating that many targets cannot be reached closely even after taking
-the best of $K$ samples. Very large configurations can also degrade the curve, which is consistent
-with unstable training dynamics or overly diffuse conditional sampling that reduces the frequency of
-near-target hits.
+The ECDF profiles highlight distinct architectural biases. The INN configurations demonstrate the steepest initial rise, reflecting the high-precision target matching enabled by their bijective nature. In contrast, the CVAE models often plateau earlier, suggesting that the latent bottleneck may limit precision in specific target regions. For MDNs, increasing the number of mixture components generally shifts the ECDF curve upward, reflecting better coverage of multi-modal inverse solutions.
 
-Across families, the ECDF shapes can be interpreted in terms of the inductive biases of each inverse
-sampler. MDNs can assign probability mass to multiple outcome-consistent regions through a mixture,
-so increasing the number of components often improves the fraction of targets that admit a close hit
-under a finite $K$ by representing multi-modal inverse structure. CVAEs trade off latent capacity and
-decoder capacity: insufficient latent dimensionality can restrict conditional variability, while
-sufficient latent capacity improves coverage of alternative designs for the same target. INNs provide
-a structured bijective parameterization whose effective capacity grows with the number of coupling
-layers and subnet size; when adequately parameterized they can yield sharp conditional structure, but
-under-parameterization tends to manifest as early saturation in the ECDF.
-
-Candidate-cloud statistics $b(\vect{y}^{\star})$ and $v(\vect{y}^{\star})$ are computed for all targets
-as defined in Section~\ref{subsubsec:objective_cloud}, and they are used to interpret why a curve
-behaves as it does rather than as the primary selection rule. In particular, a configuration can
-achieve a strong best-shot ECDF either because it produces consistently target-centered clouds or
-because it occasionally lands a very close hit within a diffuse cloud. Bias and dispersion help
-distinguish these cases in later diagnostics, but the ablation selection itself is driven by the
-best-shot ECDF profile under fixed $K$.
-
-Table~\ref{tab:ablation_f5_selected} records the selected configuration per family carried forward
-into the remaining objective-space comparisons. The selected settings correspond to the configurations
-that dominate alternatives in the low-discrepancy regime in Figure~\ref{fig:ablation_ecdf_f5}, while
-avoiding configurations that only improve performance at very loose thresholds.
+Based on these results, we select the configurations that dominate the low-discrepancy region ($t < 0.05$) for subsequent benchmarking (Table~\ref{tab:ablation_f5_selected}).
 
 \begin{table}[!htbp]
   \centering
-  \caption{Selected hyperparameter setting per model family from the ECDF-based ablation on COCO $f_5$.
-  Selection is based on the best-shot ECDF profile in Figure~\ref{fig:ablation_ecdf_f5} under fixed
-  candidate budget $K$.}
+  \caption{Selected hyperparameter configurations based on ECDF dominance.}
   \label{tab:ablation_f5_selected}
   \rarray{1.15}
   \begin{tabular}{l l}
     \toprule
     \textbf{Model family} & \textbf{Selected configuration} \\
     \midrule
-    CVAE & -- \\
-    MDN  & -- \\
-    INN  & -- \\
+    CVAE & [Latent Dim: X, Decoder Depth: Y] \\
+    MDN  & [Mixture Components: Z, Hidden Layers: W] \\
+    INN  & [Coupling Layers: N, Subnet Size: M] \\
     \bottomrule
   \end{tabular}
 \end{table}
 
+%-------------------------------------------------------------------------------
+\subsubsection{Candidate-cloud geometry}\label{subsubsec:objective_cloud}
+%-------------------------------------------------------------------------------
 
+While best-shot attainment measures the model's single best success, it does not describe the behavior of the full candidate cloud $\{\widehat{\vect{y}}^{(1)},\dots,\widehat{\vect{y}}^{(K)}\}$. For effective decision support, the cloud's geometry matters: a concentrated, target-centered set indicates a precise sampler, while a diffuse or shifted cloud indicates high uncertainty or systematic bias.
+
+Following the metrics in Section~\ref{sec:eval_candidate_cloud}, we diagnose sampling behavior using bias ($b$) and dispersion ($v$):
+\begin{equation}
+  b(\vect{y}^{\star}) = \frac{\big\lVert \bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}}, \qquad v(\vect{y}^{\star}) = \mathrm{median}_{k}\; \frac{\big\lVert \vect{r}^{(k)}(\vect{y}^{\star})-\bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}},
+  \label{eq:residual_bias_dispersion}
+\end{equation}
+where $\bar{\vect{r}}(\vect{y}^{\star})$ is the mean residual vector of the cloud. Normalization by $\sqrt{m}$ ensures values remain comparable across problems with different numbers of objectives.
+
+In our experiments, we compute $b$ and $v$ for all targets and present the results as **paired box plots** (Figure~\ref{fig:bias_dispersion_boxplot}). This visualization allows for a direct comparison of error magnitudes ($L_2$ norm) across estimator versions. The vertical "strips" of data points highlight the density and outliers for both systematic error (bias) and random error (dispersion). 
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.85\linewidth]{images/accuracy_bias_dispersion_density.png}
+  \caption{Distributional diagnostics for candidate-cloud geometry. These box plots distinguish between models that achieve close best-shot hits through precise centering (low bias, e.g., \texttt{mdn}) versus those with shifted distributions (e.g., \texttt{cvae (v1)}).}
+  \label{fig:bias_dispersion_boxplot}
+\end{figure}
+
+These statistics help interpret the performance differences. For instance, while a model might achieve a low "best-shot" error, the box plots reveal if this is due to consistent accuracy or simply high dispersion—where a "lucky" hit occurs despite a diffuse cloud. As seen in the figure, the \texttt{mdn} variants maintain significantly lower median bias compared to the \texttt{cvae} baseline, though the latter exhibits a tighter dispersion profile.
 
 %-------------------------------------------------------------------------------
 \subsection{Decision-space diagnostics}\label{subsec:decision_diagnostics}
@@ -385,114 +188,42 @@ avoiding configurations that only improve performance at very loose thresholds.
 
 Decision-space diagnostics evaluate inverse models as conditional samplers over decisions. For each
 held-out paired case $(\vect{x}_i,\vect{y}_i)$, we condition on $\vect{y}_i$ and draw a candidate set
-$\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. The aim is to quantify whether the sampled set behaves like
-a trustworthy conditional distribution around the ground-truth decision $\vect{x}_i$. We follow the
-evaluation definitions in Section~\ref{sec:eval_design} and report three complementary quantities:
-probabilistic accuracy via CRPS, reliability via PIT calibration, and a scalar summary of calibration
-error via MACE.
+$\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. 
+Unlike objective-space metrics that measure the proximity of outcomes to a target, these diagnostics quantify whether the generated candidate set $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$ accurately reflects the distribution of the ground-truth decision $\vect{x}_i$ when conditioned on the observation $\vect{y}_i$. The objective is to determine if the model behaves as a statistically trustworthy estimator of the inverse mapping.
+
+
+
+
 
 %-------------------------------------------------------------------------------
-\subsubsection{Decision-space scoring contract}\label{subsubsec:decision_contract}
+\subsubsection{Statistical Reliability: PIT, Calibration Curves, and MACE}\label{subsubsec:reliability}
 %-------------------------------------------------------------------------------
 
-For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples
-$\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$, which define an empirical conditional distribution. The
-diagnostic contract is defined by how this sampled distribution is compared against the realized truth
-$\vect{x}_i$.
-
-Reliability is assessed through probability integral transform (PIT) values, as introduced in
-Section~\ref{sec:eval_design}. For each case $i$ and each decision dimension $d\in\{1,\dots,D\}$, let
-\[
-  \widehat{x}^{(1)}_{i,d},\dots,\widehat{x}^{(K)}_{i,d}
-\]
-denote the $K$ sampled values of component $d$, and let $x_{i,d}$ denote the ground-truth component.
-Define the PIT rank statistic
+The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
 \begin{equation}
-  z_{i,d}
-  \;=\;
-  \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right],
-  \label{eq:pit_rank_def}
+  z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
 \end{equation}
-where $\mathbb{I}[\cdot]$ equals 1 when its condition holds and 0 otherwise. Here $z_{i,d}\in[0,1]$
-measures the empirical percentile position of the truth relative to the sampled conditional
-distribution for that component. Under a calibrated conditional sampler, PIT values are approximately
-uniform, so departures from uniformity indicate miscalibration.
+For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies.
 
-We report calibration visually using the PIT calibration curve defined in Section~\ref{sec:eval_design}.
-Let $\{z_\ell\}_{\ell=1}^{L}$ denote the pooled PIT values across cases and dimensions (or across cases
-after a declared pooling rule). Sorting these values yields $z_{(1)}\le\dots\le z_{(L)}$, and the
-empirical calibration curve is
+The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf}:
 \begin{equation}
-  \widehat{G}(t)
-  \;=\;
-  \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right],
-  \qquad t\in[0,1],
-  \label{eq:pit_ecdf_curve}
+  \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
 \end{equation}
-which is the empirical CDF of PIT values. Under perfect calibration, $\widehat{G}(t)\approx t$ for all
-$t$, so the curve lies close to the diagonal.
+This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific hyperparameter configurations lead to overconfident or underconfident conditional samplers.
 
-To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE),
-defined in Section~\ref{sec:eval_design} as the average absolute deviation of the PIT curve from the
-diagonal over a grid. For a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$,
+To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
 \begin{equation}
-  \mathrm{MACE}
-  \;=\;
-  \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
+  \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
   \label{eq:mace_def}
 \end{equation}
-Smaller MACE indicates closer agreement with the ideal diagonal and therefore better reliability.
+A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
 
-Probabilistic accuracy is assessed through the continuous ranked probability score (CRPS), also defined
-in Section~\ref{sec:eval_design}. For each case $i$ and each decision dimension $d$, the empirical CRPS
-of the sampled set relative to the truth is computed from the sampled values
-$\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. Aggregating across decision
-dimensions yields a per-case score,
-\begin{equation}
-  \mathrm{CRPS}_i
-  \;=\;
-  \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}\!\left(\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K},\,x_{i,d}\right),
-  \label{eq:crps_case_def}
-\end{equation}
-where lower values are better. CRPS rewards candidate sets that place probability mass near the truth
-while penalizing unnecessary dispersion, so it captures the sharpness--accuracy trade-off in a single
-number.
-
-%-------------------------------------------------------------------------------
-\subsubsection{Ablation protocol, reporting, and selection}\label{subsubsec:decision_ablation}
-%-------------------------------------------------------------------------------
-
-We report the decision-space ablation on the COCO $f_5$ dataset to match the objective-space analysis
-and to isolate differences attributable to model capacity rather than to changes in the data
-distribution. Hyperparameter variants are evaluated within each model family under the same candidate
-budget $K$ and over the same held-out test set.
-
-For each configuration, we compute PIT values using \eqref{eq:pit_rank_def} and summarize reliability
-using the PIT calibration curve \eqref{eq:pit_ecdf_curve}. We also compute MACE using \eqref{eq:mace_def}
-as a scalar measure of deviation from the ideal diagonal. In parallel, we compute per-case CRPS values
-using \eqref{eq:crps_case_def} to quantify probabilistic accuracy.
-
-We report results using PIT calibration curves (Figure~\ref{fig:f5_pit_ablation}), a compact table of
-MACE values (Table~\ref{tab:f5_mace_ablation}), and CRPS boxplots (Figure~\ref{fig:f5_crps_box_ablation}).
-PIT curves provide a direct visual comparison of reliability. The MACE table supports concise ranking
-when curves are visually close and enables straightforward tabular reporting alongside other metrics.
-CRPS boxplots summarize the distribution of accuracy across held-out cases, highlighting both typical
-performance and failure tails.
-
-Configuration selection uses a reliability-first criterion. We prefer configurations whose PIT curves
-lie closest to the diagonal and whose MACE is smallest. When multiple configurations exhibit similar
-reliability, we then prefer those with lower and more stable CRPS distributions. This joint criterion
-avoids selecting an overly sharp but miscalibrated sampler or a well-calibrated but overly diffuse
-sampler. The selected configuration per family is carried forward into the remaining decision-space
-evaluation.
+We report the reliability results of the decision-space ablation on the COCO $f_5$ dataset using PIT calibration curves (Figure~\ref{fig:f5_pit_ablation}) and a compact table of MACE values (Table~\ref{tab:f5_mace_ablation}). These provide a direct visual and scalar comparison of reliability across hyperparameter variants.
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-  \caption[COCO $f_5$: PIT calibration curves across ablation variants]{PIT calibration curves on COCO
-  $f_5$ for hyperparameter variants (one curve per configuration). Curves closer to the diagonal
-  indicate better reliability under repeated conditioning as measured by \eqref{eq:pit_rank_def} and
-  summarized by \eqref{eq:pit_ecdf_curve}.}
+  \caption[COCO $f_5$: PIT calibration curves across ablation variants]{PIT calibration curves on COCO $f_5$ for hyperparameter variants (one curve per configuration). Curves closer to the diagonal indicate better reliability under repeated conditioning as measured by \eqref{eq:pit_rank_def} and summarized by \eqref{eq:pit_ecdf_curve}.}
   \label{fig:f5_pit_ablation}
 \end{figure}
 
@@ -511,22 +242,185 @@ Configuration & MACE $\downarrow$ \\
 \texttt{variant-4} & \textemdash \\
 \bottomrule
 \end{tabular}
-\caption[COCO $f_5$: MACE across ablation variants]{Mean absolute calibration error (MACE) on COCO $f_5$
-for each hyperparameter variant, computed as in \eqref{eq:mace_def}. Smaller values indicate PIT
-calibration curves closer to the ideal diagonal.}
+\caption[COCO $f_5$: MACE across ablation variants]{Mean absolute calibration error (MACE) on COCO $f_5$ for each hyperparameter variant, computed as in \eqref{eq:mace_def}. Smaller values indicate PIT calibration curves closer to the ideal diagonal.}
 \label{tab:f5_mace_ablation}
 \end{table}
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{Probabilistic Accuracy: CRPS}\label{subsubsec:accuracy}
+%-------------------------------------------------------------------------------
+
+Finally, the Continuous Ranked Probability Score (CRPS) is employed to measure the accuracy and sharpness of the distributions. As per Eq.~\eqref{eq:crps_expectation}, for each case $i$ and each decision dimension $d$, the empirical CRPS of the sampled set relative to the truth is computed from the sampled values $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. Aggregating across decision dimensions yields a per-case score:
+\begin{equation}
+  \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}\!\left(\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K},\,x_{i,d}\right),
+\end{equation}
+where lower values are better. CRPS rewards models that concentrate probability mass near the ground truth while penalizing excessive dispersion, thus capturing the essential trade-off between precision and accuracy.
+
+We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_box_ablation}). These boxplots summarize the distribution of accuracy across held-out cases, highlighting both typical performance and failure tails. Hyperparameter variants are evaluated within each model family under the same candidate budget $K$ and over the same held-out test set.
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{images/probabilistic_error_crps.png}
-  \caption[COCO $f_5$: CRPS boxplots across ablation variants]{Distribution of per-case CRPS values on
-  COCO $f_5$ for hyperparameter variants (boxplots), computed as in \eqref{eq:crps_case_def}. Lower
-  medians indicate more accurate conditional distributions; narrower spreads indicate more consistent
-  performance across cases.}
+  \caption[COCO $f_5$: CRPS boxplots across ablation variants]{Distribution of per-case CRPS values on COCO $f_5$ for hyperparameter variants (boxplots), computed as in \eqref{eq:crps_case_def}. Lower medians indicate more accurate conditional distributions; narrower spreads indicate more consistent performance across cases.}
   \label{fig:f5_crps_box_ablation}
 \end{figure}
 
+
+
+% %-------------------------------------------------------------------------------
+% \subsubsection{Ablation protocol, reporting, and selection}\label{subsubsec:decision_ablation}
+% %-------------------------------------------------------------------------------
+
+% We report the decision-space ablation on the COCO $f_5$ dataset to match the objective-space analysis
+% and to isolate differences attributable to model capacity rather than to changes in the data
+% distribution. Hyperparameter variants are evaluated within each model family under the same candidate
+% budget $K$ and over the same held-out test set.
+
+% For each configuration, we compute PIT values using \eqref{eq:pit_rank_def} and summarize reliability
+% using the PIT calibration curve \eqref{eq:pit_ecdf_curve}. We also compute MACE using \eqref{eq:mace_def}
+% as a scalar measure of deviation from the ideal diagonal. In parallel, we compute per-case CRPS values
+% using \eqref{eq:crps_case_def} to quantify probabilistic accuracy.
+
+% We report results using PIT calibration curves (Figure~\ref{fig:f5_pit_ablation}), a compact table of
+% MACE values (Table~\ref{tab:f5_mace_ablation}), and CRPS boxplots (Figure~\ref{fig:f5_crps_box_ablation}).
+% PIT curves provide a direct visual comparison of reliability. The MACE table supports concise ranking
+% when curves are visually close and enables straightforward tabular reporting alongside other metrics.
+% CRPS boxplots summarize the distribution of accuracy across held-out cases, highlighting both typical
+% performance and failure tails.
+
+% Configuration selection uses a reliability-first criterion. We prefer configurations whose PIT curves
+% lie closest to the diagonal and whose MACE is smallest. When multiple configurations exhibit similar
+% reliability, we then prefer those with lower and more stable CRPS distributions. This joint criterion
+% avoids selecting an overly sharp but miscalibrated sampler or a well-calibrated but overly diffuse
+% sampler. The selected configuration per family is carried forward into the remaining decision-space
+% evaluation.
+
+
+
+% \begin{figure}[!htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
+%   \caption[COCO $f_5$: PIT calibration curves across ablation variants]{PIT calibration curves on COCO
+%   $f_5$ for hyperparameter variants (one curve per configuration). Curves closer to the diagonal
+%   indicate better reliability under repeated conditioning as measured by \eqref{eq:pit_rank_def} and
+%   summarized by \eqref{eq:pit_ecdf_curve}.}
+%   \label{fig:f5_pit_ablation}
+% \end{figure}
+
+% \begin{table}[!htbp]
+% \centering
+% \small
+% \setlength{\tabcolsep}{6pt}
+% \renewcommand{\arraystretch}{1.25}
+% \begin{tabular}{l c}
+% \toprule
+% Configuration & MACE $\downarrow$ \\
+% \midrule
+% \texttt{variant-1} & \textemdash \\
+% \texttt{variant-2} & \textemdash \\
+% \texttt{variant-3} & \textemdash \\
+% \texttt{variant-4} & \textemdash \\
+% \bottomrule
+% \end{tabular}
+% \caption[COCO $f_5$: MACE across ablation variants]{Mean absolute calibration error (MACE) on COCO $f_5$
+% for each hyperparameter variant, computed as in \eqref{eq:mace_def}. Smaller values indicate PIT
+% calibration curves closer to the ideal diagonal.}
+% \label{tab:f5_mace_ablation}
+% \end{table}
+
+% \begin{figure}[!htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{images/probabilistic_error_crps.png}
+%   \caption[COCO $f_5$: CRPS boxplots across ablation variants]{Distribution of per-case CRPS values on
+%   COCO $f_5$ for hyperparameter variants (boxplots), computed as in \eqref{eq:crps_case_def}. Lower
+%   medians indicate more accurate conditional distributions; narrower spreads indicate more consistent
+%   performance across cases.}
+%   \label{fig:f5_crps_box_ablation}
+% \end{figure}
+
+
+
+
+
+
+
+
+%-------------------------------------------------------------------------------
+% \subsubsection{Scoring contract}\label{subsubsec:decision_contract}
+% %-------------------------------------------------------------------------------
+% We follow the
+% evaluation definitions in Section~\ref{sec:eval_design} and report three complementary quantities:
+% probabilistic accuracy via CRPS, reliability via PIT calibration, and a scalar summary of calibration
+% error via MACE.
+
+% For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples
+% $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$, which define an empirical conditional distribution. The
+% diagnostic contract is defined by how this sampled distribution is compared against the realized truth
+% $\vect{x}_i$.
+
+
+% The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
+% \begin{equation}
+%   z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
+% \end{equation}
+% For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity, visualized through the empirical CDF curve $\widehat{G}(t)$ in Eq.~\eqref{eq:pit_ecdf_curve}, provide a diagnostic signature of specific model deficiencies.
+
+% The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf_curve}:
+% \begin{equation}
+%   \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
+% \end{equation}
+% This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific hyperparameter configurations lead to overconfident or underconfident conditional samplers.
+
+
+% To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE),
+% defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the
+% diagonal over a grid. For a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$,
+% \begin{equation}
+%   \mathrm{MACE}
+%   \;=\;
+%   \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
+%   \label{eq:mace_def}
+% \end{equation}
+% A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability
+
+% Finally, the Continuous Ranked Probability Score (CRPS) is employed to measure the accuracy and sharpness of the distributions. As per Eq.~\eqref{eq:crps_expectation}. For each case $i$ and each decision dimension $d$, the empirical CRPS
+% of the sampled set relative to the truth is computed from the sampled values
+% $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. Aggregating across decision
+% dimensions yields a per-case score:
+% \begin{equation}
+%   \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}\!\left(\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K},\,x_{i,d}\right).
+% \end{equation}
+% where lower values are better. CRPS rewards models that concentrate probability mass near the ground truth while penalizing excessive dispersion, thus capturing the essential trade-off between precision and accuracy.
+
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{Ablation Protocol and Selection}\label{subsubsec:decision_selection}
+%-------------------------------------------------------------------------------
+
+The decision-space ablation on the COCO $f_5$ dataset is reported to match the objective-space analysis and to isolate differences attributable to model capacity. Configuration selection uses a reliability-first criterion. We prefer configurations whose PIT curves lie closest to the diagonal and whose MACE is smallest. When multiple configurations exhibit similar reliability, we then prefer those with lower and more stable CRPS distributions. This joint criterion avoids selecting an overly sharp but miscalibrated sampler or a well-calibrated but overly diffuse sampler. The selected configuration per family is carried forward into the remaining decision-space evaluation.
+
+
+
+% %-------------------------------------------------------------------------------
+% \subsection{Decision-space diagnostics}\label{subsec:decision_diagnostics}
+% %-------------------------------------------------------------------------------
+
+% Decision-space diagnostics evaluate inverse models as conditional samplers. Unlike objective-space metrics that measure the proximity of outcomes to a target, these diagnostics quantify whether the generated candidate set $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$ accurately reflects the distribution of the ground-truth decision $\vect{x}_i$ when conditioned on the observation $\vect{y}_i$. The objective is to determine if the model behaves as a statistically trustworthy estimator of the inverse mapping.
+
+
+% %-------------------------------------------------------------------------------
+% \subsubsection{Ablation Analysis and Model Performance}\label{subsubsec:decision_ablation_results}
+% %-------------------------------------------------------------------------------
+
+% The decision-space ablation is conducted on the COCO $f_5$ dataset to isolate performance variations attributable to model capacity and hyperparameter configurations. All variants are evaluated under a consistent candidate budget $K$ to ensure fair comparison.
+
+% The morphology of the PIT calibration curves in Figure~\ref{fig:f5_pit_ablation} reveals the nature of the approximation errors in the inverse mapping. An S-shaped (sigmoid) curve indicates overconfidence, where the model's predicted variance is too small, causing the ground truth to frequently reside in the extreme tails of the distribution. Conversely, an inverse S-shaped curve signifies underconfidence or over-dispersion, where the model provides overly broad distributions. Concave or convex curves indicate a systematic bias, where the model consistently over- or under-estimates the decision parameters.
+
+% The results indicate that higher-capacity models typically yield PIT curves closer to the diagonal. This suggests that the complexity of the $f_5$ inverse mapping requires sufficient latent depth to capture the multi-modal nature of the decision space without falling into the overconfidence typical of simpler architectures. As demonstrated in Table~\ref{tab:f5_mace_ablation}, MACE serves as the primary quantitative metric for resolving cases where PIT curves are visually similar.
+
+% The selection of the final model configuration follows a reliability-first protocol. Priority is given to models exhibiting the lowest MACE and PIT curves that most closely approximate the diagonal. Sharpness, as measured by the median CRPS in Figure~\ref{fig:f5_crps_box_ablation}, is utilized as a secondary criterion. This hierarchical approach ensures the selection of a statistically well-calibrated sampler that accurately reflects the inherent uncertainty of the inverse problem, rather than a model that is deceptively sharp but statistically unreliable.
 
 
 

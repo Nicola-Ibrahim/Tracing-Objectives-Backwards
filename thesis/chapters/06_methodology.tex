@@ -323,7 +323,9 @@ Euclidean aggregation in residual space, based on the $\ell_2$ norm:
 \begin{equation}
   s^{(k)}(\vect{y}^{\star})
   \;=\;
-  \big\lVert \vect{r}^{(k)}(\vect{y}^{\star}) \big\rVert_2,
+  \big\lVert \vect{r}^{(k)}(\vect{y}^{\star}) \big\rVert_2
+  \;=\;
+  \sqrt{\sum_{j=1}^{m}\Big(r^{(k)}_{j}(\vect{y}^{\star})\Big)^{2}},
   \qquad k=1,\dots,K,
   \label{eq:discrepancy_residual_euclid}
 \end{equation}
@@ -510,19 +512,21 @@ actually contain the ground truth about 10\% of the time, ``50th percentile'' ab
 the time, and so on. This is a distribution-level check, not a best-candidate accuracy
 check. \cite{Diebold1998}
 
-We assess reliability using the probability integral transform (PIT), applied component-wise
-to the empirical conditional distribution represented by the $K$ candidates. For each test
-case $i$ and decision dimension $d$, we compute the PIT value as the empirical percentile
-rank of the ground-truth component $x_{i,d}$ among the sampled candidates:
+
+
+To assess this reliability, we employ the Probability Integral Transform (PIT) applied component-wise to the empirical conditional distribution. For each test case $i$ and each decision dimension $d \in \{1, \dots, D\}$, let
+\[
+  \widehat{x}^{(1)}_{i,d}, \dots, \widehat{x}^{(K)}_{i,d}
+\]
+denote the $K$ sampled values of component $d$, and let $x_{i,d}$ denote the corresponding ground-truth component. The PIT value is computed as the empirical percentile rank of the ground-truth component among the sampled candidates:
 \begin{equation}
-  z_{i,d}
-  \;=\;
-  \underbrace{\frac{1}{K}\sum_{k=1}^{K}\mathbf{1}\!\left(\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right)}_{\text{percentile rank of }x_{i,d}\text{ among }K\text{ samples}},
+  z_{i,d} = \underbrace{\frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left(\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right)}_{\text{percentile rank of }x_{i,d}\text{ among }K\text{ samples}},
   \label{eq:pit_empirical}
 \end{equation}
-The quantity $z_{i,d}\in[0,1]$ is the empirical CDF of the $K$ sampled candidates evaluated at
+
+where $\mathbb{I}(\cdot)$ is the indicator function. The quantity $z_{i,d}\in[0,1]$ is the empirical CDF of the $K$ sampled candidates evaluated at
 the ground-truth value $x_{i,d}$. Equivalently, it is the percentile rank of $x_{i,d}$ among the
-samples: for example, $z_{i,d}=0.1$ means roughly 10\% of sampled values lie below $x_{i,d}$.
+samples: for example, $z_{i,d}=0.1$ indicates that 10\% of the sampled candidates lie below the actual ground-truth value $x_{i,d}$.
 If the conditional sampler is calibrated for component $d$, then these ranks aggregated over
 test cases are approximately uniform on $[0,1]$. Systematic departures from uniformity therefore
 diagnose distorted uncertainty under repeated conditioning. 
