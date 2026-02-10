@@ -66,11 +66,8 @@ class GenerateDatasetCommandHandler:
         )
 
         problem_name = getattr(problem, "name", "unknown")
-        algorithm_name = algorithm.__class__.__name__
-        optimizer_name = optimizer.__class__.__name__
         self._logger.log_info(
             f"Starting dataset generation for problem '{problem_name}' "
-            f"(algorithm={algorithm_name}, optimizer={optimizer_name})."
         )
 
         normalizer_cfg = command.normalizer_config.model_dump()

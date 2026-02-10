@@ -20,9 +20,8 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
     Generates and persists high-resolution diagnostic dashboards.
     """
 
-    def __init__(self, output_dir: str = "reports/figures"):
+    def __init__(self, output_dir: str = "reports/evaluation/figures"):
         super().__init__(ROOT_PATH / output_dir)
-        self._output_dir = self.save_path
 
     def plot(self, results: list[DiagnosticResult]) -> None:
         """
@@ -199,5 +198,5 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
     def _persist_figure(self, fig: go.Figure, name: str) -> None:
         """Persists figure to files without timestamps."""
         # Save High-Resolution Static Image (PNG)
-        png_path = self._output_dir / f"{name}.png"
+        png_path = self.save_path / f"{name}.png"
         fig.write_image(png_path, scale=3)
