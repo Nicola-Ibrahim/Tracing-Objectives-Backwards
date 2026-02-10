@@ -4,26 +4,22 @@ from plotly.subplots import make_subplots
 
 from ..helpers.pdf_2d import add_pdf2d
 
-_DEC_COLORSCALE = "Oranges"
-_OBJ_COLORSCALE = "Blues"
-
 
 def create_raw_decision_density_figure(historical_solutions: np.ndarray) -> go.Figure:
     """Creates 2D PDF density plot for raw decisions."""
     fig = make_subplots(rows=1, cols=1)
 
-    if historical_solutions.size:
-        add_pdf2d(
-            fig,
-            1,
-            1,
-            historical_solutions[:, 0],
-            historical_solutions[:, 1],
-            "$x_1$ (Raw)",
-            "$x_2$ (Raw)",
-            colorscale=_DEC_COLORSCALE,
-            show_points=False,
-        )
+    add_pdf2d(
+        fig,
+        1,
+        1,
+        historical_solutions[:, 0],
+        historical_solutions[:, 1],
+        "$x_1$ (Raw)",
+        "$x_2$ (Raw)",
+        colorscale="Oranges",
+        show_points=False,
+    )
 
     fig.update_layout(
         title="<b>Raw Decision Density</b>",
@@ -38,18 +34,17 @@ def create_raw_objective_density_figure(historical_objectives: np.ndarray) -> go
     """Creates 2D PDF density plot for raw objectives."""
     fig = make_subplots(rows=1, cols=1)
 
-    if historical_objectives.size:
-        add_pdf2d(
-            fig,
-            1,
-            1,
-            historical_objectives[:, 0],
-            historical_objectives[:, 1],
-            "$y_1$ (Raw)",
-            "$y_2$ (Raw)",
-            colorscale=_OBJ_COLORSCALE,
-            show_points=False,
-        )
+    add_pdf2d(
+        fig,
+        1,
+        1,
+        historical_objectives[:, 0],
+        historical_objectives[:, 1],
+        "$y_1$ (Raw)",
+        "$y_2$ (Raw)",
+        colorscale="Blues",
+        show_points=False,
+    )
 
     fig.update_layout(
         title="<b>Raw Objective Density</b>",

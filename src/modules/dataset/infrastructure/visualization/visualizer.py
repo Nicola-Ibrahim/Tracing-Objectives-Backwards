@@ -135,7 +135,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         """Persists figure to files."""
         png_path = self.save_path / f"{name}.png"
         try:
-            # fig.write_image(str(png_path), scale=3)
-            fig.write_html(str(png_path.with_suffix(".html")), include_plotlyjs="cdn")
+            fig.write_image(str(png_path), scale=3)
+            # fig.write_html(str(png_path.with_suffix(".html")), include_plotlyjs="cdn")
         except Exception as e:
             print(f"Error saving {name} PNG: {e}")

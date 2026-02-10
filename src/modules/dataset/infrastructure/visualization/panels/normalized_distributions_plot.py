@@ -4,9 +4,6 @@ from plotly.subplots import make_subplots
 
 from ..helpers.pdf_1d import add_pdf1d
 
-_OBJ_COLOR = "#2980b9"
-_DEC_COLOR = "#d35400"
-
 
 def create_normalized_decision_pdf_figure(X_train: np.ndarray) -> go.Figure:
     """Creates 1D PDF plots for normalized decisions."""
@@ -14,11 +11,11 @@ def create_normalized_decision_pdf_figure(X_train: np.ndarray) -> go.Figure:
 
     # x1 (col 0)
     if X_train.size and X_train.shape[1] > 0:
-        add_pdf1d(fig, 1, 1, X_train[:, 0], "Norm $x_1$", color=_DEC_COLOR)
+        add_pdf1d(fig, 1, 1, X_train[:, 0], "Norm $x_1$", color="#d35400")
 
     # x2 (col 1)
     if X_train.size and X_train.shape[1] > 1:
-        add_pdf1d(fig, 1, 2, X_train[:, 1], "Norm $x_2$", color=_DEC_COLOR)
+        add_pdf1d(fig, 1, 2, X_train[:, 1], "Norm $x_2$", color="#d35400")
 
     fig.update_layout(
         title="<b>Normalized Decision PDFs</b>",
@@ -36,11 +33,11 @@ def create_normalized_objective_pdf_figure(y_train: np.ndarray) -> go.Figure:
 
     # y1 (col 0)
     if y_train.size and y_train.shape[1] > 0:
-        add_pdf1d(fig, 1, 1, y_train[:, 0], "Norm $y_1$", color=_OBJ_COLOR)
+        add_pdf1d(fig, 1, 1, y_train[:, 0], "Norm $y_1$", color="#2980b9")
 
     # y2 (col 1)
     if y_train.size and y_train.shape[1] > 1:
-        add_pdf1d(fig, 1, 2, y_train[:, 1], "Norm $y_2$", color=_OBJ_COLOR)
+        add_pdf1d(fig, 1, 2, y_train[:, 1], "Norm $y_2$", color="#2980b9")
 
     fig.update_layout(
         title="<b>Normalized Objective PDFs</b>",

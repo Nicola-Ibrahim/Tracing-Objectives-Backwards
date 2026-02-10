@@ -4,9 +4,6 @@ from plotly.subplots import make_subplots
 
 from ..helpers.scatter_3d import add_3d_overlay
 
-_DEC_COLOR = "#d35400"
-_OBJ_COLOR = "#2980b9"
-
 
 def create_3d_decision_context_figure(
     X_train: np.ndarray, y_train: np.ndarray
@@ -21,7 +18,7 @@ def create_3d_decision_context_figure(
     )
 
     # Plot 1: x1, x2, y1
-    _plot_3d(
+    add_3d_overlay(
         fig=fig,
         row=1,
         col=1,
@@ -29,11 +26,13 @@ def create_3d_decision_context_figure(
         y=X_train[:, 1],
         z=y_train[:, 0],
         name="Train",
-        color=_DEC_COLOR,
+        size=3,
+        opacity=0.8,
+        color="#d35400",
     )
 
     # Plot 2: x1, x2, y2
-    _plot_3d(
+    add_3d_overlay(
         fig=fig,
         row=1,
         col=2,
@@ -41,7 +40,9 @@ def create_3d_decision_context_figure(
         y=X_train[:, 1],
         z=y_train[:, 1],
         name="Train",
-        color=_DEC_COLOR,
+        size=3,
+        opacity=0.8,
+        color="#2980b9",
     )
 
     fig.update_scenes(
@@ -81,7 +82,7 @@ def create_3d_objective_context_figure(
     )
 
     # Plot 1: y1, y2, x1
-    _plot_3d(
+    add_3d_overlay(
         fig=fig,
         row=1,
         col=1,
@@ -89,11 +90,13 @@ def create_3d_objective_context_figure(
         y=y_train[:, 1],
         z=X_train[:, 0],
         name="Train",
-        color=_OBJ_COLOR,
+        size=3,
+        opacity=0.8,
+        color="#2980b9",
     )
 
     # Plot 2: y1, y2, x2
-    _plot_3d(
+    add_3d_overlay(
         fig=fig,
         row=1,
         col=2,
@@ -101,7 +104,9 @@ def create_3d_objective_context_figure(
         y=y_train[:, 1],
         z=X_train[:, 1],
         name="Train",
-        color=_OBJ_COLOR,
+        size=3,
+        opacity=0.8,
+        color="#d35400",
     )
 
     fig.update_scenes(
@@ -126,28 +131,3 @@ def create_3d_objective_context_figure(
         width=1200,
     )
     return fig
-
-
-def _plot_3d(
-    fig: go.Figure,
-    row: int,
-    col: int,
-    x: np.ndarray,
-    y: np.ndarray,
-    z: np.ndarray,
-    name: str,
-    color: str,
-):
-    if x.size > 0 and y.size > 0 and z.size > 0:
-        add_3d_overlay(
-            fig,
-            row=row,
-            col=col,
-            x=x,
-            y=y,
-            z=z,
-            name=name,
-            size=3,
-            opacity=0.8,
-            color=color,
-        )
