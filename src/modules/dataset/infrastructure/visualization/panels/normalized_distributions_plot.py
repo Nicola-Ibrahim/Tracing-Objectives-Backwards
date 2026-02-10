@@ -1,31 +1,24 @@
-from typing import Any
-
 import numpy as np
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from ..helpers.pdf_1d import add_pdf1d
 
-_OBJ_TRAIN = "#2980b9"
-_OBJ_TEST = "#5dade2"
-_DEC_TRAIN = "#d35400"
-_DEC_TEST = "#e59866"
+_OBJ_COLOR = "#2980b9"
+_DEC_COLOR = "#d35400"
 
 
-def create_normalized_decision_pdf_figure(data: dict[str, Any]) -> go.Figure:
+def create_normalized_decision_pdf_figure(X_train: np.ndarray) -> go.Figure:
     """Creates 1D PDF plots for normalized decisions."""
-    from plotly.subplots import make_subplots
-
     fig = make_subplots(rows=1, cols=2, subplot_titles=("Norm x1 PDF", "Norm x2 PDF"))
 
     # x1 (col 0)
-    _add_pdf_overlay(
-        fig, data, ["X_train", "X_test"], 0, 1, 1, [_DEC_TRAIN, _DEC_TEST], "Norm $x_1$"
-    )
+    if X_train.size and X_train.shape[1] > 0:
+        add_pdf1d(fig, 1, 1, X_train[:, 0], "Norm $x_1$", color=_DEC_COLOR)
 
     # x2 (col 1)
-    _add_pdf_overlay(
-        fig, data, ["X_train", "X_test"], 1, 1, 2, [_DEC_TRAIN, _DEC_TEST], "Norm $x_2$"
-    )
+    if X_train.size and X_train.shape[1] > 1:
+        add_pdf1d(fig, 1, 2, X_train[:, 1], "Norm $x_2$", color=_DEC_COLOR)
 
     fig.update_layout(
         title="<b>Normalized Decision PDFs</b>",
@@ -37,21 +30,17 @@ def create_normalized_decision_pdf_figure(data: dict[str, Any]) -> go.Figure:
     return fig
 
 
-def create_normalized_objective_pdf_figure(data: dict[str, Any]) -> go.Figure:
+def create_normalized_objective_pdf_figure(y_train: np.ndarray) -> go.Figure:
     """Creates 1D PDF plots for normalized objectives."""
-    from plotly.subplots import make_subplots
-
     fig = make_subplots(rows=1, cols=2, subplot_titles=("Norm y1 PDF", "Norm y2 PDF"))
 
     # y1 (col 0)
-    _add_pdf_overlay(
-        fig, data, ["y_train", "y_test"], 0, 1, 1, [_OBJ_TRAIN, _OBJ_TEST], "Norm $y_1$"
-    )
+    if y_train.size and y_train.shape[1] > 0:
+        add_pdf1d(fig, 1, 1, y_train[:, 0], "Norm $y_1$", color=_OBJ_COLOR)
 
     # y2 (col 1)
-    _add_pdf_overlay(
-        fig, data, ["y_train", "y_test"], 1, 1, 2, [_OBJ_TRAIN, _OBJ_TEST], "Norm $y_2$"
-    )
+    if y_train.size and y_train.shape[1] > 1:
+        add_pdf1d(fig, 1, 2, y_train[:, 1], "Norm $y_2$", color=_OBJ_COLOR)
 
     fig.update_layout(
         title="<b>Normalized Objective PDFs</b>",
@@ -61,18 +50,3 @@ def create_normalized_objective_pdf_figure(data: dict[str, Any]) -> go.Figure:
         showlegend=True,
     )
     return fig
-
-
-def _add_pdf_overlay(fig, data, keys, data_col, row, plot_col, colors, label):
-    for k, color in zip(keys, colors):
-        arr = _get_2d(data, k)
-        if arr.size and arr.shape[1] > data_col:
-            v = arr[:, data_col]
-            add_pdf1d(fig, row, plot_col, v, label, color=color)
-
-
-def _get_2d(data: dict[str, Any], key: str):
-    arr = np.asarray(data.get(key, []))
-    if arr.size == 0:
-        return np.empty((0, 2))
-    return arr[:, :2] if arr.ndim == 2 else arr.reshape(-1, 2)

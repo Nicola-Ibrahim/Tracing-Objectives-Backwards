@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 import plotly.graph_objects as go
@@ -16,6 +15,10 @@ from .panels.normalized_distributions_plot import (
 from .panels.normalized_space_plot import (
     create_normalized_decision_space_figure,
     create_normalized_objective_space_figure,
+)
+from .panels.pareto_plot import (
+    create_pareto_front_figure,
+    create_pareto_set_figure,
 )
 from .panels.raw_density_plot import (
     create_raw_decision_density_figure,
@@ -45,73 +48,87 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         super().__init__(ROOT_PATH / output_dir)
 
     def plot(self, data: dict[str, Any]):
-        if not isinstance(data, dict):
-            raise TypeError("Visualizer expects a dict prepared by the handler.")
+        # 1. Unpack Data
+        # Normalized (train only as per user request)
+        X_train = data["X_train"]
+        y_train = data["y_train"]
 
-        # Drop any accidental objects (defensive)
-        for k in list(data.keys()):
-            if "normalizer" in k.lower():
-                data.pop(k, None)
+        # Raw Data
+        pareto_set = data["pareto_set"]
+        pareto_front = data["pareto_front"]
+        historical_solutions = data["historical_solutions"]
+        historical_objectives = data["historical_objectives"]
 
-        # 1. Raw Spaces
-        self._persist_figure(
-            create_raw_decision_space_figure(data), "raw_decision_space"
-        )
-        self._persist_figure(
-            create_raw_objective_space_figure(data), "raw_objective_space"
-        )
-
-        # # 2. Raw Distributions (KDEs)
+        # 2. Raw Space Plots
         # self._persist_figure(
-        #     create_raw_decision_distributions_figure(data), "raw_decision_distribution"
+        #     create_raw_decision_space_figure(pareto_set, historical_solutions),
+        #     "raw_decision_space",
         # )
         # self._persist_figure(
-        #     create_raw_objective_distributions_figure(data),
+        #     create_raw_objective_space_figure(pareto_front, historical_objectives),
+        #     "raw_objective_space",
+        # )
+
+        # 3. Pareto-only Plots
+        self._persist_figure(create_pareto_set_figure(pareto_set), "pareto_set")
+        self._persist_figure(create_pareto_front_figure(pareto_front), "pareto_front")
+
+        # # 4. Raw Distributions (KDEs)
+        # self._persist_figure(
+        #     create_raw_decision_distributions_figure(pareto_set),
+        #     "raw_decision_distribution",
+        # )
+        # self._persist_figure(
+        #     create_raw_objective_distributions_figure(pareto_front),
         #     "raw_objective_distribution",
         # )
 
-        # # 3. Raw Density (2D PDFs)
+        # # 5. Raw Density (2D PDFs)
         # self._persist_figure(
-        #     create_raw_decision_density_figure(data), "raw_decision_density"
+        #     create_raw_decision_density_figure(historical_solutions),
+        #     "raw_decision_density",
         # )
         # self._persist_figure(
-        #     create_raw_objective_density_figure(data), "raw_objective_density"
+        #     create_raw_objective_density_figure(historical_objectives),
+        #     "raw_objective_density",
         # )
 
-        # 4. Normalized Spaces
+        # 6. Normalized Spaces
         self._persist_figure(
-            create_normalized_decision_space_figure(data), "normalized_decision_space"
+            create_normalized_decision_space_figure(X_train),
+            "normalized_decision_space",
         )
         self._persist_figure(
-            create_normalized_objective_space_figure(data), "normalized_objective_space"
+            create_normalized_objective_space_figure(y_train),
+            "normalized_objective_space",
         )
 
-        # # 5. Normalized Distributions
+        # 7. Normalized Distributions
         # self._persist_figure(
-        #     create_normalized_decision_pdf_figure(data),
+        #     create_normalized_decision_pdf_figure(X_train),
         #     "normalized_decision_distribution",
         # )
         # self._persist_figure(
-        #     create_normalized_objective_pdf_figure(data),
+        #     create_normalized_objective_pdf_figure(y_train),
         #     "normalized_objective_distribution",
         # )
 
-        # # 6. Normalized Density
+        # # 8. Normalized Density
         # self._persist_figure(
-        #     create_normalized_decision_density_figure(data),
+        #     create_normalized_decision_density_figure(X_train),
         #     "normalized_decision_density",
         # )
         # self._persist_figure(
-        #     create_normalized_objective_density_figure(data),
+        #     create_normalized_objective_density_figure(y_train),
         #     "normalized_objective_density",
         # )
 
-        # 7. 3D Context Views
+        # 9. 3D Context Views
         self._persist_figure(
-            create_3d_decision_context_figure(data), "3d_decision_context"
+            create_3d_decision_context_figure(X_train, y_train), "3d_decision_context"
         )
         self._persist_figure(
-            create_3d_objective_context_figure(data), "3d_objective_context"
+            create_3d_objective_context_figure(X_train, y_train), "3d_objective_context"
         )
 
     def _persist_figure(self, fig: go.Figure, name: str) -> None:

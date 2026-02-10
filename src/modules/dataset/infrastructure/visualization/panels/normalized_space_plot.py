@@ -1,28 +1,31 @@
-from typing import Any
-
 import numpy as np
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from ..helpers.scatter_2d import add_scatter_overlay
 
-_OBJ_TRAIN = "#2980b9"
-_OBJ_TEST = "#5dade2"
-_DEC_TRAIN = "#d35400"
-_DEC_TEST = "#e59866"
-_DEFAULT_COLOR = "#888888"
+_OBJ_COLOR = "#2980b9"
+_DEC_COLOR = "#d35400"
 
 
-def create_normalized_decision_space_figure(data: dict[str, Any]) -> go.Figure:
+def create_normalized_decision_space_figure(X_train: np.ndarray) -> go.Figure:
     """Creates scatter plot for Normalized Decision Space (x1 vs x2)."""
-    fig = go.Figure()
+    fig = make_subplots(rows=1, cols=1)
 
     # Train (Decisions)
-    _add_series(
-        fig, data, "X_train", "Train (Decisions)", _DEC_TRAIN, "circle-open", 6, 0.7
-    )
-
-    # Test (Decisions)
-    _add_series(fig, data, "X_test", "Test (Decisions)", _DEC_TEST, "x", 7, 0.9)
+    if X_train.size:
+        add_scatter_overlay(
+            fig,
+            1,
+            1,
+            X_train[:, 0],
+            X_train[:, 1],
+            name="Train (Decisions)",
+            symbol="circle-open",
+            size=6,
+            opacity=0.7,
+            color=_DEC_COLOR,
+        )
 
     fig.update_layout(
         title="<b>Normalized Decisions</b>",
@@ -35,17 +38,24 @@ def create_normalized_decision_space_figure(data: dict[str, Any]) -> go.Figure:
     return fig
 
 
-def create_normalized_objective_space_figure(data: dict[str, Any]) -> go.Figure:
+def create_normalized_objective_space_figure(y_train: np.ndarray) -> go.Figure:
     """Creates scatter plot for Normalized Objective Space (y1 vs y2)."""
-    fig = go.Figure()
+    fig = make_subplots(rows=1, cols=1)
 
     # Train (Objectives)
-    _add_series(
-        fig, data, "y_train", "Train (Objectives)", _OBJ_TRAIN, "circle-open", 6, 0.7
-    )
-
-    # Test (Objectives)
-    _add_series(fig, data, "y_test", "Test (Objectives)", _OBJ_TEST, "x", 7, 0.9)
+    if y_train.size:
+        add_scatter_overlay(
+            fig,
+            1,
+            1,
+            y_train[:, 0],
+            y_train[:, 1],
+            name="Train (Objectives)",
+            symbol="circle-open",
+            size=6,
+            opacity=0.7,
+            color=_OBJ_COLOR,
+        )
 
     fig.update_layout(
         title="<b>Normalized Objectives</b>",
@@ -56,27 +66,3 @@ def create_normalized_objective_space_figure(data: dict[str, Any]) -> go.Figure:
         width=800,
     )
     return fig
-
-
-def _add_series(fig, data, key, name, color, symbol, size, opacity):
-    arr = _get_2d(data, key)
-    if arr.size:
-        add_scatter_overlay(
-            fig,
-            None,
-            None,
-            arr[:, 0],
-            arr[:, 1],
-            name=name,
-            symbol=symbol,
-            size=size,
-            opacity=opacity,
-            color=color,
-        )
-
-
-def _get_2d(data: dict[str, Any], key: str):
-    arr = np.asarray(data.get(key, []))
-    if arr.size == 0:
-        return np.empty((0, 2))
-    return arr[:, :2] if arr.ndim == 2 else arr.reshape(-1, 2)

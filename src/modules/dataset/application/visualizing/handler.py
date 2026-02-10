@@ -36,8 +36,6 @@ class VisualizeDatasetCommandHandler:
             "dataset_name": dataset.name,
             "X_train": processed.decisions_train,
             "y_train": processed.objectives_train,
-            "X_test": processed.decisions_test,
-            "y_test": processed.objectives_test,
             "pareto_set": dataset.pareto.set,
             "pareto_front": dataset.pareto.front,
             "historical_solutions": dataset.decisions,
