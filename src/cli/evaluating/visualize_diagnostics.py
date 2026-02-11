@@ -38,9 +38,9 @@ def cli():
             # InverseEstimatorCandidate(
             #     type=EstimatorTypeEnum.MDN, version=4, run_number=1
             # ),
-            # InverseEstimatorCandidate(
-            #     type=EstimatorTypeEnum.MDN, version=5, run_number=1
-            # ),
+            InverseEstimatorCandidate(
+                type=EstimatorTypeEnum.MDN, version=5, run_number=1
+            ),
             # InverseEstimatorCandidate(
             #     type=EstimatorTypeEnum.MDN, version=6, run_number=1
             # ),
@@ -53,12 +53,12 @@ def cli():
             # InverseEstimatorCandidate(
             #     type=EstimatorTypeEnum.MDN, version=9, run_number=1
             # ),
-            # InverseEstimatorCandidate(
-            #     type=EstimatorTypeEnum.MDN, version=10, run_number=1
-            # ),
             InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=11, run_number=1
+                type=EstimatorTypeEnum.MDN, version=10, run_number=1
             ),
+            # InverseEstimatorCandidate(
+            #     type=EstimatorTypeEnum.MDN, version=11, run_number=1
+            # ),
             InverseEstimatorCandidate(
                 type=EstimatorTypeEnum.CVAE, version=1, run_number=1
             ),

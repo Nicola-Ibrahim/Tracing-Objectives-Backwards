@@ -1,75 +1,69 @@
 from typing import Any
 
-import numpy as np
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from ..helpers.scatter_plot import add_line_trace
 
 
-def add_accuracy_ecdf_plot(
-    fig: go.Figure,
-    row: int,
-    col: int,
-    results_map: dict[str, dict[str, Any]],
+def create_accuracy_ecdf_figure(
+    ecdf_data: dict[str, dict[str, Any]],
     color_map: dict[str, str],
-) -> None:
+    title: str,
+    subtitle: str,
+) -> go.Figure:
     """
-    Adds an Empirical Cumulative Distribution Function (ECDF) plot of the
-    best-shot discrepancy scores for each model.
+    Creates Empirical Cumulative Distribution Function (ECDF) figure.
     """
-    for model_name, res in results_map.items():
-        # 1. Fetch best-shot scores
-        # We handle both the new naming and fallback if needed
-        accuracy = res.get("accuracy", {})
-        best_shot = accuracy.get("best_shot_scores")
 
-        if best_shot is None:
-            # Fallback to discrepancy_scores if best_shot is missing
-            discrepancy = accuracy.get("discrepancy_scores")
-            if discrepancy is not None:
-                best_shot = np.min(discrepancy, axis=1)
+    fig = make_subplots(rows=1, cols=1)
+    row, col = 1, 1
 
-        if best_shot is None:
-            continue
-
-        # 2. Extract metadata components for the label
-        meta = res.get("metadata", {})
-        scale_method = meta.get("scale_method", "unknown")
-        n_samples = meta.get("num_samples", "?")
-
-        # Label format: Type v1 (scale, K=10)
-        label = f"{model_name} ({scale_method}, K={n_samples})"
-
-        # 3. Construct ECDF
-        x_sorted = np.sort(best_shot)
-        y_ecdf = np.arange(1, len(x_sorted) + 1) / len(x_sorted)
+    for model_name, data in ecdf_data.items():
+        x_sorted = data["x_sorted"]
+        y_ecdf = data["y_ecdf"]
+        label = data["label"]
+        median_val = data["median_val"]
 
         color = color_map.get(model_name, "gray")
 
         # 4. Add ECDF trace
-        fig.add_trace(
-            go.Scatter(
-                x=x_sorted,
-                y=y_ecdf,
-                mode="lines",
-                name=label,
-                line=dict(color=color, width=2.5, shape="hv"),
-                legendgroup=model_name,
-            ),
+        add_line_trace(
+            fig=fig,
+            x=x_sorted,
+            y=y_ecdf,
+            name=label,
+            color=color,
             row=row,
             col=col,
+            width=2.5,
+            shape="hv",
+            legendgroup=model_name,
         )
 
-        # 5. Optional: Add median vertical line
-        median_val = np.median(best_shot)
-        fig.add_trace(
-            go.Scatter(
-                x=[median_val, median_val],
-                y=[0, 1],
-                mode="lines",
-                line=dict(color=color, width=1, dash="dash"),
-                showlegend=False,
-                hoverinfo="skip",
-                legendgroup=model_name,
-            ),
+        add_line_trace(
+            fig=fig,
+            x=[median_val, median_val],
+            y=[0, 1],
+            name=label,
+            color=color,
             row=row,
             col=col,
+            width=1,
+            dash="dash",
+            showlegend=False,
+            hoverinfo="skip",
+            legendgroup=model_name,
         )
+
+    fig.update_layout(
+        title=f"<b>{title}</b><br><sup>{subtitle}</sup>",
+        xaxis_title="Best-shot discrepancy (min over K)",
+        yaxis_title="Fraction of targets",
+        yaxis_range=[0, 1.05],
+        template="plotly_white",
+        height=800,
+        width=1000,
+        showlegend=True,
+    )
+    return fig

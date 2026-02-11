@@ -1,55 +1,47 @@
-from typing import Any, List, Union
-
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from ..color_utils import darken_rgba
+from ..helpers.bar_plot import add_bar_trace
 
 
-def add_metric_bar_plot(
-    fig: go.Figure,
-    results_map: dict[str, dict[str, Any]],
+def create_metric_bar_figure(
+    metric_values: dict[str, float],
     color_map: dict[str, str],
     model_names: list[str],
-    metric_path: List[str],
-    metric_name: str,
-    row: int = 1,
-    col: int = 1,
-    show_legend: bool = False,
-) -> None:
+    title: str,
+    subtitle: str,
+) -> go.Figure:
     """
-    Generic helper to add a bar chart for a nested metric.
-    Recursively follows metric_path into the result dictionary.
+    Creates a bar chart figure for a specific metric.
     """
-
-    def _get_nested(data: dict, path: List[str]) -> Union[float, int, None]:
-        curr = data
-        for key in path:
-            if isinstance(curr, dict) and key in curr:
-                curr = curr[key]
-            else:
-                return None
-        return curr
+    fig = make_subplots(rows=1, cols=1)
+    row, col = 1, 1
 
     for model_name in model_names:
-        if model_name in results_map:
-            val = _get_nested(results_map[model_name], metric_path)
-            if val is None:
-                continue
-
+        if model_name in metric_values:
+            val = metric_values[model_name]
             color = color_map.get(model_name, "gray")
 
-            fig.add_trace(
-                go.Bar(
-                    x=[model_name],
-                    y=[val],
-                    marker=dict(
-                        color=color,
-                        line=dict(color=darken_rgba(color), width=1.5),
-                    ),
-                    showlegend=show_legend,
-                    legendgroup=model_name,
-                    name=model_name if show_legend else metric_name,
-                ),
+            add_bar_trace(
+                fig=fig,
+                x=[model_name],
+                y=[val],
+                name=model_name,
+                color=color,
+                border_color=darken_rgba(color),
                 row=row,
                 col=col,
+                showlegend=True,
+                legendgroup=model_name,
             )
+
+    fig.update_layout(
+        title=f"<b>{title}</b><br><sup>{subtitle}</sup>",
+        yaxis_title="Metric Value",
+        template="plotly_white",
+        height=700,
+        width=1200,
+        showlegend=True,
+    )
+    return fig
