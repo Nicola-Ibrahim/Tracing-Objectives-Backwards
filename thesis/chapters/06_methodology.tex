@@ -661,6 +661,35 @@ departures from the diagonal. For example, a model may achieve strong best-of-$K
 Reporting both diagnostics makes these trade-offs explicit and supports the interpretation of the comparative results \cite{Diebold1998}
 
 
+\subsubsection{Interpretive Signatures of PIT and CRPS}
+\label{sec:diagnostic_signatures}
+
+To provide a comprehensive view of model behavior and facilitate a deeper understanding of how predictive distributions manifest in decision space, Figure \ref{fig:diagnostic_signatures_grid} illustrates various edge cases in probabilistic modeling. By analyzing the relationship between the spatial distribution of generated samples and the target $\vect{y}^\star$, we can diagnose specific failure modes that standard accuracy metrics might overlook.  
+
+The evaluation relies on two complementary perspectives: the Continuous Ranked Probability Score (CRPS), which quantifies the total error by penalizing both lack of accuracy (distance from target) and lack of sharpness (diffuse variance); and the Probability Integral Transform (PIT), which serves as an "honesty check" to determine if the model's self-reported uncertainty spread is statistically consistent with the observed data.
+
+\begin{itemize}
+    \item Ideal Performance (Top-Left): Characterized by Low CRPS and a Flat PIT. The model is both sharp and honest: samples are tightly clustered around the target $\vect{y}^\star$, and the model’s internal uncertainty perfectly matches the true dispersion of the objective space.
+    
+    \item Diffuse but Calibrated (Top-Right): This scenario shows a Flat PIT but High CRPS. While the model is "honest" about its uncertainty, its predictions are too vague to be useful. The samples cover the target correctly on average, but the high variance makes it difficult to pinpoint a precise design.
+
+    \item Overconfidence (Second Row): This represents the "Overconfident" failure mode. In the Low CRPS case, the model is precise but slightly off-target; because its distribution is too narrow (U-shaped PIT), it fails to realize it has missed the target. In the High CRPS case (Overconfident Bias), the model is "sure" of a result that is far removed from the ground truth, indicating a fundamental failure in the learned mapping.
+
+    \item Underconfidence (Third Row): These cases show a Hill-shaped PIT. The model is effectively "hedging its bets" by producing a distribution that is wider than necessary. Even when the samples are centered on the target (Underconfident Hill), the lack of sharpness results in a poor CRPS, indicating that the model is being overly conservative.
+
+    \item Systematic Bias (Bottom Row): These signatures reveal a displacement of the entire sample cloud. Whether the predictions are sharp (Sharp Bias) or inconsistent (Large Bias), the displacement from $\vect{y}^\star$ causes the PIT to skew. This suggests the model has failed to integrate the conditional constraints, leading to a systematic drift where the true target consistently falls in the extreme tails of the predicted distribution.
+\end{itemize}
+
+Through this framework, we can identify whether a model’s poor performance stems from a lack of predictive capacity (Bias), an inability to refine its search (Sharpness), or a fundamental misunderstanding of its own error margins (Calibration).
+
+\begin{figure}[!htbp]
+  \centering
+  \begin{adjustbox}{width=0.75\linewidth}
+      \input{figures/pit_vs_crps}
+  \end{adjustbox}
+  \caption[Diagnostic Signatures of CRPS and PIT Calibration]{Diagnostic signatures of model performance across the CRPS--PIT landscape.}
+  \label{fig:diagnostic_signatures_grid}
+\end{figure}
 % %-------------------------------------------------------------------------------
 % \section{Pipelines}\label{sec:pipelines}
 % %-------------------------------------------------------------------------------

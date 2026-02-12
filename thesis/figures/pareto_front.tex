@@ -52,7 +52,7 @@
     \begin{pgfonlayer}{main}
         % Draw the "Cone of Dominance" originating from PF3
         % Any point in this shaded region is dominated by PF3 (because it's worse in f1 AND f2)
-        \fill[dominanceRegion, opacity=0.2] (PF3) rectangle (\xmax, \ymax);
+        \fill[dominanceRegion, opacity=0.15] (PF3) rectangle (\xmax, \ymax);
         \draw[dominanceRegion, dashed, thick] (PF3) -- (PF3 |- 0,\ymax) node[above, label text, opacity=1] {Worse $f_1$};
         \draw[dominanceRegion, dashed, thick] (PF3) -- (PF3 -| \xmax,0) node[right, label text, opacity=1] {Worse $f_2$};
 
@@ -84,7 +84,7 @@
 
     % --- 6. Final Annotations ---
     % Label the Pareto Front
-    \node[text=paretoBlue, font=\sffamily\bfseries, anchor=south west] at ($(PF5)+(0.2,0.1)$) {Pareto Front (Non-dominated Set)};
+    \node[text=paretoBlue, font=\sffamily\bfseries, anchor=north east] at ($(PF5)+(0,-0.2)$) {Pareto Front (Non-dominated Set)};
 
     % Label the Feasible Space
     \node[text=dominatedGray!80!black, font=\sffamily\itshape] at (6, 5) {Feasible Objective Space};

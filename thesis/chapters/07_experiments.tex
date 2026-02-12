@@ -2,78 +2,169 @@
 % Experiments
 %-------------------------------------------------------------------------------
 
-\chapter{Experiments}\label{chap:experiments}
+
 
 % This section follows a two-stage evaluation pipeline. First, we tune each inverse-model family with an intra-model ablation study, using outcome-space target matching to identify a best-performing configuration within that family. We then freeze these best-in-class configurations and compare models head-to-head under identical data splits, target sets, and sampling protocol.
 
-\section{bi-objective case}\label{sec:exp_coco}
-we have to write about why we chose this bi-objective case and its effect.
 
-\subsection{Optimization process}
-A multi-objective optimisation problem (MOP) is defined by decision variables
-$\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector
-$\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. We consider minimization of all objectives.
-A general constrained MOP is written as
+\chapter{Experiments}\label{chap:experiments}
+
+\section{bi-objective case}\label{sec:exp_coco}
+The selection of a bi-objective configuration for this study is motivated by the need to rigorously evaluate the inverse model's ability to capture the Pareto front while maintaining interpretability. Bi-objective problems serve as a fundamental benchmark in multi-objective optimization, providing a non-trivial trade-off surface that remains amenable to high-fidelity visualization. This dimensionality allows for a direct, intuitive assessment of how the model explores the decision space relative to the objective-space conflict. 
+
+% Furthermore, focusing on two objectives ensures that the performance bottlenecks identified are attributable to the underlying model architecture and hyperparameter configurations rather than the exponential increase in complexity associated with many-objective spaces.
+
+% \subsection{Optimization process}
+% A multi-objective optimisation problem (MOP) is defined by decision variables
+% $\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector
+% $\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. We consider minimization of all objectives.
+% A general constrained MOP is written as
+% \begin{align}
+% \min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\
+% \text{s.t.}\; g_j(\vect{x}) &\le 0,\quad j=1,\dots,J,\\
+% h_k(\vect{x}) &= 0,\quad k=1,\dots,K.
+% \label{eq:mop}
+% \end{align}
+% The feasible region $\calX$ is assumed compact. Objectives may be nonlinear, non-convex, and costly to evaluate, which motivates data-driven surrogates and inverse models in later sections.
+
+% Trade-offs are formalized by Pareto dominance. For $\vect{u},\vect{v}\in\R^m$,
+% $\vect{u}\preceq\vect{v}$ holds if $u_i\le v_i$ for all $i$ and $u_j<v_j$ for at least one index $j$.
+% A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ satisfies
+% $\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
+% Figure~\ref{fig:pareto_front} illustrates this geometry for a bi-objective case, showing an example non-dominated
+% set (Pareto front approximation) together with a dominated region induced by a representative Pareto point.
+
+
+
+% %-------------------------------------------------------------------------------
+% \subsection{Problem and Data}\label{subsec:problem_data}
+% %-------------------------------------------------------------------------------
+
+% We generate bi-objective datasets from the COCO BBOB benchmark suite via the \texttt{cocoex} Python interface, which exposes standardized test functions through deterministic problem instances. In this chapter, we focus on BBOB $f_5$ (Linear Slope) because its construction yields strong directionality and boundary effects: the optimum lies on the domain boundary and the per-coordinate slopes increase with index, which makes target attainment in objective space sensitive to where the inverse sampler places probability mass. In COCO notation, the function includes an instance-dependent bias $f_{\mathrm{opt}}$ and an instance-specific optimum location $\vect{x}^{\mathrm{opt}}$, and the definition can be written as:
+
+% \begin{equation}
+%     f_{5}(\vect{x}) = \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
+% \end{equation}
+
+% where $D$ is the decision dimension, $s_i$ are signed slope coefficients that scale across coordinates, and $z_i$ applies an instance-dependent saturation that creates flat behavior beyond the boundary-aligned optimum direction. 
+
+% To construct a bi-objective problem, we pair two deterministic instances of the same analytic function family:
+
+% \begin{equation}
+%     \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
+% \end{equation}
+
+% with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations while preserving the underlying function definition, enabling reproducible variation under a fixed function index. 
+
+% We approximate a Pareto-relevant archive for this constructed bi-objective $f_5$ problem using NSGA-II under a fixed evaluation budget and fixed random seeds. Figure~\ref{fig:pareto_front} recalls Pareto dominance for bi-objective minimization: points on the Pareto front are non-dominated trade-offs, while points in the dominated region are strictly worse in both objectives.
+
+% \begin{figure}[!htbp]
+%   \centering
+%   \begin{adjustbox}{width=\linewidth}
+%       \input{figures/pareto_front}
+%   \end{adjustbox}
+%   \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
+%   \label{fig:pareto_front}
+% \end{figure}
+
+% Because Pareto-only archives can be small under limited budgets, we train on a larger optimizer-generated archive that includes both Pareto-relevant solutions and additional historically evaluated solutions produced during the NSGA-II search. Concretely, we record $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$ from the run history and split them into train/validation/test (80/10/10) with a fixed seed. 
+
+% The resulting distribution of this collected data is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged Pareto-relevant set highlights the target regions our inverse model is designed to characterize.
+
+% \begin{figure}[!htbp]
+%     \centering
+%     \includegraphics[width=1\linewidth]{images/data_distribution.png}
+%     \caption{Visual representation of the $f_5$ bi-objective dataset. The decision space (left) shows the parameter manifold of the Pareto set, while the objective space (right) illustrates the convergence toward the non-dominated Pareto front.}
+%     \label{fig:data_distribution}
+% \end{figure}
+
+% Data preparation strictly follows the protocol defined in Section~\ref{sec:normalization}. Instead, we apply the \texttt{HypercubeNormalizer} to the training split of the archive to estimate the transformation maps $T_x$ and $T_y$. This ensures that both the decision space and objective space are mapped into a consistent $[0,1]$ coordinate system based on the empirical range of the data. The held-out test outcomes define inverse queries in objective space, and (when needed) we use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. By using these same stored normalization maps for both training and testing, all scoring and ECDF reporting remain comparable across targets and estimators, as every discrepancy is measured within the same normalized coordinate system.
+
+
+
+%-------------------------------------------------------------------------------
+\subsection{Data Acquisition}\label{sec:exp_coco}
+%-------------------------------------------------------------------------------
+
+To evaluate the inverse models, we construct a bi-objective optimization problem (MOP) using the COCO BBOB benchmark suite. This section describes the problem formulation and the procedure for generating the training and testing archives.
+
+\subsubsection{Problem Formulation ($f_5$ Linear Slope)}
+
+A general MOP involves finding a decision vector $\vect{x} \in \calX \subset \R^n$ that minimizes an objective vector $\vect{f}(\vect{x}) = (f_1(\vect{x}), \dots, f_m(\vect{x}))$. In this study, we focus on a bi-objective case ($m=2$) derived from the BBOB $f_5$ (Linear Slope) function family. We select $f_5$ due to its strong directionality and boundary effects, where the optimum lies on the domain boundary. The function is defined as:
+
+\begin{equation}
+    f_{5}(\vect{x}) = \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
+\end{equation}
+
+where $D$ is the decision dimension and $s_i$ are signed slope coefficients. We construct our bi-objective problem by pairing two deterministic instances $(a, b)$ of this family:
+\begin{equation}
+    \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big).
+\end{equation}
+COCO instances apply deterministic shifts and transformations while preserving the underlying landscape, providing a reproducible yet non-trivial trade-off surface.
+
+\subsubsection{Data Generation via NSGA-II}
+
+The construction of our dataset begins with a formal definition of the optimization landscape. A multi-objective optimization problem (MOP) is characterized by decision variables $\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector $\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. In this study, we consider the simultaneous minimization of all objectives:
 \begin{align}
 \min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\
 \text{s.t.}\; g_j(\vect{x}) &\le 0,\quad j=1,\dots,J,\\
 h_k(\vect{x}) &= 0,\quad k=1,\dots,K.
 \label{eq:mop}
 \end{align}
-The feasible region $\calX$ is assumed compact. Objectives may be nonlinear, non-convex, and costly to evaluate, which motivates data-driven surrogates and inverse models in later sections.
+Trade-offs between conflicting objectives are formalized through the principle of Pareto dominance. For two objective vectors $\vect{u},\vect{v}\in\R^m$, we say $\vect{u}$ dominates $\vect{v}$ ($\vect{u}\preceq\vect{v}$) if $u_i\le v_i$ for all $i$ and $u_j < v_j$ for at least one index $j$. A feasible point $\vect{x}^\star$ is considered Pareto-optimal if no other feasible point exists that dominates it. The collection of these points in the objective space constitutes the Pareto front, as illustrated in Figure~\ref{fig:pareto_front}.
 
-Trade-offs are formalized by Pareto dominance. For $\vect{u},\vect{v}\in\R^m$,
-$\vect{u}\preceq\vect{v}$ holds if $u_i\le v_i$ for all $i$ and $u_j<v_j$ for at least one index $j$.
-A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ satisfies
-$\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
-Figure~\ref{fig:pareto_front} illustrates this geometry for a bi-objective case, showing an example non-dominated
-set (Pareto front approximation) together with a dominated region induced by a representative Pareto point.
-
-
-
-%-------------------------------------------------------------------------------
-\subsection{Problem and Data}\label{subsec:problem_data}
-%-------------------------------------------------------------------------------
-
-We generate bi-objective datasets from the COCO BBOB benchmark suite via the \texttt{cocoex} Python interface, which exposes standardized test functions through deterministic problem instances. In this chapter, we focus on BBOB $f_5$ (Linear Slope) because its construction yields strong directionality and boundary effects: the optimum lies on the domain boundary and the per-coordinate slopes increase with index, which makes target attainment in objective space sensitive to where the inverse sampler places probability mass. In COCO notation, the function includes an instance-dependent bias $f_{\mathrm{opt}}$ and an instance-specific optimum location $\vect{x}^{\mathrm{opt}}$, and the definition can be written as:
-
-\begin{equation}
-    f_{5}(\vect{x}) = \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
-\end{equation}
-
-where $D$ is the decision dimension, $s_i$ are signed slope coefficients that scale across coordinates, and $z_i$ applies an instance-dependent saturation that creates flat behavior beyond the boundary-aligned optimum direction. 
-
-To construct a bi-objective problem, we pair two deterministic instances of the same analytic function family:
-
-\begin{equation}
-    \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
-\end{equation}
-
-with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations while preserving the underlying function definition, enabling reproducible variation under a fixed function index. 
-
-We approximate a Pareto-relevant archive for this constructed bi-objective $f_5$ problem using NSGA-II under a fixed evaluation budget and fixed random seeds. Figure~\ref{fig:pareto_front} recalls Pareto dominance for bi-objective minimization: points on the Pareto front are non-dominated trade-offs, while points in the dominated region are strictly worse in both objectives.
+To generate the necessary data for our inverse models, we approximate a Pareto-relevant archive for the bi-objective $f_5$ problem using the NSGA-II algorithm under a fixed evaluation budget and deterministic random seeds. As shown in Figure~\ref{fig:pareto_front}, points residing on the Pareto front represent optimal trade-offs, whereas points in the dominated region are strictly inferior in both objective dimensions.
 
 \begin{figure}[!htbp]
   \centering
-  \begin{adjustbox}{width=\linewidth}
+  \begin{adjustbox}{width=0.7\linewidth}
       \input{figures/pareto_front}
   \end{adjustbox}
   \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
   \label{fig:pareto_front}
 \end{figure}
 
-Because Pareto-only archives can be small under limited budgets, we train on a larger optimizer-generated archive that includes both Pareto-relevant solutions and additional historically evaluated solutions produced during the NSGA-II search. Concretely, we record $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$ from the run history and split them into train/validation/test (80/10/10) with a fixed seed. 
 
-The resulting distribution of this collected data is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged Pareto-relevant set highlights the target regions our inverse model is designed to characterize.
+The dataset used to train and validate our inverse models is curated by sampling the search space of the $f_5$ problem. Because inverse modeling necessitates a functional mapping from the objective space back to the decision space, we require a diverse archive of $(\vect{x}, \vect{y})$ pairs. This archive must span the entire spectrum of the search, from high-performance Pareto-optimal solutions to sub-optimal exploratory points.
+
+In this context, we utilize NSGA-II primarily as a data-generation tool. Rather than retaining only the final converged Pareto set, we record the comprehensive search history to assemble an archive of $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$. This historical data provides the model with a dense and varied characterization of the objective space.
+
+As illustrated in Figure~\ref{fig:data_distribution}, these points are categorized into:
+\begin{itemize}
+    \item \textbf{Non-dominated solutions:} The empirical Pareto front (represented in blue) which serves as the primary target for inverse queries.
+    \item \textbf{Exploratory solutions:} Dominated points (represented in gray) that reflect the broader search history, providing the necessary context for the model to learn the global mapping $\calY \to \calX$.
+\end{itemize}
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=1\linewidth]{images/data_distribution.png}
-    \caption{Visual representation of the $f_5$ bi-objective dataset. The decision space (left) shows the parameter manifold of the Pareto set, while the objective space (right) illustrates the convergence toward the non-dominated Pareto front.}
-    \label{fig:data_distribution}
+    % Increased width to 0.49 to maximize image size in the row
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/pareto_set.png}
+        \caption{Decision Space ($\calX$)}
+        \label{fig:pareto_set_dist}
+    \end{subfigure}
+    \hfill % Keeps images pushed to the left and right edges
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/pareto_front.png}
+        \caption{Objective Space ($\calY$)}
+        \label{fig:pareto_front_dist}
+    \end{subfigure}
+    
+    \caption{Distribution of the $f_5$ bi-objective dataset. Panel (a) shows the decision space manifold where the optimized solutions (Pareto set) are located. Panel (b) illustrates the objective space, showing the convergence of the search history toward the non-dominated Pareto front at the lower-left boundary.}
+    \label{fig:data_distribution_combined}
 \end{figure}
 
-Data preparation strictly follows the protocol defined in Section~\ref{sec:normalization}. Instead, we apply the \texttt{HypercubeNormalizer} to the training split of the archive to estimate the transformation maps $T_x$ and $T_y$. This ensures that both the decision space and objective space are mapped into a consistent $[0,1]$ coordinate system based on the empirical range of the data. The held-out test outcomes define inverse queries in objective space, and (when needed) we use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. By using these same stored normalization maps for both training and testing, all scoring and ECDF reporting remain comparable across targets and estimators, as every discrepancy is measured within the same normalized coordinate system.
+\subsubsection{Preprocessing and Normalization}
+
+The archive is split into training, validation, and test sets (80/10/10) using a fixed seed. To ensure numerical stability and comparable scoring across different decision dimensions, we apply the \texttt{HypercubeNormalizer} as defined in Section~\ref{sec:normalization}. 
+
+The normalization maps $T_x$ and $T_y$ are estimated solely from the training split, mapping both spaces into a consistent $[0,1]$ coordinate system. All subsequent evaluation metrics discussed in Section~\ref{sec:evaluation}, are performed within this normalized framework. This ensures that discrepancies are measured on a standardized scale regardless of the original function range.
+
+
+
+The resulting distribution of this collected data is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged Pareto-relevant set highlights the target regions our inverse model is designed to characterize.
 
 
 %%-------------------------------------------------------------------------------
@@ -133,8 +224,8 @@ We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) pr
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{images/accuracy_ecdf_best_shot.png}
-  \caption{COCO $f_5$ objective-space ablation: ECDF of best-shot discrepancy $s_{\min}(\vect{y}^{\star})$. Curves that lie higher at small $t$ indicate stronger near-target attainment under budget $K$.}
+  \includegraphics[width=\linewidth]{images/accuracy_ecdf_best_shot.png}
+  \caption{Objective-space ablation: ECDF of best-shot discrepancy $s_{\min}(\vect{y}^{\star})$. Curves that lie higher at small $t$ indicate stronger near-target attainment under budget $K$.}
   \label{fig:ablation_ecdf_f5}
 \end{figure}
 
@@ -223,7 +314,7 @@ We report the reliability results of the decision-space ablation on the COCO $f_
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-  \caption[COCO $f_5$: PIT calibration curves across ablation variants]{PIT calibration curves on COCO $f_5$ for hyperparameter variants (one curve per configuration). Curves closer to the diagonal indicate better reliability under repeated conditioning as measured by \eqref{eq:pit_rank_def} and summarized by \eqref{eq:pit_ecdf_curve}.}
+  \caption[PIT calibration curves across ablation variants]{PIT calibration curves for hyperparameter variants. Curves closer to the diagonal indicate better reliability under repeated conditioning.}
   \label{fig:f5_pit_ablation}
 \end{figure}
 
@@ -261,8 +352,8 @@ We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_bo
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/probabilistic_error_crps.png}
-  \caption[COCO $f_5$: CRPS boxplots across ablation variants]{Distribution of per-case CRPS values on COCO $f_5$ for hyperparameter variants (boxplots), computed as in \eqref{eq:crps_case_def}. Lower medians indicate more accurate conditional distributions; narrower spreads indicate more consistent performance across cases.}
+  \includegraphics[width=\linewidth]{images/reliability_probabilistic_error_crps.png}
+  \caption[CRPS boxplots across ablation variants]{Distribution of per-case CRPS values for hyperparameter variants. Lower medians indicate more accurate conditional distributions; narrower spreads indicate more consistent performance across cases.}
   \label{fig:f5_crps_box_ablation}
 \end{figure}
 
@@ -425,7 +516,7 @@ The decision-space ablation on the COCO $f_5$ dataset is reported to match the o
 
 
 
-\subsection{Discussion of Results}
+\section{Discussion of Results}
 
 Across benchmarks, Gaussian process regression emerges as the most
 effective inverse modelling strategy.  Its probabilistic nature allows

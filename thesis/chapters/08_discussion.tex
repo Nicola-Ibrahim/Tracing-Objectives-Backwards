@@ -69,25 +69,28 @@ attainment and experimental reality.
   experimental synthesis. In this case, the reported attainment reflects internal consistency rather
   than physical certainty.
 
-  \item \textbf{Completeness of the design space representation $\mathcal{X}$.}
-  The framework treats the decision vector $\vect{x}$ as a complete description of the material or
-  artifact under design. We assume that the variables included in $\mathcal{X}$ (e.g., elemental
-  composition, lattice parameters) are sufficient to determine the properties in $\mathcal{Y}$.
-  A limitation is that real-world performance can depend on latent factors not captured in standard
-  datasets, such as microstructure, grain boundaries, or explicit synthesis pathways (e.g., cooling
-  rates). An inverse model may propose a valid $\vect{x}$ under the dataset’s mapping, yet the
-  corresponding physical realization may be underdetermined without the associated processing
-  conditions.
 
-  \item \textbf{Representativeness of Pareto-optimal targets.}
-  By focusing evaluation on the Pareto frontier, the experiments target the limits of known
-  performance in the available data. We assume that the observed Pareto frontier in the training data
-  serves as a localized approximation of the true physical boundary. A limitation is that targets far
-  beyond the observed Pareto front are inherently extrapolative: while attainment metrics can identify
-  such targets as difficult or unattainable under the checker, decision-space diagnostics (PIT and
-  CRPS) become harder to interpret when the conditional distribution $p(\vect{x}\mid\vect{y})$ is
-  weakly supported by data. In such regimes, apparent miscalibration may reflect genuine epistemic
-  uncertainty rather than a correctable model defect.
+  \item \textbf{Completeness of the design space representation $\mathcal{X}$.}
+  We assume that the decision vector $\vect{x}$ provides a sufficient and complete description of 
+  the material to determine the properties in $\mathcal{Y}$. Under this assumption, the model 
+  utilizes its latent space to characterize the manifold of the provided data and map the 
+  "one-to-many" relationships inherent in the archive. A limitation arises when real-world 
+  performance depends on unobserved physical factors—such as microstructure, grain boundaries, 
+  or explicit synthesis pathways—that are absent from the training dataset. Consequently, 
+  the model may propose a mathematically consistent candidate $\vect{x}$ that nonetheless 
+  remains physically underdetermined. In such regimes, the latent representation successfully 
+  resolves the variance present within the observed data but cannot account for the epistemic 
+  uncertainty arising from a physically incomplete design space.
+
+  % \item \textbf{Representativeness of Pareto-optimal targets.}
+  % By focusing evaluation on the Pareto frontier, the experiments target the limits of known
+  % performance in the available data. We assume that the observed Pareto frontier in the training data
+  % serves as a localized approximation of the true physical boundary. A limitation is that targets far
+  % beyond the observed Pareto front are inherently extrapolative: while attainment metrics can identify
+  % such targets as difficult or unattainable under the checker, decision-space diagnostics (PIT and
+  % CRPS) become harder to interpret when the conditional distribution $p(\vect{x}\mid\vect{y})$ is
+  % weakly supported by data. In such regimes, apparent miscalibration may reflect genuine epistemic
+  % uncertainty rather than a correctable model defect.
 
   \item \textbf{Impact of the candidate budget $K$.}
   Outcome-space attainment metrics such as best-of-$K$ discrepancy are explicit functions of the
@@ -97,7 +100,23 @@ attainment and experimental reality.
   through sampling luck rather than learned conditional structure. This motivates joint reporting with
   decision-space diagnostics: PIT-based calibration checks whether uncertainty is statistically
   consistent across repeated conditioning, and CRPS penalizes unnecessary diffuseness.
+
+  \item \textbf{Impact of the candidate budget $K$.}
+  We assume that the candidate budget $K$ serves as a direct proxy for experimental 
+  bandwidth, representing the finite number of designs that can be physically 
+  evaluated or synthesized. Under this assumption, attainment metrics such as 
+  best-of-$K$ discrepancy are used to quantify the model's practical utility. 
+  A limitation arises because high-budget regimes ($K \gg 1$) can inadvertently 
+  reward high-variance samplers that reach a target through "sampling luck" 
+  rather than a truly learned conditional structure $p(\vect{x}\mid\vect{y})$. 
+  In such cases, a model may appear successful in outcome space despite lacking 
+  statistical reliability. This motivates the joint reporting of attainment alongside 
+  decision-space diagnostics: PIT-based calibration ensures that the predicted 
+  uncertainty is statistically consistent, while CRPS penalizes unnecessary 
+  diffuseness, allowing us to distinguish between a precise, learned mapping 
+  and an overly broad, uncalibrated distribution.
 \end{itemize}
+
 
 
 
