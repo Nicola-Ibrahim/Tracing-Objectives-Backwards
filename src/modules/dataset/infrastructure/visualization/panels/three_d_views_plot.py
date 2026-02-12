@@ -46,26 +46,35 @@ def create_3d_decision_context_figure(
     )
 
     fig.update_scenes(
-        xaxis_title="x1 (norm)",
-        yaxis_title="x2 (norm)",
-        zaxis_title="y1 (norm)",
+        xaxis=dict(title="x1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="x2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="y1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=1,
     )
     fig.update_scenes(
-        xaxis_title="x1 (norm)",
-        yaxis_title="x2 (norm)",
-        zaxis_title="y2 (norm)",
+        xaxis=dict(title="x1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="x2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="y2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=2,
     )
 
     fig.update_layout(
-        title="<b>3D Decision Context (Decisions x Objectives)</b>",
+        title=dict(
+            text="<b>3D Decision Context (Decisions x Objectives)</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=600,
+        height=700,
         width=1200,
+        margin=dict(t=100, b=50, l=50, r=50),
     )
+    for i in fig["layout"]["annotations"]:
+        i["font"] = dict(size=18)
+
     return fig
 
 
@@ -110,24 +119,33 @@ def create_3d_objective_context_figure(
     )
 
     fig.update_scenes(
-        xaxis_title="y1 (norm)",
-        yaxis_title="y2 (norm)",
-        zaxis_title="x1 (norm)",
+        xaxis=dict(title="y1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="y2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="x1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=1,
     )
     fig.update_scenes(
-        xaxis_title="y1 (norm)",
-        yaxis_title="y2 (norm)",
-        zaxis_title="x2 (norm)",
+        xaxis=dict(title="y1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="y2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="x2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=2,
     )
 
     fig.update_layout(
-        title="<b>3D Objective Context (Objectives x Decisions)</b>",
+        title=dict(
+            text="<b>3D Objective Context (Objectives x Decisions)</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=600,
+        height=700,
         width=1200,
+        margin=dict(t=100, b=50, l=50, r=50),
     )
+    for i in fig["layout"]["annotations"]:
+        i["font"] = dict(size=18)
+
     return fig

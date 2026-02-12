@@ -72,6 +72,8 @@ def create_accuracy_ecdf_figure(
             linewidth=2,
             linecolor="black",
             mirror=False,
+            range=[-0.1, 1.1],
+            dtick=0.2,
         ),
         yaxis=dict(
             title="Fraction of targets",

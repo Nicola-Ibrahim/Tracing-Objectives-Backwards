@@ -19,12 +19,36 @@ def create_raw_decision_distributions_figure(pareto_set: np.ndarray) -> go.Figur
         add_pdf1d(fig, 1, 2, pareto_set[:, 1], "$x_2$", color=_DEC_COLOR)
 
     fig.update_layout(
-        title="<b>Raw Decision Distributions</b>",
+        title=dict(
+            text="<b>Raw Decision Distributions</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=500,
-        width=1000,
+        height=600,
+        width=1200,
+        margin=dict(t=120, b=100, l=100, r=100),
         showlegend=False,
     )
+    fig.update_xaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    fig.update_yaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    for i in fig["layout"]["annotations"]:
+        i["font"] = dict(size=20)
     return fig
 
 
@@ -40,10 +64,34 @@ def create_raw_objective_distributions_figure(pareto_front: np.ndarray) -> go.Fi
             add_pdf1d(fig, 1, 2, pareto_front[:, 1], "$y_2$", color=_OBJ_COLOR)
 
     fig.update_layout(
-        title="<b>Raw Objective Distributions</b>",
+        title=dict(
+            text="<b>Raw Objective Distributions</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=500,
-        width=1000,
+        height=600,
+        width=1200,
+        margin=dict(t=120, b=100, l=100, r=100),
         showlegend=False,
     )
+    fig.update_xaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    fig.update_yaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    for i in fig["layout"]["annotations"]:
+        i["font"] = dict(size=20)
     return fig

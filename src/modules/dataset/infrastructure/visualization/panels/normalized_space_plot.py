@@ -24,12 +24,34 @@ def create_normalized_decision_space_figure(X_train: np.ndarray) -> go.Figure:
     )
 
     fig.update_layout(
-        title="<b>Normalized Decisions</b>",
-        xaxis_title="Norm $x_1$",
-        yaxis_title="Norm $x_2$",
+        title=dict(
+            text="<b>Normalized Decisions</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
+        xaxis=dict(
+            title="Norm $x_1$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
+        yaxis=dict(
+            title="Norm $x_2$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
         template="plotly_white",
-        height=600,
+        height=700,
         width=800,
+        margin=dict(t=100, b=100, l=100, r=100),
     )
     return fig
 
@@ -53,11 +75,33 @@ def create_normalized_objective_space_figure(y_train: np.ndarray) -> go.Figure:
     )
 
     fig.update_layout(
-        title="<b>Normalized Objectives</b>",
-        xaxis_title="Norm $y_1$",
-        yaxis_title="Norm $y_2$",
+        title=dict(
+            text="<b>Normalized Objectives</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
+        xaxis=dict(
+            title="Norm $y_1$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
+        yaxis=dict(
+            title="Norm $y_2$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
         template="plotly_white",
-        height=600,
+        height=700,
         width=800,
+        margin=dict(t=100, b=100, l=100, r=100),
     )
     return fig

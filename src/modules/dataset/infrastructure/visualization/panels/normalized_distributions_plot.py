@@ -18,12 +18,39 @@ def create_normalized_decision_pdf_figure(X_train: np.ndarray) -> go.Figure:
         add_pdf1d(fig, 1, 2, X_train[:, 1], "Norm $x_2$", color="#d35400")
 
     fig.update_layout(
-        title="<b>Normalized Decision PDFs</b>",
+        title=dict(
+            text="<b>Normalized Decision PDFs</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=500,
-        width=1000,
+        height=600,
+        width=1200,
+        margin=dict(t=120, b=100, l=100, r=100),
         showlegend=True,
+        legend=dict(font=dict(size=14)),
     )
+    fig.update_xaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    fig.update_yaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    # Update subplot titles size
+    for i in fig["layout"]["annotations"]:
+        i["font"] = dict(size=20)
+
     return fig
 
 
@@ -40,10 +67,37 @@ def create_normalized_objective_pdf_figure(y_train: np.ndarray) -> go.Figure:
         add_pdf1d(fig, 1, 2, y_train[:, 1], "Norm $y_2$", color="#2980b9")
 
     fig.update_layout(
-        title="<b>Normalized Objective PDFs</b>",
+        title=dict(
+            text="<b>Normalized Objective PDFs</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=500,
-        width=1000,
+        height=600,
+        width=1200,
+        margin=dict(t=120, b=100, l=100, r=100),
         showlegend=True,
+        legend=dict(font=dict(size=14)),
     )
+    fig.update_xaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    fig.update_yaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    # Update subplot titles size
+    for i in fig["layout"]["annotations"]:
+        i["font"] = dict(size=20)
+
     return fig

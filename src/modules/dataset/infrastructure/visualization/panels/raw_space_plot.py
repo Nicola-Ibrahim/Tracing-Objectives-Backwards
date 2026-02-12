@@ -20,7 +20,7 @@ def create_raw_decision_space_figure(
         pareto_set[:, 1],
         name="Pareto Set",
         symbol="circle",
-        size=7,
+        size=8,
         opacity=1.0,
         color="#d35400",  # Pumpkin
     )
@@ -35,17 +35,40 @@ def create_raw_decision_space_figure(
         name="Historical (Decisions)",
         color="#bdc3c7",  # Silver
         symbol="cross",
-        size=5,
+        size=6,
         opacity=0.5,
     )
 
     fig.update_layout(
-        title="<b>Decision Space (Raw)</b>",
-        xaxis_title="$x_1$",
-        yaxis_title="$x_2$",
+        title=dict(
+            text="<b>Decision Space (Raw)</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
+        xaxis=dict(
+            title="$x_1$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
+        yaxis=dict(
+            title="$x_2$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
         template="plotly_white",
-        height=600,
+        height=700,
         width=800,
+        margin=dict(t=100, b=100, l=100, r=100),
+        legend=dict(font=dict(size=14)),
     )
     return fig
 
@@ -65,7 +88,7 @@ def create_raw_objective_space_figure(
         pareto_front[:, 1],
         name="Pareto Front",
         symbol="circle",
-        size=7,
+        size=8,
         opacity=1.0,
         color="#2980b9",  # Belize Hole
     )
@@ -80,16 +103,39 @@ def create_raw_objective_space_figure(
         name="Historical (Objectives)",
         color="#bdc3c7",  # Silver
         symbol="cross",
-        size=5,
+        size=6,
         opacity=0.5,
     )
 
     fig.update_layout(
-        title="<b>Objective Space (Raw)</b>",
-        xaxis_title="$y_1$",
-        yaxis_title="$y_2$",
+        title=dict(
+            text="<b>Objective Space (Raw)</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
+        xaxis=dict(
+            title="$y_1$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
+        yaxis=dict(
+            title="$y_2$",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
         template="plotly_white",
-        height=600,
+        height=700,
         width=800,
+        margin=dict(t=100, b=100, l=100, r=100),
+        legend=dict(font=dict(size=14)),
     )
     return fig

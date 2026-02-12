@@ -22,10 +22,32 @@ def create_raw_decision_density_figure(historical_solutions: np.ndarray) -> go.F
     )
 
     fig.update_layout(
-        title="<b>Raw Decision Density</b>",
+        title=dict(
+            text="<b>Raw Decision Density</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=600,
-        width=700,
+        height=700,
+        width=800,
+        margin=dict(t=100, b=100, l=100, r=100),
+    )
+    fig.update_xaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    fig.update_yaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
     )
     return fig
 
@@ -47,9 +69,31 @@ def create_raw_objective_density_figure(historical_objectives: np.ndarray) -> go
     )
 
     fig.update_layout(
-        title="<b>Raw Objective Density</b>",
+        title=dict(
+            text="<b>Raw Objective Density</b>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         template="plotly_white",
-        height=600,
-        width=700,
+        height=700,
+        width=800,
+        margin=dict(t=100, b=100, l=100, r=100),
+    )
+    fig.update_xaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
+    )
+    fig.update_yaxes(
+        title_font=dict(size=18),
+        tickfont=dict(size=14),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=False,
     )
     return fig
