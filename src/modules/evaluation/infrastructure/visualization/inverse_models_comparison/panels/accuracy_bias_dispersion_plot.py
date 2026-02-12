@@ -58,29 +58,44 @@ def create_accuracy_bias_dispersion_figure(
         )
 
     fig.update_layout(
-        title=f"<b>{title}</b><br><sup>{subtitle}</sup>",
+        title=dict(
+            text=f"<b>{title}</b><br><sup>{subtitle}</sup>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
         height=800,
         width=1200,
         boxmode="group",
         template="plotly_white",
+        margin=dict(t=100, b=100, l=100, r=100),
         yaxis=dict(
             title="Error Magnitude (L2 Norm)",
-            gridcolor="lightgrey",
-            zerolinecolor="lightgrey",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            gridcolor="rgba(211, 211, 211, 0.5)",
+            zerolinecolor="rgba(211, 211, 211, 0.8)",
             range=[0, 0.2],
+            dtick=0.04,
         ),
         xaxis=dict(
             title="Estimator Version",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
         ),
         legend=dict(
-            title="Error Component",
+            title=dict(text="Error Component", font=dict(size=16)),
+            font=dict(size=14),
             orientation="v",
             yanchor="top",
             y=0.99,
             xanchor="right",
             x=0.99,
+            bgcolor="rgba(255, 255, 255, 0.7)",
+            bordercolor="lightgrey",
+            borderwidth=1,
         ),
     )
-    fig.update_xaxes(showline=True, linewidth=1, linecolor="lightgrey", mirror=False)
-    fig.update_yaxes(showline=True, linewidth=1, linecolor="lightgrey", mirror=False)
+    fig.update_xaxes(showline=True, linewidth=2, linecolor="black", mirror=False)
+    fig.update_yaxes(showline=True, linewidth=2, linecolor="black", mirror=False)
     return fig

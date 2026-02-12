@@ -57,13 +57,48 @@ def create_accuracy_ecdf_figure(
         )
 
     fig.update_layout(
-        title=f"<b>{title}</b><br><sup>{subtitle}</sup>",
-        xaxis_title="Best-shot discrepancy (min over K)",
-        yaxis_title="Fraction of targets",
-        yaxis_range=[0, 1.05],
+        title=dict(
+            text=f"<b>{title}</b><br><sup>{subtitle}</sup>",
+            font=dict(size=24),
+            x=0.05,
+            xanchor="left",
+        ),
+        xaxis=dict(
+            title="Best-shot discrepancy (min over K)",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            gridcolor="rgba(211, 211, 211, 0.5)",
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+        ),
+        yaxis=dict(
+            title="Fraction of targets",
+            title_font=dict(size=18),
+            tickfont=dict(size=14),
+            gridcolor="rgba(211, 211, 211, 0.5)",
+            range=[0, 1.05],
+            showline=True,
+            linewidth=2,
+            linecolor="black",
+            mirror=False,
+            dtick=0.2,
+        ),
         template="plotly_white",
         height=800,
         width=1000,
-        showlegend=True,
+        margin=dict(t=100, b=100, l=100, r=100),
+        legend=dict(
+            font=dict(size=13),
+            orientation="v",
+            yanchor="bottom",
+            y=0.01,
+            xanchor="right",
+            x=0.99,
+            bgcolor="rgba(255, 255, 255, 0.7)",
+            bordercolor="lightgrey",
+            borderwidth=1,
+        ),
     )
     return fig
