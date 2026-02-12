@@ -18,6 +18,7 @@ class ActivationFunctionEnum(Enum):
     SIGMOID = "sigmoid"
     SOFTPLUS = "softplus"
     IDENTITY = "identity"
+    ELU = "elu"
 
 
 class DistributionFamilyEnum(Enum):
@@ -190,25 +191,25 @@ class MDNEstimatorParams(EstimatorParamsBase):
         description="Type of the Mixture Density Network interpolation method.",
     )
     num_mixtures: int = Field(
-        -1,
+        10,
         description="Number of mixture components (-1 triggers BIC-based selection).",
     )
     learning_rate: float = Field(
-        1e-4, gt=0, description="Learning rate for the optimizer."
+        1e-3, gt=0, description="Learning rate for the optimizer."
     )
     distribution_family: DistributionFamilyEnum = Field(
-        DistributionFamilyEnum.NORMAL,
+        DistributionFamilyEnum.LAPLACE,
         description="Distribution family used for mixture components.",
     )
     gmm_boost: bool = Field(
         False, description="Whether to apply GMM-based initialization."
     )
     hidden_layers: list[int] = Field(
-        [256, 128, 128],
+        [256, 256, 256],
         description="List defining the number of units in each hidden layer of the MDN.",
     )
     hidden_activation_fn_name: ActivationFunctionEnum = Field(
-        ActivationFunctionEnum.RELU,
+        ActivationFunctionEnum.ELU,
         description="Activation function for hidden layers.",
     )
     optimizer_fn_name: OptimizerFunctionEnum = Field(
@@ -250,12 +251,15 @@ class CVAEEstimatorParams(EstimatorParamsBase):
         description="Type of the Conditional Variational Autoencoder interpolation method.",
     )
     latent_dim: int = Field(
-        8, gt=0, description="Dimensionality of the latent space in the CVAE."
+        2, gt=0, description="Dimensionality of the latent space in the CVAE."
     )
     learning_rate: float = Field(
         0.001, gt=0, description="Learning rate for the Adam optimizer."
     )
-    beta: float = Field(0.1, ge=0.0, description="Final KL divergence weight.")
+
+    # 0.5 widens the predictions
+    # 0.1 narrows the predictions
+    beta: float = Field(0.5, ge=0.0, description="Final KL divergence weight.")
     kl_warmup: int = Field(
         100,
         ge=0,
@@ -267,8 +271,11 @@ class CVAEEstimatorParams(EstimatorParamsBase):
         description="Free nats threshold applied to KL divergence per dimension.",
     )
     hidden: int = Field(128, gt=0, description="Hidden layer width for CVAE nets.")
+
+    # -0.3 increases the uncertainty
+    # -10.0 decreases the uncertainty
     decoder_min_logvar: float = Field(
-        -6.0, description="Lower clamp for decoder log-variance."
+        -2.0, description="Lower clamp for decoder log-variance."
     )
     decoder_max_logvar: float = Field(
         4.0, description="Upper clamp for decoder log-variance."
@@ -279,7 +286,7 @@ class CVAEEstimatorParams(EstimatorParamsBase):
     prior_max_logvar: float = Field(
         2.0, description="Upper clamp for prior log-variance."
     )
-    epochs: int = Field(200, gt=0, description="Number of training epochs.")
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
     batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
     val_size: float = Field(
         0.2,
@@ -308,15 +315,11 @@ class INNEstimatorParams(EstimatorParamsBase):
     use_batch_norm: bool = Field(
         True, description="Use batch normalization between layers."
     )
-    learning_rate: float = Field(
-        1e-3, gt=0, description="Initial learning rate."
-    )
+    learning_rate: float = Field(1e-5, gt=0, description="Initial learning rate.")
     optimizer_name: INNOptimizerEnum = Field(
         INNOptimizerEnum.ADAM, description="Optimizer choice."
     )
-    weight_decay: float = Field(
-        1e-5, ge=0, description="L2 regularization strength."
-    )
+    weight_decay: float = Field(1e-3, ge=0, description="L2 regularization strength.")
     epochs: int = Field(100, gt=0, description="Maximum training epochs.")
     batch_size: int = Field(128, gt=0, description="Batch size for training.")
     val_size: float = Field(
@@ -328,15 +331,11 @@ class INNEstimatorParams(EstimatorParamsBase):
     clip_grad_norm: float | None = Field(
         5.0, ge=0.0, description="Gradient clipping threshold."
     )
-    lr_scheduler: bool = Field(
-        True, description="Use learning rate scheduler."
-    )
+    lr_scheduler: bool = Field(True, description="Use learning rate scheduler.")
     lr_decay_factor: float = Field(
         0.5, gt=0.0, description="LR reduction factor for scheduler."
     )
-    lr_patience: int = Field(
-        10, ge=1, description="Patience for LR scheduler."
-    )
+    lr_patience: int = Field(10, ge=1, description="Patience for LR scheduler.")
     early_stopping_patience: int = Field(
         20, ge=1, description="Patience for early stopping."
     )
