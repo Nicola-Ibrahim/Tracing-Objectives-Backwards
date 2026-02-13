@@ -59,7 +59,7 @@ setting requires assumptions and comes with limitations that reflect the gap bet
 attainment and experimental reality.
 
 \begin{itemize}
-  \item \textbf{Fidelity of the forward checker.}
+  \item Fidelity of the forward checker.
   The propose--check contract assumes that the evaluator $\mathcal{E}$ functions as a reliable
   ground-truth proxy (e.g., a DFT simulator, an FEA routine, or a high-fidelity surrogate).
   We assume that $\mathcal{E}$ captures the essential physics required to validate the objective
@@ -70,7 +70,7 @@ attainment and experimental reality.
   than physical certainty.
 
 
-  \item \textbf{Completeness of the design space representation $\mathcal{X}$.}
+  \item Completeness of the design space representation $\mathcal{X}$.
   We assume that the decision vector $\vect{x}$ provides a sufficient and complete description of 
   the material to determine the properties in $\mathcal{Y}$. Under this assumption, the model 
   utilizes its latent space to characterize the manifold of the provided data and map the 
@@ -82,6 +82,10 @@ attainment and experimental reality.
   resolves the variance present within the observed data but cannot account for the epistemic 
   uncertainty arising from a physically incomplete design space.
 
+
+  \item Conditioning on the Pareto Boundary.
+  Our modeling approach assumes that by training on the comprehensive search history—incorporating both sub-optimal exploratory points and converged solutions—the inverse model can successfully extrapolate to the extreme edges of the objective space. We assume the learned mapping $p(\vect{x} \mid \vect{y})$ remains valid even when the conditioning vector $\vect{y}^\star$ is situated exactly on the empirical Pareto Front. A limitation is that data density is inherently lowest at these performance boundaries, as the optimizer naturally spends less time at the absolute limits of feasible trade-offs compared to the broader exploration region. This sparsity may lead to poorly calibrated uncertainty or "mode collapse" precisely where the user cares the most: the optimal trade-offs. In this case, the reported performance at the boundary may reflect a failure of the model to resolve the sparse local manifold rather than a lack of valid solutions in the decision space.
+
   % \item \textbf{Representativeness of Pareto-optimal targets.}
   % By focusing evaluation on the Pareto frontier, the experiments target the limits of known
   % performance in the available data. We assume that the observed Pareto frontier in the training data
@@ -92,29 +96,32 @@ attainment and experimental reality.
   % weakly supported by data. In such regimes, apparent miscalibration may reflect genuine epistemic
   % uncertainty rather than a correctable model defect.
 
-  \item \textbf{Impact of the candidate budget $K$.}
-  Outcome-space attainment metrics such as best-of-$K$ discrepancy are explicit functions of the
-  candidate budget $K$. We treat $K$ as a proxy for experimental bandwidth, representing how many
-  candidate designs can be evaluated or synthesized. A limitation is that best-of-$K$ attainment can
-  reward high-variance samplers that occasionally hit a target by chance, thereby reducing discrepancy
-  through sampling luck rather than learned conditional structure. This motivates joint reporting with
-  decision-space diagnostics: PIT-based calibration checks whether uncertainty is statistically
-  consistent across repeated conditioning, and CRPS penalizes unnecessary diffuseness.
+%   \item \textbf{Impact of the candidate budget $K$.}
+%   Outcome-space attainment metrics such as best-of-$K$ discrepancy are explicit functions of the
+%   candidate budget $K$. We treat $K$ as a proxy for experimental bandwidth, representing how many
+%   candidate designs can be evaluated or synthesized. A limitation is that best-of-$K$ attainment can
+%   reward high-variance samplers that occasionally hit a target by chance, thereby reducing discrepancy
+%   through sampling luck rather than learned conditional structure. This motivates joint reporting with
+%   decision-space diagnostics: PIT-based calibration checks whether uncertainty is statistically
+%   consistent across repeated conditioning, and CRPS penalizes unnecessary diffuseness.
 
-  \item \textbf{Impact of the candidate budget $K$.}
-  We assume that the candidate budget $K$ serves as a direct proxy for experimental 
-  bandwidth, representing the finite number of designs that can be physically 
-  evaluated or synthesized. Under this assumption, attainment metrics such as 
-  best-of-$K$ discrepancy are used to quantify the model's practical utility. 
-  A limitation arises because high-budget regimes ($K \gg 1$) can inadvertently 
-  reward high-variance samplers that reach a target through "sampling luck" 
-  rather than a truly learned conditional structure $p(\vect{x}\mid\vect{y})$. 
-  In such cases, a model may appear successful in outcome space despite lacking 
-  statistical reliability. This motivates the joint reporting of attainment alongside 
-  decision-space diagnostics: PIT-based calibration ensures that the predicted 
-  uncertainty is statistically consistent, while CRPS penalizes unnecessary 
-  diffuseness, allowing us to distinguish between a precise, learned mapping 
-  and an overly broad, uncalibrated distribution.
+%   \item \textbf{Impact of the candidate budget $K$.}
+%   We assume that the candidate budget $K$ serves as a direct proxy for experimental 
+%   bandwidth, representing the finite number of designs that can be physically 
+%   evaluated or synthesized. Under this assumption, attainment metrics such as 
+%   best-of-$K$ discrepancy are used to quantify the model's practical utility. 
+%   A limitation arises because high-budget regimes ($K \gg 1$) can inadvertently 
+%   reward high-variance samplers that reach a target through "sampling luck" 
+%   rather than a truly learned conditional structure $p(\vect{x}\mid\vect{y})$. 
+%   In such cases, a model may appear successful in outcome space despite lacking 
+%   statistical reliability. This motivates the joint reporting of attainment alongside 
+%   decision-space diagnostics: PIT-based calibration ensures that the predicted 
+%   uncertainty is statistically consistent, while CRPS penalizes unnecessary 
+%   diffuseness, allowing us to distinguish between a precise, learned mapping 
+%   and an overly broad, uncalibrated distribution.
+
+
+
 \end{itemize}
 
 
@@ -159,21 +166,8 @@ querying.
 
 \section{Conclusion}\label{sec:conclusion}
 
-This thesis studied inverse decision mapping for target-driven design, treating inverse models as
-conditional samplers that return a finite candidate set for a user-specified outcome target. The
-experiments show that budgeted objective-space attainment can be achieved on Pareto-relevant COCO
-benchmarks when the training archive is representative, but that attainment alone is not sufficient to
-characterize model behaviour in one-to-many regimes. Decision-space diagnostics based on PIT
-calibration and CRPS provide essential complementary evidence by distinguishing reliable uncertainty
-from diffuse or overconfident candidate generation.
+This thesis established a robust framework for inverse decision mapping in target-driven design, positioning inverse models as conditional probabilistic samplers that support the discovery of high-performance configurations. By investigating the $f_5$ bi-objective landscape, we demonstrated that the relationship between outcomes and decisions is inherently one-to-many, requiring an exploration strategy grounded in a structured propose--check loop. The study confirms that while inverse models can successfully navigate complex search histories, their evaluation requires a dual-perspective approach that accounts for both the precision of the generated outcomes and the integrity of the underlying decision-space manifold.
 
-The main methodological outcome is an evaluation protocol that separates two questions: whether a
-method can reach a target within a fixed candidate budget, and whether the resulting candidate set can
-be interpreted as a trustworthy and informative conditional distribution. This separation clarifies
-comparisons across inverse model families and supports model selection that is aligned with practical
-inverse-design workflows.
+The central methodological contribution is an evaluation protocol that bifurcates model performance into objective-space plausibility and decision-space faithfulness. Rather than relying on simple point successes, the objective-space analysis utilizes candidate-cloud diagnostics, such as cloud bias and within-set dispersion, to characterize the aggregate geometry of generated outcomes. Complementing this, decision-space diagnostics based on PIT calibration and the Continuous Ranked Probability Score provide essential evidence of a model's statistical reliability. This separation ensures that a model is not merely hitting a target by chance or through excessive variance, but is instead providing a trustworthy representation of the conditional distribution.
 
-Future work should focus on strengthening this propose--check interface by improving training
-objectives (e.g., tandem losses), adding pre-query plausibility checks (e.g., conformal screening of
-targets), and extending evaluation with Pareto-distance measures to ensure generated outcomes remain
-trade-off relevant.
+Our findings indicate that objective-space alignment alone is insufficient to fully characterize model behavior in ambiguous design regimes. By integrating distributional metrics into the propose--check contract, this work supports a more rigorous selection of inverse models that are aligned with the demands of practical engineering workflows. Future work should focus on hardening this interface through tandem consistency losses, conformal target screening, and Pareto-distance evaluations to ensure that generated candidates remain both trade-off relevant and physically consistent with the desired performance profile.

@@ -1,7 +1,7 @@
 %% Thesis master file
 % !TeX spellcheck = en_US
 % !TeX encoding  = utf-8
-% !TeX program   = pdflatex
+% !TeX program   = xelatex
 % !BIB program   = bibtex
 
 %-------------------------------------------------------------------------------
@@ -21,6 +21,10 @@
 % Language and encoding
 %-------------------------------------------------------------------------------
 \usepackage[english]{babel}
+
+
+\usepackage[a-3b]{pdfx} % Load PDF/A-3b support (loads hyperref automatically)
+
 
 % If not already loaded by your style file:
 \usepackage{ifthen}
@@ -52,7 +56,7 @@
 \def\matrikellist {4014384}
 
 % --- Supervisor(s): keep one line if only primary; add second with \\ ---
-\newcommand{\Supervisor}{Dr.\ Moritz Seiler (Primary) \\ Dr.\ Stefan Heindorf (Second Supervisor)}
+\newcommand{\Supervisor}{Dr.\ Moritz Seiler \\ Dr.\ Stefan Heindorf}
 
 % --- Dates / numbers ---
 \newcommand{\SubmissionDate}{\today}
@@ -70,13 +74,15 @@
 %-------------------------------------------------------------------------------
 % Hyperref setup
 %-------------------------------------------------------------------------------
-\hypersetup{
-    pdftitle   = {\WorkType: \Titel},
-    pdfauthor  = {\authorlist},
-    pdfkeywords= {inverse design, multi-objective optimization, surrogate modeling, inverse mapping, decision-space exploration, Pareto front, Bayesian modeling},
-    pdfsubject = {\Titel, \SubmissionDate},
-    pdfstartview={FitH}
-}
+% \hypersetup{
+%     pdftitle   = {\WorkType: \Titel},
+%     pdfauthor  = {\authorlist},
+%     pdfkeywords= {inverse design, multi-objective optimization, surrogate modeling, inverse mapping, decision-space exploration, Pareto front, Bayesian modeling},
+%     pdfsubject = {\Titel, \SubmissionDate},
+%     pdfstartview={FitH}
+% }
+
+
 
 %-------------------------------------------------------------------------------
 % Begin of the document
@@ -85,6 +91,7 @@
     \frontmatter
     \input{style/titlepage}
     \input{style/declaration}
+    \input{style/ai_use}
     \ifthenelse{\boolean{WorkIsConfidential}}{\input{style/confidentiality}}{}
     \input{chapters/01_abstract}
     \tableofcontents
