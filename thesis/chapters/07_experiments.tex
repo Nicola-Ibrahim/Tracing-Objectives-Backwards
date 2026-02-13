@@ -306,26 +306,27 @@ Smaller models, such as those with only 64 hidden units or aggressive learning r
 \begin{table}[!htbp]
 \centering
 \small
-\setlength{\tabcolsep}{10pt}
+\setlength{\tabcolsep}{8pt}
 \renewcommand{\arraystretch}{1.25}
-\begin{tabular}{l c c}
+\begin{tabular}{l l c}
 \toprule
 Model Configuration & Details & MACE $\downarrow$ \\
 \midrule
-\textbf{MDN7} & layers: 3x256, lr: 0.001 & \textbf{0.0123} \\
-MDN5 & layers: 3x128, lr: 0.001 & 0.0211 \\
-MDN10 & layers: 3x512, lr: 0.001 & 0.0189 \\
+\textbf{MDN7} & 3x256, $K_{mix}=10$, Normal, lr: 0.001 & \textbf{0.0123} \\
+MDN5 & 3x256, $K_{mix}=20$, Normal, lr: 0.001 & 0.0211 \\
+MDN10 & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0189 \\
 \midrule
-\textbf{INN1} & layers: 6, dim: 128, lr: 0.001 & \textbf{0.0148} \\
-INN3 & layers: 4, dim: 64, lr: 0.001 & 0.0312 \\
+\textbf{INN1} & 6 layers, dim: 128, lr: 0.001 & \textbf{0.0148} \\
+INN3 & 10 layers, dim: 128, lr: 0.001 & 0.0312 \\
 \midrule
-CVAE1 & layers: 3x256, lr: 0.001 & 0.0385 \\
-CVAE2 & layers: 2x128, lr: 0.001 & 0.0492 \\
+CVAE1 & dim: 128, $z=8$, $\beta=0.1$, lr: 0.0001 & 0.0385 \\
+CVAE2 & dim: 128, $z=4$, $\beta=0.5$, lr: 0.001 & 0.0492 \\
 \bottomrule
 \end{tabular}
-\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) for all evaluated architectural configurations. MDN7 and INN1 represent the most reliable models, while CVAE models show the highest underconfidence.}
+\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) for various architectural configurations. Notation: $K_{mix}$ is the number of mixtures, $z$ is the latent dimension, $\beta$ is the KL-divergence weight, and lr is the learning rate.}
 \label{tab:f5_mace_ablation}
 \end{table}
+
 
 %-------------------------------------------------------------------------------
 \subsubsection{Probabilistic Accuracy: CRPS}\label{subsubsec:accuracy}
@@ -343,7 +344,7 @@ We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_bo
 
 The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass. In this regard, MDN7 and the INN family demonstrate a clear superiority, achieving the lowest median CRPS values while maintaining the tightest interquartile ranges.
 
-The Mixture Density Network family shows a high sensitivity to architectural capacity. MDN7 stands as the most precise configuration; by utilizing three hidden layers of 256 units, the model provides enough expressive bandwidth to represent the 2D decision space with sharp, peaked Gaussian components. In contrast, reducing the capacity in MDN5 (128 units) results in a wider distribution of CRPS scores, suggesting that the model relies on broader components that disperse probability mass too widely. Conversely, the increased dimension in MDN10 (512 units) does not yield a proportional gain in accuracy, often exhibiting a higher frequency of outliers which suggests that larger hidden layers may introduce optimization instabilities for this specific 2D-to-2D mapping.
+The Mixture Density Network family shows a high sensitivity to specific architectural parameterization beyond mere layer depth. MDN7 stands as a highly precise configuration; by utilizing three hidden layers of 256 units with 10 mixture components, the model provides sufficient expressive bandwidth to represent the 2D decision space with sharp, peaked Gaussian components. In contrast, MDN5 achieves a similar and close CRPS performance using the same hidden architecture but with an increased count of 20 mixture components. This suggests that for the 2D-to-2D mapping of the $f_5$ landscape, 10 components are already sufficient, with the additional mixtures in MDN5 offering diminishing returns in accuracy. Conversely, the MDN10 configuration utilizes a Laplace distribution family and a significantly smaller batch size of 32; despite sharing the same hidden capacity, this setup does not yield a gain in precision and often exhibits a higher frequency of outliers. This suggests that the heavier-tailed Laplace kernels combined with the increased stochasticity of small-batch optimization may introduce instabilities that degrade the consistency of the mapping.
 
 The Invertible Neural Network configurations, INN1 and INN3, provide a strong argument for structural precision. Both models utilize a hidden dimension of 128 and a stable learning rate of 0.001. INN1, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior. Interestingly, increasing the depth to ten coupling layers in INN3 yields nearly identical median accuracy and spread. This suggests that for a 2D decision space, the six-layer architecture of INN1 already provides sufficient expressive power to map the complex multi-objective $f_5$ boundaries. The lack of significant improvement in INN3 indicates a state of diminishing returns, where the additional layers maintain high accuracy but do not further refine the sample sharpness.
 
