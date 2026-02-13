@@ -86,40 +86,6 @@ attainment and experimental reality.
   \item Conditioning on the Pareto Boundary.
   Our modeling approach assumes that by training on the comprehensive search history—incorporating both sub-optimal exploratory points and converged solutions—the inverse model can successfully extrapolate to the extreme edges of the objective space. We assume the learned mapping $p(\vect{x} \mid \vect{y})$ remains valid even when the conditioning vector $\vect{y}^\star$ is situated exactly on the empirical Pareto Front. A limitation is that data density is inherently lowest at these performance boundaries, as the optimizer naturally spends less time at the absolute limits of feasible trade-offs compared to the broader exploration region. This sparsity may lead to poorly calibrated uncertainty or "mode collapse" precisely where the user cares the most: the optimal trade-offs. In this case, the reported performance at the boundary may reflect a failure of the model to resolve the sparse local manifold rather than a lack of valid solutions in the decision space.
 
-  % \item \textbf{Representativeness of Pareto-optimal targets.}
-  % By focusing evaluation on the Pareto frontier, the experiments target the limits of known
-  % performance in the available data. We assume that the observed Pareto frontier in the training data
-  % serves as a localized approximation of the true physical boundary. A limitation is that targets far
-  % beyond the observed Pareto front are inherently extrapolative: while attainment metrics can identify
-  % such targets as difficult or unattainable under the checker, decision-space diagnostics (PIT and
-  % CRPS) become harder to interpret when the conditional distribution $p(\vect{x}\mid\vect{y})$ is
-  % weakly supported by data. In such regimes, apparent miscalibration may reflect genuine epistemic
-  % uncertainty rather than a correctable model defect.
-
-%   \item \textbf{Impact of the candidate budget $K$.}
-%   Outcome-space attainment metrics such as best-of-$K$ discrepancy are explicit functions of the
-%   candidate budget $K$. We treat $K$ as a proxy for experimental bandwidth, representing how many
-%   candidate designs can be evaluated or synthesized. A limitation is that best-of-$K$ attainment can
-%   reward high-variance samplers that occasionally hit a target by chance, thereby reducing discrepancy
-%   through sampling luck rather than learned conditional structure. This motivates joint reporting with
-%   decision-space diagnostics: PIT-based calibration checks whether uncertainty is statistically
-%   consistent across repeated conditioning, and CRPS penalizes unnecessary diffuseness.
-
-%   \item \textbf{Impact of the candidate budget $K$.}
-%   We assume that the candidate budget $K$ serves as a direct proxy for experimental 
-%   bandwidth, representing the finite number of designs that can be physically 
-%   evaluated or synthesized. Under this assumption, attainment metrics such as 
-%   best-of-$K$ discrepancy are used to quantify the model's practical utility. 
-%   A limitation arises because high-budget regimes ($K \gg 1$) can inadvertently 
-%   reward high-variance samplers that reach a target through "sampling luck" 
-%   rather than a truly learned conditional structure $p(\vect{x}\mid\vect{y})$. 
-%   In such cases, a model may appear successful in outcome space despite lacking 
-%   statistical reliability. This motivates the joint reporting of attainment alongside 
-%   decision-space diagnostics: PIT-based calibration ensures that the predicted 
-%   uncertainty is statistically consistent, while CRPS penalizes unnecessary 
-%   diffuseness, allowing us to distinguish between a precise, learned mapping 
-%   and an overly broad, uncalibrated distribution.
-
 
 
 \end{itemize}

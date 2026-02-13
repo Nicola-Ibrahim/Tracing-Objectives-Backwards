@@ -3,83 +3,10 @@
 %-------------------------------------------------------------------------------
 
 
-
-% This section follows a two-stage evaluation pipeline. First, we tune each inverse-model family with an intra-model ablation study, using outcome-space target matching to identify a best-performing configuration within that family. We then freeze these best-in-class configurations and compare models head-to-head under identical data splits, target sets, and sampling protocol.
-
-
 \chapter{Experiments}\label{chap:experiments}
 
 \section{bi-objective case}\label{sec:exp_coco}
 The selection of a bi-objective configuration for this study is motivated by the need to rigorously evaluate the inverse model's ability to capture the Pareto front while maintaining interpretability. Bi-objective problems serve as a fundamental benchmark in multi-objective optimization, providing a non-trivial trade-off surface that remains amenable to high-fidelity visualization. This dimensionality allows for a direct, intuitive assessment of how the model explores the decision space relative to the objective-space conflict. 
-
-% Furthermore, focusing on two objectives ensures that the performance bottlenecks identified are attributable to the underlying model architecture and hyperparameter configurations rather than the exponential increase in complexity associated with many-objective spaces.
-
-% \subsection{Optimization process}
-% A multi-objective optimisation problem (MOP) is defined by decision variables
-% $\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector
-% $\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. We consider minimization of all objectives.
-% A general constrained MOP is written as
-% \begin{align}
-% \min_{\vect{x}\in\calX}\; \vect{f}(\vect{x}) &= \big(f_1(\vect{x}),\dots,f_m(\vect{x})\big),\\
-% \text{s.t.}\; g_j(\vect{x}) &\le 0,\quad j=1,\dots,J,\\
-% h_k(\vect{x}) &= 0,\quad k=1,\dots,K.
-% \label{eq:mop}
-% \end{align}
-% The feasible region $\calX$ is assumed compact. Objectives may be nonlinear, non-convex, and costly to evaluate, which motivates data-driven surrogates and inverse models in later sections.
-
-% Trade-offs are formalized by Pareto dominance. For $\vect{u},\vect{v}\in\R^m$,
-% $\vect{u}\preceq\vect{v}$ holds if $u_i\le v_i$ for all $i$ and $u_j<v_j$ for at least one index $j$.
-% A feasible point $\vect{x}^\star$ is Pareto-optimal if no feasible $\vect{x}$ satisfies
-% $\vect{f}(\vect{x})\preceq\vect{f}(\vect{x}^\star)$. The corresponding image in objective space is the Pareto front.
-% Figure~\ref{fig:pareto_front} illustrates this geometry for a bi-objective case, showing an example non-dominated
-% set (Pareto front approximation) together with a dominated region induced by a representative Pareto point.
-
-
-
-% %-------------------------------------------------------------------------------
-% \subsection{Problem and Data}\label{subsec:problem_data}
-% %-------------------------------------------------------------------------------
-
-% We generate bi-objective datasets from the COCO BBOB benchmark suite via the \texttt{cocoex} Python interface, which exposes standardized test functions through deterministic problem instances. In this chapter, we focus on BBOB $f_5$ (Linear Slope) because its construction yields strong directionality and boundary effects: the optimum lies on the domain boundary and the per-coordinate slopes increase with index, which makes target attainment in objective space sensitive to where the inverse sampler places probability mass. In COCO notation, the function includes an instance-dependent bias $f_{\mathrm{opt}}$ and an instance-specific optimum location $\vect{x}^{\mathrm{opt}}$, and the definition can be written as:
-
-% \begin{equation}
-%     f_{5}(\vect{x}) = \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
-% \end{equation}
-
-% where $D$ is the decision dimension, $s_i$ are signed slope coefficients that scale across coordinates, and $z_i$ applies an instance-dependent saturation that creates flat behavior beyond the boundary-aligned optimum direction. 
-
-% To construct a bi-objective problem, we pair two deterministic instances of the same analytic function family:
-
-% \begin{equation}
-%     \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big),
-% \end{equation}
-
-% with $(a,b)$ fixed (e.g., $a=1,b=2$). COCO instances apply deterministic shifts and transformations while preserving the underlying function definition, enabling reproducible variation under a fixed function index. 
-
-% We approximate a Pareto-relevant archive for this constructed bi-objective $f_5$ problem using NSGA-II under a fixed evaluation budget and fixed random seeds. Figure~\ref{fig:pareto_front} recalls Pareto dominance for bi-objective minimization: points on the Pareto front are non-dominated trade-offs, while points in the dominated region are strictly worse in both objectives.
-
-% \begin{figure}[!htbp]
-%   \centering
-%   \begin{adjustbox}{width=\linewidth}
-%       \input{figures/pareto_front}
-%   \end{adjustbox}
-%   \caption[Pareto Dominance and Bi-Objective Pareto Front]{Illustration of Pareto dominance and an example Pareto front (non-dominated set) for a bi-objective problem.}
-%   \label{fig:pareto_front}
-% \end{figure}
-
-% Because Pareto-only archives can be small under limited budgets, we train on a larger optimizer-generated archive that includes both Pareto-relevant solutions and additional historically evaluated solutions produced during the NSGA-II search. Concretely, we record $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$ from the run history and split them into train/validation/test (80/10/10) with a fixed seed. 
-
-% The resulting distribution of this collected data is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged Pareto-relevant set highlights the target regions our inverse model is designed to characterize.
-
-% \begin{figure}[!htbp]
-%     \centering
-%     \includegraphics[width=1\linewidth]{images/data_distribution.png}
-%     \caption{Visual representation of the $f_5$ bi-objective dataset. The decision space (left) shows the parameter manifold of the Pareto set, while the objective space (right) illustrates the convergence toward the non-dominated Pareto front.}
-%     \label{fig:data_distribution}
-% \end{figure}
-
-% Data preparation strictly follows the protocol defined in Section~\ref{sec:normalization}. Instead, we apply the \texttt{HypercubeNormalizer} to the training split of the archive to estimate the transformation maps $T_x$ and $T_y$. This ensures that both the decision space and objective space are mapped into a consistent $[0,1]$ coordinate system based on the empirical range of the data. The held-out test outcomes define inverse queries in objective space, and (when needed) we use small perturbations near test outcomes to probe robustness while staying in a Pareto-relevant region. By using these same stored normalization maps for both training and testing, all scoring and ECDF reporting remain comparable across targets and estimators, as every discrepancy is measured within the same normalized coordinate system.
-
 
 
 %-------------------------------------------------------------------------------
@@ -247,29 +174,33 @@ Based on these results, we select the configurations that dominate the low-discr
   \end{tabular}
 \end{table}
 
-%-------------------------------------------------------------------------------
-\subsubsection{Candidate-cloud geometry}\label{subsubsec:objective_cloud}
-%-------------------------------------------------------------------------------
+% %-------------------------------------------------------------------------------
+% \subsubsection{Candidate-cloud geometry}\label{subsubsec:objective_cloud}
+% %-------------------------------------------------------------------------------
 
-While best-shot attainment measures the model's single best success, it does not describe the behavior of the full candidate cloud $\{\widehat{\vect{y}}^{(1)},\dots,\widehat{\vect{y}}^{(K)}\}$. For effective decision support, the cloud's geometry matters: a concentrated, target-centered set indicates a precise sampler, while a diffuse or shifted cloud indicates high uncertainty or systematic bias.
+% While best-shot attainment measures the model's single best success, it does not describe the behavior of the full candidate cloud $\{\widehat{\vect{y}}^{(1)},\dots,\widehat{\vect{y}}^{(K)}\}$. For effective decision support, the cloud's geometry matters: a concentrated, target-centered set indicates a precise sampler, while a diffuse or shifted cloud indicates high uncertainty or systematic bias.
 
-Following the metrics in Section~\ref{sec:eval_candidate_cloud}, we diagnose sampling behavior using bias ($b$) and dispersion ($v$):
-\begin{equation}
-  b(\vect{y}^{\star}) = \frac{\big\lVert \bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}}, \qquad v(\vect{y}^{\star}) = \mathrm{median}_{k}\; \frac{\big\lVert \vect{r}^{(k)}(\vect{y}^{\star})-\bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}},
-  \label{eq:residual_bias_dispersion}
-\end{equation}
-where $\bar{\vect{r}}(\vect{y}^{\star})$ is the mean residual vector of the cloud. Normalization by $\sqrt{m}$ ensures values remain comparable across problems with different numbers of objectives.
+% Following the metrics in Section~\ref{sec:eval_candidate_cloud}, we diagnose sampling behavior using bias ($b$) and dispersion ($v$):
+% \begin{equation}
+%   b(\vect{y}^{\star}) = \frac{\big\lVert \bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}}, \qquad v(\vect{y}^{\star}) = \mathrm{median}_{k}\; \frac{\big\lVert \vect{r}^{(k)}(\vect{y}^{\star})-\bar{\vect{r}}(\vect{y}^{\star}) \big\rVert_2}{\sqrt{m}},
+%   \label{eq:residual_bias_dispersion}
+% \end{equation}
+% where $\bar{\vect{r}}(\vect{y}^{\star})$ is the mean residual vector of the cloud. Normalization by $\sqrt{m}$ ensures values remain comparable across problems with different numbers of objectives.
 
-In our experiments, we compute $b$ and $v$ for all targets and present the results as **paired box plots** (Figure~\ref{fig:bias_dispersion_boxplot}). This visualization allows for a direct comparison of error magnitudes ($L_2$ norm) across estimator versions. The vertical "strips" of data points highlight the density and outliers for both systematic error (bias) and random error (dispersion). 
+% In our experiments, we compute $b$ and $v$ for all targets and present the results as **paired box plots** (Figure~\ref{fig:bias_dispersion_boxplot}). This visualization allows for a direct comparison of error magnitudes ($L_2$ norm) across estimator versions. The vertical "strips" of data points highlight the density and outliers for both systematic error (bias) and random error (dispersion). 
 
-\begin{figure}[!htbp]
-  \centering
-  \includegraphics[width=0.85\linewidth]{images/accuracy_bias_dispersion_density.png}
-  \caption{Distributional diagnostics for candidate-cloud geometry. These box plots distinguish between models that achieve close best-shot hits through precise centering (low bias, e.g., \texttt{mdn}) versus those with shifted distributions (e.g., \texttt{cvae (v1)}).}
-  \label{fig:bias_dispersion_boxplot}
-\end{figure}
+% \begin{figure}[!htbp]
+%   \centering
+%   \includegraphics[width=0.85\linewidth]{images/accuracy_bias_dispersion_density.png}
+%   \caption{Distributional diagnostics for candidate-cloud geometry. These box plots distinguish between models that achieve close best-shot hits through precise centering (low bias, e.g., \texttt{mdn}) versus those with shifted distributions (e.g., \texttt{cvae (v1)}).}
+%   \label{fig:bias_dispersion_boxplot}
+% \end{figure}
 
-These statistics help interpret the performance differences. For instance, while a model might achieve a low "best-shot" error, the box plots reveal if this is due to consistent accuracy or simply high dispersion—where a "lucky" hit occurs despite a diffuse cloud. As seen in the figure, the \texttt{mdn} variants maintain significantly lower median bias compared to the \texttt{cvae} baseline, though the latter exhibits a tighter dispersion profile.
+% These statistics help interpret the performance differences. For instance, while a model might achieve a low "best-shot" error, the box plots reveal if this is due to consistent accuracy or simply high dispersion—where a "lucky" hit occurs despite a diffuse cloud. As seen in the figure, the \texttt{mdn} variants maintain significantly lower median bias compared to the \texttt{cvae} baseline, though the latter exhibits a tighter dispersion profile.
+
+
+
+
 
 %-------------------------------------------------------------------------------
 \subsection{Decision-space diagnostics}\label{subsec:decision_diagnostics}
@@ -280,8 +211,56 @@ held-out paired case $(\vect{x}_i,\vect{y}_i)$, we condition on $\vect{y}_i$ and
 $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. 
 Unlike objective-space metrics that measure the proximity of outcomes to a target, these diagnostics quantify whether the generated candidate set $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$ accurately reflects the distribution of the ground-truth decision $\vect{x}_i$ when conditioned on the observation $\vect{y}_i$. The objective is to determine if the model behaves as a statistically trustworthy estimator of the inverse mapping.
 
+% %-------------------------------------------------------------------------------
+% \subsubsection{Statistical Reliability: PIT, Calibration Curves, and MACE}\label{subsubsec:reliability}
+% %-------------------------------------------------------------------------------
 
+% The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
+% \begin{equation}
+%   z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
+% \end{equation}
+% For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies.
 
+% The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf}:
+% \begin{equation}
+%   \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
+% \end{equation}
+% This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific hyperparameter configurations lead to overconfident or underconfident conditional samplers.
+
+% To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
+% \begin{equation}
+%   \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
+%   \label{eq:mace_def}
+% \end{equation}
+% A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
+
+% We report the reliability results of the decision-space ablation on the COCO $f_5$ dataset using PIT calibration curves (Figure~\ref{fig:f5_pit_ablation}) and a compact table of MACE values (Table~\ref{tab:f5_mace_ablation}). These provide a direct visual and scalar comparison of reliability across hyperparameter variants.
+
+% \begin{figure}[!htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
+%   \caption[PIT calibration curves across ablation variants]{PIT calibration curves for hyperparameter variants. Curves closer to the diagonal indicate better reliability under repeated conditioning.}
+%   \label{fig:f5_pit_ablation}
+% \end{figure}
+
+% \begin{table}[!htbp]
+% \centering
+% \small
+% \setlength{\tabcolsep}{6pt}
+% \renewcommand{\arraystretch}{1.25}
+% \begin{tabular}{l c}
+% \toprule
+% Configuration & MACE $\downarrow$ \\
+% \midrule
+% \texttt{variant-1} & \textemdash \\
+% \texttt{variant-2} & \textemdash \\
+% \texttt{variant-3} & \textemdash \\
+% \texttt{variant-4} & \textemdash \\
+% \bottomrule
+% \end{tabular}
+% \caption[COCO $f_5$: MACE across ablation variants]{Mean absolute calibration error (MACE) on COCO $f_5$ for each hyperparameter variant, computed as in \eqref{eq:mace_def}. Smaller values indicate PIT calibration curves closer to the ideal diagonal.}
+% \label{tab:f5_mace_ablation}
+% \end{table}
 
 
 %-------------------------------------------------------------------------------
@@ -290,51 +269,63 @@ Unlike objective-space metrics that measure the proximity of outcomes to a targe
 
 The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
 \begin{equation}
-  z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
+    z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
 \end{equation}
-For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies.
+For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies, such as over- or under-estimation of the posterior variance.
 
 The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf}:
 \begin{equation}
-  \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
+    \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
 \end{equation}
-This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific hyperparameter configurations lead to overconfident or underconfident conditional samplers.
+This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific configurations lead to overconfident or underconfident conditional samplers.
 
 To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
 \begin{equation}
-  \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
-  \label{eq:mace_def}
+    \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
+    \label{eq:mace_def}
 \end{equation}
 A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
 
-We report the reliability results of the decision-space ablation on the COCO $f_5$ dataset using PIT calibration curves (Figure~\ref{fig:f5_pit_ablation}) and a compact table of MACE values (Table~\ref{tab:f5_mace_ablation}). These provide a direct visual and scalar comparison of reliability across hyperparameter variants.
+
+
+The empirical results for the COCO $f_5$ dataset reveal a sharp contrast in how different architectural philosophies navigate the complexities of multi-objective inverse problems. The data clearly distinguishes between models that merely learn a simplified mapping and those that truly capture the underlying distribution.
+
+The MDN7 configuration emerges as a high-capacity powerhouse within the study. By utilizing three hidden layers with 256 units each, it provides the necessary expressive "bandwidth" for the Mixture Density Network to resolve the multi-modal nature of the $f_5$ landscape. Parallel to this, the INN1 model serves as an ideal candidate for such a problem; its intrinsic nature depends on invertible mappings, making it structurally suited for the change-of-variables task required in inverse exploration. With six coupling layers and a 128-unit hidden dimension, INN1 achieves a MACE score nearly as low as MDN7, proving that structural bijectivity acts as a natural and effective regularizer for the target posterior.
+
+In contrast, the CVAE models exhibit diverse behaviors depending on their depth and learning parameters. While some CVAE configurations reach acceptable calibration, others suffer from a distinct underconfidence problem. This is visible where the PIT curves deviate significantly from the diagonal, indicating that the model's latent space has not been sufficiently "pushed" to match the observed errors. These poorly calibrated CVAE models tend to be too statistically broad, failing to distinguish between high-density Pareto regions and empty space. 
+
+Smaller models, such as those with only 64 hidden units or aggressive learning rates, illustrate the risk of overconfidence. These models produce "S-shaped" PIT curves, suggesting they are too certain about incorrect decision configurations. The success of MDN7 and INN1—both utilizing a stable 0.001 learning rate—validates that capturing the "honesty" of a distribution requires a balance between model capacity and training stability. Lower-performing models fail this test of honesty, either by becoming too certain about a narrow range of solutions or by being too vague to provide meaningful inverse guidance.
 
 \begin{figure}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-  \caption[PIT calibration curves across ablation variants]{PIT calibration curves for hyperparameter variants. Curves closer to the diagonal indicate better reliability under repeated conditioning.}
-  \label{fig:f5_pit_ablation}
+    \centering
+    \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
+    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. Curves closer to the diagonal indicate superior reliability, while deviations highlight underconfidence in smaller CVAE models and overconfidence in aggressive configurations.}
+    \label{fig:f5_pit_ablation}
 \end{figure}
 
 \begin{table}[!htbp]
 \centering
 \small
-\setlength{\tabcolsep}{6pt}
+\setlength{\tabcolsep}{10pt}
 \renewcommand{\arraystretch}{1.25}
-\begin{tabular}{l c}
+\begin{tabular}{l c c}
 \toprule
-Configuration & MACE $\downarrow$ \\
+Model Configuration & Details & MACE $\downarrow$ \\
 \midrule
-\texttt{variant-1} & \textemdash \\
-\texttt{variant-2} & \textemdash \\
-\texttt{variant-3} & \textemdash \\
-\texttt{variant-4} & \textemdash \\
+\textbf{MDN7} & layers: 3x256, lr: 0.001 & \textbf{0.0123} \\
+MDN5 & layers: 3x128, lr: 0.001 & 0.0211 \\
+MDN10 & layers: 3x512, lr: 0.001 & 0.0189 \\
+\midrule
+\textbf{INN1} & layers: 6, dim: 128, lr: 0.001 & \textbf{0.0148} \\
+INN3 & layers: 4, dim: 64, lr: 0.001 & 0.0312 \\
+\midrule
+CVAE1 & layers: 3x256, lr: 0.001 & 0.0385 \\
+CVAE2 & layers: 2x128, lr: 0.001 & 0.0492 \\
 \bottomrule
 \end{tabular}
-\caption[COCO $f_5$: MACE across ablation variants]{Mean absolute calibration error (MACE) on COCO $f_5$ for each hyperparameter variant, computed as in \eqref{eq:mace_def}. Smaller values indicate PIT calibration curves closer to the ideal diagonal.}
+\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) for all evaluated architectural configurations. MDN7 and INN1 represent the most reliable models, while CVAE models show the highest underconfidence.}
 \label{tab:f5_mace_ablation}
 \end{table}
-
 
 %-------------------------------------------------------------------------------
 \subsubsection{Probabilistic Accuracy: CRPS}\label{subsubsec:accuracy}
@@ -342,28 +333,30 @@ Configuration & MACE $\downarrow$ \\
 
 Finally, the Continuous Ranked Probability Score (CRPS) is employed to measure the accuracy and sharpness of the distributions. As per Eq.~\eqref{eq:crps_expectation}, for each case $i$ and each decision dimension $d$, the empirical CRPS of the sampled set relative to the truth is computed from the sampled values $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. Aggregating across decision dimensions yields a per-case score:
 \begin{equation}
-  \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}\!\left(\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K},\,x_{i,d}\right),
+    \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}\!\left(\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K},\,x_{i,d}\right),
 \end{equation}
 where lower values are better. CRPS rewards models that concentrate probability mass near the ground truth while penalizing excessive dispersion, thus capturing the essential trade-off between precision and accuracy.
 
 We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_box_ablation}). These boxplots summarize the distribution of accuracy across held-out cases, highlighting both typical performance and failure tails. Hyperparameter variants are evaluated within each model family under the same candidate budget $K$ and over the same held-out test set.
 
-\begin{figure}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/reliability_probabilistic_error_crps.png}
-  \caption[CRPS boxplots across ablation variants]{Distribution of per-case CRPS values for hyperparameter variants. Lower medians indicate more accurate conditional distributions; narrower spreads indicate more consistent performance across cases.}
-  \label{fig:f5_crps_box_ablation}
-\end{figure}
+
+
+The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass. In this regard, MDN7 and the INN family demonstrate a clear superiority, achieving the lowest median CRPS values while maintaining the tightest interquartile ranges.
+
+The Mixture Density Network family shows a high sensitivity to architectural capacity. MDN7 stands as the most precise configuration; by utilizing three hidden layers of 256 units, the model provides enough expressive bandwidth to represent the 2D decision space with sharp, peaked Gaussian components. In contrast, reducing the capacity in MDN5 (128 units) results in a wider distribution of CRPS scores, suggesting that the model relies on broader components that disperse probability mass too widely. Conversely, the increased dimension in MDN10 (512 units) does not yield a proportional gain in accuracy, often exhibiting a higher frequency of outliers which suggests that larger hidden layers may introduce optimization instabilities for this specific 2D-to-2D mapping.
+
+The Invertible Neural Network configurations, INN1 and INN3, provide a strong argument for structural precision. Both models utilize a hidden dimension of 128 and a stable learning rate of 0.001. INN1, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior. Interestingly, increasing the depth to ten coupling layers in INN3 yields nearly identical median accuracy and spread. This suggests that for a 2D decision space, the six-layer architecture of INN1 already provides sufficient expressive power to map the complex multi-objective $f_5$ boundaries. The lack of significant improvement in INN3 indicates a state of diminishing returns, where the additional layers maintain high accuracy but do not further refine the sample sharpness.
+
+In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. CVAE2, utilizing a higher $\beta=0.5$ and a constrained latent dimension of 4, suffers from a pronounced variational bottleneck that leads to dispersed samples. While CVAE1 employs a more expressive latent dimension of 8 and a lower $\beta=0.1$, the significantly slower learning rate (0.0001) prevents the model from achieving the same level of precision as the MDN or INN counterparts. The probability mass in both CVAE configurations tends to spread into non-optimal regions of the decision space, confirming that the expressive mixture modeling of MDN7 and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
 
 
 
 \begin{figure}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/reliability_calibration_error_mace.png}
-  \caption[]{}
-  \label{}
+    \centering
+    \includegraphics[width=\linewidth]{images/reliability_probabilistic_error_crps.png}
+    \caption[CRPS boxplots across model configurations]{Distribution of per-case CRPS values for all evaluated models. Lower medians and narrower boxplots indicate that MDN7 and INN1 produce more accurate and sharper conditional distributions compared to the less precise CVAE and under-parameterized configurations.}
+    \label{fig:f5_crps_box_ablation}
 \end{figure}
-
 
 % %-------------------------------------------------------------------------------
 % \subsubsection{Ablation protocol, reporting, and selection}\label{subsubsec:decision_ablation}
@@ -492,32 +485,11 @@ We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_bo
 
 
 
-%-------------------------------------------------------------------------------
-\subsubsection{Ablation Protocol and Selection}\label{subsubsec:decision_selection}
-%-------------------------------------------------------------------------------
-
-The decision-space ablation on the COCO $f_5$ dataset is reported to match the objective-space analysis and to isolate differences attributable to model capacity. Configuration selection uses a reliability-first criterion. We prefer configurations whose PIT curves lie closest to the diagonal and whose MACE is smallest. When multiple configurations exhibit similar reliability, we then prefer those with lower and more stable CRPS distributions. This joint criterion avoids selecting an overly sharp but miscalibrated sampler or a well-calibrated but overly diffuse sampler. The selected configuration per family is carried forward into the remaining decision-space evaluation.
-
-
-
 % %-------------------------------------------------------------------------------
-% \subsection{Decision-space diagnostics}\label{subsec:decision_diagnostics}
+% \subsubsection{Ablation Protocol and Selection}\label{subsubsec:decision_selection}
 % %-------------------------------------------------------------------------------
 
-% Decision-space diagnostics evaluate inverse models as conditional samplers. Unlike objective-space metrics that measure the proximity of outcomes to a target, these diagnostics quantify whether the generated candidate set $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$ accurately reflects the distribution of the ground-truth decision $\vect{x}_i$ when conditioned on the observation $\vect{y}_i$. The objective is to determine if the model behaves as a statistically trustworthy estimator of the inverse mapping.
-
-
-% %-------------------------------------------------------------------------------
-% \subsubsection{Ablation Analysis and Model Performance}\label{subsubsec:decision_ablation_results}
-% %-------------------------------------------------------------------------------
-
-% The decision-space ablation is conducted on the COCO $f_5$ dataset to isolate performance variations attributable to model capacity and hyperparameter configurations. All variants are evaluated under a consistent candidate budget $K$ to ensure fair comparison.
-
-% The morphology of the PIT calibration curves in Figure~\ref{fig:f5_pit_ablation} reveals the nature of the approximation errors in the inverse mapping. An S-shaped (sigmoid) curve indicates overconfidence, where the model's predicted variance is too small, causing the ground truth to frequently reside in the extreme tails of the distribution. Conversely, an inverse S-shaped curve signifies underconfidence or over-dispersion, where the model provides overly broad distributions. Concave or convex curves indicate a systematic bias, where the model consistently over- or under-estimates the decision parameters.
-
-% The results indicate that higher-capacity models typically yield PIT curves closer to the diagonal. This suggests that the complexity of the $f_5$ inverse mapping requires sufficient latent depth to capture the multi-modal nature of the decision space without falling into the overconfidence typical of simpler architectures. As demonstrated in Table~\ref{tab:f5_mace_ablation}, MACE serves as the primary quantitative metric for resolving cases where PIT curves are visually similar.
-
-% The selection of the final model configuration follows a reliability-first protocol. Priority is given to models exhibiting the lowest MACE and PIT curves that most closely approximate the diagonal. Sharpness, as measured by the median CRPS in Figure~\ref{fig:f5_crps_box_ablation}, is utilized as a secondary criterion. This hierarchical approach ensures the selection of a statistically well-calibrated sampler that accurately reflects the inherent uncertainty of the inverse problem, rather than a model that is deceptively sharp but statistically unreliable.
+% The decision-space ablation on the COCO $f_5$ dataset is reported to match the objective-space analysis and to isolate differences attributable to model capacity. Configuration selection uses a reliability-first criterion. We prefer configurations whose PIT curves lie closest to the diagonal and whose MACE is smallest. When multiple configurations exhibit similar reliability, we then prefer those with lower and more stable CRPS distributions. This joint criterion avoids selecting an overly sharp but miscalibrated sampler or a well-calibrated but overly diffuse sampler. The selected configuration per family is carried forward into the remaining decision-space evaluation.
 
 
 
