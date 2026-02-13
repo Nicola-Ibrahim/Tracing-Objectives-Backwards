@@ -9,7 +9,7 @@ from ...modules.evaluation.application.use_cases.compare_inverse_model_candidate
     InverseEstimatorCandidate,
 )
 from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates.inverse_model_candidates_comparator import (
-    InverseGeneratorComparator,
+    InverseModelsCandidatesComparator,
 )
 from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (
     DecisionGenerationComparisonVisualizer,
@@ -31,28 +31,22 @@ def main():
     command = CompareInverseModelCandidatesCommand(
         dataset_name="cocoex_f5",
         inverse_estimators=[
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=1),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=2),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=3),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=4),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=5),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=6),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=7),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=10),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=3),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=3),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
-        target_objective=[410, 1400],
-        distance_tolerance=0.02,
+        target_objective=[408, 1300],
         n_samples=20,
-        diversity_method="euclidean",
     )
 
     # Initialize the handler with pre-built services
     handler = CompareInverseModelCandidatesCommandHandler(
-        comparator=InverseGeneratorComparator(),
+        comparator=InverseModelsCandidatesComparator(),
         model_repository=FileSystemModelArtifactRepository(),
         data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),

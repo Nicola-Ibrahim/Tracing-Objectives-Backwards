@@ -20,6 +20,8 @@ class SelectionResult:
     best_decision: np.ndarray
     best_objective: np.ndarray
     all_distances: np.ndarray  # For visualization
+    sorted_candidates: np.ndarray  # [NEW]
+    sorted_objectives: np.ndarray  # [NEW]
 
 
 class InverseModelsCandidatesComparator:
@@ -36,16 +38,13 @@ class InverseModelsCandidatesComparator:
 
     def compare(
         self,
-        *,
-        inverse_estimators: dict[
-            str, BaseEstimator | ProbabilisticEstimator | DeterministicEstimator
-        ],
+        inverse_estimators: dict[str, BaseEstimator],
         forward_estimator: BaseEstimator,
         target_objective_norm: np.ndarray,
         target_objective_raw: np.ndarray,
         decisions_normalizer: BaseNormalizer,
+        objectives_normalizer: BaseNormalizer,
         n_samples: int,
-        distance_tolerance: float = 0.0,
     ) -> dict[str, Any]:
         """
         Runs the comparison pipeline for each inverse estimator.
@@ -85,38 +84,35 @@ class InverseModelsCandidatesComparator:
                 }
             )
 
-            # # 3. Validate (Optional)
-            # if self._validator and self._validator.is_enabled:
-            #     mask = self._validator.validate(
-            #         candidates_raw=candidates_raw,
-            #         predicted_objectives=predicted_objectives,
-            #         target_objective_raw=target_objective_raw,
-            #         distance_tolerance=distance_tolerance,
-            #     )
-            #     candidates_raw = candidates_raw[mask]
-            #     predicted_objectives = predicted_objectives[mask]
+            # 3. Normalize for fair distance calculation
+            predicted_objectives_norm = objectives_normalizer.transform(
+                predicted_objectives
+            )
 
-            # 4. Select (Best candidate by distance)
+            # 4. Select (Sort all candidates by distance)
             if len(candidates_raw) > 0:
                 selection = self._select(
                     candidates=candidates_raw,
-                    predicted_objectives=predicted_objectives,
-                    target_objective_raw=target_objective_raw,
+                    predicted_objectives_norm=predicted_objectives_norm,
+                    target_objective_norm=target_objective_norm,
+                    predicted_objectives_raw=predicted_objectives,
                 )
 
-                # Update generator_runs with best point info for visualization
+                # Update generator_runs with SORTED points and best point info
                 generator_runs[-1].update(
                     {
-                        "best_index": selection.best_index,
+                        "decisions": selection.sorted_candidates,
+                        "predicted_objectives": selection.sorted_objectives,
+                        "best_index": 0,
                         "best_decision": selection.best_decision,
                         "best_objective": selection.best_objective,
                     }
                 )
 
                 results_map[name] = {
-                    "decisions": candidates_raw,
-                    "predicted_objectives": predicted_objectives,
-                    "best_index": selection.best_index,
+                    "decisions": selection.sorted_candidates,
+                    "predicted_objectives": selection.sorted_objectives,
+                    "best_index": 0,
                     "best_distance": selection.best_distance,
                     "best_decision": selection.best_decision,
                     "best_objective": selection.best_objective,
@@ -175,19 +171,27 @@ class InverseModelsCandidatesComparator:
     def _select(
         self,
         candidates: np.ndarray,
-        predicted_objectives: np.ndarray,
-        target_objective_raw: np.ndarray,
+        predicted_objectives_norm: np.ndarray,
+        target_objective_norm: np.ndarray,
+        predicted_objectives_raw: np.ndarray,
     ) -> SelectionResult:
-        """Returns selection result with best candidate and all distances."""
+        """Returns selection result with candidates sorted by NORMALIZED distance."""
         distances = np.linalg.norm(
-            predicted_objectives - target_objective_raw.reshape(1, -1), axis=1
+            predicted_objectives_norm - target_objective_norm.reshape(1, -1), axis=1
         )
-        best_idx = int(np.argmin(distances))
+
+        # Sort all arrays by distance
+        sort_idx = np.argsort(distances)
+        sorted_distances = distances[sort_idx]
+        sorted_candidates = candidates[sort_idx]
+        sorted_objectives = predicted_objectives_raw[sort_idx]
 
         return SelectionResult(
-            best_index=best_idx,
-            best_distance=float(distances[best_idx]),
-            best_decision=candidates[best_idx],
-            best_objective=predicted_objectives[best_idx],
-            all_distances=distances,
+            best_index=0,
+            best_distance=float(sorted_distances[0]),
+            best_decision=sorted_candidates[0],
+            best_objective=sorted_objectives[0],
+            all_distances=sorted_distances,
+            sorted_candidates=sorted_candidates,
+            sorted_objectives=sorted_objectives,
         )

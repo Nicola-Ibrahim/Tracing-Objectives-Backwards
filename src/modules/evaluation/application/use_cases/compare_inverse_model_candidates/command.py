@@ -29,10 +29,7 @@ class CompareInverseModelCandidatesCommand(BaseModel):
         description="list of inverse model candidates (type + version) to use for generation",
         examples=[
             [
-                {
-                    "type": EstimatorTypeEnum.MDN.value,
-                    "version": 1,
-                }
+                {"type": EstimatorTypeEnum.MDN.value, "version": 1},
             ]
         ],
     )
@@ -46,18 +43,8 @@ class CompareInverseModelCandidatesCommand(BaseModel):
         description="Target point in objective space (y1, y2, ...)",
         examples=[[0.5, 0.8]],
     )
-    distance_tolerance: float = Field(
-        ...,
-        description="Distance tolerance for selecting candidates.",
-        examples=[0.02],
-    )
     n_samples: int = Field(
         ...,
         description="Number of samples to draw per inverse estimator.",
         examples=[250],
-    )
-    diversity_method: str = Field(
-        ...,
-        description="Diversity method for suggestions.",
-        examples=["euclidean"],
     )

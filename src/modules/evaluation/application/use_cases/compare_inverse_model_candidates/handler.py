@@ -10,7 +10,7 @@ from .....modeling.domain.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
 from .....shared.domain.interfaces.base_logger import BaseLogger
-from .....shared.domain.interfaces.base_visualizer import BaseVisualizer
+from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .command import CompareInverseModelCandidatesCommand, InverseEstimatorCandidate
 from .inverse_model_candidates_comparator import InverseModelsCandidatesComparator
 
@@ -30,7 +30,7 @@ class CompareInverseModelCandidatesCommandHandler:
         model_repository: BaseModelArtifactRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,
-        visualizer: BaseVisualizer | None = None,
+        visualizer: BaseVisualizer,
     ):
         self._comparator = comparator
         self._model_repository = model_repository
@@ -80,22 +80,24 @@ class CompareInverseModelCandidatesCommandHandler:
             target_objective_norm=target_objective_norm,
             target_objective_raw=target_objective_raw,
             decisions_normalizer=dataset.processed.decisions_normalizer,
+            objectives_normalizer=dataset.processed.objectives_normalizer,
             n_samples=command.n_samples,
-            distance_tolerance=command.distance_tolerance,
         )
 
         # 6. Build visualization payload and generate plots
         results_map = workflow_output["results_map"]
         generator_runs = workflow_output["generator_runs"]
 
-        if results_map and self._visualizer:
-            self._logger.log_info("Generating comparison visualization...")
-            visualization_data = self._build_visualization_payload(
-                dataset=dataset,
-                target_objective=target_objective_raw,
-                generator_runs=generator_runs,
-            )
-            self._visualizer.plot(visualization_data)
+        self._logger.log_info("Generating comparison visualization...")
+        self._visualizer.plot(
+            data={
+                "dataset_name": dataset.name,
+                "pareto_front": dataset.pareto.front,
+                "pareto_set": dataset.pareto.set,
+                "target_objective": target_objective_raw,
+                "generators": generator_runs,
+            }
+        )
 
         return results_map
 
@@ -137,13 +139,7 @@ class CompareInverseModelCandidatesCommandHandler:
         """
         Builds the visualization payload for the visualizer.
         """
-        return {
-            "dataset_name": dataset.name,
-            "pareto_front": dataset.pareto.front,
-            "pareto_set": dataset.pareto.set,
-            "target_objective": target_objective,
-            "generators": generator_runs,
-        }
+        return
 
     def _prepare_target(
         self, target_objective: list, processed_data: ProcessedData

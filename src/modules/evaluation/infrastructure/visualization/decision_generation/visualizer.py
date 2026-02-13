@@ -9,6 +9,7 @@ from .panels.layout_config import (
 from .panels.payload_handler import prepare_payload
 from .panels.traces import (
     add_best_decision_trace,
+    add_best_objective_trace,
     add_decision_trace,
     add_objective_connection_trace,
     add_pareto_front_trace,
@@ -68,6 +69,7 @@ class DecisionGenerationComparisonVisualizer(BaseVisualizer):
             add_pareto_front_trace(fig, pareto_front, show_legend, row, 2)
             add_target_trace(fig, target, show_legend, row, 2)
             add_prediction_trace(fig, run, idx, row, 2, color)
+            add_best_objective_trace(fig, run, row, 2, color)
             add_objective_connection_trace(fig, run, target, row, 2, color)
 
             fig.update_xaxes(title_text="y1", row=row, col=2)
