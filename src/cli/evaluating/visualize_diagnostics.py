@@ -25,29 +25,15 @@ def cli():
 
     command = VisualizeInverseEstimatorDiagnosticCommand(
         dataset_name="cocoex_f5",
-        requests=[
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=5, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=7, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.MDN, version=10, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.CVAE, version=1, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.CVAE, version=2, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.INN, version=1, run_number=1
-            ),
-            InverseEstimatorCandidate(
-                type=EstimatorTypeEnum.INN, version=3, run_number=1
-            ),
-          
+        inverse_estimator_candidates=[
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=8),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=10),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=12),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=13),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=3),
         ],
     )
 

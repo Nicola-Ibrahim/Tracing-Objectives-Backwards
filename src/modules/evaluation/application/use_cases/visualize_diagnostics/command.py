@@ -23,7 +23,7 @@ class VisualizeInverseEstimatorDiagnosticCommand(BaseModel):
         examples=["cocoex_f5"],
     )
 
-    requests: list[InverseEstimatorCandidate] = Field(
+    inverse_estimator_candidates: list[InverseEstimatorCandidate] = Field(
         ...,
         description="List of specific inverse estimator runs to load and compare.",
         examples=[

@@ -21,7 +21,7 @@ from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 @click.command(help="Run diagnostic computation and persist results to the auditor")
 def cli():
     candidates = [
-        InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=4),
+        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=13),
     ]
 
     command = DiagnoseInverseModelsCommand(

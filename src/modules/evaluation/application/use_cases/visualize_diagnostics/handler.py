@@ -30,7 +30,7 @@ class VisualizeInverseEstimatorDiagnosticCommandHandler:
         # 1. Fetch requested runs using repository batch logic
         try:
             results_map_entities = self._diag_repo.get_batch(
-                requests=command.requests,
+                estimators=command.inverse_estimator_candidates,
                 dataset_name=command.dataset_name,
             )
         except FileNotFoundError as e:

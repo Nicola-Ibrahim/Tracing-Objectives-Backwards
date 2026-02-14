@@ -31,9 +31,10 @@ def main():
     command = CompareInverseModelCandidatesCommand(
         dataset_name="cocoex_f5",
         inverse_estimators=[
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=5),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=7),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=8),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=10),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=12),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=13),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),

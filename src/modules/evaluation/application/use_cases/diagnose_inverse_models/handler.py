@@ -97,6 +97,7 @@ class DiagnoseInverseModelsHandler:
             # Accuracy Domain (Objective Space - Standardized Lens)
             y_target = dataset.processed.objectives_test
 
+            # (Objective Space - Standardized Lens)
             spatial_audit = SpatialCandidateAuditor.audit(
                 training_objectives=dataset.processed.objectives_train,
                 candidates=y_pred,
