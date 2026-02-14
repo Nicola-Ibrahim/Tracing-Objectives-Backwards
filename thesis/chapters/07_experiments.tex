@@ -290,16 +290,19 @@ A lower MACE value indicates that the PIT curve resides closer to the ideal diag
 
 The empirical results for the COCO $f_5$ dataset reveal a sharp contrast in how different architectural philosophies navigate the complexities of multi-objective inverse problems. The data clearly distinguishes between models that merely learn a simplified mapping and those that truly capture the underlying distribution.
 
-The MDN7 configuration emerges as a high-capacity powerhouse within the study. By utilizing three hidden layers with 256 units each, it provides the necessary expressive "bandwidth" for the Mixture Density Network to resolve the multi-modal nature of the $f_5$ landscape. Parallel to this, the INN1 model serves as an ideal candidate for such a problem; its intrinsic nature depends on invertible mappings, making it structurally suited for the change-of-variables task required in inverse exploration. With six coupling layers and a 128-unit hidden dimension, INN1 achieves a MACE score nearly as low as MDN7, proving that structural bijectivity acts as a natural and effective regularizer for the target posterior.
 
-In contrast, the CVAE models exhibit diverse behaviors depending on their depth and learning parameters. While some CVAE configurations reach acceptable calibration, others suffer from a distinct underconfidence problem. This is visible where the PIT curves deviate significantly from the diagonal, indicating that the model's latent space has not been sufficiently "pushed" to match the observed errors. These poorly calibrated CVAE models tend to be too statistically broad, failing to distinguish between high-density Pareto regions and empty space. 
 
-Smaller models, such as those with only 64 hidden units or aggressive learning rates, illustrate the risk of overconfidence. These models produce "S-shaped" PIT curves, suggesting they are too certain about incorrect decision configurations. The success of MDN7 and INN1—both utilizing a stable 0.001 learning rate—validates that capturing the "honesty" of a distribution requires a balance between model capacity and training stability. Lower-performing models fail this test of honesty, either by becoming too certain about a narrow range of solutions or by being too vague to provide meaningful inverse guidance.
+
+The \texttt{mdn (v8)} configuration emerges as the high-capacity powerhouse within this study. By effectively resolving the multi-modal nature of the $f_5$ landscape, it achieves the lowest Mean Absolute Calibration Error (MACE $\approx$ 0.031). As seen in the PIT calibration plot, its curve (lavender-blue) tracks the ideal diagonal with remarkable precision, suggesting a highly "honest" estimation of posterior uncertainty. Parallel to this, the \texttt{inn (v1)} model serves as a strong contender; its structural bijectivity acts as a natural regularizer for the inverse mapping task, yielding a competitive MACE of 0.044. While \texttt{mdn (v10)} remains highly reliable, the slight increase in error compared to \texttt{v8} suggests that further increasing mixture complexity or changing noise kernels may reach a point of diminishing returns.
+
+In contrast, the CVAE models exhibit significant calibration pathologies. The \texttt{cvae (v2)} configuration, in particular, suffers from a severe overconfidence problem. This is strikingly visible in its "S-shaped" PIT curve, which deviates most aggressively from the diagonal. This signature indicates that the model's predicted distributions are far too narrow, failing to capture the true diversity of the inverse solution space. While \texttt{cvae (v1)} performs better than its counterpart, it still exhibits a MACE (0.116) that is nearly triple that of the MDN and INN leaders. These models tend to be statistically "blind" to certain regions of the Pareto front, over-concentrating density where it isn't justified.
+
+The results for the Invertible Neural Networks show that depth is not a universal remedy. Increasing the complexity from \texttt{inn (v1)} to \texttt{inn (v3)} (10 layers) actually led to a slight degradation in calibration (MACE 0.056). This suggests that for this specific dimensionality, the 6-layer architecture of \texttt{v1} provides the optimal balance between expressivity and training stability. Ultimately, the success of the MDN and INN variants validates that capturing the "honesty" of a distribution requires an architecture that respects the underlying probabilistic geometry rather than just minimizing a reconstruction loss.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. Curves closer to the diagonal indicate superior reliability, while deviations highlight underconfidence in smaller CVAE models and overconfidence in aggressive configurations.}
+    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. The \texttt{mdn (v8)} and \texttt{mdn (v10)} curves reside closest to the diagonal, while \texttt{cvae (v2)} displays a prominent S-curve characteristic of high overconfidence.}
     \label{fig:f5_pit_ablation}
 \end{figure}
 
@@ -312,20 +315,58 @@ Smaller models, such as those with only 64 hidden units or aggressive learning r
 \toprule
 Model Configuration & Details & MACE $\downarrow$ \\
 \midrule
-\textbf{MDN7} & 3x256, $K_{mix}=10$, Normal, lr: 0.001 & \textbf{0.0123} \\
-MDN5 & 3x256, $K_{mix}=20$, Normal, lr: 0.001 & 0.0211 \\
-MDN10 & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0189 \\
+\textbf{mdn (v8)} & 3x256, $K_{mix}=10$, Normal, lr: 0.001 & \textbf{0.0312} \\
+mdn (v10) & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0348 \\
 \midrule
-\textbf{INN1} & 6 layers, dim: 128, lr: 0.001 & \textbf{0.0148} \\
-INN3 & 10 layers, dim: 128, lr: 0.001 & 0.0312 \\
+\textbf{inn (v1)} & 6 layers, dim: 128, lr: 0.001 & \textbf{0.0435} \\
+inn (v3) & 10 layers, dim: 128, lr: 0.001 & 0.0561 \\
 \midrule
-CVAE1 & dim: 128, $z=8$, $\beta=0.1$, lr: 0.0001 & 0.0385 \\
-CVAE2 & dim: 128, $z=4$, $\beta=0.5$, lr: 0.001 & 0.0492 \\
+cvae (v1) & dim: 128, $z=8$, $\beta=0.1$, lr: 0.0001 & 0.1154 \\
+cvae (v2) & dim: 128, $z=4$, $\beta=0.5$, lr: 0.001 & 0.1923 \\
 \bottomrule
 \end{tabular}
-\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) for various architectural configurations. Notation: $K_{mix}$ is the number of mixtures, $z$ is the latent dimension, $\beta$ is the KL-divergence weight, and lr is the learning rate.}
+\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) derived from PIT curves. The MDN variants demonstrate superior statistical reliability, while CVAE models show the highest calibration error.}
 \label{tab:f5_mace_ablation}
 \end{table}
+
+
+
+% The MDN7 configuration emerges as a high-capacity powerhouse within the study. By utilizing three hidden layers with 256 units each, it provides the necessary expressive "bandwidth" for the Mixture Density Network to resolve the multi-modal nature of the $f_5$ landscape. Parallel to this, the INN1 model serves as an ideal candidate for such a problem; its intrinsic nature depends on invertible mappings, making it structurally suited for the change-of-variables task required in inverse exploration. With six coupling layers and a 128-unit hidden dimension, INN1 achieves a MACE score nearly as low as MDN7, proving that structural bijectivity acts as a natural and effective regularizer for the target posterior.
+
+% In contrast, the CVAE models exhibit diverse behaviors depending on their depth and learning parameters. While some CVAE configurations reach acceptable calibration, others suffer from a distinct underconfidence problem. This is visible where the PIT curves deviate significantly from the diagonal, indicating that the model's latent space has not been sufficiently "pushed" to match the observed errors. These poorly calibrated CVAE models tend to be too statistically broad, failing to distinguish between high-density Pareto regions and empty space. 
+
+% Smaller models, such as those with only 64 hidden units or aggressive learning rates, illustrate the risk of overconfidence. These models produce "S-shaped" PIT curves, suggesting they are too certain about incorrect decision configurations. The success of MDN7 and INN1—both utilizing a stable 0.001 learning rate—validates that capturing the "honesty" of a distribution requires a balance between model capacity and training stability. Lower-performing models fail this test of honesty, either by becoming too certain about a narrow range of solutions or by being too vague to provide meaningful inverse guidance.
+
+% \begin{figure}[!htbp]
+%     \centering
+%     \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
+%     \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. Curves closer to the diagonal indicate superior reliability, while deviations highlight underconfidence in smaller CVAE models and overconfidence in aggressive configurations.}
+%     \label{fig:f5_pit_ablation}
+% \end{figure}
+
+% \begin{table}[!htbp]
+% \centering
+% \small
+% \setlength{\tabcolsep}{8pt}
+% \renewcommand{\arraystretch}{1.25}
+% \begin{tabular}{l l c}
+% \toprule
+% Model Configuration & Details & MACE $\downarrow$ \\
+% \midrule
+% \textbf{MDN7} & 3x256, $K_{mix}=10$, Normal, lr: 0.001 & \textbf{0.0123} \\
+% MDN5 & 3x256, $K_{mix}=20$, Normal, lr: 0.001 & 0.0211 \\
+% MDN10 & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0189 \\
+% \midrule
+% \textbf{INN1} & 6 layers, dim: 128, lr: 0.001 & \textbf{0.0148} \\
+% INN3 & 10 layers, dim: 128, lr: 0.001 & 0.0312 \\
+% \midrule
+% CVAE1 & dim: 128, $z=8$, $\beta=0.1$, lr: 0.0001 & 0.0385 \\
+% CVAE2 & dim: 128, $z=4$, $\beta=0.5$, lr: 0.001 & 0.0492 \\
+% \bottomrule
+% \end{tabular}
+% \caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) for various architectural configurations. Notation: $K_{mix}$ is the number of mixtures, $z$ is the latent dimension, $\beta$ is the KL-divergence weight, and lr is the learning rate.}
+% \label{tab:f5_mace_ablation}
+% \end{table}
 
 
 %-------------------------------------------------------------------------------
@@ -342,13 +383,22 @@ We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_bo
 
 
 
-The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass. In this regard, MDN7 and the INN family demonstrate a clear superiority, achieving the lowest median CRPS values while maintaining the tightest interquartile ranges.
+The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass near the ground truth. In this regard, the \texttt{mdn (v8)} configuration and the INN family demonstrate a clear superiority, achieving the lowest CRPS values, which signifies a superior balance between precision and accuracy.
 
-The Mixture Density Network family shows a high sensitivity to specific architectural parameterization beyond mere layer depth. MDN7 stands as a highly precise configuration; by utilizing three hidden layers of 256 units with 10 mixture components, the model provides sufficient expressive bandwidth to represent the 2D decision space with sharp, peaked Gaussian components. In contrast, MDN5 achieves a similar and close CRPS performance using the same hidden architecture but with an increased count of 20 mixture components. This suggests that for the 2D-to-2D mapping of the $f_5$ landscape, 10 components are already sufficient, with the additional mixtures in MDN5 offering diminishing returns in accuracy. Conversely, the MDN10 configuration utilizes a Laplace distribution family and a significantly smaller batch size of 32; despite sharing the same hidden capacity, this setup does not yield a gain in precision and often exhibits a higher frequency of outliers. This suggests that the heavier-tailed Laplace kernels combined with the increased stochasticity of small-batch optimization may introduce instabilities that degrade the consistency of the mapping.
+The Mixture Density Network family shows that high-capacity hidden architectures are essential for minimizing probabilistic error. \texttt{mdn (v8)} stands as the most precise configuration in the study (CRPS $\approx$ 0.021). By utilizing three hidden layers of 256 units with 10 mixture components, the model provides sufficient expressive bandwidth to represent the decision space with sharp, peaked components. In contrast, the \texttt{mdn (v10)} configuration utilizes a Laplace distribution kernel; while still highly effective, it yields a slightly higher CRPS ($\approx$ 0.023). This suggests that while heavier-tailed kernels can offer robustness, the Gaussian components in \texttt{v8} may be better suited for the specific density profiles of the $f_5$ landscape.
 
-The Invertible Neural Network configurations, INN1 and INN3, provide a strong argument for structural precision. Both models utilize a hidden dimension of 128 and a stable learning rate of 0.001. INN1, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior. Interestingly, increasing the depth to ten coupling layers in INN3 yields nearly identical median accuracy and spread. This suggests that for a 2D decision space, the six-layer architecture of INN1 already provides sufficient expressive power to map the complex multi-objective $f_5$ boundaries. The lack of significant improvement in INN3 indicates a state of diminishing returns, where the additional layers maintain high accuracy but do not further refine the sample sharpness.
+The Invertible Neural Network configurations, \texttt{inn (v1)} and \texttt{inn (v3)}, provide a strong argument for structural precision. Both models achieve nearly identical CRPS values ($\approx$ 0.026), indicating a high level of consistency. \texttt{inn (v1)}, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior. The fact that \texttt{inn (v3)} does not significantly improve upon this score despite its increased depth (ten layers) suggests a state of diminishing returns; for a 2D decision space, the six-layer architecture already provides sufficient expressive power to map the complex multi-objective boundaries without the need for additional parameters.
 
-In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. CVAE2, utilizing a higher $\beta=0.5$ and a constrained latent dimension of 4, suffers from a pronounced variational bottleneck that leads to dispersed samples. While CVAE1 employs a more expressive latent dimension of 8 and a lower $\beta=0.1$, the significantly slower learning rate (0.0001) prevents the model from achieving the same level of precision as the MDN or INN counterparts. The probability mass in both CVAE configurations tends to spread into non-optimal regions of the decision space, confirming that the expressive mixture modeling of MDN7 and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
+In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. \texttt{cvae (v2)}, utilizing a higher $\beta=0.5$ and a constrained latent dimension, suffers from a pronounced variational bottleneck that leads to overly dispersed samples and the highest observed CRPS ($\approx$ 0.064). While \texttt{cvae (v1)} employs a more expressive latent dimension and a lower $\beta=0.1$, resulting in a improved score ($\approx$ 0.034), it still fails to reach the precision levels of the MDN or INN counterparts. The higher error in both CVAE configurations confirms that the expressive mixture modeling of \texttt{mdn (v8)} and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
+
+
+% The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass. In this regard, MDN7 and the INN family demonstrate a clear superiority, achieving the lowest median CRPS values while maintaining the tightest interquartile ranges.
+
+% The Mixture Density Network family shows a high sensitivity to specific architectural parameterization beyond mere layer depth. MDN7 stands as a highly precise configuration; by utilizing three hidden layers of 256 units with 10 mixture components, the model provides sufficient expressive bandwidth to represent the 2D decision space with sharp, peaked Gaussian components. In contrast, MDN5 achieves a similar and close CRPS performance using the same hidden architecture but with an increased count of 20 mixture components. This suggests that for the 2D-to-2D mapping of the $f_5$ landscape, 10 components are already sufficient, with the additional mixtures in MDN5 offering diminishing returns in accuracy. Conversely, the MDN10 configuration utilizes a Laplace distribution family and a significantly smaller batch size of 32; despite sharing the same hidden capacity, this setup does not yield a gain in precision and often exhibits a higher frequency of outliers. This suggests that the heavier-tailed Laplace kernels combined with the increased stochasticity of small-batch optimization may introduce instabilities that degrade the consistency of the mapping.
+
+% The Invertible Neural Network configurations, INN1 and INN3, provide a strong argument for structural precision. Both models utilize a hidden dimension of 128 and a stable learning rate of 0.001. INN1, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior. Interestingly, increasing the depth to ten coupling layers in INN3 yields nearly identical median accuracy and spread. This suggests that for a 2D decision space, the six-layer architecture of INN1 already provides sufficient expressive power to map the complex multi-objective $f_5$ boundaries. The lack of significant improvement in INN3 indicates a state of diminishing returns, where the additional layers maintain high accuracy but do not further refine the sample sharpness.
+
+% In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. CVAE2, utilizing a higher $\beta=0.5$ and a constrained latent dimension of 4, suffers from a pronounced variational bottleneck that leads to dispersed samples. While CVAE1 employs a more expressive latent dimension of 8 and a lower $\beta=0.1$, the significantly slower learning rate (0.0001) prevents the model from achieving the same level of precision as the MDN or INN counterparts. The probability mass in both CVAE configurations tends to spread into non-optimal regions of the decision space, confirming that the expressive mixture modeling of MDN7 and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
 
 
 
