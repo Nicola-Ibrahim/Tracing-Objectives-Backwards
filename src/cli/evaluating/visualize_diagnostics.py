@@ -33,7 +33,13 @@ def cli():
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=3),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=3),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=4),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=5),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=6),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=7),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=8),
+            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=9),
         ],
     )
 

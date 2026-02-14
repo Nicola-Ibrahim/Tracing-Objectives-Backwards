@@ -307,7 +307,7 @@ class INNEstimatorParams(EstimatorParamsBase):
         description="Type of the invertible neural network estimator.",
     )
     num_coupling_layers: int = Field(
-        6, ge=1, description="Number of coupling transformations."
+        20, ge=1, description="Number of coupling transformations."
     )
     hidden_dim: int = Field(
         128, gt=0, description="Hidden layer size in coupling networks."
@@ -315,7 +315,7 @@ class INNEstimatorParams(EstimatorParamsBase):
     use_batch_norm: bool = Field(
         True, description="Use batch normalization between layers."
     )
-    learning_rate: float = Field(1e-5, gt=0, description="Initial learning rate.")
+    learning_rate: float = Field(1e-2, gt=0, description="Initial learning rate.")
     optimizer_name: INNOptimizerEnum = Field(
         INNOptimizerEnum.ADAM, description="Optimizer choice."
     )

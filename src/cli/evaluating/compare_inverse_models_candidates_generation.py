@@ -38,7 +38,7 @@ def main():
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
             InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=3),
+            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=5),
         ],
         forward_estimator_type=EstimatorTypeEnum.COCO,
         target_objective=[408, 1300],
