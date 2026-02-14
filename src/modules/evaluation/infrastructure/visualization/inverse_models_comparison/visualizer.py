@@ -40,46 +40,46 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
 
         model_names = []
         for res in results:
-            name = f"{res.metadata.estimator.type} (v{res.metadata.estimator.version})"
-            model_names.append(name)
+            model_name = (
+                f"{res.metadata.estimator.type} (v{res.metadata.estimator.version})"
+            )
+            model_names.append(model_name)
 
             # a. Calibration
             if res.reliability and res.reliability.calibration_curve:
-                calibration_data[name] = {
+                calibration_data[model_name] = {
                     "pit_values": res.reliability.calibration_curve.pit_values,
                     "cdf_y": res.reliability.calibration_curve.cdf_y,
                 }
-
             # b. ECDF & Residuals
             if res.accuracy:
-                scores = res.accuracy.best_shot_scores
-                if scores is None and res.accuracy.discrepancy_scores is not None:
-                    scores = np.min(res.accuracy.discrepancy_scores, axis=1)
+                # if scores is None and res.accuracy.discrepancy_scores is not None:
+                #     scores = np.min(res.accuracy.discrepancy_scores, axis=1)
 
-                if scores is not None:
-                    residuals_data[name] = scores
-                    x_sorted = np.sort(scores)
+                if res.accuracy.best_shot_scores is not None:
+                    residuals_data[model_name] = res.accuracy.best_shot_scores
+                    x_sorted = np.sort(res.accuracy.best_shot_scores)
                     y_ecdf = np.arange(1, len(x_sorted) + 1) / len(x_sorted)
-                    ecdf_data[name] = {
+                    ecdf_data[model_name] = {
                         "x_sorted": x_sorted,
                         "y_ecdf": y_ecdf,
-                        "label": f"{name} ({res.metadata.scale_method}, K={res.metadata.num_samples})",
-                        "median_val": np.median(scores),
+                        "label": model_name,
+                        "median_val": np.median(res.accuracy.best_shot_scores),
                     }
 
                 # c. Bias & Dispersion
-                bias_data[name] = res.accuracy.systematic_bias
-                dispersion_data[name] = res.accuracy.cloud_dispersion
+                bias_data[model_name] = res.accuracy.systematic_bias
+                dispersion_data[model_name] = res.accuracy.cloud_dispersion
 
             # d. Scalar Metrics
             if res.reliability:
-                metric_data["mace"][name] = res.reliability.calibration_error
-                metric_data["crps"][name] = res.reliability.crps
+                metric_data["mace"][model_name] = res.reliability.calibration_error
+                metric_data["crps"][model_name] = res.reliability.crps
                 if res.reliability.summary:
-                    metric_data["diversity"][name] = (
+                    metric_data["diversity"][model_name] = (
                         res.reliability.summary.mean_diversity
                     )
-                    metric_data["sharpness"][name] = (
+                    metric_data["sharpness"][model_name] = (
                         res.reliability.summary.mean_interval_width
                     )
 
@@ -142,42 +142,42 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
             "accuracy_bias_dispersion_density",
         )
 
-        self._persist_figure(
-            create_error_boxplot_figure(
-                residuals_data=residuals_data,
-                color_map=color_map,
-                model_names=model_names,
-                title="Residual Distributions: Spread of Best-Shot Errors",
-                subtitle="Lower is Better",
-            ),
-            "accuracy_residual_distributions",
-        )
+        # self._persist_figure(
+        #     create_error_boxplot_figure(
+        #         residuals_data=residuals_data,
+        #         color_map=color_map,
+        #         model_names=model_names,
+        #         title="Residual Distributions: Spread of Best-Shot Errors",
+        #         subtitle="Lower is Better",
+        #     ),
+        #     "accuracy_residual_distributions",
+        # )
 
         # Exploration Metrics
-        self._persist_figure(
-            create_metric_bar_figure(
-                metric_values=metric_data["diversity"],
-                color_map=color_map,
-                model_names=model_names,
-                title="Candidate Diversity Score",
-                subtitle="Higher = More Exploration",
-            ),
-            "exploration_diversity",
-        )
+        # self._persist_figure(
+        #     create_metric_bar_figure(
+        #         metric_values=metric_data["diversity"],
+        #         color_map=color_map,
+        #         model_names=model_names,
+        #         title="Candidate Diversity Score",
+        #         subtitle="Higher = More Exploration",
+        #     ),
+        #     "exploration_diversity",
+        # )
 
-        self._persist_figure(
-            create_metric_bar_figure(
-                metric_values=metric_data["sharpness"],
-                color_map=color_map,
-                model_names=model_names,
-                title="Prediction Interval Width (90%)",
-                subtitle="Lower = More Precise/Sharp",
-            ),
-            "sharpness_interval_width",
-        )
+        # self._persist_figure(
+        #     create_metric_bar_figure(
+        #         metric_values=metric_data["sharpness"],
+        #         color_map=color_map,
+        #         model_names=model_names,
+        #         title="Prediction Interval Width (90%)",
+        #         subtitle="Lower = More Precise/Sharp",
+        #     ),
+        #     "sharpness_interval_width",
+        # )
 
     def _persist_figure(self, fig: go.Figure, name: str) -> None:
         """Persists figure to files without timestamps."""
         # Save High-Resolution Static Image (PNG)
         png_path = self.save_path / f"{name}.png"
-        fig.write_image(png_path, scale=3)
+        fig.write_image(png_path, scale=5)

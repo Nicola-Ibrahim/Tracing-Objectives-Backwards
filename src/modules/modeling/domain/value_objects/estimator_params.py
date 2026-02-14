@@ -198,7 +198,7 @@ class MDNEstimatorParams(EstimatorParamsBase):
         1e-3, gt=0, description="Learning rate for the optimizer."
     )
     distribution_family: DistributionFamilyEnum = Field(
-        DistributionFamilyEnum.LAPLACE,
+        DistributionFamilyEnum.NORMAL,
         description="Distribution family used for mixture components.",
     )
     gmm_boost: bool = Field(
@@ -209,7 +209,7 @@ class MDNEstimatorParams(EstimatorParamsBase):
         description="List defining the number of units in each hidden layer of the MDN.",
     )
     hidden_activation_fn_name: ActivationFunctionEnum = Field(
-        ActivationFunctionEnum.ELU,
+        ActivationFunctionEnum.RELU,
         description="Activation function for hidden layers.",
     )
     optimizer_fn_name: OptimizerFunctionEnum = Field(

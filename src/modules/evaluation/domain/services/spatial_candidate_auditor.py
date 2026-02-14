@@ -12,6 +12,9 @@ DistanceType = Literal["euclidean", "mahalanobis"]
 class SpatialAudit:
     """Immutable result of the objective-space audit (normalized objective space)."""
 
+    # N: number of targets
+    # K: number of candidates
+    # M: number of objectives
     residuals: np.ndarray  # r^(k)(y*): (N, K, M)  = y_hat^(k) - y*
     discrepancy_scores: np.ndarray  # s^(k)(y*): (N, K)
     best_shot_scores: np.ndarray  # min_k(s): (N,)
@@ -51,6 +54,7 @@ class SpatialCandidateAuditor:
         ridge: float = 1e-6,
     ) -> SpatialAudit:
         """
+
         Args:
             training_objectives: (N_tr, M) training outcomes in the same normalized space.
             candidates: (N, K, M) checked candidate outcomes (y_hat) in normalized space.

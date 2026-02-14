@@ -64,7 +64,8 @@ def create_accuracy_ecdf_figure(
             xanchor="left",
         ),
         xaxis=dict(
-            title="Best-shot discrepancy (min over K)",
+            title="Best-shot discrepancy (log scale)",
+            type="log",
             title_font=dict(size=18),
             tickfont=dict(size=14),
             gridcolor="rgba(211, 211, 211, 0.5)",
@@ -72,8 +73,7 @@ def create_accuracy_ecdf_figure(
             linewidth=2,
             linecolor="black",
             mirror=False,
-            range=[-0.1, 1.1],
-            dtick=0.2,
+            autorange=True,
         ),
         yaxis=dict(
             title="Fraction of targets",
