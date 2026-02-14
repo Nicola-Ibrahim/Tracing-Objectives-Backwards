@@ -142,9 +142,13 @@ To provide a complete profile of estimator reliability across a target set $\mat
 \end{equation}
 where $t \ge 0$ is a discrepancy threshold and $\mathbb{I}[\cdot]$ is the indicator function. The value $\widehat{F}(t)$ reports the proportion of targets solved to within accuracy $t$ under budget $K$. For example, if $N=5$ targets yield sorted best-shot scores $\{0.01, 0.02, 0.03, 0.04, 0.10\}$, the ECDF at threshold $t=0.03$ is $\widehat{F}(0.03) = 4/5 = 0.8$.
 
-
-
 We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) problem to identify optimal configurations for the CVAE, MDN, and INN families. Figure~\ref{fig:ablation_ecdf_f5} presents the resulting ECDF curves. Visually, curves that rise faster (higher initial slope) indicate high precision, while the asymptotic behavior in the right tail indicates the fraction of targets that remain "hard" to solve.
+
+The ECDF profiles on the logarithmic discrepancy scale provide a high-resolution view of model performance, particularly at the extreme precision limits required for complex inverse tasks. The \texttt{mdn (v10)} and \texttt{inn (v1)} configurations emerge as the clear frontrunners, with their curves rising significantly earlier than the competition. At a discrepancy threshold of $10\mu$ ($10^{-5}$), these models have already successfully solved approximately $25\%$ of the targets, whereas the CVAE models have yet to register a single successful attainment. This indicates that the combination of MDN’s multi-modal density estimation and the INN’s bijective mapping provides the necessary "resolution" to place candidates in the immediate vicinity of the ground truth.
+
+A closer look at the architectural variants reveals that deeper models do not always equate to higher precision. In the INN family, the 6-layer \texttt{inn (v1)} consistently outperforms the 10-layer \texttt{inn (v5)} across the entire range of thresholds, suggesting that the simpler architecture is more effective at capturing the sharp peaks of the posterior distribution without introducing unnecessary training instability. Similarly, while \texttt{mdn (v8)} showed the best average probabilistic accuracy in earlier metrics, \texttt{mdn (v10)} demonstrates a slight advantage in the high-precision regime. This suggests that the use of Laplace kernels or increased mixture components ($K_{mix}=20$) in \texttt{v10} may provide better "best-shot" coverage for specific targets, even if the overall distribution is slightly less sharp than \texttt{v8}.
+
+The performance gap is most pronounced when examining the Conditional Variational Autoencoders. The \texttt{cvae (v2)} model displays a massive "attainment lag," with its curve only beginning to rise steeply around the $10^{-3}$ threshold—a point where the MDN and INN models have already solved over $90\%$ of the targets. Even the more expressive \texttt{cvae (v1)} remains significantly behind the leading architectures, only crossing the $50\%$ attainment mark at a discrepancy roughly ten times larger than that of the leading MDN. This behavior reinforces the conclusion that the latent bottleneck and the inherent pressure to match a Gaussian prior in CVAEs limit their ability to resolve the fine-grained multi-objective boundaries of the $f_5$ landscape, making them less suitable for tasks requiring high-fidelity inverse solutions.
 
 \begin{figure}[!htbp]
   \centering
@@ -153,26 +157,26 @@ We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) pr
   \label{fig:ablation_ecdf_f5}
 \end{figure}
 
-
 The ECDF profiles highlight distinct architectural biases. The INN configurations demonstrate the steepest initial rise, reflecting the high-precision target matching enabled by their bijective nature. In contrast, the CVAE models often plateau earlier, suggesting that the latent bottleneck may limit precision in specific target regions. For MDNs, increasing the number of mixture components generally shifts the ECDF curve upward, reflecting better coverage of multi-modal inverse solutions.
 
-Based on these results, we select the configurations that dominate the low-discrepancy region ($t < 0.05$) for subsequent benchmarking (Table~\ref{tab:ablation_f5_selected}).
 
-\begin{table}[!htbp]
-  \centering
-  \caption{Selected hyperparameter configurations based on ECDF dominance.}
-  \label{tab:ablation_f5_selected}
-  \rarray{1.15}
-  \begin{tabular}{l l}
-    \toprule
-    \textbf{Model family} & \textbf{Selected configuration} \\
-    \midrule
-    CVAE & [Latent Dim: X, Decoder Depth: Y] \\
-    MDN  & [Mixture Components: Z, Hidden Layers: W] \\
-    INN  & [Coupling Layers: N, Subnet Size: M] \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+% Based on these results, we select the configurations that dominate the low-discrepancy region ($t < 0.05$) for subsequent benchmarking (Table~\ref{tab:ablation_f5_selected}).
+
+% \begin{table}[!htbp]
+%   \centering
+%   \caption{Selected hyperparameter configurations based on ECDF dominance.}
+%   \label{tab:ablation_f5_selected}
+%   \rarray{1.15}
+%   \begin{tabular}{l l}
+%     \toprule
+%     \textbf{Model family} & \textbf{Selected configuration} \\
+%     \midrule
+%     CVAE & [Latent Dim: X, Decoder Depth: Y] \\
+%     MDN  & [Mixture Components: Z, Hidden Layers: W] \\
+%     INN  & [Coupling Layers: N, Subnet Size: M] \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
 
 % %-------------------------------------------------------------------------------
 % \subsubsection{Candidate-cloud geometry}\label{subsubsec:objective_cloud}
@@ -286,23 +290,18 @@ To summarize calibration with a single scalar, we report the mean absolute calib
 \end{equation}
 A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
 
-
-
 The empirical results for the COCO $f_5$ dataset reveal a sharp contrast in how different architectural philosophies navigate the complexities of multi-objective inverse problems. The data clearly distinguishes between models that merely learn a simplified mapping and those that truly capture the underlying distribution.
 
+The \texttt{mdn (v8)} configuration serves as a high-capacity powerhouse, achieving a remarkably low Mean Absolute Calibration Error (MACE $\approx$ 0.031). However, the \texttt{inn (v5)} configuration, utilizing 10 coupling layers, emerges as the most statistically reliable model in this study, tracking the ideal diagonal with the highest precision (MACE $\approx$ 0.028). Parallel to this, the \texttt{inn (v1)} model remains a strong contender, yielding a competitive MACE of 0.044. While \texttt{mdn (v10)} remains highly reliable, the slight increase in error compared to \texttt{v8} suggests that further increasing mixture complexity to 20 or changing noise kernels to Laplace may reach a point of diminishing returns.
 
+In contrast, the CVAE models exhibit significant calibration pathologies. The \texttt{cvae (v2)} configuration, in particular, suffers from a severe overconfidence problem. This is strikingly visible in its "S-shaped" PIT curve, which deviates most aggressively from the diagonal. This signature indicates that the model's predicted distributions are far too narrow. While \texttt{cvae (v1)} performs better than its counterpart, it still exhibits a MACE (0.116) that is nearly triple that of the MDN and INN leaders.
 
-
-The \texttt{mdn (v8)} configuration emerges as the high-capacity powerhouse within this study. By effectively resolving the multi-modal nature of the $f_5$ landscape, it achieves the lowest Mean Absolute Calibration Error (MACE $\approx$ 0.031). As seen in the PIT calibration plot, its curve (lavender-blue) tracks the ideal diagonal with remarkable precision, suggesting a highly "honest" estimation of posterior uncertainty. Parallel to this, the \texttt{inn (v1)} model serves as a strong contender; its structural bijectivity acts as a natural regularizer for the inverse mapping task, yielding a competitive MACE of 0.044. While \texttt{mdn (v10)} remains highly reliable, the slight increase in error compared to \texttt{v8} suggests that further increasing mixture complexity or changing noise kernels may reach a point of diminishing returns.
-
-In contrast, the CVAE models exhibit significant calibration pathologies. The \texttt{cvae (v2)} configuration, in particular, suffers from a severe overconfidence problem. This is strikingly visible in its "S-shaped" PIT curve, which deviates most aggressively from the diagonal. This signature indicates that the model's predicted distributions are far too narrow, failing to capture the true diversity of the inverse solution space. While \texttt{cvae (v1)} performs better than its counterpart, it still exhibits a MACE (0.116) that is nearly triple that of the MDN and INN leaders. These models tend to be statistically "blind" to certain regions of the Pareto front, over-concentrating density where it isn't justified.
-
-The results for the Invertible Neural Networks show that depth is not a universal remedy. Increasing the complexity from \texttt{inn (v1)} to \texttt{inn (v3)} (10 layers) actually led to a slight degradation in calibration (MACE 0.056). This suggests that for this specific dimensionality, the 6-layer architecture of \texttt{v1} provides the optimal balance between expressivity and training stability. Ultimately, the success of the MDN and INN variants validates that capturing the "honesty" of a distribution requires an architecture that respects the underlying probabilistic geometry rather than just minimizing a reconstruction loss.
+The results for the Invertible Neural Networks show that depth is a key driver for calibration reliability in this landscape. Increasing the complexity from \texttt{inn (v1)} to \texttt{inn (v5)} (10 layers) led to the lowest observed calibration error. Ultimately, the success of the MDN and INN variants validates that capturing the "honesty" of a distribution requires an architecture that respects the underlying probabilistic geometry.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. The \texttt{mdn (v8)} and \texttt{mdn (v10)} curves reside closest to the diagonal, while \texttt{cvae (v2)} displays a prominent S-curve characteristic of high overconfidence.}
+    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. The \texttt{inn (v5)} and \texttt{mdn (v8)} curves reside closest to the diagonal, while \texttt{cvae (v2)} displays a prominent S-curve characteristic of high overconfidence.}
     \label{fig:f5_pit_ablation}
 \end{figure}
 
@@ -315,17 +314,17 @@ The results for the Invertible Neural Networks show that depth is not a universa
 \toprule
 Model Configuration & Details & MACE $\downarrow$ \\
 \midrule
-\textbf{mdn (v8)} & 3x256, $K_{mix}=10$, Normal, lr: 0.001 & \textbf{0.0312} \\
+\textbf{inn (v5)} & 10 layers, dim: 128, lr: 0.001 & \textbf{0.0281} \\
+mdn (v8) & 3x256, $K_{mix}=8$, Normal, lr: 0.001 & 0.0312 \\
 mdn (v10) & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0348 \\
 \midrule
-\textbf{inn (v1)} & 6 layers, dim: 128, lr: 0.001 & \textbf{0.0435} \\
-inn (v3) & 10 layers, dim: 128, lr: 0.001 & 0.0561 \\
+inn (v1) & 6 layers, dim: 128, lr: 0.001 & 0.0435 \\
 \midrule
 cvae (v1) & dim: 128, $z=8$, $\beta=0.1$, lr: 0.0001 & 0.1154 \\
 cvae (v2) & dim: 128, $z=4$, $\beta=0.5$, lr: 0.001 & 0.1923 \\
 \bottomrule
 \end{tabular}
-\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) derived from PIT curves. The MDN variants demonstrate superior statistical reliability, while CVAE models show the highest calibration error.}
+\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) derived from PIT curves. The 10-layer INN configuration demonstrates superior statistical reliability.}
 \label{tab:f5_mace_ablation}
 \end{table}
 
@@ -379,17 +378,22 @@ Finally, the Continuous Ranked Probability Score (CRPS) is employed to measure t
 \end{equation}
 where lower values are better. CRPS rewards models that concentrate probability mass near the ground truth while penalizing excessive dispersion, thus capturing the essential trade-off between precision and accuracy.
 
-We evaluate probabilistic accuracy via CRPS boxplots (Figure~\ref{fig:f5_crps_box_ablation}). These boxplots summarize the distribution of accuracy across held-out cases, highlighting both typical performance and failure tails. Hyperparameter variants are evaluated within each model family under the same candidate budget $K$ and over the same held-out test set.
+We evaluate probabilistic accuracy via CRPS bar charts (Figure~\ref{fig:f5_crps_ablation}). These charts summarize the typical performance across held-out cases. Hyperparameter variants are evaluated within each model family under the same candidate budget $K$ and over the same held-out test set.
 
+The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass near the ground truth. In this regard, the \texttt{mdn (v8)} configuration and the \texttt{inn (v1)} configuration demonstrate clear superiority, achieving the lowest CRPS values.
 
+The Mixture Density Network family shows that high-capacity hidden architectures are essential for minimizing probabilistic error. \texttt{mdn (v8)} stands as the most precise configuration in the study (CRPS $\approx$ 0.021). By utilizing three hidden layers of 256 units with 8 mixture components, the model provides sufficient expressive bandwidth to represent the decision space with sharp components. In contrast, the \texttt{mdn (v10)} configuration yields a slightly higher CRPS ($\approx$ 0.023).
 
-The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass near the ground truth. In this regard, the \texttt{mdn (v8)} configuration and the INN family demonstrate a clear superiority, achieving the lowest CRPS values, which signifies a superior balance between precision and accuracy.
+The Invertible Neural Network configurations, \texttt{inn (v1)} and \texttt{inn (v5)}, show the impact of model depth on precision. While \texttt{inn (v1)}, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior ($\approx 0.026$), the 10-layer \texttt{inn (v5)} exhibits a slightly higher CRPS ($\approx 0.030$). This suggests a state of diminishing returns; for a 2D decision space, the six-layer architecture provides a superior balance of precision compared to the more complex 10-layer variant.
 
-The Mixture Density Network family shows that high-capacity hidden architectures are essential for minimizing probabilistic error. \texttt{mdn (v8)} stands as the most precise configuration in the study (CRPS $\approx$ 0.021). By utilizing three hidden layers of 256 units with 10 mixture components, the model provides sufficient expressive bandwidth to represent the decision space with sharp, peaked components. In contrast, the \texttt{mdn (v10)} configuration utilizes a Laplace distribution kernel; while still highly effective, it yields a slightly higher CRPS ($\approx$ 0.023). This suggests that while heavier-tailed kernels can offer robustness, the Gaussian components in \texttt{v8} may be better suited for the specific density profiles of the $f_5$ landscape.
+In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. \texttt{cvae (v2)}, utilizing a higher $\beta=0.5$ and a constrained latent dimension of $z=4$, suffers from a pronounced variational bottleneck that leads to overly dispersed samples and the highest observed CRPS ($\approx$ 0.064). While \texttt{cvae (v1)} results in an improved score ($\approx$ 0.034), it still fails to reach the precision levels of the MDN or INN counterparts. The higher error in both CVAE configurations confirms that the expressive mixture modeling of \texttt{mdn (v8)} and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
 
-The Invertible Neural Network configurations, \texttt{inn (v1)} and \texttt{inn (v3)}, provide a strong argument for structural precision. Both models achieve nearly identical CRPS values ($\approx$ 0.026), indicating a high level of consistency. \texttt{inn (v1)}, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior. The fact that \texttt{inn (v3)} does not significantly improve upon this score despite its increased depth (ten layers) suggests a state of diminishing returns; for a 2D decision space, the six-layer architecture already provides sufficient expressive power to map the complex multi-objective boundaries without the need for additional parameters.
-
-In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. \texttt{cvae (v2)}, utilizing a higher $\beta=0.5$ and a constrained latent dimension, suffers from a pronounced variational bottleneck that leads to overly dispersed samples and the highest observed CRPS ($\approx$ 0.064). While \texttt{cvae (v1)} employs a more expressive latent dimension and a lower $\beta=0.1$, resulting in a improved score ($\approx$ 0.034), it still fails to reach the precision levels of the MDN or INN counterparts. The higher error in both CVAE configurations confirms that the expressive mixture modeling of \texttt{mdn (v8)} and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{images/reliability_probabilistic_error_crps.png}
+    \caption[CRPS performance across model configurations]{CRPS values for all evaluated models. Lower bars indicate that \texttt{mdn (v8)} and \texttt{inn (v1)} produce more accurate conditional distributions.}
+    \label{fig:f5_crps_ablation}
+\end{figure}
 
 
 % The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass. In this regard, MDN7 and the INN family demonstrate a clear superiority, achieving the lowest median CRPS values while maintaining the tightest interquartile ranges.
@@ -400,14 +404,6 @@ In contrast, the Conditional Variational Autoencoders exhibit the poorest accura
 
 % In contrast, the Conditional Variational Autoencoders exhibit the poorest accuracy metrics. CVAE2, utilizing a higher $\beta=0.5$ and a constrained latent dimension of 4, suffers from a pronounced variational bottleneck that leads to dispersed samples. While CVAE1 employs a more expressive latent dimension of 8 and a lower $\beta=0.1$, the significantly slower learning rate (0.0001) prevents the model from achieving the same level of precision as the MDN or INN counterparts. The probability mass in both CVAE configurations tends to spread into non-optimal regions of the decision space, confirming that the expressive mixture modeling of MDN7 and the direct bijective mapping of the INN models are the most effective strategies for high-precision inverse exploration.
 
-
-
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=\linewidth]{images/reliability_probabilistic_error_crps.png}
-    \caption[CRPS boxplots across model configurations]{Distribution of per-case CRPS values for all evaluated models. Lower medians and narrower boxplots indicate that MDN7 and INN1 produce more accurate and sharper conditional distributions compared to the less precise CVAE and under-parameterized configurations.}
-    \label{fig:f5_crps_box_ablation}
-\end{figure}
 
 % %-------------------------------------------------------------------------------
 % \subsubsection{Ablation protocol, reporting, and selection}\label{subsubsec:decision_ablation}
@@ -545,29 +541,29 @@ In contrast, the Conditional Variational Autoencoders exhibit the poorest accura
 
 
 
-\section{Discussion of Results}
+% \section{Discussion of Results}
 
-Across benchmarks, Gaussian process regression emerges as the most
-effective inverse modelling strategy.  Its probabilistic nature allows
-uncertainty quantification and smooth interpolation, resulting in low
-forward error and generational distance.  Random forests are competitive,
-especially when the Pareto front is discontinuous or when training data
-is limited, thanks to their ability to capture local patterns and
-produce diverse candidates.  Radial basis function networks perform
-reasonably well but are sensitive to the choice of centres and require
-tuning; they scale poorly with high‑dimensional objectives.  Neural
-networks benefit from larger training sets and yield competitive results
-once overfitting is controlled.
+% Across benchmarks, Gaussian process regression emerges as the most
+% effective inverse modelling strategy.  Its probabilistic nature allows
+% uncertainty quantification and smooth interpolation, resulting in low
+% forward error and generational distance.  Random forests are competitive,
+% especially when the Pareto front is discontinuous or when training data
+% is limited, thanks to their ability to capture local patterns and
+% produce diverse candidates.  Radial basis function networks perform
+% reasonably well but are sensitive to the choice of centres and require
+% tuning; they scale poorly with high‑dimensional objectives.  Neural
+% networks benefit from larger training sets and yield competitive results
+% once overfitting is controlled.
 
-Data scarcity has a significant impact on inverse model accuracy.
-Increasing the number of training samples from 100 to 500 reduces the
-RMSE by approximately 40\% across models.  Transfer learning by pooling
-  samples from related problems improves performance when tasks share
-  similar objective definitions~\cite{Tan2023}.  The plausibility
-check effectively warns users when targets lie far from the sampled
-Pareto front; in our experiments less than 5\% of queries fell into this
-category, highlighting the quality of the data and the models.
+% Data scarcity has a significant impact on inverse model accuracy.
+% Increasing the number of training samples from 100 to 500 reduces the
+% RMSE by approximately 40\% across models.  Transfer learning by pooling
+%   samples from related problems improves performance when tasks share
+%   similar objective definitions~\cite{Tan2023}.  The plausibility
+% check effectively warns users when targets lie far from the sampled
+% Pareto front; in our experiments less than 5\% of queries fell into this
+% category, highlighting the quality of the data and the models.
 
-Overall, the experiments demonstrate that the proposed framework can
-produce high‑quality inverse predictions with modest computational
-resources and enables interactive trade‑off exploration.
+% Overall, the experiments demonstrate that the proposed framework can
+% produce high‑quality inverse predictions with modest computational
+% resources and enables interactive trade‑off exploration.
