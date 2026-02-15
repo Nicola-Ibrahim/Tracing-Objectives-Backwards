@@ -150,7 +150,15 @@ This score identifies the most accurate match within the budget $K$. Because inc
 \subsubsection{Empirical Cumulative Distribution Functions (ECDF)}\label{subsubsec:objective_ecdf}
 %-------------------------------------------------------------------------------
 
-To provide a complete profile of estimator reliability across a target set $\mathcal{T}$, we employ the Empirical Cumulative Distribution Function (ECDF). For a set of $N$ targets, the ECDF is defined as:
+While individual residuals provide local snapshots of performance, we require a global diagnostic to assess the consistency of the inverse estimators. To this end, we employ the Empirical Cumulative Distribution Function (ECDF) as a primary tool for evaluating attainment reliability and probabilistic precision. By aggregating best-shot scores across the entire target set, the ECDF reveals how robustly a model can satisfy a specific accuracy requirement. Specifically, it allows us to measure:
+\begin{itemize}
+    \item High-Precision Accuracy: How quickly the model identifies candidates within extremely tight tolerances (e.g., $10^{-5}$).
+    \item Global Reliability: The total fraction of targets the model is capable of solving as the error threshold relaxes.
+\end{itemize}
+
+Crucially, the ECDF allows us to analyze the models across a continuous range of discrepancy thresholds $t$. By treating $t$ as a sliding scale of "success criteria," we can observe different performance snapshots: a model that excels at a coarse threshold ($t=10^{-1}$) might fail completely in high-precision regimes ($t=10^{-5}$). Evaluating the models across these multiple snapshots ensures that we do not cherry-pick a single favorable threshold, providing a more transparent and comprehensive assessment of each architecture's limits.
+
+For a set of $N$ targets, the ECDF is defined as:
 \begin{equation}
   \widehat{F}(t) 
   \;=\; 
@@ -159,7 +167,17 @@ To provide a complete profile of estimator reliability across a target set $\mat
 \end{equation}
 where $t \ge 0$ is a discrepancy threshold and $\mathbb{I}[\cdot]$ is the indicator function. The value $\widehat{F}(t)$ reports the proportion of targets solved to within accuracy $t$ under budget $K$. For example, if $N=5$ targets yield sorted best-shot scores $\{0.01, 0.02, 0.03, 0.04, 0.10\}$, the ECDF at threshold $t=0.03$ is $\widehat{F}(0.03) = 4/5 = 0.8$.
 
+
+
+
 We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) problem to identify optimal configurations for the CVAE, MDN, and INN families. Figure~\ref{fig:ablation_ecdf_f5} presents the resulting ECDF curves. Visually, curves that rise faster (higher initial slope) indicate high precision, while the asymptotic behavior in the right tail indicates the fraction of targets that remain "hard" to solve.
+
+
+The ECDF profiles on the logarithmic discrepancy scale provide a high-resolution view of model performance, particularly at the extreme precision limits required for complex inverse tasks. The \texttt{mdn (v10)} and \texttt{inn (v1)} configurations emerge as the clear frontrunners, with their curves rising significantly earlier than the competition. At a discrepancy threshold of $10\mu$ ($10^{-5}$), these models have already successfully solved approximately $25\%$ of the targets, whereas the CVAE models have yet to register a single successful attainment. This indicates that the combination of MDN’s multi-modal density estimation and the INN’s bijective mapping provides the necessary "resolution" to place candidates in the immediate vicinity of the ground truth.
+
+A closer look at the architectural variants reveals that deeper models do not always equate to higher precision. In the INN family, the 6-layer \texttt{inn (v1)} consistently outperforms the 10-layer \texttt{inn (v5)} across the entire range of thresholds, suggesting that the simpler architecture is more effective at capturing the sharp peaks of the posterior distribution without introducing unnecessary training instability. Similarly, while \texttt{mdn (v8)} showed the best average probabilistic accuracy in earlier metrics, \texttt{mdn (v10)} demonstrates a slight advantage in the high-precision regime. This suggests that the use of Laplace kernels or increased mixture components ($K_{mix}=20$) in \texttt{v10} may provide better "best-shot" coverage for specific targets, even if the overall distribution is slightly less sharp than \texttt{v8}.
+
+The performance gap is most pronounced when examining the Conditional Variational Autoencoders. The \texttt{cvae (v5)} model displays a massive "attainment lag," with its curve only beginning to rise steeply after the $100\mu$ threshold—a point where the MDN and INN models have already solved over $60\%$ of the targets. Even the \texttt{cvae (v4)} configuration, which utilizes a slightly smaller latent dimension, remains significantly behind the leading architectures, only crossing the $50\%$ attainment mark at a discrepancy threshold ($10^{-4}$) nearly an order of magnitude larger than that of the leading MDNs. This behavior reinforces the conclusion that even with expanded latent capacities and inverse mapping, the inherent pressure to match a Gaussian prior in CVAEs limits their ability to resolve the fine-grained multi-objective boundaries of the $f_5$ landscape.
 
 
 \begin{figure}[!htbp]
@@ -169,33 +187,9 @@ We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) pr
   \label{fig:ablation_ecdf_f5}
 \end{figure}
 
-The ECDF profiles on the logarithmic discrepancy scale provide a high-resolution view of model performance, particularly at the extreme precision limits required for complex inverse tasks. The \texttt{mdn (v10)} and \texttt{inn (v1)} configurations emerge as the clear frontrunners, with their curves rising significantly earlier than the competition. At a discrepancy threshold of $10\mu$ ($10^{-5}$), these models have already successfully solved approximately $25\%$ of the targets, whereas the CVAE models have yet to register a single successful attainment. This indicates that the combination of MDN’s multi-modal density estimation and the INN’s bijective mapping provides the necessary "resolution" to place candidates in the immediate vicinity of the ground truth.
-
-A closer look at the architectural variants reveals that deeper models do not always equate to higher precision. In the INN family, the 6-layer \texttt{inn (v1)} consistently outperforms the 10-layer \texttt{inn (v5)} across the entire range of thresholds, suggesting that the simpler architecture is more effective at capturing the sharp peaks of the posterior distribution without introducing unnecessary training instability. Similarly, while \texttt{mdn (v8)} showed the best average probabilistic accuracy in earlier metrics, \texttt{mdn (v10)} demonstrates a slight advantage in the high-precision regime. This suggests that the use of Laplace kernels or increased mixture components ($K_{mix}=20$) in \texttt{v10} may provide better "best-shot" coverage for specific targets, even if the overall distribution is slightly less sharp than \texttt{v8}.
-
-The performance gap is most pronounced when examining the Conditional Variational Autoencoders. The \texttt{cvae (v5)} model displays a massive "attainment lag," with its curve only beginning to rise steeply after the $100\mu$ threshold—a point where the MDN and INN models have already solved over $60\%$ of the targets. Even the \texttt{cvae (v4)} configuration, which utilizes a slightly smaller latent dimension, remains significantly behind the leading architectures, only crossing the $50\%$ attainment mark at a discrepancy threshold ($10^{-4}$) nearly an order of magnitude larger than that of the leading MDNs. This behavior reinforces the conclusion that even with expanded latent capacities and inverse mapping, the inherent pressure to match a Gaussian prior in CVAEs limits their ability to resolve the fine-grained multi-objective boundaries of the $f_5$ landscape.
-
-The ECDF profiles highlight distinct architectural biases. The INN configurations demonstrate the steepest initial rise, reflecting the high-precision target matching enabled by their bijective nature. In contrast, the CVAE models often plateau earlier, suggesting that the latent bottleneck may limit precision in specific target regions. For MDNs, increasing the number of mixture components generally shifts the ECDF curve upward, reflecting better coverage of multi-modal inverse solutions.
+The ECDF analysis provides a practical roadmap for model selection based on the desired precision of the propose--check loop. By observing where the curves rise, we conclude that the \texttt{mdn} and \texttt{inn} families are the superior choice for high-fidelity tasks, as they consistently place candidates within tight error tolerances ($10^{-5}$ to $10^{-3}$) that the CVAE models simply cannot reach. Ultimately, these curves demonstrate that while the \texttt{cvae (v4)} and \texttt{v5} configurations can solve a majority of targets given a loose enough tolerance, the structural advantages of MDNs and INNs provide a significantly higher "success rate" at a lower computational budget, ensuring more reliable and precise inverse solutions in complex objective spaces.
 
 
-
-% Based on these results, we select the configurations that dominate the low-discrepancy region ($t < 0.05$) for subsequent benchmarking (Table~\ref{tab:ablation_f5_selected}).
-
-% \begin{table}[!htbp]
-%   \centering
-%   \caption{Selected hyperparameter configurations based on ECDF dominance.}
-%   \label{tab:ablation_f5_selected}
-%   \rarray{1.15}
-%   \begin{tabular}{l l}
-%     \toprule
-%     \textbf{Model family} & \textbf{Selected configuration} \\
-%     \midrule
-%     CVAE & [Latent Dim: X, Decoder Depth: Y] \\
-%     MDN  & [Mixture Components: Z, Hidden Layers: W] \\
-%     INN  & [Coupling Layers: N, Subnet Size: M] \\
-%     \bottomrule
-%   \end{tabular}
-% \end{table}
 
 % %-------------------------------------------------------------------------------
 % \subsubsection{Candidate-cloud geometry}\label{subsubsec:objective_cloud}
@@ -238,34 +232,53 @@ Unlike objective-space metrics that measure the proximity of outcomes to a targe
 %-------------------------------------------------------------------------------
 \subsubsection{Statistical Reliability: PIT, Calibration Curves, and MACE}\label{subsubsec:reliability}
 %-------------------------------------------------------------------------------
+While the ECDF captures the model's ability to find high-precision solutions, it does not account for the quality of the model's predicted uncertainty. A model might achieve a low best-shot error by sheer luck or by spreading mass too thinly. To evaluate the statistical reliability of the conditional samplers, we must determine if the model is "honest" about its own precision. In this section, we transition from measuring spatial accuracy to measuring probabilistic calibration: the degree to which a model's predicted distribution matches the actual distribution of observed errors. This allows us to diagnose whether a model is overconfident (underestimating error) or underconfident (overestimating error).
 
 The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
 \begin{equation}
     z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
 \end{equation}
-For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies, such as over- or under-estimation of the posterior variance.
+Here, $z_{i,d}$ represents the local quantile of the true decision value $x_{i\textbf{},d}$ within the model's generated sample set. The indicator function $\mathbb{I}[\cdot]$ effectively \textbf{counts} how many of the $K$ generated candidates are smaller than or equal to the ground truth. By normalizing this count by $K$, we obtain a value in the range $[0, 1]$. For a perfectly calibrated conditional sampler, these values are uniformly distributed, meaning the truth is just as likely to fall in the 10th percentile as the 90th percentile of the model's predictions. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies, such as over- or under-estimation of the posterior variance.
 
-The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf}:
+The calibration of the inverse models is visually analyzed using the PIT calibration curve. To move from local ranks to a global diagnostic, we aggregate the PIT values across all test cases $i$ and all decision dimensions $d$ to form a pooled set $\{z_\ell\}_{\ell=1}^{L}$, where $L$ is the total number of observations ($N \times D$). We then compute the empirical calibration curve $\widehat{G}(t)$ according to Eq.~\eqref{eq:pit_ecdf}:
 \begin{equation}
     \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
 \end{equation}
-This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific configurations lead to overconfident or underconfident conditional samplers.
+In this context, $\widehat{G}(t)$ is the Cumulative Distribution Function (CDF) of the pooled PIT values. It measures the proportion of PIT values that fall below a given probability threshold $t$. Under the condition of perfect calibration, the ranks are uniform, and the CDF should closely follow the diagonal $\widehat{G}(t) = t$. Departures from this diagonal allow us to identify model behavior: an "S-shaped" curve, for example, indicates that the model's variance is too small, signifying overconfidence.
 
 To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
 \begin{equation}
     \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
     \label{eq:mace_def}
 \end{equation}
-A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
+A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability across the entire distribution.
+
+
+
+% The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
+% \begin{equation}
+%     z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
+% \end{equation}
+% For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies, such as over- or under-estimation of the posterior variance.
+
+% The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf}:
+% \begin{equation}
+%     \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
+% \end{equation}
+% This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific configurations lead to overconfident or underconfident conditional samplers.
+
+% To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
+% \begin{equation}
+%     \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
+%     \label{eq:mace_def}
+% \end{equation}
+% A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
 
 The empirical results for the COCO $f_5$ dataset reveal a sharp contrast in how different architectural philosophies navigate the complexities of multi-objective inverse problems. The data clearly distinguishes between models that merely learn a simplified mapping and those that truly capture the underlying distribution.
 
 The \texttt{mdn (v8)} configuration serves as a high-capacity powerhouse, achieving a remarkably low Mean Absolute Calibration Error (MACE $\approx$ 0.031). However, the \texttt{inn (v5)} configuration, utilizing 10 coupling layers, emerges as the most statistically reliable model in this study, tracking the ideal diagonal with the highest precision (MACE $\approx$ 0.028). Parallel to this, the \texttt{inn (v1)} model remains a strong contender, yielding a competitive MACE of 0.044. While \texttt{mdn (v10)} remains highly reliable, the slight increase in error compared to \texttt{v8} suggests that further increasing mixture complexity to 20 or changing noise kernels to Laplace may reach a point of diminishing returns.
 
 In contrast, the updated CVAE configurations exhibit significant calibration pathologies despite the increased latent dimensionality. The \texttt{cvae (v5)} configuration suffers from a overconfidence problem, strikingly visible in its "S-shaped" PIT curve. This signature indicates that the model's predicted distributions are far too narrow relative to the actual error distribution. While \texttt{cvae (v4)} performs slightly better than its larger counterpart, it still exhibits a MACE ($\approx 0.068$) that is more than double that of the MDN and INN leaders.
-
-
-The results for the Invertible Neural Networks show that depth is a key driver for calibration reliability in this landscape. Increasing the complexity from \texttt{inn (v1)} to \texttt{inn (v5)} (10 layers) led to the lowest observed calibration error. Ultimately, the success of the MDN and INN variants validates that capturing the "honesty" of a distribution requires an architecture that respects the underlying probabilistic geometry.
 
 \begin{figure}[!htbp]
     \centering
@@ -308,15 +321,38 @@ cvae (v5) & dim: 128, $z=265$, $\beta=0.8$, lr: 0.01 & 0.0732 \\
 
 
 
+The analysis of PIT curves and MACE values provides a crucial "honesty check" that spatial accuracy alone cannot reveal. By observing these distributions, we conclude that achieving high-precision results is only valuable if the model accurately communicates its own uncertainty. The primary achievement of this diagnostic is the identification of \textbf{model trustworthiness}: while the \texttt{cvae (v4)} and \texttt{v5} configurations are reasonably well-aligned with the diagonal, they still exhibit a noticeable S-curve characteristic of \textbf{overconfidence} compared to the other architectures. This indicates that their internal uncertainty estimates are slightly too narrow, resulting in the highest observed calibration errors in the study (MACE $\approx$ 0.068--0.073). Conversely, the near-perfect diagonal performance of \texttt{inn (v5)} and \texttt{mdn (v8)} proves that these architectures have more successfully mastered the underlying probabilistic geometry. For the practitioner, this means that while the CVAE models are functional, the MDN and INN variants provide a more reliable proxy for the actual search effort required to find valid solutions in autonomous propose--check loops.
+
+
 %-------------------------------------------------------------------------------
 \subsubsection{Probabilistic Accuracy: CRPS}\label{subsubsec:accuracy}
 %-------------------------------------------------------------------------------
+While the ECDF evaluates attainment and PIT/MACE evaluates statistical honesty, we require a final metric that considers the entire distribution's quality. To this end, we employ the Continuous Ranked Probability Score (CRPS) as the primary measure of \textbf{probabilistic accuracy}. CRPS evaluates how effectively a model balances \textbf{precision} (sharpness of the distribution) with \textbf{reliability} (capturing the ground truth). Unlike metrics that only consider the single "best" sample, CRPS accounts for the placement of all generated candidates, effectively penalizing both over-dispersion and systematic bias.
 
-Finally, the Continuous Ranked Probability Score (CRPS) is employed to measure the accuracy and sharpness of the distributions. As per Eq.~\eqref{eq:crps_expectation}, for each case $i$ and each decision dimension $d$, the empirical CRPS of the sampled set relative to the truth is computed from the sampled values $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. Aggregating across decision dimensions yields a per-case score:
+As per Eq.~\eqref{eq:crps_expectation}, for each test case $i$ and each decision dimension $d$, the empirical CRPS is computed from the sampled set $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. To clarify the mechanics of the calculation, the score can be decomposed into two distinct physical quantities:
 \begin{equation}
-    \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}\!\left(\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K},\,x_{i,d}\right),
+  \mathrm{CRPS}_{i,d}
+  \;=\;
+  \underbrace{\text{MAE}(X, x_{i,d})}_{\text{Accuracy}}
+  \;-\;
+  \underbrace{\frac{1}{2}\text{MD}(X, X')}_{\text{Dispersion}},
+  \label{eq:crps_decomposed}
 \end{equation}
-where lower values are better. CRPS rewards models that concentrate probability mass near the ground truth while penalizing excessive dispersion, thus capturing the essential trade-off between precision and accuracy.
+where $X$ and $X'$ represent independent samples drawn from the model's posterior. This decomposition reveals the dual-objective nature of the metric:
+\begin{itemize}
+    \item Mean Absolute Error (MAE): $\mathbb{E}|X - x_{i,d}|$ measures the average distance of the model's predictions from the truth. This is a pure measure of accuracy.
+    \item Mean Difference (MD): $\mathbb{E}|X - X'|$ measures the internal variety of the model's samples. A large value indicates high uncertainty or "blurry" predictions.
+\end{itemize}
+
+
+
+By subtracting the dispersion from the error, CRPS rewards models that are both "close" and "certain." A model that is very accurate but highly uncertain (large dispersion) will receive a worse score than a model that is slightly less accurate but much more precise. Aggregating across decision dimensions yields the final per-case score:
+\begin{equation}
+    \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}_{i,d}.
+\end{equation}
+In this aggregation, we first compute the score for each individual decision dimension $d \in \{1, \dots, D\}$ to evaluate how well the model captures the specific parameters of the inverse solution. We then calculate the arithmetic mean across these dimensions to produce $\mathrm{CRPS}_i$, which represents the model's probabilistic performance for a single specific target. 
+
+To arrive at the final values presented in our results, we take one further step by averaging these per-case scores across the entire test set of $N$ targets. This resulting global mean provides a robust, scalar summary of the model’s overall probabilistic accuracy, ensuring that the reported performance reflects the model's behavior across the full variety of targets in the dataset rather than a single successful or failed prediction.
 
 We evaluate probabilistic accuracy via CRPS bar charts (Figure~\ref{fig:f5_crps_ablation}). These charts summarize the typical performance across held-out cases. Hyperparameter variants are evaluated within each model family under the same candidate budget $K$ and over the same held-out test set.
 
@@ -361,6 +397,8 @@ cvae (v5) & dim: 4, $z=265$, $\beta=0.8$, lr: 0.01 & 0.0289 \\
 \label{tab:f5_crps_ablation}
 \end{table}
 
+
+The analysis of CRPS values serves as the final arbiter of model quality by measuring the "efficiency" of the predicted distributions. By observing these results, we conclude that a model's true utility lies in its ability to be simultaneously accurate and sharp. The primary achievement of this metric is the confirmation that \texttt{mdn (v8)} is the most effective architecture for the $f_5$ landscape, as it minimizes the wasted probability mass (dispersion) while maintaining the highest proximity to the truth. For the practitioner, these values prove that while the \texttt{cvae} configurations are competitive and "good enough" for general tasks, the \texttt{mdn} and \texttt{inn} variants provide more refined search spaces. Ultimately, analyzing CRPS ensures that we select a model that doesn't just find the solution, but does so with the highest possible confidence and the least amount of "noise," streamlining the transition from probabilistic sampling to real-world decision-making.
 
 % \section{Discussion of Results}
 
