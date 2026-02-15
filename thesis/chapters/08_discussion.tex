@@ -11,42 +11,54 @@ limitations, and directions for future work.
 
 \section{Interpreting the Findings and Implications}\label{sec:discussion_interpretation}
 
-The inverse models studied in this work are evaluated as conditional samplers that support
-target-driven design under a propose--check loop. The experiments in Chapter~\ref{chap:experiments}
-indicate that, when the training archive is representative of the reachable outcome region, learned
-inverse mappings can translate a user-specified target $\vect{y}^{\ast}$ into decision candidates whose
-forward evaluations approach that target within a finite candidate budget. This result should be
-interpreted operationally: the inverse model provides a practical interface for exploration by
-producing a short list of plausible decisions conditioned on a desired outcome, rather than
-guaranteeing a unique or physically realizable design.
+The synthesis of empirical results from the experiments reveals that architectural selection is not merely a matter of hyperparameter tuning, but a fundamental choice between competing statistical virtues. By analyzing the ECDF, MACE, and CRPS metrics in unison, we can move beyond individual scores to understand the specific "personalities" of each model family.
+
+A primary finding of this work is the distinct tension between a model's ability to hit a target and its ability to accurately communicate its own error. This is most visible when comparing the Invertible Neural Network (INN) and Conditional Variational Autoencoder (CVAE) families. The mace values highlight a significant "honesty gap": the inn (v5) achieved the highest statistical reliability with a MACE of approximately 0.028, tracking the ideal calibration diagonal almost perfectly. In contrast, the cvae (v4) and cvae (v5) models exhibited a persistent S-curve pathology in their PIT calibration plots, resulting in much higher calibration errors (0.068 and 0.073, respectively). 
+
+This indicates that while the CVAE models are capable of producing candidates near the ground truth, they are fundamentally underconfident. Their internal uncertainty estimates are too wide, which can be deceptive in an autonomous propose--check loop. Conversely, the inn (v5) may exhibit higher precision, but its "honesty" makes it a more trustworthy diagnostic tool for determining when a target is truly reachable.
 
 
-A first theme is the distinction between attainment and uncertainty quality. Budgeted outcome-space
-discrepancy is intentionally optimistic: it quantifies whether the sampler can produce at least one
-good match within $K$ draws, which matches the user-facing notion of success under limited inspection.
-However, attainment alone cannot determine whether the candidate set constitutes a trustworthy
-conditional distribution. Decision-space diagnostics therefore play a distinct role: they separate
-reliability under repeated conditioning from practical usefulness, and they prevent over-interpreting
-``good hits'' that arise from chance or from overly aggressive sampling variance.
+Based on the statistical signatures observed, the models can be categorized into three distinct functional groups:
 
-A second theme is that model comparison depends on the candidate budget $K$. Changes in attainment as a
-function of $K$ reflect how each model allocates probability mass under the conditional distribution:
-some models concentrate mass and saturate quickly, while others distribute mass more broadly and
-continue to benefit from additional samples. This interaction is central in one-to-many inverse
-problems, where multiple distinct decisions can map to similar outcomes. Accordingly, the preferred
-model depends on whether the intended workflow prioritizes rapid attainment with small $K$ or broader
-coverage that improves with additional candidates.
+\begin{itemize}
+    \item The High-Precision Powerhouse: The \texttt{mdn (v8)} stands out as the most balanced and effective architecture, achieving the best probabilistic accuracy with a CRPS of approximately 0.021 and rapid attainment in ECDF curves. Its ability to concentrate probability mass without sacrificing significant calibration (MACE of 0.031) makes it the superior engine for high-fidelity inverse solutions.
+    \item The Reliability Benchmark: The \texttt{inn (v5)} represents the gold standard for statistical honesty, achieving the lowest calibration error (MACE of 0.028). While it suffered a penalty in CRPS (approximately 0.030) due to higher sample dispersion—likely a byproduct of its 10-layer depth in a low-dimensional space—it remains the model that most faithfully respects the underlying probabilistic geometry.
+    \item The Efficient Generalists: The \texttt{cvae (v4)} and \texttt{v5} configurations are highly effective at placing mass near the truth (CRPS 0.028--0.029) and eventually reach high levels of attainment as thresholds relax. However, their "attainment lag" at high-precision thresholds (below $10\mu$) and their underconfident calibration make them less suitable for high-stakes precision tasks.
+\end{itemize}
 
-These interpretations imply a practical evaluation and selection stance. Outcome-space attainment
-should be treated as a budgeted utility measure: it answers whether the system can deliver at least
-one actionable proposal within a fixed budget, and it should therefore be reported explicitly as a
-function of $K$. Decision-space diagnostics should be treated as distribution-quality indicators: when
-candidate dispersion informs downstream exploration or uncertainty must be interpretable, calibration
-and CRPS-based assessment justify whether the sampled set can be treated as a meaningful conditional
-distribution rather than a collection of independent guesses. Taken together, the combined reporting
-format supports a workflow in which attainment establishes feasibility under a given $K$, and
-reliability and probabilistic accuracy determine whether the resulting candidate set supports informed
-exploration rather than ad hoc trial-and-error.
+The results suggest that the choice of model must be dictated by the specific requirements of the inverse task. If the goal is rapid, automated attainment within tight tolerances, the ECDF and CRPS results strongly favor the MDN and lower-depth INN variants. If the priority is a safe and interpretable search space where the model's "confidence" can be used to guide exploration, the MACE results indicate that the deeper INN is the only viable choice. 
+
+Ultimately, this analysis proves that "best-shot" success is an incomplete story. The achievement of this diagnostic suite is the ability to separate models that are merely lucky from those that are statistically robust, ensuring that the transition from probabilistic sampling to real-world decision-making is grounded in reliability.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.3} % vertical spacing
+\setlength{\tabcolsep}{8pt}       % horizontal spacing
+\caption{Decision Matrix: Model Performance Summary}
+\label{tab:decision_matrix}
+\begin{tabularx}{\textwidth}{
+    >{\raggedright\arraybackslash}l 
+    >{\centering\arraybackslash}m{2.2cm}
+    >{\centering\arraybackslash}m{2.2cm}
+    >{\centering\arraybackslash}m{2.2cm}
+    >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Model} 
+& \textbf{\shortstack{Attainment \\ \small(ECDF)}} 
+& \textbf{\shortstack{Reliability \\ \small(MACE)}} 
+& \textbf{\shortstack{Accuracy \\ \small(CRPS)}} 
+& \textbf{Primary Strength} \\
+\midrule
+mdn (v8)  & High     & High (0.031)     & Best (0.021)     & Optimal Balance \\
+mdn (v10) & High     & Moderate (0.035) & High (0.023)     & High-Speed Attainment \\
+inn (v1)  & High     & Moderate (0.044) & High (0.026)     & Efficiency \\
+inn (v5)  & Moderate & Best (0.028)     & Lowest (0.030)   & Trustworthiness \\
+cvae (v4) & Lagging  & Poor (0.068)     & Moderate (0.028) & Mass Concentration \\
+cvae (v5) & Lagging  & Worst (0.073)    & Moderate (0.029) & Capacity \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 
 
 %-------------------------------------------------------------------------------

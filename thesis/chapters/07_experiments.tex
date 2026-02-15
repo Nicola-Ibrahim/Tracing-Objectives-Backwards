@@ -244,7 +244,8 @@ The calibration of the inverse models is visually analyzed using the PIT calibra
 \begin{equation}
     \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
 \end{equation}
-In this context, $\widehat{G}(t)$ is the Cumulative Distribution Function (CDF) of the pooled PIT values. It measures the proportion of PIT values that fall below a given probability threshold $t$. Under the condition of perfect calibration, the ranks are uniform, and the CDF should closely follow the diagonal $\widehat{G}(t) = t$. Departures from this diagonal allow us to identify model behavior: an "S-shaped" curve, for example, indicates that the model's variance is too small, signifying overconfidence.
+
+In this context, $\widehat{G}(t)$ is the Cumulative Distribution Function (CDF) of the pooled PIT values. It measures the proportion of PIT values that fall below a given probability threshold $t$. Under the condition of perfect calibration, the ranks are uniform, and the CDF should closely follow the diagonal $\widehat{G}(t) = t$. Departures from this diagonal allow us to identify specific model behaviors based on the direction of the deviation. For example, an "S-shaped" curve that dips below the diagonal before swinging above it—as observed in the \texttt{cvae (v5)} results—indicates that the model's predicted variance is too large, signifying underconfidence. Conversely, a curve that bulges above the diagonal and then drops below it would indicate that the variance is too narrow, signifying overconfidence.
 
 To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
 \begin{equation}
@@ -278,12 +279,16 @@ The empirical results for the COCO $f_5$ dataset reveal a sharp contrast in how 
 
 The \texttt{mdn (v8)} configuration serves as a high-capacity powerhouse, achieving a remarkably low Mean Absolute Calibration Error (MACE $\approx$ 0.031). However, the \texttt{inn (v5)} configuration, utilizing 10 coupling layers, emerges as the most statistically reliable model in this study, tracking the ideal diagonal with the highest precision (MACE $\approx$ 0.028). Parallel to this, the \texttt{inn (v1)} model remains a strong contender, yielding a competitive MACE of 0.044. While \texttt{mdn (v10)} remains highly reliable, the slight increase in error compared to \texttt{v8} suggests that further increasing mixture complexity to 20 or changing noise kernels to Laplace may reach a point of diminishing returns.
 
-In contrast, the updated CVAE configurations exhibit significant calibration pathologies despite the increased latent dimensionality. The \texttt{cvae (v5)} configuration suffers from a overconfidence problem, strikingly visible in its "S-shaped" PIT curve. This signature indicates that the model's predicted distributions are far too narrow relative to the actual error distribution. While \texttt{cvae (v4)} performs slightly better than its larger counterpart, it still exhibits a MACE ($\approx 0.068$) that is more than double that of the MDN and INN leaders.
+
+
+In contrast, the updated CVAE configurations exhibit significant calibration pathologies despite the increased latent dimensionality. The \texttt{cvae (v5)} configuration suffers from an underconfidence problem, strikingly visible in its PIT curve, which dips below the diagonal before swinging above it. This signature indicates that the model's predicted distributions are far too wide relative to the actual error distribution, essentially overestimating the necessary search space. While \texttt{cvae (v4)} performs slightly better than its larger counterpart, it still exhibits a MACE ($\approx 0.068$) that is more than double that of the MDN and INN leaders, such as \texttt{inn (v5)} at $\approx 0.028$.
+
+
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. The \texttt{inn (v5)} and \texttt{mdn (v8)} curves reside closest to the diagonal, while \texttt{cvae (v2)} displays a prominent S-curve characteristic of high overconfidence.}
+    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. The \texttt{inn (v5)} and \texttt{mdn (v8)} curves reside closest to the diagonal, while \texttt{cvae (v2)} displays a prominent S-curve characteristic of underconfidence.}
     \label{fig:f5_pit_ablation}
 \end{figure}
 
@@ -303,7 +308,7 @@ In contrast, the updated CVAE configurations exhibit significant calibration pat
 \renewcommand{\arraystretch}{1.25}
 \begin{tabular}{l l c}
 \toprule
-Model Configuration & Details & MACE $\downarrow$ \\
+\textbf{Model Configuration} & \textbf{Details} & \textbf{MACE} $\downarrow$ \\
 \midrule
 mdn (v8) & 3x256, $K_{mix}=8$, Normal, lr: 0.001 & 0.0312 \\
 mdn (v10) & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0348 \\
@@ -321,7 +326,7 @@ cvae (v5) & dim: 128, $z=265$, $\beta=0.8$, lr: 0.01 & 0.0732 \\
 
 
 
-The analysis of PIT curves and MACE values provides a crucial "honesty check" that spatial accuracy alone cannot reveal. By observing these distributions, we conclude that achieving high-precision results is only valuable if the model accurately communicates its own uncertainty. The primary achievement of this diagnostic is the identification of \textbf{model trustworthiness}: while the \texttt{cvae (v4)} and \texttt{v5} configurations are reasonably well-aligned with the diagonal, they still exhibit a noticeable S-curve characteristic of \textbf{overconfidence} compared to the other architectures. This indicates that their internal uncertainty estimates are slightly too narrow, resulting in the highest observed calibration errors in the study (MACE $\approx$ 0.068--0.073). Conversely, the near-perfect diagonal performance of \texttt{inn (v5)} and \texttt{mdn (v8)} proves that these architectures have more successfully mastered the underlying probabilistic geometry. For the practitioner, this means that while the CVAE models are functional, the MDN and INN variants provide a more reliable proxy for the actual search effort required to find valid solutions in autonomous propose--check loops.
+The analysis of PIT curves and MACE values provides a crucial "honesty check" that spatial accuracy alone cannot reveal. By observing these distributions, we conclude that achieving high-precision results is only valuable if the model accurately communicates its own uncertainty. The primary achievement of this diagnostic is the identification of model trustworthiness: while the \texttt{cvae (v4)} and \texttt{v5} configurations are reasonably well-aligned with the diagonal, they still exhibit a noticeable S-curve characteristic of underconfidence compared to the other architectures. This indicates that their internal uncertainty estimates are slightly too narrow, resulting in the highest observed calibration errors in the study (MACE $\approx$ 0.068--0.073). Conversely, the near-perfect diagonal performance of \texttt{inn (v5)} and \texttt{mdn (v8)} proves that these architectures have more successfully mastered the underlying probabilistic geometry. For the practitioner, this means that while the CVAE models are functional, the MDN and INN variants provide a more reliable proxy for the actual search effort required to find valid solutions in autonomous propose--check loops.
 
 
 %-------------------------------------------------------------------------------
@@ -381,7 +386,7 @@ In contrast, the Conditional Variational Autoencoders show good values in CRPS c
 \renewcommand{\arraystretch}{1.25}
 \begin{tabular}{l l c}
 \toprule
-Model Configuration & Details & CRPS $\downarrow$ \\
+\textbf{Model Configuration} & \textbf{Details} & \textbf{CRPS} $\downarrow$ \\
 \midrule
 \textbf{mdn (v8)} & 3x256, $K_{mix}=8$, Normal, lr: 0.001 & \textbf{0.0213} \\
 mdn (v10) & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0234 \\
