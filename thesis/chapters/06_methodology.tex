@@ -186,18 +186,18 @@ $\vect{y}$-dependent parameters,
   \sum_{j=1}^{M}\pi_{\theta,j}(\vect{y})=1,\ \ \pi_{\theta,j}(\vect{y})\ge 0 .
   \label{eq:mdn_density}
 \end{equation}
-Training substitutes \eqref{eq:mdn_density} into the objective in \eqref{eq:cond_mle_inverse} and
-optimises the resulting mixture negative log-likelihood. The implementation enforces the standard
+Training substitutes \eqref{eq:mdn_density} into the objective in \eqref{eq:mdn_opt_problem} and
+optimizes the resulting mixture negative log-likelihood. The implementation enforces the standard
 constraints on mixture weights and uses a stable parameterisation of covariance matrices, consistent
-with the model definition in Chapter~\ref{chap:Background}.
+with the model definition in Section~\ref{sec:mdn}.
 
 %-------------------------------------------------------------------------------
 \subsection{Conditional variational autoencoder}\label{subsec:cvae_training}
 %-------------------------------------------------------------------------------
 
 The conditional variational autoencoder introduces latent variables to represent conditional
-variability. As direct maximisation of the conditional likelihood is generally intractable, 
-the model is trained by minimising the negative evidence lower bound (ELBO), which serves as 
+variability. As direct maximization of the conditional likelihood is generally intractable, 
+the model is trained by minimizing the negative evidence lower bound (ELBO), which serves as 
 a tractable surrogate for the objective in \eqref{eq:cond_mle_methodology}. Utilizing an 
 encoder $q_{\phi}(\vect{z}\mid\vect{x},\vect{y})$ and a decoder $p_{\theta}(\vect{x}\mid\vect{y},\vect{z})$, 
 the training objective is formulated as:
