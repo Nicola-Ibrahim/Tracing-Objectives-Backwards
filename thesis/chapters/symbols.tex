@@ -13,7 +13,7 @@
     $\calX$ & Decision space (feasible region of decision variables)\\
     $\calY$ & Objective space\\
     $\R^n$ & $n$-dimensional Euclidean space (decision space scope)\\
-    $n$ & Dimension of the decision space\\
+    $n, D$ & Dimension of the decision space\\
     $m$ & Number of objectives\\
     \addlinespace[10pt]
 
@@ -23,6 +23,8 @@
     $\vect{y}^{\star}$ & User‑specified target objective vector\\
     $\vect{f}(\vect{x})$ & Vector of objective functions evaluated at $\vect{x}$\\
     $\mathcal{E}$ & Outcome evaluator (true operator, simulator, or surrogate)\\
+    $\calF(\vect{x})$ & Feasibility predicate (1 if $\vect{x}$ is feasible, 0 otherwise)\\
+    $g_j(\vect{x}), h_k(\vect{x})$ & Inequality and equality constraint functions\\
     $\text{PS}$ & Pareto set of non‑dominated decision vectors\\
     $\text{PF}$ & Pareto front (image of $\text{PS}$ in objective space)\\
     $\preceq$ & Pareto dominance operator\\
@@ -33,30 +35,33 @@
     $\widehat{\vect{x}}^{(k)}$ & $k$-th candidate decision predicted by the inverse model\\
     $K$ & Number of candidate decisions generated (candidate budget)\\
     $\vect{z}$ & Latent variable in generative models\\
+    $d_z$ & Latent dimensionality\\
     $p(\vect{z})$ & Prior distribution over latent variables\\
     $\pi_k, \boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k$ & Parameters of the $k$-th mixture component (MDN)\\
-    $g$ & True (possibly multi‑valued) inverse mapping\\
-    $\hat{g}$ & Learned inverse surrogate model\\
+    $g, \hat{g}$ & True and learned inverse mappings\\
     $\hat{f}$ & Surrogate forward model\\
-    $\theta, \phi$ & Trainable parameter vectors of the learned models\\
-    $\lambda$ & Regularization penalty weight\\
+    $\theta, \phi$ & Parameters of the proposal and inference models\\
+    $\lambda, \beta$ & Regularization and KL-weighting coefficients\\
     $\Omega(\cdot)$ & Regularization functional\\
+    $T, T_x, T_y$ & Bijective transformations or normalization maps\\
     \addlinespace[10pt]
 
     \multicolumn{2}{l}{\textbf{Evaluation and Assessment}} \\
     $\mathcal{D}$ & Dataset of sampled pairs $(\vect{x}_i,\vect{y}_i)$\\
-    $N$ & Number of sampled pairs in $\mathcal{D}$\\
-    $d(\cdot,\cdot)$ & Discrepancy or distance function in objective space\\
-    $s^{(k)}$ & Attainment score (checked discrepancy) for the $k$-th candidate\\
-    $D_{\min}^{(K)}$ & Minimum checked discrepancy within a set of size $K$\\
-    $D_{\mathrm{med}}^{(K)}$ & Median checked discrepancy across candidates in a set\\
-    $\mathrm{CalErr}$ & Calibration error (mean absolute deviation of PIT CDF)\\
-    $\mathrm{CRPS}$ & Continuous Ranked Probability Score\\
-    $z_{i,d}$ & Probability Integral Transform (PIT) value for dimension $d$\\
-    $\mathrm{GD}$ & Generational distance indicator\\
-    $\mathrm{IGD}$ & Inverted generational distance indicator\\
-    $e_f$ & Forward error $\|\vect{f}(\hat{\vect{x}})-\vect{y}^{\star}\|$\\
-    $\sigma$ & Bandwidth parameter of radial basis functions\\
-    $\tau$ & Threshold for plausibility warnings\\
+    $N$ & Number of samples in the archive\\
+    $\mathcal{L}(\cdot, \cdot), d(\cdot, \cdot)$ & Deployment discrepancy and distance functions\\
+    $\vect{r}^{(k)}$ & Residual vector for the $k$-th candidate ($\widehat{\vect{y}}^{(k)} - \vect{y}^{\star}$)\\
+    $\bar{\vect{r}}$ & Mean residual vector of a candidate cloud\\
+    $s^{(k)}, s_{\min}$ & Individual and best-shot attainment scores\\
+    $\widehat{F}(t)$ & Empirical CDF of scores (Attainment ECDF)\\
+    $\widehat{G}(t)$ & Empirical CDF of PIT ranks (Calibration Curve)\\
+    $z_{i,d}$ & Probability Integral Transform (PIT) value\\
+    $\mathrm{MACE}$ & Mean Absolute Calibration Error (reliability diagnostic)\\
+    $\mathrm{CRPS}$ & Continuous Ranked Probability Score (probabilistic accuracy)\\
+    $\mathrm{MAE}$ & Mean Absolute Error (accuracy component of CRPS)\\
+    $\mathrm{MD}$ & Mean Difference (dispersion component of CRPS)\\
+    $\mathrm{Succ}_\epsilon$ & Tolerance success indicator at threshold $\epsilon$\\
+    $\mathrm{GD}, \mathrm{IGD}, \mathrm{HV}$ & Performance indicators for Pareto front approximations\\
+    $\sigma, \tau$ & Model-specific parameters (bandwidth, threshold)\\
   \end{longtable}
 \end{flushleft}

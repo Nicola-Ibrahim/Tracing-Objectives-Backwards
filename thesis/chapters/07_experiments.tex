@@ -13,21 +13,26 @@ The selection of a bi-objective configuration for this study is motivated by the
 \subsection{Data Acquisition}\label{sec:exp_coco}
 %-------------------------------------------------------------------------------
 
-To evaluate the inverse models, we construct a bi-objective optimization problem (MOP) using the COCO BBOB benchmark suite. This section describes the problem formulation and the procedure for generating the training and testing archives.
+To evaluate the inverse models, we construct a bi-objective optimization problem (MOP) using the COCO BBOB benchmark suite \cite{cocoexDocs, cocoBBOBOverview}. This section describes the problem formulation and the procedure for generating the training and testing archives.
 
-\subsubsection{Problem Formulation ($f_5$ Linear Slope)}
 
-A general MOP involves finding a decision vector $\vect{x} \in \calX \subset \R^n$ that minimizes an objective vector $\vect{f}(\vect{x}) = (f_1(\vect{x}), \dots, f_m(\vect{x}))$. In this study, we focus on a bi-objective case ($m=2$) derived from the BBOB $f_5$ (Linear Slope) function family. We select $f_5$ due to its strong directionality and boundary effects, where the optimum lies on the domain boundary. The function is defined as:
+\subsubsection{Problem Formulation ($F_5$ Sphere/Sharp Ridge)}
+
+A general MOP involves finding a decision vector $\vect{x} \in \calX \subset \R^n$ that minimizes an objective vector $\vect{f}(\vect{x}) = (f_1(\vect{x}), \dots, f_m(\vect{x}))$. In this study, we focus on the bi-objective problem $F_5$ from the BBOB-biobj suite, which is constructed by combining two distinct unimodal landscapes: the Sphere function ($f_1$) and the Sharp Ridge function ($f_{13}$). We select this problem because it creates a fundamental tension between a smooth, separable objective and a non-separable, non-differentiable ridge. The objective vector is defined as:
 
 \begin{equation}
-    f_{5}(\vect{x}) = \sum_{i = 1}^{D}\big(5\,|s_i| - s_i z_i\big) + f_\mathrm{opt},
+    \vect{f}(\vect{x}) = \big(f_1(\vect{z}),\; f_{13}(\vect{z})\big) + \vect{f}_{\mathrm{opt}},
 \end{equation}
 
-where $D$ is the decision dimension and $s_i$ are signed slope coefficients. We construct our bi-objective problem by pairing two deterministic instances $(a, b)$ of this family:
-\begin{equation}
-    \vect{f}(\vect{x})=\big(f^{(\mathrm{inst}=a)}(\vect{x}),\; f^{(\mathrm{inst}=b)}(\vect{x})\big).
-\end{equation}
-COCO instances apply deterministic shifts and transformations while preserving the underlying landscape, providing a reproducible yet non-trivial trade-off surface.
+where $\vect{z}$ represents the decision vector $\vect{x}$ after applying the deterministic COCO transformations (rotation and shifting). The individual components are formulated as:
+
+\begin{align}
+    f_{1}(\vect{z}) &= \sum_{i = 1}^{D} z_i^2 \\
+    f_{13}(\vect{z}) &= z_1^2 + 100 \sqrt{\sum_{i = 2}^{D} z_i^2},
+\end{align}
+
+where $D$ is the decision dimension. Unlike problems with simple trade-offs, $F_5$ is characterized by a sharp ridge in the second objective where the gradient remains constant even as the ridge is approached. This property makes the inverse task particularly difficult for probabilistic samplers, as the model must accurately resolve a non-smooth manifold to locate solutions that satisfy the desired trade-off between the simple sphere and the ill-conditioned ridge.
+
 
 
 \subsubsection{Data Generation via NSGA-II}
@@ -50,7 +55,7 @@ Trade-offs between conflicting objectives are formalized through the principle o
   \label{fig:pareto_front}
 \end{figure}
 
-To generate the necessary data for our inverse models, we utilize the NSGA-II algorithm as a data-generation tool for the bi-objective $f_5$ problem. Rather than retaining only the final converged Pareto set, we record the comprehensive search history to assemble an archive of $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$. This historical data provides the model with a dense and varied characterization of the objective space, spanning from high-performance Pareto-optimal solutions to sub-optimal exploratory points.
+To generate the necessary data for our inverse models, we utilize the Non-dominated Sorting Genetic Algorithm II (NSGA-II) algorithm as a data-generation tool for the bi-objective $f_5$ problem. Rather than retaining only the final converged Pareto set, we record the comprehensive search history to assemble an archive of $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$. This historical data provides the model with a dense and varied characterization of the objective space, spanning from high-performance Pareto-optimal solutions to sub-optimal exploratory points.
 
 As illustrated in Figure~\ref{fig:pareto_front}, the raw distribution of this archive is categorized into:
 \begin{itemize}
@@ -59,7 +64,7 @@ As illustrated in Figure~\ref{fig:pareto_front}, the raw distribution of this ar
 \end{itemize}
 
 
-The characteristic structure of the Pareto data collected during this process is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Raw Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Raw Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the **Pareto front** at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged, Pareto-relevant set highlights the specific target regions our inverse model is designed to characterize before any normalization is applied.
+The characteristic structure of the Pareto data collected during this process is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Raw Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Raw Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged, Pareto-relevant set highlights the specific target regions our inverse model is designed to characterize before any normalization is applied.
 
 \begin{figure}[!htbp]
     \centering
