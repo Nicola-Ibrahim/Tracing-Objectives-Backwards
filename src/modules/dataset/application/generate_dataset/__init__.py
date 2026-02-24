@@ -1,7 +1,6 @@
-from .command import GenerateDatasetCommand
-from .handler import GenerateDatasetCommandHandler
+from .service import GenerateDatasetParams, GenerateDatasetService
 
 __all__ = [
-    "GenerateDatasetCommand",
-    "GenerateDatasetCommandHandler",
+    "GenerateDatasetParams",
+    "GenerateDatasetService",
 ]

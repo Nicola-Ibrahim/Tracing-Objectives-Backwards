@@ -4,14 +4,14 @@ from ...modules.dataset.application.factories.algorithm import AlgorithmFactory
 from ...modules.dataset.application.factories.optimizer import OptimizerFactory
 from ...modules.dataset.application.factories.problem import ProblemFactory
 from ...modules.dataset.application.generate_dataset import (
-    GenerateDatasetCommandHandler,
+    GenerateDatasetService,
 )
-from ...modules.dataset.application.generate_dataset.command import (
+from ...modules.dataset.application.generate_dataset.service import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
     ApplicationProblemConfig,
-    GenerateDatasetCommand,
+    GenerateDatasetParams,
     OptimizerType,
     ProblemType,
 )
@@ -47,8 +47,8 @@ def generate_data(function_id: int):
         verbose=False,
     )
 
-    # Build command from CLI arguments
-    command = GenerateDatasetCommand(
+    # Build params from CLI arguments
+    params = GenerateDatasetParams(
         problem_config=problem_config,
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
@@ -63,7 +63,7 @@ def generate_data(function_id: int):
     # Setup dependencies (could later be moved to a container or bootstrap file)
     logger = CMDLogger()
     dataset_service = DatasetGenerationService()
-    handler = GenerateDatasetCommandHandler(
+    service = GenerateDatasetService(
         problem_factory=ProblemFactory(),
         algorithm_factory=AlgorithmFactory(),
         optimizer_factory=OptimizerFactory(),
@@ -74,7 +74,7 @@ def generate_data(function_id: int):
     )
 
     # Execute
-    handler.execute(command)
+    service.execute(params)
 
 
 if __name__ == "__main__":

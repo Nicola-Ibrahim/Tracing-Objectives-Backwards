@@ -5,11 +5,11 @@ from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.train_inverse_model_grid_search.command import (
-    TrainInverseModelGridSearchCommand,
+from ...modules.evaluation.application.use_cases.train_inverse_model_grid_search.service import (
+    TrainInverseModelGridSearchParams,
 )
 from ...modules.evaluation.application.use_cases.train_inverse_model_grid_search.handler import (
-    TrainInverseModelGridSearchCommandHandler,
+    TrainInverseModelGridSearchService,
 )
 from ...modules.modeling.application.factories.estimator import EstimatorFactory
 from ...modules.modeling.application.factories.metrics import MetricFactory
@@ -38,7 +38,7 @@ from ...modules.modeling.infrastructure.repositories.model_artifact_repo import 
     help="Dataset identifier to load for training.",
 )
 def cli(estimator: str, dataset_name: str) -> None:
-    command = TrainInverseModelGridSearchCommand(
+    params = TrainInverseModelGridSearchParams(
         dataset_name=dataset_name,
         estimator_params=ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator)](),
         estimator_performance_metric_configs=default_metric_configs(),
@@ -49,14 +49,14 @@ def cli(estimator: str, dataset_name: str) -> None:
         learning_curve_steps=50,
         epochs=100,
     )
-    handler = TrainInverseModelGridSearchCommandHandler(
+    service = TrainInverseModelGridSearchService(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="InterpolationGridCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
     )
-    handler.execute(command)
+    service.execute(params)
 
 
 def main() -> None:  # pragma: no cover - CLI entrypoint

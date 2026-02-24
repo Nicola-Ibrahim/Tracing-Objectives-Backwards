@@ -2,8 +2,8 @@ import click
 
 from ...modules.evaluation.application.use_cases.visualize_diagnostics import (
     InverseEstimatorCandidate,
-    VisualizeInverseEstimatorDiagnosticCommand,
-    VisualizeInverseEstimatorDiagnosticCommandHandler,
+    VisualizeInverseEstimatorDiagnosticParams,
+    VisualizeInverseEstimatorDiagnosticService,
 )
 from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
     FileSystemDiagnosticRepository,
@@ -23,7 +23,7 @@ def cli():
     """
     logger = CMDLogger(name="VisualizeDiagnosticsLogger")
 
-    command = VisualizeInverseEstimatorDiagnosticCommand(
+    params = VisualizeInverseEstimatorDiagnosticParams(
         dataset_name="cocoex_f5",
         inverse_estimator_candidates=[
             InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=8),
@@ -43,13 +43,13 @@ def cli():
         ],
     )
 
-    handler = VisualizeInverseEstimatorDiagnosticCommandHandler(
+    service = VisualizeInverseEstimatorDiagnosticService(
         diagnostic_repository=FileSystemDiagnosticRepository(),
         visualizer=InverseModelsComparisonVisualizer(),
         logger=logger,
     )
 
-    handler.execute(command)
+    service.execute(params)
 
 
 def main() -> None:

@@ -1,7 +1,7 @@
-from .command import TrainForwardModelCommand
-from .handler import TrainForwardModelCommandHandler
+from .service import TrainForwardModelParams
+from .service import TrainForwardModelService
 
 __all__ = [
-    "TrainForwardModelCommand",
-    "TrainForwardModelCommandHandler",
+    "TrainForwardModelParams",
+    "TrainForwardModelService",
 ]

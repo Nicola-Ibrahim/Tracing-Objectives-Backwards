@@ -1,7 +1,7 @@
-from .command import TrainInverseModelCommand
-from .handler import TrainInverseModelCommandHandler
+from .service import TrainInverseModelParams
+from .service import TrainInverseModelService
 
 __all__ = [
-    "TrainInverseModelCommand",
-    "TrainInverseModelCommandHandler",
+    "TrainInverseModelParams",
+    "TrainInverseModelService",
 ]

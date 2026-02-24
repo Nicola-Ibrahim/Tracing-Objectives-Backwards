@@ -10,8 +10,8 @@ from ...modules.modeling.application.registry import (
     default_metric_configs,
 )
 from ...modules.modeling.application.use_cases.train_inverse_model import (
-    TrainInverseModelCommand,
-    TrainInverseModelCommandHandler,
+    TrainInverseModelParams,
+    TrainInverseModelService,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
@@ -35,7 +35,7 @@ from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
     help="Dataset identifier to load for training.",
 )
 def cli(estimator: str, dataset_name: str) -> None:
-    command = TrainInverseModelCommand(
+    params = TrainInverseModelParams(
         dataset_name=dataset_name,
         estimator_params=ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator)](),
         estimator_performance_metric_configs=default_metric_configs(),
@@ -44,7 +44,7 @@ def cli(estimator: str, dataset_name: str) -> None:
         epochs=100,
     )
 
-    handler = TrainInverseModelCommandHandler(
+    service = TrainInverseModelService(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
@@ -52,7 +52,7 @@ def cli(estimator: str, dataset_name: str) -> None:
         metric_factory=MetricFactory(),
     )
 
-    handler.execute(command)
+    service.execute(params)
 
 
 def main() -> None:

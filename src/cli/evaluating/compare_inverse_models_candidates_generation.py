@@ -4,8 +4,8 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates import (
-    CompareInverseModelCandidatesCommand,
-    CompareInverseModelCandidatesCommandHandler,
+    CompareInverseModelCandidatesParams,
+    CompareInverseModelCandidatesService,
     InverseEstimatorCandidate,
 )
 from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates.inverse_model_candidates_comparator import (
@@ -28,7 +28,7 @@ def main():
     """
 
     # Create the command object using the provided estimator and hardcoded target
-    command = CompareInverseModelCandidatesCommand(
+    params = CompareInverseModelCandidatesParams(
         dataset_name="cocoex_f5",
         inverse_estimators=[
             InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=8),
@@ -46,7 +46,7 @@ def main():
     )
 
     # Initialize the handler with pre-built services
-    handler = CompareInverseModelCandidatesCommandHandler(
+    service = CompareInverseModelCandidatesService(
         comparator=InverseModelsCandidatesComparator(),
         model_repository=FileSystemModelArtifactRepository(),
         data_repository=FileSystemDatasetRepository(),
@@ -54,7 +54,7 @@ def main():
         visualizer=DecisionGenerationComparisonVisualizer(),
     )
 
-    handler.execute(command)
+    service.execute(params)
 
 
 if __name__ == "__main__":

@@ -6,11 +6,11 @@ from modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
 )
-from modules.modeling.application.train_forward_model.command import (
-    TrainForwardModelCommand,
+from modules.modeling.application.train_forward_model.service import (
+    TrainForwardModelParams,
 )
 from modules.modeling.application.train_forward_model.handler import (
-    TrainForwardModelCommandHandler,
+    TrainForwardModelService,
 )
 from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from modules.dataset.infrastructure.repositories.dataset_repository import (
@@ -29,7 +29,7 @@ def cli() -> None:
     return None
 
 
-@cli.command(name="standard", help="Single train/test split training")
+@cli.service(name="standard", help="Single train/test split training")
 @click.option(
     "--estimator",
     type=click.Choice([k.value for k in ESTIMATOR_PARAM_REGISTRY.keys()]),
@@ -44,7 +44,7 @@ def cli() -> None:
     help="Dataset identifier to load for training.",
 )
 def command_standard(estimator: str, dataset_name: str) -> None:
-    handler = TrainForwardModelCommandHandler(
+    service = TrainForwardModelService(
         processed_data_repository=FileSystemDatasetRepository(),
         model_repository=FileSystemModelArtifactRepository(),
         logger=CMDLogger(name="ForwardCMDLogger"),
@@ -52,7 +52,7 @@ def command_standard(estimator: str, dataset_name: str) -> None:
         metric_factory=MetricFactory(),
     )
     estimator_params = ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator)]()
-    command = TrainForwardModelCommand(
+    params = TrainForwardModelParams(
         dataset_name=dataset_name,
         estimator_params=estimator_params,
         estimator_performance_metric_configs=default_metric_configs(),
@@ -60,7 +60,7 @@ def command_standard(estimator: str, dataset_name: str) -> None:
         learning_curve_steps=50,
         epochs=100,
     )
-    handler.execute(command)
+    service.execute(params)
 
 
 def main() -> None:

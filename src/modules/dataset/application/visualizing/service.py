@@ -1,10 +1,20 @@
+from pydantic import BaseModel, Field
+
+
+class VisualizeDatasetParams(BaseModel):
+    dataset_name: str = Field(
+        ...,
+        description="Dataset identifier to visualize.",
+        examples=["dataset"],
+    )
+
+
 from ...domain.entities.dataset import Dataset
 from ...domain.interfaces.base_repository import BaseDatasetRepository
 from ...domain.interfaces.base_visualizer import BaseVisualizer
-from .command import VisualizeDatasetCommand
 
 
-class VisualizeDatasetCommandHandler:
+class VisualizeDatasetService:
     """
     Loads a bi-objective dataset, builds normalizers via an injected factory,
     normalizes decisions (X) and objectives (F), and passes everything to the
@@ -20,9 +30,9 @@ class VisualizeDatasetCommandHandler:
         self._dataset_repo = dataset_repo
         self._visualizer = visualizer
 
-    def execute(self, command: VisualizeDatasetCommand) -> None:
+    def execute(self, params: VisualizeDatasetParams) -> None:
         # 1) Load dataset aggregate
-        dataset_name = command.dataset_name
+        dataset_name = params.dataset_name
 
         dataset: Dataset = self._dataset_repo.load(name=dataset_name)
         if not dataset.processed:

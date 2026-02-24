@@ -1,8 +1,8 @@
-from .command import GenerateCandidatesCommand, InverseEstimatorCandidate
-from .handler import GenerateCandidatesCommandHandler
+from .service import GenerateCandidatesParams, InverseEstimatorCandidate
+from .service import GenerateCandidatesService
 
 __all__ = [
     "InverseEstimatorCandidate",
-    "GenerateCandidatesCommand",
-    "GenerateCandidatesCommandHandler",
+    "GenerateCandidatesParams",
+    "GenerateCandidatesService",
 ]

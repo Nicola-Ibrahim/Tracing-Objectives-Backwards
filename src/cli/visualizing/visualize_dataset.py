@@ -1,8 +1,8 @@
 import click
 
 from ...modules.dataset.application.visualizing import (
-    VisualizeDatasetCommand,
-    VisualizeDatasetCommandHandler,
+    VisualizeDatasetParams,
+    VisualizeDatasetService,
 )
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
@@ -20,13 +20,13 @@ from ...modules.dataset.infrastructure.visualization import (
     help="Dataset identifier to visualize.",
 )
 def main(dataset_name: str):
-    command = VisualizeDatasetCommand(dataset_name=dataset_name)
-    handler = VisualizeDatasetCommandHandler(
+    params = VisualizeDatasetParams(dataset_name=dataset_name)
+    service = VisualizeDatasetService(
         dataset_repo=FileSystemDatasetRepository(),
         visualizer=PlotlyDatasetVisualizer(),
     )
 
-    handler.execute(command)
+    service.execute(params)
 
 
 if __name__ == "__main__":

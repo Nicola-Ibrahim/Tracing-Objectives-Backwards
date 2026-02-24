@@ -1,3 +1,51 @@
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
+
+
+class InverseEstimatorCandidate(BaseModel):
+    """Represents a specific inverse estimator candidate (type and optional version)."""
+
+    type: EstimatorTypeEnum = Field(
+        ...,
+        examples=[EstimatorTypeEnum.MDN.value],
+    )
+    version: int | None = Field(
+        ...,
+        description="Specific integer version number (e.g., 1). If None, latest is used.",
+        examples=[1],
+    )
+
+
+class DiagnoseInverseModelsParams(BaseModel):
+    """
+    Command for the full evaluation suite including
+    Objective-Space Accuracy and Decision-Space Reliability.
+    Supports comparing multiple inverse model candidates.
+    """
+
+    dataset_name: str = Field(..., examples=["cocoex_f5"])
+
+    inverse_estimator_candidates: list[InverseEstimatorCandidate] = Field(
+        ...,
+        description="List of model candidates to compare.",
+        examples=[[{"type": EstimatorTypeEnum.MDN.value, "version": 1}]],
+    )
+
+    forward_estimator_type: EstimatorTypeEnum = Field(
+        ..., examples=[EstimatorTypeEnum.COCO]
+    )
+
+    num_samples: int = Field(default=200, description="K candidates per target")
+    random_state: int = 42
+
+    scale_method: Literal["sd", "mad", "iqr"] = Field(
+        default="sd", description="sd | mad | iqr"
+    )
+
+
 import numpy as np
 
 from .....dataset.domain.interfaces.base_repository import BaseDatasetRepository
@@ -20,10 +68,9 @@ from ....domain.services.spatial_candidate_auditor import (
     SpatialCandidateAuditor,
 )
 from ....domain.value_objects.estimator import Estimator
-from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
 
 
-class DiagnoseInverseModelsHandler:
+class DiagnoseInverseModelsService:
     """
     Orchestrator for the Thesis-aligned evaluation suite.
     Computes diagnostics and persists them via the Diagnostic Repository.
@@ -41,24 +88,24 @@ class DiagnoseInverseModelsHandler:
         self._diag_repo = diagnostic_repository
         self._logger = logger
 
-    def execute(self, command: DiagnoseInverseModelsCommand) -> dict[str, int]:
+    def execute(self, params: DiagnoseInverseModelsParams) -> dict[str, int]:
         self._logger.log_info(
             f"Starting Diagnostic Compute for: "
-            f"{[(c.type.value, c.version) for c in command.inverse_estimator_candidates]}"
+            f"{[(c.type.value, c.version) for c in params.inverse_estimator_candidates]}"
         )
 
         # 1. Load context
-        dataset = self._data_repo.load(command.dataset_name)
+        dataset = self._data_repo.load(params.dataset_name)
 
         # Load Forward Estimator
         forward_estimator = self._model_artifact_repo.get_latest_version(
-            command.forward_estimator_type.value, "forward", command.dataset_name
+            params.forward_estimator_type.value, "forward", params.dataset_name
         ).estimator
 
         # 3. Initialize inverse estimators
         inverse_estimators = self._initialize_estimators(
-            inverse_estimator_candidates=command.inverse_estimator_candidates,
-            dataset_name=command.dataset_name,
+            inverse_estimator_candidates=params.inverse_estimator_candidates,
+            dataset_name=params.dataset_name,
         )
 
         # 4. Run diagnostic workflow
@@ -67,7 +114,7 @@ class DiagnoseInverseModelsHandler:
             y_test_norm = dataset.processed.objectives_test
 
             samples_X_norm = inverse_estimator.sample(
-                y_test_norm, n_samples=command.num_samples
+                y_test_norm, n_samples=params.num_samples
             )
 
             if samples_X_norm.ndim == 2:
@@ -119,9 +166,9 @@ class DiagnoseInverseModelsHandler:
                     version=version,
                     mapping_direction="inverse",
                 ),
-                dataset_name=command.dataset_name,
-                num_samples=command.num_samples,
-                scale_method=command.scale_method,
+                dataset_name=params.dataset_name,
+                num_samples=params.num_samples,
+                scale_method=params.scale_method,
                 accuracy=AccuracyLens(
                     discrepancy_scores=spatial_audit.discrepancy_scores,
                     best_shot_scores=spatial_audit.best_shot_scores,

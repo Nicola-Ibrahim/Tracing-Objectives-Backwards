@@ -1,8 +1,8 @@
-from .command import CheckModelPerformanceCommand, InverseEstimatorCandidate
-from .handler import CheckModelPerformanceCommandHandler
+from .service import CheckModelPerformanceParams, InverseEstimatorCandidate
+from .service import CheckModelPerformanceService
 
 __all__ = [
-    "CheckModelPerformanceCommand",
-    "CheckModelPerformanceCommandHandler",
+    "CheckModelPerformanceParams",
+    "CheckModelPerformanceService",
     "InverseEstimatorCandidate",
 ]

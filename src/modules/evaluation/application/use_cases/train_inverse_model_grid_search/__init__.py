@@ -1,7 +1,7 @@
-from .command import TrainInverseModelGridSearchCommand
-from .handler import TrainInverseModelGridSearchCommandHandler
+from .service import TrainInverseModelGridSearchParams
+from .service import TrainInverseModelGridSearchService
 
 __all__ = [
-    "TrainInverseModelGridSearchCommand",
-    "TrainInverseModelGridSearchCommandHandler",
+    "TrainInverseModelGridSearchParams",
+    "TrainInverseModelGridSearchService",
 ]

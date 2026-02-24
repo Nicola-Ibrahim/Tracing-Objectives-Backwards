@@ -1,7 +1,7 @@
-from .command import TrainInverseModelCrossValidationCommand
-from .handler import TrainInverseModelCrossValidationCommandHandler
+from .service import TrainInverseModelCrossValidationParams
+from .service import TrainInverseModelCrossValidationService
 
 __all__ = [
-    "TrainInverseModelCrossValidationCommand",
-    "TrainInverseModelCrossValidationCommandHandler",
+    "TrainInverseModelCrossValidationParams",
+    "TrainInverseModelCrossValidationService",
 ]

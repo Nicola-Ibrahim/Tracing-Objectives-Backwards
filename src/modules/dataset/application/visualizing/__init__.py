@@ -1,4 +1,4 @@
-from .command import VisualizeDatasetCommand
-from .handler import VisualizeDatasetCommandHandler
+from .service import VisualizeDatasetParams
+from .service import VisualizeDatasetService
 
-__all__ = ["VisualizeDatasetCommand", "VisualizeDatasetCommandHandler"]
+__all__ = ["VisualizeDatasetParams", "VisualizeDatasetService"]

@@ -4,8 +4,8 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ...modules.evaluation.application.use_cases.diagnose_inverse_models import (
-    DiagnoseInverseModelsCommand,
-    DiagnoseInverseModelsHandler,
+    DiagnoseInverseModelsParams,
+    DiagnoseInverseModelsService,
     InverseEstimatorCandidate,
 )
 from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
@@ -24,7 +24,7 @@ def cli():
         InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=9),
     ]
 
-    command = DiagnoseInverseModelsCommand(
+    params = DiagnoseInverseModelsParams(
         dataset_name="cocoex_f5",
         inverse_estimator_candidates=candidates,
         forward_estimator_type=EstimatorTypeEnum.COCO,
@@ -33,14 +33,14 @@ def cli():
         scale_method="iqr",
     )
 
-    handler = DiagnoseInverseModelsHandler(
+    service = DiagnoseInverseModelsService(
         data_repository=FileSystemDatasetRepository(),
         model_artifact_repository=FileSystemModelArtifactRepository(),
         diagnostic_repository=FileSystemDiagnosticRepository(),
         logger=CMDLogger(name="DiagnoseInverseModelsLogger"),
     )
 
-    handler.execute(command)
+    service.execute(params)
 
 
 def main() -> None:

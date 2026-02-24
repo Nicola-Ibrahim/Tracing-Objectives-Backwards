@@ -1,11 +1,11 @@
-from .command import (
+from .service import (
     InverseEstimatorCandidate,
-    VisualizeInverseEstimatorDiagnosticCommand,
+    VisualizeInverseEstimatorDiagnosticParams,
 )
-from .handler import VisualizeInverseEstimatorDiagnosticCommandHandler
+from .service import VisualizeInverseEstimatorDiagnosticService
 
 __all__ = [
     "InverseEstimatorCandidate",
-    "VisualizeInverseEstimatorDiagnosticCommand",
-    "VisualizeInverseEstimatorDiagnosticCommandHandler",
+    "VisualizeInverseEstimatorDiagnosticParams",
+    "VisualizeInverseEstimatorDiagnosticService",
 ]

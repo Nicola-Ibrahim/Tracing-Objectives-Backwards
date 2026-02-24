@@ -1,3 +1,59 @@
+from pydantic import BaseModel, Field
+
+from ....domain.enums.estimator_type import EstimatorTypeEnum
+
+
+class InverseEstimatorCandidate(BaseModel):
+    """Represents a specific inverse estimator candidate (type and optional version)."""
+
+    type: EstimatorTypeEnum = Field(
+        ...,
+        examples=[EstimatorTypeEnum.MDN.value],
+    )
+    version: int | None = Field(
+        ...,
+        description="Specific integer version number (e.g., 1). If None, latest is used.",
+        examples=[1],
+    )
+
+
+class GenerateCandidatesParams(BaseModel):
+    dataset_name: str = Field(
+        ...,
+        description="Dataset identifier to use for comparison.",
+        examples=["dataset"],
+    )
+
+    inverse_estimator: InverseEstimatorCandidate = Field(
+        ...,
+        description="inverse model candidate (type + version) to use for generation",
+        examples={
+            "type": EstimatorTypeEnum.MDN.value,
+            "version": 1,
+        },
+    )
+    forward_estimator_type: EstimatorTypeEnum = Field(
+        ...,
+        description="Name of the forward model to use for verification",
+        examples=[EstimatorTypeEnum.MDN.value],
+    )
+    target_objective: list[float] = Field(
+        ...,
+        description="Target point in objective space (y1, y2, ...)",
+        examples=[[0.5, 0.8]],
+    )
+    distance_tolerance: float = Field(
+        ...,
+        description="Distance tolerance for selecting candidates.",
+        examples=[0.02],
+    )
+    n_samples: int = Field(
+        ...,
+        description="Number of samples to draw per inverse estimator.",
+        examples=[250],
+    )
+
+
 from typing import Any
 
 import numpy as np
@@ -10,10 +66,9 @@ from .....modeling.domain.interfaces.base_repository import (
     BaseModelArtifactRepository,
 )
 from .....shared.domain.interfaces.base_logger import BaseLogger
-from .command import GenerateCandidatesCommand, InverseEstimatorCandidate
 
 
-class GenerateCandidatesCommandHandler:
+class GenerateCandidatesService:
     """
     Generate Design Candidates (X) for a requested Objective (Y).
 
@@ -32,24 +87,24 @@ class GenerateCandidatesCommandHandler:
         self._data_repository = data_repository
         self._logger = logger
 
-    def execute(self, command: GenerateCandidatesCommand) -> dict[str, Any]:
+    def execute(self, params: GenerateCandidatesParams) -> dict[str, Any]:
         """
         Coordinates the generation of decision candidates using multiple inverse models.
         """
         self._logger.log_info(
-            f"Starting decision generation on '{command.dataset_name}'. "
-            f"Inverse: {command.inverse_estimator.type.value}"
-            f"Forward: {command.forward_estimator_type.value}"
+            f"Starting decision generation on '{params.dataset_name}'. "
+            f"Inverse: {params.inverse_estimator.type.value}"
+            f"Forward: {params.forward_estimator_type.value}"
         )
 
         # 1. Load context: dataset and processed data
-        dataset: Dataset = self._data_repository.load(command.dataset_name)
+        dataset: Dataset = self._data_repository.load(params.dataset_name)
         if not dataset.processed:
             raise ValueError(f"Dataset '{dataset.name}' has no processed data.")
 
         # 2. Prepare target objective (raw + normalized)
         target_objective_raw, target_objective_norm = self._prepare_target(
-            command.target_objective, dataset.processed
+            params.target_objective, dataset.processed
         )
         self._logger.log_info(
             f"Target Objective (Raw): {target_objective_raw.tolist()}"
@@ -57,13 +112,13 @@ class GenerateCandidatesCommandHandler:
 
         # 3. Initialize inverse estimators using private helper
         inverse_estimator = self._initialize_estimator(
-            candidate=command.inverse_estimator, dataset_name=command.dataset_name
+            candidate=params.inverse_estimator, dataset_name=params.dataset_name
         )
 
         # 4. Generate candidates
         candidates = inverse_estimator.sample(
             X=target_objective_norm,
-            n_samples=command.n_samples,
+            n_samples=params.n_samples,
         )  
 
         self._logger.log_info(f"Generated {candidates.shape[1]} candidates.")

@@ -1,8 +1,8 @@
-from .command import DiagnoseInverseModelsCommand, InverseEstimatorCandidate
-from .handler import DiagnoseInverseModelsHandler
+from .service import DiagnoseInverseModelsParams, InverseEstimatorCandidate
+from .service import DiagnoseInverseModelsService
 
 __all__ = [
-    "DiagnoseInverseModelsCommand",
-    "DiagnoseInverseModelsHandler",
+    "DiagnoseInverseModelsParams",
+    "DiagnoseInverseModelsService",
     "InverseEstimatorCandidate",
 ]

@@ -4,8 +4,8 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ...modules.modeling.application.use_cases.generate_candidates import (
-    GenerateCandidatesCommand,
-    GenerateCandidatesCommandHandler,
+    GenerateCandidatesParams,
+    GenerateCandidatesService,
     InverseEstimatorCandidate,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
@@ -22,7 +22,7 @@ def main():
     """
 
     # Create the command object using the provided estimator and hardcoded target
-    command = GenerateCandidatesCommand(
+    params = GenerateCandidatesParams(
         dataset_name="cocoex_f5",
         inverse_estimator=InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=1),
         forward_estimator_type=EstimatorTypeEnum.COCO,
@@ -33,13 +33,13 @@ def main():
     )
 
     # Initialize the handler with pre-built services
-    handler = GenerateCandidatesCommandHandler(
+    service = GenerateCandidatesService(
         model_repository=FileSystemModelArtifactRepository(),
         data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
     )
 
-    handler.execute(command)
+    service.execute(params)
 
 
 if __name__ == "__main__":
