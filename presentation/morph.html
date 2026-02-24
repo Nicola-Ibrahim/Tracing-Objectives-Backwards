@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master's Thesis Defense: Tracing the Objectives Backwards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #60a5fa;
+            --secondary: #4f46e5;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 0.03) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 0.03) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 0.03) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .display-font {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Animations */
+        .section-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .section-reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Glassmorphism Sidebar */
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Sidebar Links */
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar-link::before {
+            content: '';
+            position: absolute;
+            left: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 0;
+            width: 3px;
+            background: var(--primary);
+            transition: all 0.3s ease;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .sidebar-link:hover {
+            color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .sidebar-link.active {
+            color: var(--primary);
+            font-weight: 700;
+            transform: translateX(8px);
+        }
+
+        .sidebar-link.active::before {
+            height: 100%;
+        }
+
+        /* Cards & Elements */
+        .slide-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+        }
+
+        .bento-card {
+            background: var(--surface);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .bento-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Speaker Notes */
+        .notes-container {
+            margin-top: 2rem;
+        }
+
+        .speaker-notes-toggle {
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+        }
+
+        .speaker-notes-toggle:hover {
+            background: #fef3c7;
+        }
+
+        .notes-content {
+            display: none;
+            border-left: 3px solid var(--accent);
+            background: linear-gradient(to right, #fffbeb, transparent);
+            padding: 1.5rem;
+            margin-top: 0.5rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #78350f;
+        }
+
+        .notes-content.open {
+            display: block;
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Progress Bar */
+        #scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-light), var(--secondary));
+            z-index: 1000;
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .formula-box {
+            background: #f1f5f9;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            font-family: serif;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.02);
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-blue-200 selection:text-blue-900">
+    <div id="scroll-progress"></div>
+
+    <div class="flex max-w-[1600px] mx-auto relative">
+        <!-- Sticky Sidebar Navigation -->
+        <aside class="hidden xl:flex w-80 h-screen sticky top-0 flex-col p-8 glass-sidebar z-40 overflow-y-auto">
+            <div class="mb-10 flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <span class="font-extrabold text-xl tracking-tight display-font text-slate-800">Thesis<span
+                        class="text-blue-600">Defense</span></span>
+            </div>
+
+            <nav class="space-y-8 flex-1">
+                <!-- Part I -->
+                <div>
+                    <h5 class="text-[10px] uppercase font-bold tracking-widest text-blue-600 mb-4 ml-4">Part I: Intro
+                    </h5>
+                    <ul class="space-y-4 text-sm font-medium ml-4">
+                        <li><a href="#hero" class="sidebar-link active">Slide 1: Title</a></li>
+                        <li><a href="#outline" class="sidebar-link">Slide 2: Outline</a></li>
+                    </ul>
+                </div>
+                <!-- Part II -->
+                <div>
+                    <h5 class="text-[10px] uppercase font-bold tracking-widest text-blue-600 mb-4 ml-4">Part II: The
+                        Headache</h5>
+                    <ul class="space-y-4 text-sm font-medium ml-4">
+                        <li><a href="#engineering-context" class="sidebar-link">Slide 1: Engineering Context</a></li>
+                        <li><a href="#hadamard" class="sidebar-link">Slide 2: Hadamard's Criteria</a></li>
+                        <li><a href="#ill-posedness" class="sidebar-link">Slide 3: Core Ill-Posedness</a></li>
+                        <li><a href="#average-trap" class="sidebar-link">Slide 4: The "Average" Trap</a></li>
+                    </ul>
+                </div>
+                <!-- Part III -->
+                <div>
+                    <h5 class="text-[10px] uppercase font-bold tracking-widest text-blue-600 mb-4 ml-4">Part III:
+                        Methodology</h5>
+                    <ul class="space-y-4 text-sm font-medium ml-4">
+                        <li><a href="#research-goal" class="sidebar-link">Slide 1: The Mission</a></li>
+                        <li><a href="#math-bridge" class="sidebar-link">Slide 2: Math Bridge</a></li>
+                        <li><a href="#propose-check" class="sidebar-link">Slide 3: Propose-Check</a></li>
+                        <li><a href="#architectures" class="sidebar-link">Slide 4: Probabilistic Engines</a></li>
+                        <li><a href="#checker" class="sidebar-link">Slide 5: Forward Surrogate</a></li>
+                        <li><a href="#plausibility" class="sidebar-link">Slide 6: Plausibility Metric</a></li>
+                        <li><a href="#reliability" class="sidebar-link">Slide 7: Reliability Metric</a></li>
+                    </ul>
+                </div>
+                <!-- Part IV -->
+                <div>
+                    <h5 class="text-[10px] uppercase font-bold tracking-widest text-blue-600 mb-4 ml-4">Part IV: Results
+                    </h5>
+                    <ul class="space-y-4 text-sm font-medium ml-4">
+                        <li><a href="#coco-benchmark" class="sidebar-link">Slide 1: COCO F5 Benchmark</a></li>
+                        <li><a href="#data-prep" class="sidebar-link">Slide 2: Data Preparation</a></li>
+                        <li><a href="#precision-ecdf" class="sidebar-link">Slide 3: Precision (ECDF)</a></li>
+                        <li><a href="#reliability-calibration" class="sidebar-link">Slide 4: Calibration & Honest
+                                Models</a></li>
+                    </ul>
+                </div>
+                <!-- Part V -->
+                <div>
+                    <h5 class="text-[10px] uppercase font-bold tracking-widest text-blue-600 mb-4 ml-4">Part V: Future &
+                        Conclusion</h5>
+                    <ul class="space-y-4 text-sm font-medium ml-4">
+                        <li><a href="#future-roadmap" class="sidebar-link">Slide 1: Future Roadmap</a></li>
+                        <li><a href="#conclusion" class="sidebar-link">Slide 2: Conclusion</a></li>
+                        <li><a href="#qa" class="sidebar-link">Slide 3: Q&A / References</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div class="mt-8 pt-8 border-t border-slate-200/60 text-xs text-slate-400 font-medium">
+                Paderborn University
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 px-6 py-12 lg:px-20 lg:py-24 max-w-5xl overflow-hidden">
+
+            <!-- ================= PART I: INTRO ================= -->
+
+            <section id="hero" class="min-h-[85vh] flex flex-col justify-center section-reveal mb-32 relative">
+                <div
+                    class="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -z-10">
+                </div>
+                <div
+                    class="absolute bottom-0 left-20 w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -z-10">
+                </div>
+
+                <span class="slide-badge">Part I &bull; Slide 1</span>
+                <h1 class="text-5xl lg:text-7xl font-extrabold leading-tight mb-8 display-font">
+                    Tracing the Objectives Backwards:<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
+                        Data-Driven Inverse Exploration of Multi-Objective Problems
+                    </span>
+                </h1>
+
+                <div class="grid sm:grid-cols-3 gap-6 mb-12 mt-8">
+                    <div class="bento-card bg-white/50 backdrop-blur-sm">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">Candidate</p>
+                        <p class="text-lg font-bold text-slate-800">[Your Name]</p>
+                    </div>
+                    <div class="bento-card bg-white/50 backdrop-blur-sm">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">Supervisors</p>
+                        <p class="text-lg font-bold text-slate-800">[Supervisor 1]<br>[Supervisor 2]</p>
+                    </div>
+                    <div class="bento-card bg-white/50 backdrop-blur-sm">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">University</p>
+                        <p class="text-lg font-bold text-slate-800">Paderborn University</p>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "Good morning. Today, I will present my research on 'Tracing the Objectives Backwards.' We will
+                        explore how generative machine learning can solve one of the most persistent 'headaches' in
+                        modern engineering: finding the right design when you only know the desired performance."
+                    </div>
+                </div>
+            </section>
+
+            <section id="outline" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge">Part I &bull; Slide 2</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">The Outline</h2>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bento-card border-l-4 border-l-blue-500">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">I. The Motivation & Headache</h3>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-center gap-3"><i class="fas fa-cogs text-blue-400"></i> Engineering
+                                Context</li>
+                            <li class="flex items-center gap-3"><i class="fas fa-brain text-blue-400"></i> Hadamard &
+                                Ill-Posedness</li>
+                            <li class="flex items-center gap-3"><i class="fas fa-chart-line text-blue-400"></i> The
+                                "Average" Trap</li>
+                        </ul>
+                    </div>
+                    <div class="bento-card border-l-4 border-l-indigo-500">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">II. Methodology</h3>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-center gap-3"><i class="fas fa-project-diagram text-indigo-400"></i>
+                                Propose-Check Framework</li>
+                            <li class="flex items-center gap-3"><i class="fas fa-network-wired text-indigo-400"></i>
+                                Probabilistic Engines</li>
+                            <li class="flex items-center gap-3"><i class="fas fa-balance-scale text-indigo-400"></i>
+                                Plausibility & Reliability</li>
+                        </ul>
+                    </div>
+                    <div class="bento-card border-l-4 border-l-purple-500">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">III. Experimental Results</h3>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-center gap-3"><i class="fas fa-flask text-purple-400"></i> COCO F5
+                                Benchmark</li>
+                            <li class="flex items-center gap-3"><i class="fas fa-chart-bar text-purple-400"></i> ECDF &
+                                Calibration</li>
+                        </ul>
+                    </div>
+                    <div class="bento-card border-l-4 border-l-emerald-500">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">IV. Future Roadmap</h3>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-center gap-3"><i class="fas fa-rocket text-emerald-400"></i>
+                                Integrating Physics</li>
+                            <li class="flex items-center gap-3"><i class="fas fa-check-circle text-emerald-400"></i>
+                                Conclusion</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= PART II: THE HEADACHE ================= -->
+
+            <section id="engineering-context" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge">Part II &bull; Slide 1</span>
+                <h2 class="text-4xl font-bold mb-8 display-font">The High-Stakes Engineering Landscape</h2>
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-8">
+                        <div class="bento-card">
+                            <h4 class="font-bold text-blue-600 text-lg mb-2 flex items-center gap-2"><i
+                                    class="fas fa-exchange-alt"></i> The Shift</h4>
+                            <p class="text-slate-600 leading-relaxed">Modern engineering has moved from simple
+                                components to complex, multi-functional systems requiring advanced optimization.</p>
+                        </div>
+                        <div class="bento-card bg-slate-900 text-white border-none shadow-2xl">
+                            <h4 class="font-bold text-amber-400 text-lg mb-2 flex items-center gap-2"><i
+                                    class="fas fa-fire-alt"></i> The Conflict</h4>
+                            <p class="text-slate-300 leading-relaxed">Designers must balance competing objectives. For
+                                example: <span class="text-white font-semibold">maximizing thermal efficiency vs.
+                                    minimizing weight.</span></p>
+                        </div>
+                    </div>
+                    <div class="relative flex justify-center">
+                        <div class="absolute inset-0 bg-blue-100 rounded-full filter blur-3xl opacity-50"></div>
+                        <img src="https://images.unsplash.com/photo-1581092335397-9583eb92d232?auto=format&fit=crop&q=80&w=600&h=600"
+                            alt="Engineering complexity"
+                            class="rounded-[2rem] shadow-2xl z-10 w-full object-cover aspect-square grayscale hover:grayscale-0 transition duration-700">
+                    </div>
+                </div>
+            </section>
+
+            <section id="hadamard" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge text-red-600 bg-red-100">Part II &bull; Slide 2</span>
+                <h2 class="text-4xl font-bold mb-4 display-font">Why is it Hard?</h2>
+                <h3 class="text-xl text-slate-500 mb-12 italic">Hadamard’s Criteria for Well-Posedness</h3>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bento-card hover:border-red-300">
+                        <div
+                            class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mb-6">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-3">1. Existence</h4>
+                        <p class="text-sm text-slate-600 leading-relaxed">Does a solution \( x \) actually exist for
+                            your target \( y^* \)? Often, desired targets are physically unreachable.</p>
+                    </div>
+                    <div class="bento-card hover:border-red-300 relative overflow-hidden">
+                        <div
+                            class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+                            CORE ISSUE</div>
+                        <div
+                            class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mb-6">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-3">2. Uniqueness</h4>
+                        <p class="text-sm text-slate-600 leading-relaxed">Is there only ONE solution? Engineering is
+                            plagued by the "One-to-Many" mapping problem.</p>
+                    </div>
+                    <div class="bento-card hover:border-red-300">
+                        <div
+                            class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mb-6">
+                            <i class="fas fa-water"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-3">3. Stability</h4>
+                        <p class="text-sm text-slate-600 leading-relaxed">Do small changes in \( y \) lead to small
+                            changes in \( x \)? Stability is rare in inverse landscapes.</p>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "To understand the 'headache,' we look at Hadamard’s Criteria. In our case, Uniqueness is the
+                        biggest hurdle. Because many designs can produce the same result, a model that only gives one
+                        answer—or worse, an average of many answers—is fundamentally flawed."
+                    </div>
+                </div>
+            </section>
+
+            <section id="ill-posedness" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge text-red-600 bg-red-100">Part II &bull; Slide 3</span>
+                <h2 class="text-4xl font-bold mb-8 display-font">The Core Problem: Ill-Posedness</h2>
+                <div class="bento-card bg-slate-900 text-white p-10 lg:p-14">
+                    <div class="grid lg:grid-cols-5 gap-12 items-center">
+                        <div class="lg:col-span-3">
+                            <p class="text-slate-400 uppercase tracking-widest text-xs font-bold mb-4">The Mathematical
+                                Dilemma</p>
+                            <div
+                                class="formula-box text-slate-900 bg-white mb-8 text-center text-3xl font-bold rounded-2xl">
+                                \[ f^{-1}(y^*) \to \{x_1, x_2, \dots\} \]
+                            </div>
+                            <p class="text-slate-300 text-lg leading-relaxed mb-6">
+                                Because \( f(x) \) is often a complex, non-linear physical simulation, its inverse is
+                                <strong class="text-red-400">Ill-Posed</strong>. There is no direct function from \( y
+                                \to x \), only a distribution \( p(x|y) \).
+                            </p>
+                        </div>
+                        <div class="lg:col-span-2 border-l border-slate-700 pl-8 space-y-6">
+                            <div class="flex items-start gap-4">
+                                <div class="mt-1 text-red-400"><i class="fas fa-compress-arrows-alt text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white mb-1">Information Loss</h4>
+                                    <p class="text-sm text-slate-400">The forward process 'collapses' multiple design
+                                        features into a single performance metric.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div class="mt-1 text-red-400"><i class="fas fa-code-branch text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white mb-1">Ambiguity</h4>
+                                    <p class="text-sm text-slate-400">One performance result maps back to countless
+                                        valid structural configurations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="average-trap" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge text-red-600 bg-red-100">Part II &bull; Slide 4</span>
+                <h2 class="text-4xl font-bold mb-8 display-font text-red-950">The "Average" Trap</h2>
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-red-700 mb-6">Why Regression Fails Inverse Problems</h3>
+                        <p class="text-slate-700 text-lg leading-relaxed mb-6">
+                            Standard Neural Networks (using MSE loss) attempt to find the <strong>mean</strong> design.
+                            In a non-linear space, the mean of two valid designs is almost always an <span
+                                class="text-red-600 font-bold underline">invalid design</span>.
+                        </p>
+                        <div class="formula-box bg-red-50 border border-red-100 text-center py-6 mb-8">
+                            <span class="font-serif text-2xl text-red-900">\( \hat{x} = E[x|y] \quad \text{but} \quad
+                                f(\hat{x}) \neq y^* \)</span>
+                        </div>
+                    </div>
+
+                    <div class="bento-card relative bg-white shadow-xl">
+                        <p class="text-xs font-bold text-slate-400 mb-6 tracking-widest uppercase">Visual Evidence</p>
+                        <div
+                            class="relative h-48 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden mb-6 flex items-center justify-center">
+                            <svg viewBox="0 0 300 150" class="w-full h-full">
+                                <path d="M 50 100 Q 150 20 250 100" fill="none" stroke="#e2e8f0" stroke-width="40"
+                                    stroke-linecap="round" />
+                                <path d="M 50 100 Q 150 20 250 100" fill="none" stroke="#cbd5e1" stroke-width="2"
+                                    stroke-dasharray="5,5" />
+                                <circle cx="80" cy="80" r="8" fill="#3b82f6" />
+                                <text x="80" y="105" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#1e293b">Valid A</text>
+                                <circle cx="220" cy="80" r="8" fill="#3b82f6" />
+                                <text x="220" y="105" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#1e293b">Valid B</text>
+                                <circle cx="150" cy="80" r="10" fill="#ef4444" class="animate-pulse" />
+                                <text x="150" y="105" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#ef4444">The "Average" (Fails)</text>
+                                <circle cx="150" cy="50" r="6" fill="#10b981" />
+                            </svg>
+                        </div>
+                        <p class="text-sm text-slate-600 italic border-l-4 border-amber-400 pl-4">
+                            "The average of a tuxedo and a swimsuit is neither formal nor waterproof."
+                        </p>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "This is the heart of the research. If we use standard regression, the model attempts to
+                        minimize error by predicting the middle point between valid clusters. But in physics, the
+                        'middle point' often breaks constraints. We don't want the average; we want the full
+                        distribution."
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= PART III: METHODOLOGY ================= -->
+
+            <section id="research-goal" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 1</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">The Mission: Target-Driven Inverse Exploration</h2>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bento-card bg-gradient-to-br from-white to-blue-50">
+                        <div
+                            class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-6">
+                            <i class="fas fa-crosshairs"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-3">Objective</h4>
+                        <p class="text-slate-600 text-sm leading-relaxed">Enable designers to specify a target \( y^* \)
+                            and receive a set of feasible candidates \( \{\hat{x}_1, \dots, \hat{x}_K\} \).</p>
+                    </div>
+                    <div class="bento-card bg-gradient-to-br from-white to-indigo-50">
+                        <div
+                            class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-6">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-3">Innovation</h4>
+                        <p class="text-slate-600 text-sm leading-relaxed">Moving away from "optimizing" one specific
+                            design to "exploring" a full distribution of potential solutions.</p>
+                    </div>
+                    <div class="bento-card bg-gradient-to-br from-white to-emerald-50">
+                        <div
+                            class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-6">
+                            <i class="fas fa-concierge-bell"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-3">Utility</h4>
+                        <p class="text-slate-600 text-sm leading-relaxed">Providing the designer with a "menu" of valid
+                            options, rather than a rigid, single black-box output.</p>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "The goal of this research is to build a bridge between requirements and results. We want a
+                        system where a designer provides the 'Target Objectives,' and the model explores the history of
+                        data to find every possible design that could achieve that target. We call this 'Inverse
+                        Exploration.'"
+                    </div>
+                </div>
+            </section>
+
+            <section id="math-bridge" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 2</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">Forward Prediction vs. Inverse Mapping</h2>
+
+                <div class="flex flex-col md:flex-row gap-8 items-stretch">
+                    <div class="flex-1 bento-card border-t-4 border-t-emerald-500 flex flex-col justify-center">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">The Known</h3>
+                        <h4 class="text-2xl font-bold text-slate-800 mb-2">Forward Problem</h4>
+                        <div class="text-3xl font-serif text-emerald-600 my-6">\( f(x) \to y \)</div>
+                        <p class="text-slate-600">Unique, stable, and mathematically well-behaved. Easy for standard
+                            neural networks.</p>
+                    </div>
+
+                    <div class="flex items-center justify-center md:px-4">
+                        <i class="fas fa-random text-3xl text-slate-300"></i>
+                    </div>
+
+                    <div
+                        class="flex-1 bento-card border-t-4 border-t-red-500 flex flex-col justify-center bg-red-50/30">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">The Challenge</h3>
+                        <h4 class="text-2xl font-bold text-slate-800 mb-2">Inverse Problem</h4>
+                        <div class="text-3xl font-serif text-red-600 my-6">\( f^{-1}(y^*) \to x \)</div>
+                        <p class="text-slate-600">Often "ill-posed" and multi-modal. Requires generative mapping.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="propose-check" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 3</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">A Scalable Inverse Workflow</h2>
+
+                <div class="bento-card bg-slate-50 p-8 lg:p-12 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-1/2 h-full opacity-5 pointer-events-none">
+                        <i class="fas fa-filter text-[20rem] absolute -right-10 top-1/2 -translate-y-1/2"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold mb-8">Phase 1: Train Generator <span
+                            class="font-serif text-blue-600 font-normal">\( q_\theta(x|y) \)</span></h3>
+
+                    <h3 class="text-xl font-bold mb-6">Phase 2: Interactive Exploration (The "Funnel")</h3>
+                    <div class="space-y-4 max-w-2xl relative z-10 text-center">
+                        <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-700">
+                            <div class="text-xs text-blue-400 font-bold uppercase tracking-widest mb-1">Step 1</div>
+                            <div class="text-xl font-bold">Propose: Sample \( K \) diverse candidates for \( y^* \)
+                            </div>
+                        </div>
+                        <div class="text-slate-400"><i class="fas fa-arrow-down text-xl"></i></div>
+                        <div class="bg-blue-600 text-white p-6 rounded-2xl shadow-lg">
+                            <div class="text-xs text-blue-200 font-bold uppercase tracking-widest mb-1">Step 2</div>
+                            <div class="text-xl font-bold">Check: Verify via forward model \( E(\hat{x}) \)</div>
+                        </div>
+                        <div class="text-slate-400"><i class="fas fa-arrow-down text-xl"></i></div>
+                        <div class="bg-emerald-500 text-white p-6 rounded-2xl shadow-lg">
+                            <div class="text-xs text-emerald-200 font-bold uppercase tracking-widest mb-1">Step 3</div>
+                            <div class="text-xl font-bold">Rank: Select the best-shot solution</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="architectures" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 4</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">Capturing the Solution Cloud</h2>
+
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <div class="bento-card group hover:bg-blue-600 transition-colors duration-500">
+                        <div class="mb-6"><i
+                                class="fas fa-mountain text-4xl text-blue-500 group-hover:text-white transition-colors"></i>
+                        </div>
+                        <h4 class="font-bold text-2xl mb-2 group-hover:text-white transition-colors">MDN</h4>
+                        <p
+                            class="text-xs font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-200 mb-6">
+                            Mixture Density</p>
+                        <p class="text-slate-600 group-hover:text-blue-50 leading-relaxed mb-4">Explicitly models
+                            multiple Gaussian "peaks" to define distinct islands.</p>
+                        <div
+                            class="formula-box bg-slate-50 group-hover:bg-blue-700/50 group-hover:text-white text-center py-3">
+                            <span class="font-serif">\( \sum \pi_k \mathcal{N}(\mu_k, \Sigma_k) \)</span>
+                        </div>
+                    </div>
+
+                    <div class="bento-card group hover:bg-indigo-600 transition-colors duration-500">
+                        <div class="mb-6"><i
+                                class="fas fa-cloud text-4xl text-indigo-500 group-hover:text-white transition-colors"></i>
+                        </div>
+                        <h4 class="font-bold text-2xl mb-2 group-hover:text-white transition-colors">CVAE</h4>
+                        <p
+                            class="text-xs font-bold uppercase tracking-widest text-slate-400 group-hover:text-indigo-200 mb-6">
+                            Conditional VAE</p>
+                        <p class="text-slate-600 group-hover:text-indigo-50 leading-relaxed mb-4">Uses a latent variable
+                            \( z \) to navigate the smooth design manifold ("Cloud").</p>
+                        <div
+                            class="formula-box bg-slate-50 group-hover:bg-indigo-700/50 group-hover:text-white text-center py-3">
+                            <span class="font-serif">\( z \sim \mathcal{N}(0, I) \)</span>
+                        </div>
+                    </div>
+
+                    <div class="bento-card group hover:bg-emerald-600 transition-colors duration-500">
+                        <div class="mb-6"><i
+                                class="fas fa-sync-alt text-4xl text-emerald-500 group-hover:text-white transition-colors"></i>
+                        </div>
+                        <h4 class="font-bold text-2xl mb-2 group-hover:text-white transition-colors">INN</h4>
+                        <p
+                            class="text-xs font-bold uppercase tracking-widest text-slate-400 group-hover:text-emerald-200 mb-6">
+                            Invertible NN</p>
+                        <p class="text-slate-600 group-hover:text-emerald-50 leading-relaxed mb-4">Bijective mapping for
+                            high-fidelity discovery. Preserves all information.</p>
+                        <div
+                            class="formula-box bg-slate-50 group-hover:bg-emerald-700/50 group-hover:text-white text-center py-3">
+                            <span class="font-serif">\( (x) \leftrightarrow (y, z) \)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="checker" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 5</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">The "Checker" (Forward Surrogate)</h2>
+
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6">Replacing the Simulator</h3>
+                        <p class="text-slate-600 text-lg leading-relaxed mb-8">
+                            To make "Propose-Check" viable, we need a "Fast Evaluator." Waiting hours for traditional
+                            physics simulations breaks the interactive workflow.
+                        </p>
+
+                        <div class="space-y-6">
+                            <div class="flex items-start gap-4">
+                                <div
+                                    class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                    <i class="fas fa-check-double text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-lg mb-1">Accuracy</h4>
+                                    <p class="text-slate-600">\( >99\% \) correlation with real physics.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div
+                                    class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                    <i class="fas fa-tachometer-alt text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-lg mb-1">Speed</h4>
+                                    <p class="text-slate-600">\( 1,000\times \) faster than traditional CFD/FEA.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bento-card bg-gradient-to-br from-slate-900 to-slate-800 text-white p-12 text-center relative overflow-hidden">
+                        <div
+                            class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10">
+                        </div>
+                        <div class="relative z-10">
+                            <i
+                                class="fas fa-bolt text-6xl text-amber-400 mb-6 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]"></i>
+                            <h4 class="text-3xl font-black mb-2">INSTANT</h4>
+                            <p class="text-slate-400 uppercase tracking-widest text-sm font-bold">Surrogate Evaluation
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="plausibility" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 6</span>
+                <h2 class="text-4xl font-bold mb-4 display-font">Measuring "Can we hit the target?"</h2>
+                <h3 class="text-xl text-slate-500 mb-12 italic">Metric Pillar 1: Plausibility</h3>
+
+                <div class="bento-card mb-8">
+                    <div class="grid lg:grid-cols-5 gap-8 items-center">
+                        <div class="lg:col-span-3">
+                            <p class="text-slate-600 mb-6 leading-relaxed">
+                                Plausibility measures how well the generated designs satisfy the user's performance
+                                requirements. We calculate the <strong>Best-Shot Discrepancy (\( S_{min} \))</strong>:
+                            </p>
+                            <div class="formula-box text-center text-xl font-bold text-blue-900 mb-6">
+                                \[ S_{min}(y^*) = \min_{k \in \{1 \dots K\}} \|E(\hat{x}^{(k)}) - y^*\|_2 \]
+                            </div>
+                            <p class="text-sm text-slate-500 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <i class="fas fa-bullseye text-blue-500 mr-2"></i> <strong>Goal:</strong> We only care
+                                how close the closest arrow is to the bullseye.
+                            </p>
+                        </div>
+                        <div class="lg:col-span-2 border-l border-slate-200 pl-8">
+                            <h4 class="font-bold text-slate-800 mb-2">ECDF Analysis</h4>
+                            <p class="text-sm text-slate-600 mb-4">Empirical Cumulative Distribution Function shows what
+                                percentage of targets the model "solves" within tolerance \( \epsilon \).</p>
+                            <div
+                                class="h-32 bg-slate-100 rounded-lg border border-slate-200 flex items-end p-2 gap-1 overflow-hidden relative">
+                                <div class="w-1/5 bg-blue-300 h-1/5 rounded-t"></div>
+                                <div class="w-1/5 bg-blue-400 h-2/5 rounded-t"></div>
+                                <div class="w-1/5 bg-blue-500 h-3/5 rounded-t"></div>
+                                <div class="w-1/5 bg-blue-600 h-4/5 rounded-t"></div>
+                                <div class="w-1/5 bg-blue-700 h-full rounded-t"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="reliability" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 7</span>
+                <h2 class="text-4xl font-bold mb-4 display-font">Measuring "Can we trust the uncertainty?"</h2>
+                <h3 class="text-xl text-slate-500 mb-12 italic">Metric Pillar 2: Reliability</h3>
+
+                <div class="grid lg:grid-cols-2 gap-8 items-stretch">
+                    <div class="bento-card flex flex-col justify-between">
+                        <div>
+                            <p class="text-slate-600 mb-6 leading-relaxed">
+                                Reliability (or Faithfulness) measures if the model’s predicted uncertainty matches its
+                                actual performance. A reliable model is "honest"—it knows exactly how much it doesn't
+                                know.
+                            </p>
+                            <ul class="space-y-6">
+                                <li>
+                                    <h4 class="font-bold text-slate-800 flex items-center gap-2"><i
+                                            class="fas fa-chart-area text-indigo-500"></i> PIT Curve</h4>
+                                    <p class="text-sm text-slate-500 mt-1">Diagnostic tool where a uniform diagonal plot
+                                        indicates perfect calibration.</p>
+                                </li>
+                                <li>
+                                    <h4 class="font-bold text-slate-800 flex items-center gap-2"><i
+                                            class="fas fa-compress-alt text-indigo-500"></i> MACE</h4>
+                                    <p class="text-sm text-slate-500 mt-1">Mean Absolute Calibration Error: Quantifies
+                                        deviation from the ideal diagonal.</p>
+                                </li>
+                                <li>
+                                    <h4 class="font-bold text-slate-800 flex items-center gap-2"><i
+                                            class="fas fa-star-half-alt text-indigo-500"></i> CSRP</h4>
+                                    <p class="text-sm text-slate-500 mt-1">Global score penalizing both "missing the
+                                        target" and "being too vague."</p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bento-card bg-slate-50 flex flex-col items-center justify-center">
+                        <h4 class="font-bold text-xs uppercase text-slate-400 tracking-widest mb-6">Calibration Plot
+                            (Ideal)</h4>
+                        <div class="w-48 h-48 border-l-2 border-b-2 border-slate-400 relative">
+                            <!-- Diagonal Line -->
+                            <div
+                                class="absolute bottom-0 left-0 w-[141.4%] border-t-2 border-indigo-500 origin-bottom-left -rotate-45">
+                            </div>
+                            <!-- Fake scatter -->
+                            <div class="absolute top-[20%] left-[20%] w-2 h-2 bg-indigo-300 rounded-full"></div>
+                            <div class="absolute top-[40%] left-[45%] w-2 h-2 bg-indigo-300 rounded-full"></div>
+                            <div class="absolute top-[60%] left-[58%] w-2 h-2 bg-indigo-300 rounded-full"></div>
+                            <div class="absolute top-[80%] left-[75%] w-2 h-2 bg-indigo-300 rounded-full"></div>
+                            <div class="absolute text-[10px] text-slate-400 -bottom-6 right-0">Predicted Prob.</div>
+                            <div
+                                class="absolute text-[10px] text-slate-400 -left-10 top-0 -rotate-90 origin-bottom-right">
+                                Empirical Prob.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= PART IV: EXPERIMENTAL RESULTS ================= -->
+
+            <section id="coco-benchmark" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-purple-100 text-purple-700">Part IV &bull; Slide 1</span>
+                <h2 class="text-4xl font-bold mb-4 display-font">Case Study: COCO F5 Bi-Objective</h2>
+                <h3 class="text-xl text-slate-500 mb-12 italic">Benchmarking on Non-Smooth Data</h3>
+
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="bento-card h-full flex flex-col justify-center border-l-4 border-l-purple-500">
+                        <ul class="space-y-8">
+                            <li>
+                                <h4 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-3"><i
+                                        class="fas fa-database text-purple-500"></i> Dataset</h4>
+                                <p class="text-slate-600 leading-relaxed"><strong>8,000 paired samples</strong> derived
+                                    from NSGA-II evolutionary traces. Representing realistic, complex mappings.</p>
+                            </li>
+                            <li>
+                                <h4 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-3"><i
+                                        class="fas fa-exclamation-triangle text-amber-500"></i> Challenge</h4>
+                                <p class="text-slate-600 leading-relaxed">Highly non-separable and non-differentiable
+                                    landscapes. Featuring <strong>Sharp Ridges</strong> that usually break standard
+                                    inverse solvers.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div
+                        class="bento-card bg-slate-900 overflow-hidden relative min-h-[300px] flex items-center justify-center group">
+                        <!-- Abstract 3D jagged representation -->
+                        <div
+                            class="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                        </div>
+                        <svg viewBox="0 0 400 300"
+                            class="w-full h-full relative z-10 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] transition-transform duration-700 group-hover:scale-105">
+                            <defs>
+                                <linearGradient id="purpleGlow" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#a855f7" />
+                                    <stop offset="100%" stop-color="#3b0764" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Sharp Ridges representing COCO F5 -->
+                            <polygon points="50,250 100,100 150,220 200,80 250,190 300,50 350,250"
+                                fill="url(#purpleGlow)" opacity="0.8" />
+                            <polyline points="50,250 100,100 150,220 200,80 250,190 300,50 350,250" fill="none"
+                                stroke="#d8b4fe" stroke-width="2" />
+
+                            <!-- 3D depth lines -->
+                            <polygon points="100,100 80,120 130,240 150,220" fill="#7e22ce" opacity="0.6" />
+                            <polygon points="200,80 180,100 230,210 250,190" fill="#7e22ce" opacity="0.6" />
+                            <polygon points="300,50 280,70 330,270 350,250" fill="#7e22ce" opacity="0.6" />
+                        </svg>
+                        <div class="absolute bottom-4 left-4 right-4 text-center">
+                            <span
+                                class="bg-black/50 backdrop-blur-md text-white/80 text-xs px-3 py-1 rounded-full uppercase tracking-widest font-bold">Non-Smooth
+                                Landscape</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "We stress-tested these models using the COCO F5 dataset. This isn't a smooth, easy landscape—it
+                        has sharp ridges and non-differentiable areas that usually break standard inverse solvers. We
+                        used 8,000 paired samples obtained from NSGA-II traces."
+                    </div>
+                </div>
+            </section>
+
+            <section id="data-prep" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-purple-100 text-purple-700">Part IV &bull; Slide 2</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">Data Preparation & Normalization</h2>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bento-card bg-white flex flex-col items-center justify-center text-center">
+                        <div
+                            class="w-16 h-16 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-2xl mb-6 shadow-inner">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-4 text-slate-800">Strategic Split</h3>
+                        <div class="flex items-center justify-center gap-4 w-full px-4 mb-4">
+                            <div
+                                class="h-8 bg-blue-500 rounded-l-lg flex-grow flex items-center justify-center text-white font-bold text-sm">
+                                80% Train</div>
+                            <div
+                                class="h-8 bg-amber-400 w-1/5 flex items-center justify-center text-slate-800 font-bold text-sm">
+                                10% Val</div>
+                            <div
+                                class="h-8 bg-emerald-500 rounded-r-lg w-1/5 flex items-center justify-center text-white font-bold text-sm">
+                                10% Test</div>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">Rigorous holdout testing to prevent data leakage.</p>
+                    </div>
+
+                    <div class="bento-card bg-white flex flex-col items-center justify-center text-center">
+                        <div
+                            class="w-16 h-16 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-2xl mb-6 shadow-inner">
+                            <i class="fas fa-compress-arrows-alt"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-4 text-slate-800">Hyper Normalization</h3>
+                        <div class="formula-box bg-slate-50 w-full mb-4">
+                            <span class="font-serif text-lg text-slate-800">\( x, y \rightarrow [0, 1] \)</span>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">Applied strict <strong>Min-Max scaling</strong> to ensure
+                            stability across complex objective manifolds.</p>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "For our methodology, we utilized a standard but strict 80/10/10 strategic split. Because the
+                        variables operate on vastly different scales, we applied hyper normalization—specifically
+                        Min-Max scaling—mapping all features \(x\) and targets \(y\) tightly between 0 and 1. This
+                        proved crucial for stabilizing the generative models."
+                    </div>
+                </div>
+            </section>
+
+            <section id="precision-ecdf" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-purple-100 text-purple-700">Part IV &bull; Slide 3</span>
+                <h2 class="text-4xl font-bold mb-4 display-font">Results: Precision and Target Attainment</h2>
+                <h3 class="text-xl text-slate-500 mb-12 italic">ECDF Results: Who Hits the Mark?</h3>
+
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6">
+                        <div class="bento-card border-l-4 border-l-blue-500">
+                            <h4 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-2"><i
+                                    class="fas fa-trophy text-blue-500"></i> Leaderboard</h4>
+                            <p class="text-sm text-slate-600"><strong>MDN (v10)</strong> and <strong>INN (v1)</strong>
+                                show vastly superior resolution capabilities.</p>
+                        </div>
+                        <div class="bento-card border-l-4 border-l-emerald-500">
+                            <h4 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-2"><i
+                                    class="fas fa-search-plus text-emerald-500"></i> Micro-Precision</h4>
+                            <p class="text-sm text-slate-600">At extreme tolerances—the \( 10\mu \) (\( 10^{-5} \))
+                                threshold—MDN and INN can solve ~25% of all targets natively.</p>
+                        </div>
+                        <div class="bento-card border-l-4 border-l-red-400">
+                            <h4 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-2"><i
+                                    class="fas fa-exclamation-circle text-red-400"></i> The CVAE Gap</h4>
+                            <p class="text-sm text-slate-600">CVAE performance is highly 'blurry'. It only begins to
+                                rise after loosening the threshold to \( 100\mu \) (\( 10^{-4} \)).</p>
+                        </div>
+                    </div>
+
+                    <div class="bento-card bg-slate-50 p-6 relative h-[400px] flex flex-col">
+                        <p class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">ECDF Graph (Zoomed
+                            In)</p>
+                        <div class="flex-1 relative w-full h-full border-l-2 border-b-2 border-slate-300">
+                            <!-- X and Y labels -->
+                            <span class="absolute -left-12 top-1/2 -rotate-90 text-xs text-slate-500 font-bold">Solved
+                                Targets (%)</span>
+                            <span
+                                class="absolute bottom-[-30px] left-1/2 -translate-x-1/2 text-xs text-slate-500 font-bold">Tolerance
+                                (\( \epsilon \)) [Log Scale]</span>
+
+                            <!-- SVG ECDF Chart Lines -->
+                            <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible"
+                                preserveAspectRatio="none">
+                                <!-- Grid Lines -->
+                                <line x1="0" y1="25" x2="100" y2="25" stroke="#e2e8f0" stroke-dasharray="2,2" />
+                                <line x1="0" y1="50" x2="100" y2="50" stroke="#e2e8f0" stroke-dasharray="2,2" />
+                                <line x1="0" y1="75" x2="100" y2="75" stroke="#e2e8f0" stroke-dasharray="2,2" />
+
+                                <!-- 10µ Threshold Marker -->
+                                <line x1="20" y1="0" x2="20" y2="100" stroke="#94a3b8" stroke-dasharray="4,4" />
+                                <text x="20" y="-5" font-size="4" fill="#64748b" text-anchor="middle">10µ (10⁻⁵)</text>
+
+                                <!-- 100µ Threshold Marker -->
+                                <line x1="60" y1="0" x2="60" y2="100" stroke="#94a3b8" stroke-dasharray="4,4" />
+                                <text x="60" y="-5" font-size="4" fill="#64748b" text-anchor="middle">100µ (10⁻⁴)</text>
+
+                                <!-- CVAE Line (Lags) -->
+                                <polyline points="0,100 20,98 40,95 60,80 80,40 100,10" fill="none" stroke="#ef4444"
+                                    stroke-width="2" stroke-linejoin="round" />
+
+                                <!-- INN Line -->
+                                <polyline points="0,100 10,90 20,75 40,50 60,20 100,5" fill="none" stroke="#10b981"
+                                    stroke-width="2" stroke-linejoin="round" />
+
+                                <!-- MDN Line -->
+                                <polyline points="0,100 10,88 20,72 40,40 60,10 100,2" fill="none" stroke="#3b82f6"
+                                    stroke-width="2.5" stroke-linejoin="round" />
+                            </svg>
+                        </div>
+
+                        <!-- Legend -->
+                        <div class="flex justify-center gap-6 mt-12 text-sm font-bold">
+                            <span class="flex items-center gap-2 text-blue-600">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full"></div> MDN
+                            </span>
+                            <span class="flex items-center gap-2 text-emerald-600">
+                                <div class="w-3 h-3 bg-emerald-500 rounded-full"></div> INN
+                            </span>
+                            <span class="flex items-center gap-2 text-red-500">
+                                <div class="w-3 h-3 bg-red-500 rounded-full"></div> CVAE
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bento-card mt-8 bg-blue-50 text-blue-900 text-center py-6 border border-blue-200">
+                    <p class="font-bold text-lg"><i class="fas fa-lightbulb text-blue-500 mr-2"></i> Conclusion</p>
+                    <p class="text-blue-800 mt-2">For tight engineering tolerances, <strong>MDN</strong> and
+                        <strong>INN</strong> are the only viable choices.
+                    </p>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "When we look at precision, MDN and INN are the clear winners. They can find targets with
+                        microscopic accuracy. Interestingly, CVAE models were quite 'blurry'—they only started hitting
+                        targets once we loosened the tolerance significantly. If an engineer needs precise tight
+                        tolerances, MDN and INN are the only viable choices."
+                    </div>
+                </div>
+            </section>
+
+            <section id="reliability-calibration" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-purple-100 text-purple-700">Part IV &bull; Slide 4</span>
+                <h2 class="text-4xl font-bold mb-4 display-font">Results: Reliability & Calibration</h2>
+                <h3 class="text-xl text-slate-500 mb-12 italic">The Most "Honest" Architectures</h3>
+
+                <div class="grid lg:grid-cols-3 gap-8 mb-12">
+                    <div class="bento-card relative overflow-hidden bg-gradient-to-br from-white to-blue-50">
+                        <div class="absolute -right-4 -top-4 text-blue-100 opacity-50"><i
+                                class="fas fa-bullseye text-6xl"></i></div>
+                        <p class="text-xs uppercase tracking-widest text-blue-500 font-bold mb-2">Precision Powerhouse
+                        </p>
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">MDN <span
+                                class="text-sm font-normal text-slate-500">(v8)</span></h3>
+                        <p class="text-slate-600 mb-6 text-sm">Achieved the lowest Continuous Ranked Probability Score,
+                            balancing sharpness and accuracy.</p>
+                        <div class="inline-block bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold">CRPS: 0.0213
+                        </div>
+                    </div>
+
+                    <div
+                        class="bento-card relative overflow-hidden bg-gradient-to-br from-white to-emerald-50 border-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.1)] transform scale-105 z-10">
+                        <div
+                            class="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+                            WINNER</div>
+                        <div class="absolute -right-4 -top-4 text-emerald-100 opacity-50"><i
+                                class="fas fa-balance-scale text-6xl"></i></div>
+                        <p class="text-xs uppercase tracking-widest text-emerald-500 font-bold mb-2">Reliability
+                            Benchmark</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">INN <span
+                                class="text-sm font-normal text-slate-500">(v5)</span></h3>
+                        <p class="text-slate-600 mb-6 text-sm">The most "statistically honest" model. Its predicted
+                            uncertainty matches reality flawlessly.</p>
+                        <div class="inline-block bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-bold">MACE:
+                            0.0280</div>
+                    </div>
+
+                    <div class="bento-card relative overflow-hidden bg-gradient-to-br from-white to-red-50">
+                        <div class="absolute -right-4 -top-4 text-red-100 opacity-50"><i
+                                class="fas fa-compress-arrows-alt text-6xl"></i></div>
+                        <p class="text-xs uppercase tracking-widest text-red-500 font-bold mb-2">Underconfident
+                            Generalist</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">CVAE <span
+                                class="text-sm font-normal text-slate-500">(v5)</span></h3>
+                        <p class="text-slate-600 mb-6 text-sm">Exhibited significant underconfidence. Its "cloud" is too
+                            large, capturing too much empty space.</p>
+                        <div class="inline-block bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold">MACE: 0.0732
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Table -->
+                <div class="bento-card overflow-hidden p-0">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr
+                                class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs tracking-wider">
+                                <th class="p-4 font-bold">Architecture</th>
+                                <th class="p-4 font-bold text-center">CRPS <span
+                                        class="lowercase font-normal text-slate-400">(Lower is better)</span></th>
+                                <th class="p-4 font-bold text-center">MACE <span
+                                        class="lowercase font-normal text-slate-400">(Lower is better)</span></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4 font-bold text-slate-800">MDN (v8)</td>
+                                <td class="p-4 text-center font-mono text-blue-600 font-bold">0.0213 <i
+                                        class="fas fa-trophy text-blue-400 text-xs ml-1"></i></td>
+                                <td class="p-4 text-center font-mono text-slate-600">0.0351</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50 transition-colors bg-emerald-50/30">
+                                <td class="p-4 font-bold text-emerald-800">INN (v5)</td>
+                                <td class="p-4 text-center font-mono text-slate-600">0.0287</td>
+                                <td class="p-4 text-center font-mono text-emerald-600 font-bold">0.0280 <i
+                                        class="fas fa-trophy text-emerald-400 text-xs ml-1"></i></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4 font-bold text-slate-800">CVAE (v5)</td>
+                                <td class="p-4 text-center font-mono text-slate-600">0.0342</td>
+                                <td class="p-4 text-center font-mono text-red-500">0.0732</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "Finally, let's look at reliability. The INN is our 'honest' model—its predicted uncertainty
+                        matches reality almost perfectly, giving us the lowest MACE score. Meanwhile, the MDN is our
+                        'useful' precision powerhouse—it provides the most concentrated accuracy, achieving the lowest
+                        CRPS, making it the best choice for high-fidelity tasks."
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= PART V: FUTURE & CONCLUSION ================= -->
+
+            <section id="future-roadmap" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-emerald-100 text-emerald-700">Part V &bull; Slide 1</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">Beyond Data: Integrating Physics</h2>
+
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6">
+                        <div class="bento-card border-l-4 border-l-emerald-500">
+                            <h4 class="font-bold text-lg mb-2">Tandem Training</h4>
+                            <p class="text-sm text-slate-600">Including physical laws directly in the neural network's
+                                loss function to ensure physical consistency.</p>
+                        </div>
+                        <div class="bento-card border-l-4 border-l-emerald-500">
+                            <h4 class="font-bold text-lg mb-2">Pareto-Aware Evaluation</h4>
+                            <p class="text-sm text-slate-600">Ensuring generated designs natively respect the Pareto
+                                front of the multi-objective landscape.</p>
+                        </div>
+                        <div class="bento-card border-l-4 border-l-emerald-500">
+                            <h4 class="font-bold text-lg mb-2">Conformal Screening</h4>
+                            <p class="text-sm text-slate-600">Preventing overconfident queries in "data deserts"
+                                (regions where the model hasn't seen training data).</p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bento-card bg-slate-900 text-center py-12 flex flex-col items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-tr from-emerald-900/40 to-transparent"></div>
+                        <div class="relative z-10 w-full px-8">
+                            <div class="flex justify-between items-center mb-8">
+                                <div
+                                    class="bg-blue-500/20 border border-blue-400/30 text-blue-300 px-4 py-2 rounded-lg text-sm font-bold">
+                                    Data-Driven</div>
+                                <i class="fas fa-plus text-slate-500"></i>
+                                <div
+                                    class="bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 px-4 py-2 rounded-lg text-sm font-bold">
+                                    Physics-Driven</div>
+                            </div>
+                            <div class="text-slate-400 mb-4"><i class="fas fa-arrow-down text-2xl"></i></div>
+                            <div
+                                class="bg-white text-slate-900 font-black text-2xl py-4 px-8 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                                HYBRID AI
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "Moving forward, we want to move beyond just data. By integrating physical laws directly into
+                        the neural network's loss function—what we call 'Tandem Training'—we can ensure that every
+                        design the AI proposes is not just statistically likely, but physically possible."
+                    </div>
+                </div>
+            </section>
+
+            <section id="conclusion" class="py-24 border-t border-slate-200/60 section-reveal">
+                <span class="slide-badge bg-emerald-100 text-emerald-700">Part V &bull; Slide 2</span>
+                <h2 class="text-4xl font-bold mb-12 display-font">Tracing the Future</h2>
+
+                <div class="grid md:grid-cols-3 gap-6 mb-12">
+                    <div class="bento-card bg-white border border-slate-200 text-center">
+                        <div
+                            class="w-16 h-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-2">Framework Validated</h4>
+                        <p class="text-sm text-slate-500">Successfully proved the "Propose-Check" protocol handles
+                            one-to-many mappings.</p>
+                    </div>
+                    <div class="bento-card bg-white border border-slate-200 text-center">
+                        <div
+                            class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                            <i class="fas fa-balance-scale-right"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-2">Metrics Established</h4>
+                        <p class="text-sm text-slate-500">Created a dual-perspective evaluation standard (Plausibility +
+                            Reliability).</p>
+                    </div>
+                    <div class="bento-card bg-white border border-slate-200 text-center">
+                        <div
+                            class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                            <i class="fas fa-medal"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-2">Clear Winners</h4>
+                        <p class="text-sm text-slate-500"><strong>MDN</strong> for sheer
+                            precision.<br><strong>INN</strong> for statistical calibration.</p>
+                    </div>
+                </div>
+
+                <div class="notes-container">
+                    <div class="speaker-notes-toggle px-4 py-2 bg-amber-50 rounded-lg items-center gap-3 text-amber-700 font-medium text-sm border border-amber-200"
+                        onclick="toggleNotes(this)">
+                        <i class="fas fa-comment-alt"></i> <span>View Speaker Notes</span>
+                    </div>
+                    <div class="notes-content">
+                        "In conclusion, this thesis proves that we can turn the 'headache' of inverse problems into a
+                        source of design flexibility. By using probabilistic models, we provide engineers with a menu of
+                        valid options, backed by rigorous statistical metrics. Thank you for your time."
+                    </div>
+                </div>
+            </section>
+
+            <section id="qa" class="py-32 border-t border-slate-200/60 section-reveal text-center relative">
+                <span class="slide-badge bg-emerald-100 text-emerald-700">Part V &bull; Slide 3</span>
+                <h2 class="text-6xl font-black mb-6 display-font">Thank You!</h2>
+                <p class="text-xl text-slate-500 mb-12">Q&A and References</p>
+
+                <div class="flex justify-center gap-6 mb-16">
+                    <a href="#"
+                        class="w-14 h-14 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center text-xl hover:text-blue-600 hover:border-blue-600 hover:shadow-lg transition-all"><i
+                            class="fas fa-envelope"></i></a>
+                    <a href="#"
+                        class="w-14 h-14 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center text-xl hover:text-blue-600 hover:border-blue-600 hover:shadow-lg transition-all"><i
+                            class="fab fa-linkedin-in"></i></a>
+                    <a href="#"
+                        class="w-14 h-14 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center text-xl hover:text-blue-600 hover:border-blue-600 hover:shadow-lg transition-all"><i
+                            class="fab fa-github"></i></a>
+                </div>
+
+                <div class="text-left max-w-2xl mx-auto bento-card">
+                    <h4 class="font-bold text-slate-800 mb-4 border-b pb-2">Key References</h4>
+                    <ul class="space-y-3 text-sm text-slate-500">
+                        <li>[1] Bishop, C. M. (1994). Mixture density networks.</li>
+                        <li>[2] Ardizzone, L., et al. (2018). Analyzing inverse problems with invertible neural
+                            networks.</li>
+                        <li>[3] Sohn, K., et al. (2015). Learning structured output representation using deep
+                            conditional generative models.</li>
+                    </ul>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // Progress Bar
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('scroll-progress').style.width = scrolled + '%';
+
+            // Sidebar Active Link Logic
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.sidebar-link');
+            let current = '';
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 250) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').substring(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Toggle Speaker Notes
+        function toggleNotes(el) {
+            const content = el.nextElementSibling;
+            const isOpen = content.classList.contains('open');
+
+            // Close all other notes
+            document.querySelectorAll('.notes-content').forEach(note => note.classList.remove('open'));
+            document.querySelectorAll('.speaker-notes-toggle').forEach(toggle => {
+                toggle.classList.remove('bg-amber-100', 'border-amber-400');
+                toggle.querySelector('span').innerText = 'View Speaker Notes';
+            });
+
+            if (!isOpen) {
+                content.classList.add('open');
+                el.classList.add('bg-amber-100', 'border-amber-400');
+                el.querySelector('span').innerText = 'Hide Speaker Notes';
+            }
+        }
+
+        // Reveal animations on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+        document.querySelectorAll('.section-reveal').forEach(el => observer.observe(el));
+    </script>
+</body>
+
+</html>a
