@@ -1,37 +1,26 @@
 from ...domain.enums.normalizer_type import NormalizerTypeEnum
-from ...domain.interfaces.base_normalizer import BaseNormalizer
-from ...infrastructure.normalizers import (
-    HypercubeNormalizer,
-    LogNormalizer,
-    MinMaxScalerNormalizer,
-    StandardNormalizer,
-    UnitVectorNormalizer,
-)
+from ...domain.interfaces.base_transform import TransformTarget
+from ...infrastructure.normalizers import NormalizationStep
 
 
 class NormalizerFactory:
     """
-    Concrete factory for creating various normalizer instances.
+    Concrete factory for creating NormalizationStep instances.
     """
 
-    _registry = {
-        NormalizerTypeEnum.MIN_MAX: MinMaxScalerNormalizer,
-        NormalizerTypeEnum.HYPERCUBE: HypercubeNormalizer,
-        NormalizerTypeEnum.STANDARD: StandardNormalizer,
-        NormalizerTypeEnum.UNIT_VECTOR: UnitVectorNormalizer,
-        NormalizerTypeEnum.LOG: LogNormalizer,
-    }
-
-    def create(self, config: dict) -> BaseNormalizer:
+    def create(self, config: dict, target: TransformTarget) -> NormalizationStep:
         """
-        Creates and returns a concrete normalizer instance based on the given type and parameters.
+        Creates and returns a concrete NormalizationStep instance based on type and parameters.
         """
-        normalizer_type = config.get("type")
+        normalizer_type = config.get("type", "min_max")
         params = config.get("params", {})
 
+        # We assume NormalizerTypeEnum can convert from string
         try:
-            normalizer_ctor = self._registry[normalizer_type]
-        except KeyError as e:
+            norm_enum = NormalizerTypeEnum(normalizer_type)
+        except ValueError as e:
             raise ValueError(f"Unknown normalizer type: {normalizer_type}") from e
 
-        return normalizer_ctor(**params)
+        return NormalizationStep(
+            target=target, normalizer_type=norm_enum, params=params
+        )

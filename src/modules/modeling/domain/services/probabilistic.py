@@ -4,7 +4,8 @@ from ..interfaces.base_estimator import (
     BaseEstimator,
     ProbabilisticEstimator,
 )
-from ..value_objects.metrics import Metrics
+from ..value_objects.estimator_step import TrainingLog
+from ..value_objects.evaluation_result import EvaluationResult
 
 
 class ProbabilisticModelTrainer:
@@ -40,7 +41,7 @@ class ProbabilisticModelTrainer:
         y_train: np.typing.NDArray,
         epochs: int = 50,
         batch_size: int = 64,
-    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics]:
+    ) -> tuple[BaseEstimator, TrainingLog, EvaluationResult]:
         """
         Public entry to train a probabilistic estimator on raw (X, y).
         """
@@ -56,6 +57,6 @@ class ProbabilisticModelTrainer:
         )
 
         # 2) produce TrainingOutcome; leave train/test point-scores None (caller can compute if desired)
-        metrics = Metrics(train=[], test=[], cv=[])
+        metrics = EvaluationResult(train=[], test=[], cv=[])
 
-        return estimator, training_history, metrics
+        return estimator, TrainingLog(**training_history), metrics

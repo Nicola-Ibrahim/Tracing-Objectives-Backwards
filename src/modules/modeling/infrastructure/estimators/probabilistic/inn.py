@@ -15,19 +15,73 @@ Reference:
     Dinh et al. "Density estimation using Real NVP" (2017)
 """
 
+from enum import Enum
+from typing import Literal
+
 import numpy as np
 import numpy.typing as npt
 import torch
 import torch.nn as nn
+from pydantic import Field
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import ProbabilisticEstimator
-from ....domain.value_objects.estimator_params import (
-    INNEstimatorParams,
-    INNOptimizerEnum,
-)
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class INNOptimizerEnum(Enum):
+    ADAM = "adam"
+    ADAMW = "adamw"
+    SGD = "sgd"
+
+
+class INNEstimatorParams(EstimatorParamsBase):
+    type: Literal["inn"] = Field(
+        EstimatorTypeEnum.INN.value,
+        description="Type of the invertible neural network estimator.",
+    )
+    num_coupling_layers: int = Field(
+        20, ge=1, description="Number of coupling transformations."
+    )
+    hidden_dim: int = Field(
+        128, gt=0, description="Hidden layer size in coupling networks."
+    )
+    use_batch_norm: bool = Field(
+        True, description="Use batch normalization between layers."
+    )
+    learning_rate: float = Field(1e-2, gt=0, description="Initial learning rate.")
+    optimizer_name: INNOptimizerEnum = Field(
+        INNOptimizerEnum.ADAM, description="Optimizer choice."
+    )
+    weight_decay: float = Field(1e-3, ge=0, description="L2 regularization strength.")
+    epochs: int = Field(100, gt=0, description="Maximum training epochs.")
+    batch_size: int = Field(128, gt=0, description="Batch size for training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation set fraction.",
+    )
+    clip_grad_norm: float | None = Field(
+        5.0, ge=0.0, description="Gradient clipping threshold."
+    )
+    lr_scheduler: bool = Field(True, description="Use learning rate scheduler.")
+    lr_decay_factor: float = Field(
+        0.5, gt=0.0, description="LR reduction factor for scheduler."
+    )
+    lr_patience: int = Field(10, ge=1, description="Patience for LR scheduler.")
+    early_stopping_patience: int = Field(
+        20, ge=1, description="Patience for early stopping."
+    )
+    verbose: bool = Field(True, description="Print training progress.")
+    seed: int = Field(42, description="Random seed for reproducibility.")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
 
 # ======================================================================
 # Coupling Layer Components

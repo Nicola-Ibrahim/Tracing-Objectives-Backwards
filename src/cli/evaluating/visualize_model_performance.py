@@ -3,7 +3,7 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.check_model_performance import (
+from ...modules.evaluation.application.use_cases import (
     CheckModelPerformanceParams,
     CheckModelPerformanceService,
     InverseEstimatorCandidate,
@@ -12,17 +12,21 @@ from ...modules.evaluation.infrastructure.visualization.model_performance_2d.vis
     ModelPerformance2DVisualizer,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.modeling.domain.services.preprocessing_service import (
+    PreprocessingService,
+)
+from ...modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
+    FileSystemTrainedPipelineRepository,
 )
 
 
 @click.command(help="Visualize a trained model's performance diagnostics")
 def main() -> None:
     service = CheckModelPerformanceService(
-        model_artificat_repo=FileSystemModelArtifactRepository(),
-        processed_dataset_repo=FileSystemDatasetRepository(),
+        model_repository=FileSystemTrainedPipelineRepository(),
+        data_repository=FileSystemDatasetRepository(),
         visualizer=ModelPerformance2DVisualizer(),
+        preprocessing_service=PreprocessingService(),
     )
     params = CheckModelPerformanceParams(
         dataset_name="cocoex_f5",

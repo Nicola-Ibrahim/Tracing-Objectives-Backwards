@@ -21,7 +21,8 @@ Reference:
     Bishop, C. "Mixture Density Networks" (1994)
 """
 
-from typing import Sequence
+from enum import Enum
+from typing import Literal, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -30,6 +31,7 @@ import plotly.express as px
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pydantic import Field
 from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
@@ -46,12 +48,90 @@ from umap import UMAP
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import ProbabilisticEstimator
-from ....domain.value_objects.estimator_params import (
-    ActivationFunctionEnum,
-    DistributionFamilyEnum,
-    MDNEstimatorParams,
-    OptimizerFunctionEnum,
-)
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class ActivationFunctionEnum(Enum):
+    RELU = "relu"
+    TANH = "tanh"
+    SIGMOID = "sigmoid"
+    SOFTPLUS = "softplus"
+    IDENTITY = "identity"
+    ELU = "elu"
+
+
+class DistributionFamilyEnum(Enum):
+    NORMAL = "normal"
+    LAPLACE = "laplace"
+    LOGNORMAL = "lognormal"
+
+
+class OptimizerFunctionEnum(Enum):
+    SGD = "sgd"
+    ADAM = "adam"
+    RMSPROP = "rmsprop"
+    GRADIENT_DESCENT = "gradient_descent"
+
+
+class MDNEstimatorParams(EstimatorParamsBase):
+    """
+    Pydantic model to define and validate parameters for an
+    MDNEstimator.
+    """
+
+    type: Literal["mdn"] = Field(
+        EstimatorTypeEnum.MDN.value,
+        description="Type of the Mixture Density Network interpolation method.",
+    )
+    num_mixtures: int = Field(
+        10,
+        description="Number of mixture components (-1 triggers BIC-based selection).",
+    )
+    learning_rate: float = Field(
+        1e-3, gt=0, description="Learning rate for the optimizer."
+    )
+    distribution_family: DistributionFamilyEnum = Field(
+        DistributionFamilyEnum.NORMAL,
+        description="Distribution family used for mixture components.",
+    )
+    gmm_boost: bool = Field(
+        False, description="Whether to apply GMM-based initialization."
+    )
+    hidden_layers: list[int] = Field(
+        [256, 256, 256],
+        description="List defining the number of units in each hidden layer of the MDN.",
+    )
+    hidden_activation_fn_name: ActivationFunctionEnum = Field(
+        ActivationFunctionEnum.RELU,
+        description="Activation function for hidden layers.",
+    )
+    optimizer_fn_name: OptimizerFunctionEnum = Field(
+        OptimizerFunctionEnum.ADAM,
+        description="Optimizer used for training.",
+    )
+    verbose: bool = Field(False, description="Enable verbose training logs.")
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(32, gt=0, description="Mini-batch size used in training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation split fraction used during training.",
+    )
+    weight_decay: float = Field(
+        0.0, ge=0.0, description="L2 weight decay applied during optimization."
+    )
+    clip_grad_norm: float | None = Field(
+        None,
+        ge=0.0,
+        description="Optional gradient norm clipping threshold.",
+    )
+    seed: int = Field(44, description="Random seed for reproducible MDN training.")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
 
 # ======================================================================
 # MDN module
@@ -489,7 +569,6 @@ class MDNEstimator(ProbabilisticEstimator):
             raise ValueError("n_samples must be >= 1")
 
         X_tensor = self._prepare_inputs(X)
-        device = self._model_device()
         n = X_tensor.shape[0]
 
         # RNG

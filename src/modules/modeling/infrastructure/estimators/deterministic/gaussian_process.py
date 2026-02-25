@@ -1,5 +1,8 @@
+from typing import Literal
+
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import Field
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
     RBF,
@@ -8,12 +11,53 @@ from sklearn.gaussian_process.kernels import (
     Matern,
 )
 
+from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from ....domain.value_objects.estimator_params import (
-    GaussianProcessEstimatorParams,
-)
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class GaussianProcessEstimatorParams(EstimatorParamsBase):
+    """
+    Pydantic model to define and validate parameters for a
+    GaussianProcessEstimator.
+    """
+
+    type: Literal["gaussian_process_nd"] = Field(
+        EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value,
+        description="Type of the gaussian process interpolation method.",
+    )
+
+    kernel: Literal["Matern", "RBF"] = Field(
+        "Matern",
+        description="""The kernel (covariance function) to use for the Gaussian Process.
+        Must be one of 'Matern' or 'RBF'.""",
+    )
+
+    alpha: float = Field(
+        1e-10,
+        ge=0.0,  # Adds a validation constraint: value must be >= 0.0
+        description="""Value added to the diagonal of the kernel matrix for numerical stability.
+        Must be a non-negative float.""",
+    )
+
+    n_restarts_optimizer: int = Field(
+        10,
+        ge=0,  # Adds a validation constraint: value must be >= 0
+        description="""Number of restarts of the optimizer to find the kernel's hyperparameters.
+        Setting to 0 performs no optimization. Must be a non-negative integer.""",
+    )
+
+    random_state: int = Field(
+        42,
+        description="""Seed for the random number generator to ensure reproducibility of the training process.""",
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+        arbitrary_types_allowed = True
+        use_enum_values = True
 
 
 class GaussianProcessEstimator(DeterministicEstimator):

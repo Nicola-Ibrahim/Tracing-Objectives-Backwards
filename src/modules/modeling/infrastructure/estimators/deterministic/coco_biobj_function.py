@@ -1,10 +1,36 @@
+from typing import Literal
+
 import cocoex
 import numpy as np
 from cocoex import Problem as COCOProblem
+from pydantic import Field
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import DeterministicEstimator
-from ....domain.value_objects.estimator_params import COCOEstimatorParams
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class COCOEstimatorParams(EstimatorParamsBase):
+    type: Literal["coco"] = Field(
+        EstimatorTypeEnum.COCO.value,
+        description="Type of the COCO interpolation method.",
+    )
+    problem_name: str = Field(
+        "bbob-biobj",
+        description="COCO suite name for bi-objective problems.",
+    )
+    function_indices: int = Field(
+        5,
+        ge=1,
+        le=55,
+        description="COCO function index (1-55 for bbob-biobj).",
+    )
+    instance_indices: int = Field(1, ge=1, description="COCO instance index.")
+    dimensions: int = Field(2, ge=1, description="Problem dimensionality.")
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class COCOEstimator(DeterministicEstimator):

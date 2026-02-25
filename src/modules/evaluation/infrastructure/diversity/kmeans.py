@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 from sklearn.cluster import KMeans
 
-from modules.evaluation.domain.feasibility.interfaces.diversity import BaseDiversityStrategy
+from ....domain.feasibility.interfaces.diversity import BaseDiversityStrategy
 
 
 class KMeansDiversityStrategy(BaseDiversityStrategy):

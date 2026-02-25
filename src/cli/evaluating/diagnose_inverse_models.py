@@ -3,7 +3,7 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.diagnose_inverse_models import (
+from ...modules.evaluation.application.use_cases import (
     DiagnoseInverseModelsParams,
     DiagnoseInverseModelsService,
     InverseEstimatorCandidate,
@@ -12,8 +12,11 @@ from ...modules.evaluation.infrastructure.repositories.diagnostic_repository imp
     FileSystemDiagnosticRepository,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.modeling.domain.services.preprocessing_service import (
+    PreprocessingService,
+)
+from ...modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
+    FileSystemTrainedPipelineRepository,
 )
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
@@ -35,9 +38,10 @@ def cli():
 
     service = DiagnoseInverseModelsService(
         data_repository=FileSystemDatasetRepository(),
-        model_artifact_repository=FileSystemModelArtifactRepository(),
+        model_repository=FileSystemTrainedPipelineRepository(),
         diagnostic_repository=FileSystemDiagnosticRepository(),
         logger=CMDLogger(name="DiagnoseInverseModelsLogger"),
+        preprocessing_service=PreprocessingService(),
     )
 
     service.execute(params)

@@ -5,7 +5,6 @@ import numpy as np
 from pydantic import BaseModel, Field
 
 from ..value_objects.pareto import Pareto
-from .processed_data import ProcessedData
 
 
 def _iso_timestamp() -> str:
@@ -14,22 +13,25 @@ def _iso_timestamp() -> str:
 
 class Dataset(BaseModel):
     """
-    Aggregate root representing a dataset, which includes the raw optimization results
-    (decisions and objectives) and optionally a processed transformation of that data.
+    Aggregate root representing a dataset.
+
+    A Dataset knows only about its data (decisions X, objectives y) and
+    optional metadata. Pareto data is an optional enrichment provided by
+    data sources that compute it (e.g., optimization solvers). CSV or
+    simulation-based sources may have no Pareto data, or compute it
+    separately and inject it.
     """
 
     name: str = Field(..., description="Unique identifier for the dataset")
 
-    # Raw Data
-    decisions: np.typing.NDArray = Field(..., description="Raw decision variables")
-    objectives: np.typing.NDArray = Field(..., description="Raw objective values")
-    pareto: Pareto = Field(
-        ..., description="Pareto set and front associated with the raw data"
-    )
+    # Core data — always present
+    decisions: np.typing.NDArray = Field(..., description="Decision variables (X)")
+    objectives: np.typing.NDArray = Field(..., description="Objective values (y)")
 
-    # Processed part
-    processed: ProcessedData | None = Field(
-        None, description="Processed version of the data (split/normalized)"
+    # Optional enrichment — only populated when the data source provides it
+    pareto: Pareto | None = Field(
+        None,
+        description="Pareto set and front, if available from the data source",
     )
 
     created_at: str = Field(
@@ -47,17 +49,11 @@ class Dataset(BaseModel):
         *,
         decisions: np.typing.NDArray,
         objectives: np.typing.NDArray,
-        pareto: Pareto,
-        processed: Optional[ProcessedData] = None,
+        pareto: Optional[Pareto] = None,
     ) -> Self:
         return cls(
             name=name,
             decisions=decisions,
             objectives=objectives,
             pareto=pareto,
-            processed=processed,
         )
-
-    def add_processed_visuals(self, processed: ProcessedData) -> None:
-        """Attaches processed data to the dataset."""
-        self.processed = processed

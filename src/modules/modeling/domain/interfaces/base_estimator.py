@@ -2,7 +2,7 @@ import enum
 import inspect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Literal, Self
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt

@@ -1,24 +1,24 @@
 from abc import ABC, abstractmethod
 
-from ..entities.model_artifact import ModelArtifact
+from ..entities.trained_pipeline import TrainedPipeline
 from .base_estimator import BaseEstimator
 
 
-class BaseModelArtifactRepository(ABC):
+class BaseTrainedPipelineRepository(ABC):
     """
     Abstract base class for a repository that handles persistence
-    of ModelArtifact entities, supporting version tracking.
+    of TrainedPipeline entities, supporting version tracking.
     """
 
     @abstractmethod
-    def save(self, model_artifact: ModelArtifact) -> None:
+    def save(self, pipeline: TrainedPipeline) -> None:
         """
-        Saves a new ModelArtifact entity (representing a specific training run/version).
+        Saves a new TrainedPipeline entity (representing a specific training run/version).
         Each version is saved in a unique directory identified by its ID.
 
         Args:
-            model_entity: The ModelArtifact entity to save. Its 'id' field
-                          will determine the storage location.
+            pipeline: The TrainedPipeline entity to save. Its 'id' field
+                      will determine the storage location.
         """
         pass
 
@@ -29,9 +29,9 @@ class BaseModelArtifactRepository(ABC):
         version_id: str,
         mapping_direction: str = "inverse",
         dataset_name: str | None = None,
-    ) -> ModelArtifact:
+    ) -> TrainedPipeline:
         """
-        Retrieves a specific ModelArtifact entity by its unique ID.
+        Retrieves a specific TrainedPipeline entity by its unique ID.
 
         Args:
             estimator_type: The estimator family (e.g., 'gaussian_process_nd').
@@ -39,7 +39,7 @@ class BaseModelArtifactRepository(ABC):
             mapping_direction: Whether to fetch a forward or inverse artifact.
 
         Returns:
-            The loaded ModelArtifact entity.
+            The loaded TrainedPipeline entity.
 
         Raises:
             FileNotFoundError: If the model with the specified ID is not found.
@@ -53,7 +53,7 @@ class BaseModelArtifactRepository(ABC):
         estimator_type: str,
         mapping_direction: str = "inverse",
         dataset_name: str | None = None,
-    ) -> list[ModelArtifact]:
+    ) -> list[TrainedPipeline]:
         """
         Retrieves all trained versions of a model based on its type.
 
@@ -61,7 +61,7 @@ class BaseModelArtifactRepository(ABC):
              estimator_type: The type of interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
-            A list of ModelArtifact entities, sorted by version (highest first)
+            A list of TrainedPipeline entities, sorted by version (highest first)
         """
         pass
 
@@ -71,7 +71,7 @@ class BaseModelArtifactRepository(ABC):
         estimator_type: str,
         mapping_direction: str = "inverse",
         dataset_name: str | None = None,
-    ) -> ModelArtifact:
+    ) -> TrainedPipeline:
         """
         Retrieves the latest trained version of a model based on its type.
 
@@ -79,7 +79,7 @@ class BaseModelArtifactRepository(ABC):
              estimator_type: The type of interpolation model
 
         Returns:
-            The ModelArtifact entity with the highest version
+            The TrainedPipeline entity with the highest version
         """
         pass
 
@@ -90,7 +90,7 @@ class BaseModelArtifactRepository(ABC):
         version: int,
         mapping_direction: str = "inverse",
         dataset_name: str | None = None,
-    ) -> ModelArtifact:
+    ) -> TrainedPipeline:
         """
         Retrieves a specific model version by its numeric version field.
 

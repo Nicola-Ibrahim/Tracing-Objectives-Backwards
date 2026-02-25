@@ -8,7 +8,6 @@ from ...domain.interfaces.base_estimator import (
     BaseEstimator,
 )
 from ...domain.value_objects.estimator_params import (
-    COCOEstimatorParams,
     EstimatorParamsBase,
 )
 from ...infrastructure.estimators.deterministic import (
@@ -88,7 +87,9 @@ class EstimatorFactory:
 
     # -------- Forward models --------
     _forward_registry: Dict[str, Callable[..., BaseEstimator]] = {
-        "coco_biobj": lambda **p: COCOEstimator(params=COCOEstimatorParams(**p)),
+        "coco_biobj": lambda **p: COCOEstimator(
+            params=ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum.COCO](**p)
+        ),
     }
 
     def create_forward(self, config: dict[str, Any]) -> BaseEstimator:

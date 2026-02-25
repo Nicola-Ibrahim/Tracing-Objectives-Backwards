@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 from ..value_objects.accuracy_summary import AccuracySummary
 

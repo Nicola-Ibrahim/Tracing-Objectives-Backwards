@@ -1,25 +1,27 @@
 import click
 
-from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from src.modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.train_inverse_model_grid_search.service import (
+from ...modules.evaluation.application.use_cases import (
     TrainInverseModelGridSearchParams,
-)
-from ...modules.evaluation.application.use_cases.train_inverse_model_grid_search.handler import (
     TrainInverseModelGridSearchService,
 )
 from ...modules.modeling.application.factories.estimator import EstimatorFactory
 from ...modules.modeling.application.factories.metrics import MetricFactory
+from ...modules.modeling.application.factories.normalizer import NormalizerFactory
 from ...modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.modeling.domain.services.preprocessing_service import (
+    PreprocessingService,
+)
+from ...modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
+    FileSystemTrainedPipelineRepository,
 )
 
 
@@ -50,11 +52,14 @@ def cli(estimator: str, dataset_name: str) -> None:
         epochs=100,
     )
     service = TrainInverseModelGridSearchService(
+        # Updated injection mappings for TrainInverseModelGridSearchService
         processed_data_repository=FileSystemDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
+        model_repository=FileSystemTrainedPipelineRepository(),
         logger=CMDLogger(name="InterpolationGridCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
+        normalizer_factory=NormalizerFactory(),
+        preprocessing_service=PreprocessingService(),
     )
     service.execute(params)
 

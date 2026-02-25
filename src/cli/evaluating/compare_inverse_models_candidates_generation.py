@@ -3,20 +3,20 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates import (
+from ...modules.evaluation.application.use_cases import (
     CompareInverseModelCandidatesParams,
     CompareInverseModelCandidatesService,
     InverseEstimatorCandidate,
 )
-from ...modules.evaluation.application.use_cases.compare_inverse_model_candidates.inverse_model_candidates_comparator import (
+from ...modules.evaluation.application.use_cases.inverse_model_candidates_comparator import (
     InverseModelsCandidatesComparator,
 )
 from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (
     DecisionGenerationComparisonVisualizer,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
+    FileSystemTrainedPipelineRepository,
 )
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
@@ -48,7 +48,7 @@ def main():
     # Initialize the handler with pre-built services
     service = CompareInverseModelCandidatesService(
         comparator=InverseModelsCandidatesComparator(),
-        model_repository=FileSystemModelArtifactRepository(),
+        model_repository=FileSystemTrainedPipelineRepository(),
         data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         visualizer=DecisionGenerationComparisonVisualizer(),

@@ -8,7 +8,6 @@ from .color_utils import get_model_colors
 from .panels.accuracy_bias_dispersion_plot import create_accuracy_bias_dispersion_figure
 from .panels.accuracy_ecdf_plot import create_accuracy_ecdf_figure
 from .panels.calibration_plot import create_calibration_figure
-from .panels.error_boxplot import create_error_boxplot_figure
 from .panels.metrics_bar_plot import create_metric_bar_figure
 
 

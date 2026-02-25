@@ -1,5 +1,8 @@
-from ...domain.interfaces.base_optimizer import BaseOptimizer
-from ...infrastructure.optimizers.minimizer import Minimizer, MinimizerConfig
+from ...infrastructure.optimization.base_optimizer import BaseOptimizer
+from ...infrastructure.optimization.optimizers.minimizer import (
+    Minimizer,
+    MinimizerConfig,
+)
 
 
 class OptimizerFactory:

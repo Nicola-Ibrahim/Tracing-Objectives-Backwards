@@ -4,14 +4,6 @@ import plotly.graph_objects as go
 
 from ....shared.config import ROOT_PATH
 from ...domain.interfaces.base_visualizer import BaseVisualizer
-from .panels.normalized_density_plot import (
-    create_normalized_decision_density_figure,
-    create_normalized_objective_density_figure,
-)
-from .panels.normalized_distributions_plot import (
-    create_normalized_decision_pdf_figure,
-    create_normalized_objective_pdf_figure,
-)
 from .panels.normalized_space_plot import (
     create_normalized_decision_space_figure,
     create_normalized_objective_space_figure,
@@ -19,18 +11,6 @@ from .panels.normalized_space_plot import (
 from .panels.pareto_plot import (
     create_pareto_front_figure,
     create_pareto_set_figure,
-)
-from .panels.raw_density_plot import (
-    create_raw_decision_density_figure,
-    create_raw_objective_density_figure,
-)
-from .panels.raw_distributions_plot import (
-    create_raw_decision_distributions_figure,
-    create_raw_objective_distributions_figure,
-)
-from .panels.raw_space_plot import (
-    create_raw_decision_space_figure,
-    create_raw_objective_space_figure,
 )
 from .panels.three_d_views_plot import (
     create_3d_decision_context_figure,
@@ -46,6 +26,7 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
 
     def __init__(self, output_dir: str = "reports/data/figures"):
         super().__init__(ROOT_PATH / output_dir)
+        self.save_path.mkdir(parents=True, exist_ok=True)
 
     def plot(self, data: dict[str, Any]):
         # 1. Unpack Data
@@ -56,8 +37,6 @@ class PlotlyDatasetVisualizer(BaseVisualizer):
         # Raw Data
         pareto_set = data["pareto_set"]
         pareto_front = data["pareto_front"]
-        historical_solutions = data["historical_solutions"]
-        historical_objectives = data["historical_objectives"]
 
         # 2. Raw Space Plots
         # self._persist_figure(

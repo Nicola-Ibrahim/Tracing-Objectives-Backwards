@@ -1,12 +1,58 @@
+from typing import Literal
+
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import Field
 from scipy.interpolate import RBFInterpolator
 
 from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from .....modeling.domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from .....modeling.domain.value_objects.estimator_params import RBFEstimatorParams
+from .....modeling.domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class RBFEstimatorParams(EstimatorParamsBase):
+    """
+    Pydantic model to define and validate parameters for an
+    RBFEstimator.
+    """
+
+    type: Literal["rbf"] = Field(
+        EstimatorTypeEnum.RBF.value,
+        description="Type of the radial basis function interpolation method.",
+    )
+    n_neighbors: int = Field(
+        10, gt=0, description="Number of nearest neighbors for RBF interpolation."
+    )
+
+    kernel: Literal[
+        "linear",
+        "thin_plate_spline",
+        "cubic",
+        "quintic",
+        "multiquadric",
+        "inverse_multiquadric",
+        "inverse_quadratic",
+        "gaussian",
+    ] = Field(
+        "thin_plate_spline",
+        description="""Type of kernel to use for RBF interpolation.
+        Options correspond to different basis functions:
+        `linear` : -r
+        `thin_plate_spline` : r**2 * log(r)
+        `cubic` : r**3
+        `quintic` : -r**5
+        `multiquadric` : -sqrt(1 + r**2)
+        `inverse_multiquadric` : 1/sqrt(1 + r**2)
+        `inverse_quadratic` : 1/(1 + r**2)
+        `gaussian` : exp(-r**2)
+        """,
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class RBFEstimator(DeterministicEstimator):

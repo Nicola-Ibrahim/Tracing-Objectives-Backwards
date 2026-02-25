@@ -28,18 +28,82 @@ Reference:
 """
 
 import warnings
+from typing import Literal
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from numpy.typing import NDArray
+from pydantic import Field
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import ProbabilisticEstimator
-from ....domain.value_objects.estimator_params import CVAEEstimatorParams
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class CVAEEstimatorParams(EstimatorParamsBase):
+    """
+    Pydantic model to define and validate parameters for a
+    CVAEEstimator.
+    """
+
+    type: Literal["cvae"] = Field(
+        EstimatorTypeEnum.CVAE.value,
+        description="Type of the Conditional Variational Autoencoder interpolation method.",
+    )
+    latent_dim: int = Field(
+        2, gt=0, description="Dimensionality of the latent space in the CVAE."
+    )
+    learning_rate: float = Field(
+        0.001, gt=0, description="Learning rate for the Adam optimizer."
+    )
+
+    # 0.5 widens the predictions
+    # 0.1 narrows the predictions
+    beta: float = Field(0.5, ge=0.0, description="Final KL divergence weight.")
+    kl_warmup: int = Field(
+        100,
+        ge=0,
+        description="Number of epochs used to warm-up the KL weight from 0 to beta.",
+    )
+    free_nats: float = Field(
+        0.0,
+        ge=0.0,
+        description="Free nats threshold applied to KL divergence per dimension.",
+    )
+    hidden: int = Field(128, gt=0, description="Hidden layer width for CVAE nets.")
+
+    # -0.3 increases the uncertainty
+    # -10.0 decreases the uncertainty
+    decoder_min_logvar: float = Field(
+        -2.0, description="Lower clamp for decoder log-variance."
+    )
+    decoder_max_logvar: float = Field(
+        4.0, description="Upper clamp for decoder log-variance."
+    )
+    prior_min_logvar: float = Field(
+        -4.0, description="Lower clamp for prior log-variance."
+    )
+    prior_max_logvar: float = Field(
+        2.0, description="Upper clamp for prior log-variance."
+    )
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation split fraction used during training.",
+    )
+    random_state: int = Field(42, description="Random seed for data splitting.")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
 
 LOG2PI = float(np.log(2.0 * np.pi))
 
@@ -240,7 +304,10 @@ class CVAEEstimator(ProbabilisticEstimator):
         cond_tr, cond_val, y_tr, y_val = train_test_split(
             cond, y, test_size=self.val_size, random_state=self.random_state
         )
-        to_t = lambda a: torch.tensor(a, dtype=torch.float32)
+
+        def to_t(a: NDArray[np.float64]) -> torch.Tensor:
+            return torch.tensor(a, dtype=torch.float32)
+
         train_loader = DataLoader(
             TensorDataset(to_t(cond_tr), to_t(y_tr)),
             batch_size=self.batch_size,
@@ -403,10 +470,6 @@ class CVAEEstimator(ProbabilisticEstimator):
                         y_v, mu_y_v, logvar_y_v
                     )
                     kl_v = kl_gaussians(mu_q_v, logvar_q_v, mu_p_v, logvar_p_v)
-
-                    base_val = recon_nll_v + beta * kl_v
-
-                    total_val = base_val
 
                     val_nll_sum += float(recon_nll_v.item())
                     val_kl_sum += float(kl_v.item())

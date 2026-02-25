@@ -1,25 +1,27 @@
 import click
 
-from modules.modeling.application.factories.estimator import EstimatorFactory
-from modules.modeling.application.factories.metrics import MetricFactory
-from modules.modeling.application.registry import (
+from src.modules.dataset.infrastructure.repositories.dataset_repository import (
+    FileSystemDatasetRepository,
+)
+from src.modules.modeling.application.factories.estimator import EstimatorFactory
+from src.modules.modeling.application.factories.metrics import MetricFactory
+from src.modules.modeling.application.factories.normalizer import NormalizerFactory
+from src.modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
 )
-from modules.modeling.application.train_forward_model.service import (
+from src.modules.modeling.application.use_cases import (
     TrainForwardModelParams,
-)
-from modules.modeling.application.train_forward_model.handler import (
     TrainForwardModelService,
 )
-from modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from modules.dataset.infrastructure.repositories.dataset_repository import (
-    FileSystemDatasetRepository,
+from src.modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from src.modules.modeling.domain.services.preprocessing_service import (
+    PreprocessingService,
 )
-from modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from src.modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
+    FileSystemTrainedPipelineRepository,
 )
-from modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from src.modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 FORWARD_ESTIMATOR_KEYS: tuple[EstimatorTypeEnum, ...] = tuple()
 
@@ -46,10 +48,12 @@ def cli() -> None:
 def command_standard(estimator: str, dataset_name: str) -> None:
     service = TrainForwardModelService(
         processed_data_repository=FileSystemDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
+        model_repository=FileSystemTrainedPipelineRepository(),
         logger=CMDLogger(name="ForwardCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
+        normalizer_factory=NormalizerFactory(),
+        preprocessing_service=PreprocessingService(),
     )
     estimator_params = ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator)]()
     params = TrainForwardModelParams(

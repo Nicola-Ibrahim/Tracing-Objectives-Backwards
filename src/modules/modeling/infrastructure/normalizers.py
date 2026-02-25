@@ -1,10 +1,12 @@
-from typing import Self
+from typing import Any, Self
 
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.preprocessing import MinMaxScaler
 
+from ..domain.enums.normalizer_type import NormalizerTypeEnum
 from ..domain.interfaces.base_normalizer import BaseNormalizer
+from ..domain.interfaces.base_transform import BaseTransformStep, TransformTarget
 
 
 class MinMaxScalerNormalizer(BaseNormalizer):
@@ -246,3 +248,85 @@ class LogNormalizer(BaseNormalizer):
             return np.exp(X_norm) - self.offset
         else:
             return np.power(self.base, X_norm) - self.offset
+
+
+class NormalizationStep(BaseTransformStep):
+    """
+    Concrete transform step that wraps a BaseNormalizer.
+    """
+
+    def __init__(
+        self,
+        target: TransformTarget,
+        normalizer_type: str | NormalizerTypeEnum,
+        params: dict | None = None,
+        _normalizer: BaseNormalizer | None = None,
+    ):
+        self._target = target
+        if isinstance(normalizer_type, str):
+            normalizer_type = NormalizerTypeEnum(normalizer_type)
+        self._normalizer_type = normalizer_type
+        self._params = params or {}
+
+        if _normalizer is not None:
+            self._normalizer_instance = _normalizer
+        else:
+            if self._normalizer_type == NormalizerTypeEnum.MIN_MAX:
+                self._normalizer_instance = MinMaxScalerNormalizer(**self._params)
+            elif self._normalizer_type == NormalizerTypeEnum.STANDARD:
+                self._normalizer_instance = StandardNormalizer(**self._params)
+            elif self._normalizer_type == NormalizerTypeEnum.LOG:
+                self._normalizer_instance = LogNormalizer(**self._params)
+            else:
+                raise ValueError(f"Unknown normalizer type: {self._normalizer_type}")
+
+    @property
+    def name(self) -> str:
+        return f"normalize_{self._target.value}"
+
+    @property
+    def target(self) -> TransformTarget:
+        return self._target
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return {
+            "type": "normalization",
+            "normalizer_type": self._normalizer_type.value,
+            "target": self._target.value,
+            "params": self._params,
+        }
+
+    def fit(self, X: np.ndarray) -> None:
+        if self._normalizer_instance is None:
+            raise RuntimeError("Normalizer instance not initialized")
+        self._normalizer_instance.fit(X)
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        if self._normalizer_instance is None:
+            raise RuntimeError("Normalizer instance not initialized")
+        return self._normalizer_instance.transform(X)
+
+    def inverse_transform(self, X: np.ndarray) -> np.ndarray:
+        if self._normalizer_instance is None:
+            raise RuntimeError("Normalizer instance not initialized")
+        return self._normalizer_instance.inverse_transform(X)
+
+    def get_fitted_state(self) -> dict[str, Any]:
+        return {"normalizer": self._normalizer_instance}
+
+    @classmethod
+    def from_fitted_state(
+        cls, config: dict[str, Any], state: dict[str, Any]
+    ) -> "NormalizationStep":
+        target = TransformTarget(config["target"])
+        normalizer_type = NormalizerTypeEnum(config["normalizer_type"])
+        params = config.get("params", {})
+        normalizer = state.get("normalizer")
+
+        return cls(
+            target=target,
+            normalizer_type=normalizer_type,
+            params=params,
+            _normalizer=normalizer,
+        )

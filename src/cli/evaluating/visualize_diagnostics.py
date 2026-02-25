@@ -1,7 +1,9 @@
 import click
 
-from ...modules.evaluation.application.use_cases.visualize_diagnostics import (
-    InverseEstimatorCandidate,
+from ...modules.evaluation.application.use_cases import (
+    InverseEstimatorDiagnosticCandidate as InverseEstimatorCandidate,
+)
+from ...modules.evaluation.application.use_cases import (
     VisualizeInverseEstimatorDiagnosticParams,
     VisualizeInverseEstimatorDiagnosticService,
 )

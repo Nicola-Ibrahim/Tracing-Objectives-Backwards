@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from modules.evaluation.domain.decision_validation.interfaces.base_ood_calibrator import (
+from ....domain.decision_validation.interfaces.base_ood_calibrator import (
     BaseOODValidator,
 )
 

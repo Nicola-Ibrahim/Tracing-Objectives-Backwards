@@ -5,17 +5,21 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
 )
 from ...modules.modeling.application.factories.estimator import EstimatorFactory
 from ...modules.modeling.application.factories.metrics import MetricFactory
+from ...modules.modeling.application.factories.normalizer import NormalizerFactory
 from ...modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
 )
-from ...modules.modeling.application.use_cases.train_inverse_model import (
+from ...modules.modeling.application.use_cases import (
     TrainInverseModelParams,
     TrainInverseModelService,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.modeling.domain.services.preprocessing_service import (
+    PreprocessingService,
+)
+from ...modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
+    FileSystemTrainedPipelineRepository,
 )
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
@@ -46,10 +50,12 @@ def cli(estimator: str, dataset_name: str) -> None:
 
     service = TrainInverseModelService(
         processed_data_repository=FileSystemDatasetRepository(),
-        model_repository=FileSystemModelArtifactRepository(),
+        model_repository=FileSystemTrainedPipelineRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
+        normalizer_factory=NormalizerFactory(),
+        preprocessing_service=PreprocessingService(),
     )
 
     service.execute(params)

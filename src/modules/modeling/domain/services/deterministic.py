@@ -6,7 +6,8 @@ from ..interfaces.base_estimator import BaseEstimator
 from ..interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ..value_objects.metrics import Metrics
+from ..value_objects.estimator_step import TrainingLog
+from ..value_objects.evaluation_result import EvaluationResult
 from .utils import evaluate_metrics
 
 
@@ -100,7 +101,7 @@ class DeterministicModelTrainer:
         learning_curve_steps: int = 50,
         random_state: int = 0,
         validation_metrics: dict[str, BaseValidationMetric],
-    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics]:
+    ) -> tuple[BaseEstimator, TrainingLog, EvaluationResult]:
         """
         Public entry to train a deterministic estimator on raw (X, y).
         """
@@ -121,10 +122,10 @@ class DeterministicModelTrainer:
         )
         test_metrics = evaluate_metrics(estimator, X_test, y_test, validation_metrics)
 
-        metrics = Metrics(
+        metrics = EvaluationResult(
             train=[train_mertics],
             test=[test_metrics],
             cv=[],
         )
 
-        return estimator, training_history, metrics
+        return estimator, TrainingLog(**training_history), metrics

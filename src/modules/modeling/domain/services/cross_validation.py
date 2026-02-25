@@ -10,7 +10,8 @@ from ..interfaces.base_estimator import (
 from ..interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ..value_objects.metrics import Metrics
+from ..value_objects.estimator_step import TrainingLog
+from ..value_objects.evaluation_result import EvaluationResult
 from .deterministic import DeterministicModelTrainer
 from .probabilistic import ProbabilisticModelTrainer
 from .utils import evaluate_metrics
@@ -35,7 +36,7 @@ class CrossValidationTrainer:
         epochs: int = 100,
         batch_size: int = 32,
         learning_curve_steps: int = 50,
-    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics]:
+    ) -> tuple[BaseEstimator, TrainingLog, EvaluationResult]:
         """
         Split + normalize, run k-fold CV, fit final estimator on full train portion,
         compute train/test metrics and return outcome.
@@ -108,7 +109,7 @@ class CrossValidationTrainer:
             fitted_estimator, X_test, y_test, validation_metrics
         )
 
-        metrics = Metrics(
+        metrics = EvaluationResult(
             train=[train_mertics],
             test=[test_metrics],
             cv=cv_scores_by_fold,
@@ -133,7 +134,7 @@ class CrossValidationTrainer:
         epochs: int = 100,
         batch_size: int = 32,
         learning_curve_steps: int = 20,
-    ) -> tuple[BaseEstimator, dict[str, list[float]], Metrics, dict[str, Any]]:
+    ) -> tuple[BaseEstimator, TrainingLog, EvaluationResult, dict[str, Any]]:
         """
         Grid search over param_range. Returns (TrainingOutcome for chosen param, summary).
         """

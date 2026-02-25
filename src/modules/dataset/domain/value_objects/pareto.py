@@ -6,15 +6,10 @@ from pydantic import BaseModel, Field
 
 class Pareto(BaseModel):
     """
-    Abstraction for multi-objective optimization results, including decision variables,
-    objectives, constraints, and constraint violations.
+    Value object representing the Pareto-optimal frontier of a dataset.
 
-    Attributes:
-        X (np.ndarray): Decision variables, shape (n_samples, n_vars) of the final population
-        F (np.ndarray): Objective values, shape (n_samples, n_objs) of the final population
-        G (np.ndarray): Constraint violations per constraint, shape (n_samples, n_constraints)
-        CV (np.ndarray): Aggregated constraint violation (e.g. max, sum), shape (n_samples,)
-        history (list): Optional list of intermediate optimization results
+    Contains the decision variables (set) and objective values (front)
+    of all Pareto-optimal solutions.
     """
 
     set: np.typing.NDArray = Field(
@@ -37,10 +32,10 @@ class Pareto(BaseModel):
         """Factory method to create a Pareto object.
 
         Args:
-            set (np.ndarray): Decision variables of the Pareto-optimal set.
-            front (np.ndarray): Objective values of the Pareto-optimal front.
+            set: Decision variables of the Pareto-optimal solutions.
+            front: Objective values of the Pareto-optimal solutions.
 
         Returns:
-            Pareto: An instance of the Pareto class.
+            Pareto instance.
         """
         return cls(set=set, front=front)

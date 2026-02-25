@@ -3,15 +3,13 @@ import click
 from ...modules.dataset.application.factories.algorithm import AlgorithmFactory
 from ...modules.dataset.application.factories.optimizer import OptimizerFactory
 from ...modules.dataset.application.factories.problem import ProblemFactory
-from ...modules.dataset.application.generate_dataset import (
-    GenerateDatasetService,
-)
-from ...modules.dataset.application.generate_dataset.service import (
+from ...modules.dataset.application.generation import (
     AlgorithmType,
     ApplicationAlgorithmConfig,
     ApplicationOptimizerConfig,
     ApplicationProblemConfig,
     GenerateDatasetParams,
+    GenerateDatasetService,
     OptimizerType,
     ProblemType,
 )
@@ -19,9 +17,6 @@ from ...modules.dataset.domain.services import DatasetGenerationService
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.modeling.application.factories.normalizer import NormalizerFactory
-from ...modules.modeling.domain.enums.normalizer_type import NormalizerTypeEnum
-from ...modules.modeling.domain.value_objects.estimator_params import NormalizerConfig
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
@@ -53,11 +48,6 @@ def generate_data(function_id: int):
         algorithm_config=algorithm_config,
         optimizer_config=optimizer_config,
         dataset_name=f"cocoex_f{function_id}",
-        normalizer_config=NormalizerConfig(
-            type=NormalizerTypeEnum.HYPERCUBE, params={}
-        ),
-        test_size=0.2,
-        random_state=42,
     )
 
     # Setup dependencies (could later be moved to a container or bootstrap file)
@@ -69,7 +59,6 @@ def generate_data(function_id: int):
         optimizer_factory=OptimizerFactory(),
         data_model_repository=FileSystemDatasetRepository(),
         dataset_service=dataset_service,
-        normalizer_factory=NormalizerFactory(),
         logger=logger,
     )
 
