@@ -12,6 +12,7 @@ dependencies = [
     "hdbscan>=0.8.40",
     "ipykernel>=6.29.5",
     "jupyter>=1.1.1",
+    "kaleido>=1.2.0",
     "matplotlib>=3.10.1",
     "nbformat>=5.10.4",
     "numpy>=2.2.5",
@@ -96,6 +97,22 @@ help = "TRAIN FORWARD: Usage: uv run poe train-fwd --est mdn --data cocoex_f5"
 # ====================================================================================
 # 3. Generation & Candidates
 # ====================================================================================
+
+[tool.poe.tasks.gen-context]
+shell = "python -m src.cli.generating.prepare_coherence_context --dataset-name $data"
+help = "GEN CONTEXT: Prepare offline generation context. Usage: uv run poe gen-context"
+  [[tool.poe.tasks.gen-context.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+[tool.poe.tasks.gen-coherent]
+shell = "python -m src.cli.generating.generate_coherent_candidates --dataset-name $data"
+help = "GEN COHERENT: Generate physically coherent candidates for a target. Usage: poe gen-coherent --data cocoex_f5"
+  [[tool.poe.tasks.gen-coherent.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
 
 [tool.poe.tasks.gen-candidates]
 cmd = "python -m src.cli.generating.generate_candidates"
