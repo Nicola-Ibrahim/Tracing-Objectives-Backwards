@@ -4,7 +4,7 @@ from ..interfaces.base_estimator import (
     BaseEstimator,
     ProbabilisticEstimator,
 )
-from ..value_objects.estimator_step import TrainingLog
+from ..value_objects.estimator import TrainingLog
 from ..value_objects.evaluation_result import EvaluationResult
 
 

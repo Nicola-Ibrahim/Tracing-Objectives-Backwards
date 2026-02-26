@@ -1,9 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from ..interfaces.base_estimator import BaseEstimator
-from .estimator_params import (
-    EstimatorParamsBase,
-)
+from .estimator_params import EstimatorParamsBase
 
 
 class TrainingLog(BaseModel):
@@ -13,7 +11,7 @@ class TrainingLog(BaseModel):
     extras: dict[str, list[float]] = {}
 
 
-class EstimatorStep(BaseModel):
+class Estimator(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     config: EstimatorParamsBase

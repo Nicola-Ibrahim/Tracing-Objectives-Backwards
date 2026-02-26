@@ -1,33 +1,23 @@
-import pickle
 from datetime import datetime
 from pathlib import Path
 
 from ....shared.config import ROOT_PATH
 from ....shared.infrastructure.processing.files.json import JsonFileHandler
+from ....shared.infrastructure.processing.files.pickle import PickleFileHandler
 from ....shared.infrastructure.processing.files.safetensors import (
     SafeTensorsFileHandler,
 )
 from ....shared.infrastructure.processing.files.toml import TomlFileHandler
-from ...application.factories.estimator import EstimatorFactory
 from ...application.registry import ESTIMATOR_PARAM_REGISTRY
 from ...domain.entities.trained_pipeline import TrainedPipeline
 from ...domain.enums.estimator_type import EstimatorTypeEnum
 from ...domain.interfaces.base_estimator import BaseEstimator
 from ...domain.interfaces.base_repository import BaseTrainedPipelineRepository
-from ...domain.interfaces.base_transform import BaseTransformStep
-from ...domain.value_objects.estimator_step import EstimatorStep, TrainingLog
+from ...domain.value_objects.estimator import Estimator, TrainingLog
 from ...domain.value_objects.evaluation_result import EvaluationResult
 from ...domain.value_objects.split_step import SplitConfig, SplitStep
-
-
-class TransformStepRegistry:
-    @staticmethod
-    def get_step_class(step_type: str) -> type[BaseTransformStep]:
-        if step_type == "normalization":
-            from ..normalizers import NormalizationStep
-
-            return NormalizationStep
-        raise ValueError(f"Unknown transform step type: {step_type}")
+from ..factories.estimator import EstimatorFactory
+from ..factories.transformer import TransformerFactory
 
 
 class VersionManager:
@@ -56,10 +46,11 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
     Manages the persistence of TrainedPipeline entities using the file system.
     """
 
-    def __init__(self):
-        self._base_model_storage_path = ROOT_PATH / "models"
+    def __init__(self, file_path: str | Path = "models") -> None:
+        self._base_model_storage_path = ROOT_PATH / file_path
         self._json_file_handler = JsonFileHandler()
         self._toml_file_handler = TomlFileHandler()
+        self._pickle_handler = PickleFileHandler()
         self._safetensors_handler = SafeTensorsFileHandler()
         self._version_manager = VersionManager(self._toml_file_handler)
         self._base_model_storage_path.mkdir(parents=True, exist_ok=True)
@@ -113,7 +104,7 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
                 "TrainedPipeline entity must have a unique 'id' for saving."
             )
 
-        estimator_type = pipeline.model.config.type
+        estimator_type = pipeline.estimator.config.type
         models_directory = self._compute_models_directory(
             estimator_type, pipeline.mapping_direction, pipeline.dataset_name
         )
@@ -151,24 +142,34 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
         transforms_dir = pipeline_dir / "transforms"
         transforms_dir.mkdir(exist_ok=True)
         for idx, transform in enumerate(pipeline.transforms):
-            t_dir = transforms_dir / f"{idx}_{transform.name}"
+            transform_type_str = transform.config.get("type", "unknown")
+            t_dir = transforms_dir / f"{idx}_{transform_type_str}"
             t_dir.mkdir(exist_ok=True)
-            self._json_file_handler.save(transform.config, t_dir / "config.json")
-            with open(t_dir / "fitted_state.pkl", "wb") as f:
-                pickle.dump(transform.get_fitted_state(), f)
+
+            # Persist configuration along with target intent
+            config = transform.config
+            if hasattr(transform, "target"):
+                target = getattr(transform, "target")
+                config["target"] = target.value if hasattr(target, "value") else target
+
+            self._json_file_handler.save(config, t_dir / "config.json")
+            self._pickle_handler.save(
+                transform.get_fitted_state(), t_dir / "fitted_state.pkl"
+            )
 
         # Estimator Step
         estimator_dir = pipeline_dir / "estimator"
         estimator_dir.mkdir(exist_ok=True)
         self._json_file_handler.save(
-            pipeline.model.config.model_dump(mode="json"), estimator_dir / "config.json"
+            pipeline.estimator.config.model_dump(mode="json"),
+            estimator_dir / "config.json",
         )
         self._json_file_handler.save(
-            pipeline.model.training_log.model_dump(mode="json"),
+            pipeline.estimator.training_log.model_dump(mode="json"),
             estimator_dir / "training_log.json",
         )
 
-        checkpoint = pipeline.model.fitted.to_checkpoint()
+        checkpoint = pipeline.estimator.fitted.to_checkpoint()
         model_state = checkpoint.pop("model_state", None)
         if model_state:
             self._safetensors_handler.save(
@@ -222,10 +223,15 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
             )
             for d in subdirs:
                 config = self._json_file_handler.load(d / "config.json")
-                with open(d / "fitted_state.pkl", "rb") as f:
-                    state = pickle.load(f)
-                step_cls = TransformStepRegistry.get_step_class(config["type"])
-                transforms.append(step_cls.from_fitted_state(config, state))
+                state_path = d / "fitted_state.pkl"
+                state = self._pickle_handler.load(state_path)
+                instance = TransformerFactory.from_checkpoint(config, state)
+
+                # Restore target intent if present
+                if "target" in config:
+                    setattr(instance, "target", config["target"])
+
+                transforms.append(instance)
 
         # Load Estimator Step
         estimator_dir = pipeline_dir / "estimator"
@@ -245,8 +251,7 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
             merged_params = {**config_data, **checkpoint}
 
             est_enum = EstimatorTypeEnum(config_data.get("type"))
-            estimator_class = EstimatorFactory._registry.get(est_enum.value)
-            fitted_estimator = estimator_class.from_checkpoint(merged_params)
+            fitted_estimator = EstimatorFactory.from_checkpoint(merged_params)
 
             params_model = ESTIMATOR_PARAM_REGISTRY.get(est_enum)
             allowed = set(params_model.model_fields.keys())
@@ -260,7 +265,7 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
                 else TrainingLog()
             )
 
-            estimator_step = EstimatorStep(
+            estimator_step = Estimator(
                 config=est_config, fitted=fitted_estimator, training_log=training_log
             )
         else:
@@ -285,7 +290,7 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
             else metadata.get("trained_at"),
             split=split,
             transforms=transforms,
-            model=estimator_step,
+            estimator=estimator_step,
             evaluation=evaluation,
         )
 
@@ -370,7 +375,7 @@ class FileSystemTrainedPipelineRepository(BaseTrainedPipelineRepository):
                         estimator_type, version, mapping_direction, dataset_name
                     )
                     name = f"{estimator_type} (v{version})"
-                resolved.append((name, p.model.fitted))
+                resolved.append((name, p.estimator.fitted))
             except FileNotFoundError:
                 if on_missing == "raise":
                     raise

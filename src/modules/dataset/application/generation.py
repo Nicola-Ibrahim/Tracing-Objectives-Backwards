@@ -54,37 +54,37 @@ class GenerateDatasetService:
         self._data_model_repository = data_model_repository
         self._logger = logger
 
-    def execute(self, params: DatasetConfiguration) -> Path:
+    def execute(self, config: DatasetConfiguration) -> Path:
         """
         Executes the service by orchestrating dataset generation.
 
         Args:
-            params: The configuration object for dataset generation.
+            config: The configuration object for dataset generation.
 
         Returns:
             Path: The file path where the generated dataset is saved.
         """
         self._logger.log_info(
-            f"Starting dataset generation for problem {params.problem_id} "
-            f"({params.n_var} variables, 2 objectives)"
+            f"Starting dataset generation for problem {config.problem_id} "
+            f"({config.n_var} variables, 2 objectives)"
         )
 
         # 1. Instantiate the problem
         # Currently defaults to COCO Bi-Objective Problem
         problem_config = COCOBiObjectiveProblemConfig(
-            problem_id=params.problem_id, n_var=params.n_var
+            problem_id=config.problem_id, n_var=config.n_var
         )
 
         # 2. Instantiate the algorithm
         # Currently defaults to NSGA-II
-        algo_config = NSGA2Config(population_size=params.population_size)
+        algo_config = NSGA2Config(population_size=config.population_size)
 
         # 3. Instantiate the optimizer
         # Currently defaults to Minimizer
         minimizer_config = MinimizerConfig(
-            generations=params.generations,
-            save_history=params.save_history,
-            verbose=params.verbose,
+            generations=config.generations,
+            save_history=config.save_history,
+            verbose=config.verbose,
         )
 
         # 4. Integrate with data source
@@ -107,7 +107,7 @@ class GenerateDatasetService:
 
         # 7. Create the Dataset aggregate (merged from DatasetGenerationService)
         dataset = Dataset.create(
-            name=params.dataset_name,
+            name=config.dataset_name,
             decisions=raw_data.decisions,
             objectives=raw_data.objectives,
             pareto=pareto,

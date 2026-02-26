@@ -4,8 +4,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..interfaces.base_transform import BaseTransformStep
-from ..value_objects.estimator_step import EstimatorStep
+from ..interfaces.base_transform import BaseTransformer
+from ..value_objects.estimator import Estimator
 from ..value_objects.evaluation_result import EvaluationResult
 from ..value_objects.split_step import SplitStep
 
@@ -41,12 +41,12 @@ class TrainedPipeline(BaseModel):
         ..., description="The data split configuration used during training."
     )
 
-    transforms: list[BaseTransformStep] = Field(
+    transforms: list[BaseTransformer] = Field(
         default_factory=list,
         description="Ordered sequence of fitted preprocessing transforms.",
     )
 
-    model: EstimatorStep = Field(
+    estimator: Estimator = Field(
         ..., description="The fitted estimator, its config, and training history."
     )
 
@@ -68,20 +68,22 @@ class TrainedPipeline(BaseModel):
         default=None, description="Automatically assigned sequential version number."
     )
 
-    def get_decisions_transforms(self) -> list[BaseTransformStep]:
+    def get_decisions_transforms(self) -> list[BaseTransformer]:
         from ..interfaces.base_transform import TransformTarget
 
         return [
             t
             for t in self.transforms
-            if t.target in (TransformTarget.DECISIONS, TransformTarget.BOTH)
+            if getattr(t, "target", None)
+            in (TransformTarget.DECISIONS, TransformTarget.BOTH, "decisions", "both")
         ]
 
-    def get_objectives_transforms(self) -> list[BaseTransformStep]:
+    def get_objectives_transforms(self) -> list[BaseTransformer]:
         from ..interfaces.base_transform import TransformTarget
 
         return [
             t
             for t in self.transforms
-            if t.target in (TransformTarget.OBJECTIVES, TransformTarget.BOTH)
+            if getattr(t, "target", None)
+            in (TransformTarget.OBJECTIVES, TransformTarget.BOTH, "objectives", "both")
         ]

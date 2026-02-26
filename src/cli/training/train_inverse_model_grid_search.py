@@ -9,9 +9,6 @@ from ...modules.evaluation.application.use_cases import (
     TrainInverseModelGridSearchParams,
     TrainInverseModelGridSearchService,
 )
-from ...modules.modeling.application.factories.estimator import EstimatorFactory
-from ...modules.modeling.application.factories.metrics import MetricFactory
-from ...modules.modeling.application.factories.normalizer import NormalizerFactory
 from ...modules.modeling.application.registry import (
     ESTIMATOR_PARAM_REGISTRY,
     default_metric_configs,
@@ -20,6 +17,9 @@ from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.modeling.domain.services.preprocessing_service import (
     PreprocessingService,
 )
+from ...modules.modeling.infrastructure.factories.estimator import EstimatorFactory
+from ...modules.modeling.infrastructure.factories.metrics import MetricFactory
+from ...modules.modeling.infrastructure.factories.transformer import TransformerFactory
 from ...modules.modeling.infrastructure.repositories.trained_pipeline_repo import (
     FileSystemTrainedPipelineRepository,
 )
@@ -44,6 +44,10 @@ def cli(estimator: str, dataset_name: str) -> None:
         dataset_name=dataset_name,
         estimator_params=ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum(estimator)](),
         estimator_performance_metric_configs=default_metric_configs(),
+        transforms=[
+            {"target": "objectives", "type": "min_max", "params": {}},
+            {"target": "decisions", "type": "min_max", "params": {}},
+        ],
         tune_param_name="n_neighbors",
         tune_param_range=[5, 10, 20, 40],
         random_state=42,
@@ -58,7 +62,7 @@ def cli(estimator: str, dataset_name: str) -> None:
         logger=CMDLogger(name="InterpolationGridCMDLogger"),
         estimator_factory=EstimatorFactory(),
         metric_factory=MetricFactory(),
-        normalizer_factory=NormalizerFactory(),
+        transformer_factory=TransformerFactory(),
         preprocessing_service=PreprocessingService(),
     )
     service.execute(params)

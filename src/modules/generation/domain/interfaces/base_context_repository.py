@@ -1,23 +1,23 @@
 from abc import ABC, abstractmethod
 
-from ..entities.coherence_context import CoherenceContext
+from ..entities.generation_context import GenerationContext
 
 
 class BaseContextRepository(ABC):
     """
-    Abstract repository interface for persisting CoherenceContext.
+    Abstract repository interface for persisting GenerationContext.
     """
 
     @abstractmethod
-    def save(self, context: CoherenceContext) -> None:
+    def save(self, context: GenerationContext) -> None:
         """
-        Persists a CoherenceContext entity.
+        Persists a GenerationContext entity.
         """
         pass
 
     @abstractmethod
-    def load(self, dataset_name: str) -> CoherenceContext:
+    def load(self, dataset_name: str) -> GenerationContext:
         """
-        Loads a CoherenceContext entity by dataset name.
+        Loads a GenerationContext entity by dataset name.
         """
         pass

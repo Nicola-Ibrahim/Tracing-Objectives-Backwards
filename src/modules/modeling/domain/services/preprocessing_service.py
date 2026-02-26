@@ -1,8 +1,7 @@
-
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from ..interfaces.base_transform import BaseTransformStep
+from ..interfaces.base_transform import BaseTransformer
 from ..value_objects.split_step import SplitConfig, SplitStep
 
 
@@ -34,32 +33,15 @@ class PreprocessingService:
         self,
         X_train: np.ndarray,
         X_test: np.ndarray,
-        y_train: np.ndarray,
-        y_test: np.ndarray,
-        transforms: list[BaseTransformStep],
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        transforms: list[BaseTransformer],
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Fits transforms on training data and applies them to both train and test data.
+        Fits transforms sequentially on training data and applies them to both train and test data.
         """
-        from ..interfaces.base_transform import TransformTarget
-
         for transform in transforms:
-            if transform.target in (TransformTarget.DECISIONS, TransformTarget.BOTH):
-                transform.fit(X_train)
-                X_train = transform.transform(X_train)
+            transform.fit(X_train)
+            X_train = transform.transform(X_train)
+            if X_test is not None:
                 X_test = transform.transform(X_test)
 
-            if transform.target in (TransformTarget.OBJECTIVES, TransformTarget.BOTH):
-                # We need to distinguish if the transform is meant to be fit on y or X, but the interface just says fit(X).
-                # Wait: if target is DECISIONS, it fits/transforms X. If OBJECTIVES, it fits/transforms y.
-                # Let's adjust for Target:
-                if transform.target == TransformTarget.OBJECTIVES:
-                    transform.fit(y_train)
-                    y_train = transform.transform(y_train)
-                    y_test = transform.transform(y_test)
-                elif transform.target == TransformTarget.BOTH:
-                    # In this setup, BOTH would mean we fit on concatenated or we only apply to decisions?
-                    # The spec mostly deals with NormalizationStep mapping to decisions/objectives separately.
-                    pass
-
-        return X_train, X_test, y_train, y_test
+        return X_train, X_test

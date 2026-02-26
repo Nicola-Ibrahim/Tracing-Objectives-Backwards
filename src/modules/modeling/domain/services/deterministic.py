@@ -6,7 +6,7 @@ from ..interfaces.base_estimator import BaseEstimator
 from ..interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ..value_objects.estimator_step import TrainingLog
+from ..value_objects.estimator import TrainingLog
 from ..value_objects.evaluation_result import EvaluationResult
 from .utils import evaluate_metrics
 

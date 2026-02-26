@@ -3,24 +3,24 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from ..enums.metric_type import MetricTypeEnum
-from ..enums.normalizer_type import NormalizerTypeEnum
+from ..enums.transform_type import TransformTypeEnum
 
 
 class EstimatorParamsBase(BaseModel):
     pass
 
 
-class NormalizerConfig(BaseModel):
+class TransformConfig(BaseModel):
     """
-    Configuration for a normalizer.
+    Configuration for a pipeline generic transform step.
     """
 
-    type: NormalizerTypeEnum = Field(
-        ..., description="The type of the normalizer to use."
+    type: TransformTypeEnum = Field(
+        ..., description="The type of the transform to use."
     )
     params: dict[str, Any] = Field(
         default_factory=dict,
-        description="Parameters specific to the normalizer type.",
+        description="Parameters specific to the transform type.",
     )
 
     class Config:

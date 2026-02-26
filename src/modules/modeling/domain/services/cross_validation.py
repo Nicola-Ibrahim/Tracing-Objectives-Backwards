@@ -10,7 +10,7 @@ from ..interfaces.base_estimator import (
 from ..interfaces.base_validation_metric import (
     BaseValidationMetric,
 )
-from ..value_objects.estimator_step import TrainingLog
+from ..value_objects.estimator import TrainingLog
 from ..value_objects.evaluation_result import EvaluationResult
 from .deterministic import DeterministicModelTrainer
 from .probabilistic import ProbabilisticModelTrainer

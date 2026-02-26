@@ -85,6 +85,19 @@ class EstimatorFactory:
 
         return mapper_ctor(params=estimator_params)
 
+    @classmethod
+    def from_checkpoint(cls, config: dict[str, Any]) -> BaseEstimator:
+        """Create an estimator from a checkpoint."""
+        estimator_type = config.get("type")
+        if not estimator_type:
+            raise ValueError("Estimator config must include 'type'.")
+        try:
+            ctor = cls._registry[estimator_type]
+        except KeyError as e:
+            raise ValueError(f"Unknown estimator type: {estimator_type}") from e
+        params = {k: v for k, v in config.items() if k != "type"}
+        return ctor.from_checkpoint(**params)
+
     # -------- Forward models --------
     _forward_registry: Dict[str, Callable[..., BaseEstimator]] = {
         "coco_biobj": lambda **p: COCOEstimator(

@@ -11,21 +11,11 @@ class TransformTarget(Enum):
     BOTH = "both"
 
 
-class BaseTransformStep(ABC):
+class BaseTransformer(ABC):
     """
     Abstract base class for preprocessing transform steps
     applied to data.
     """
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def target(self) -> TransformTarget:
-        pass
 
     @property
     @abstractmethod
@@ -52,8 +42,8 @@ class BaseTransformStep(ABC):
 
     @classmethod
     @abstractmethod
-    def from_fitted_state(
+    def from_checkpoint(
         cls, config: dict[str, Any], state: dict[str, Any]
-    ) -> "BaseTransformStep":
-        """Reconstruct the step from configuration and fitted state."""
+    ) -> "BaseTransformer":
+        """Reconstruct the step from configuration and fitted state dict."""
         pass
