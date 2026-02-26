@@ -2,8 +2,7 @@ from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
-
-from ..base_problem import BaseProblem
+from pymoo.core.problem import Problem
 
 
 class Vehicle(BaseModel):
@@ -127,7 +126,7 @@ class ElectricalVehicleProblemConfig(BaseModel):
     xu: float = Field(..., description="Upper bounds for decision variables")
 
 
-class EVControlProblem(BaseProblem):
+class EVControlProblem(Problem):
     """
     Multi-objective optimization problem for electric vehicle motion control.
     Inherits from EVProblem to implement specific evaluation logic while

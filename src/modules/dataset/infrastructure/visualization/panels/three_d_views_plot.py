@@ -6,7 +6,7 @@ from ..helpers.scatter_3d import add_3d_overlay
 
 
 def create_3d_decision_context_figure(
-    X_train: np.ndarray, y_train: np.ndarray
+    X_raw: np.ndarray, y_raw: np.ndarray
 ) -> go.Figure:
     """Creates 3D plots showing Decision Space (x1, x2) vs Objective components (y1, y2)."""
 
@@ -22,10 +22,10 @@ def create_3d_decision_context_figure(
         fig=fig,
         row=1,
         col=1,
-        x=X_train[:, 0],
-        y=X_train[:, 1],
-        z=y_train[:, 0],
-        name="Train",
+        x=X_raw[:, 0],
+        y=X_raw[:, 1],
+        z=y_raw[:, 0],
+        name="Raw Data",
         size=3,
         opacity=0.8,
         color="#d35400",
@@ -36,26 +36,26 @@ def create_3d_decision_context_figure(
         fig=fig,
         row=1,
         col=2,
-        x=X_train[:, 0],
-        y=X_train[:, 1],
-        z=y_train[:, 1],
-        name="Train",
+        x=X_raw[:, 0],
+        y=X_raw[:, 1],
+        z=y_raw[:, 1],
+        name="Raw Data",
         size=3,
         opacity=0.8,
         color="#2980b9",
     )
 
     fig.update_scenes(
-        xaxis=dict(title="x1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        yaxis=dict(title="x2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        zaxis=dict(title="y1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        xaxis=dict(title="x1 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="x2 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="y1 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=1,
     )
     fig.update_scenes(
-        xaxis=dict(title="x1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        yaxis=dict(title="x2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        zaxis=dict(title="y2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        xaxis=dict(title="x1 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="x2 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="y2 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=2,
     )
@@ -79,7 +79,7 @@ def create_3d_decision_context_figure(
 
 
 def create_3d_objective_context_figure(
-    X_train: np.ndarray, y_train: np.ndarray
+    X_raw: np.ndarray, y_raw: np.ndarray
 ) -> go.Figure:
     """Creates 3D plots showing Objective Space (y1, y2) vs Decision components (x1, x2)."""
 
@@ -95,10 +95,10 @@ def create_3d_objective_context_figure(
         fig=fig,
         row=1,
         col=1,
-        x=y_train[:, 0],
-        y=y_train[:, 1],
-        z=X_train[:, 0],
-        name="Train",
+        x=y_raw[:, 0],
+        y=y_raw[:, 1],
+        z=X_raw[:, 0],
+        name="Raw Data",
         size=3,
         opacity=0.8,
         color="#2980b9",
@@ -109,26 +109,26 @@ def create_3d_objective_context_figure(
         fig=fig,
         row=1,
         col=2,
-        x=y_train[:, 0],
-        y=y_train[:, 1],
-        z=X_train[:, 1],
-        name="Train",
+        x=y_raw[:, 0],
+        y=y_raw[:, 1],
+        z=X_raw[:, 1],
+        name="Raw Data",
         size=3,
         opacity=0.8,
         color="#d35400",
     )
 
     fig.update_scenes(
-        xaxis=dict(title="y1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        yaxis=dict(title="y2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        zaxis=dict(title="x1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        xaxis=dict(title="y1 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="y2 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="x1 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=1,
     )
     fig.update_scenes(
-        xaxis=dict(title="y1 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        yaxis=dict(title="y2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
-        zaxis=dict(title="x2 (norm)", title_font=dict(size=16), tickfont=dict(size=12)),
+        xaxis=dict(title="y1 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        yaxis=dict(title="y2 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
+        zaxis=dict(title="x2 (Raw)", title_font=dict(size=16), tickfont=dict(size=12)),
         row=1,
         col=2,
     )

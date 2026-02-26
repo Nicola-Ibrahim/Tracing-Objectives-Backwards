@@ -39,12 +39,10 @@ class VisualizeDatasetService:
         # 2) Package payload (arrays only)
         payload = {
             "dataset_name": dataset.name,
-            "X_train": dataset.decisions,
-            "y_train": dataset.objectives,
+            "X_raw": dataset.decisions,
+            "y_raw": dataset.objectives,
             "pareto_set": dataset.pareto.set if dataset.pareto else None,
             "pareto_front": dataset.pareto.front if dataset.pareto else None,
-            "historical_solutions": dataset.decisions,
-            "historical_objectives": dataset.objectives,
         }
 
         # 4) Plot

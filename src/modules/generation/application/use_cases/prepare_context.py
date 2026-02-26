@@ -30,6 +30,7 @@ class PrepareContextService:
         self._context_repository = context_repository
         self._logger = logger
 
+    # TODO: don't put the whole code inside execute method, enhance the code with private methods
     def execute(
         self, dataset_name: str, surrogate_type: str, k_neighbors: int
     ) -> CoherenceContext:
@@ -41,6 +42,9 @@ class PrepareContextService:
         dataset = self._dataset_repository.load(dataset_name)
 
         # 2. Get surrogate pipeline
+        # TODO: We should here create a new estimator and train it on the dataset
+        # we can use factory to create the estimator
+        # we can use the same logic as in train_pipeline.py
         pipeline = self._model_repository.get_latest_version(
             estimator_type=surrogate_type,
             mapping_direction="forward",
@@ -52,6 +56,8 @@ class PrepareContextService:
         decisions = dataset.decisions
 
         # 4. Normalize the decisions using pipeline transforms to get anchors_norm
+        # TODO: So again here we are not dealing with ready to use transformers like MinMaxScaler
+        # so we should fit it on the data becuase the data still un-normalized
         anchors_norm = decisions.copy()
         for t in pipeline.get_decisions_transforms():
             anchors_norm = t.transform(anchors_norm)

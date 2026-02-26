@@ -1,6 +1,6 @@
 import click
 
-from ...modules.dataset.application.visualizing import (
+from ...modules.dataset.application.visualization import (
     VisualizeDatasetParams,
     VisualizeDatasetService,
 )
