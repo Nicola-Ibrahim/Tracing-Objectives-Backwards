@@ -36,7 +36,7 @@ export default function RootLayout({
         <ToastProvider>
           <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading application...</div>}>
             <DatasetProvider>
-              <div className="max-w-[1400px] mx-auto px-4 py-8">
+              <div className="max-w-[1600px] mx-auto px-4 py-8">
                 <header className="mb-12">
                   <h1 className="text-3xl font-bold text-foreground mb-2">
                     Tracing Objectives Backwards

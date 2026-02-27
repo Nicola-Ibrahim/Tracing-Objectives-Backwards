@@ -188,8 +188,8 @@ export default function GeneratorContainer() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-3 space-y-6">
                     <Card title="Source Selection">
                         <DatasetSelector
                             datasets={datasets}
@@ -278,8 +278,8 @@ export default function GeneratorContainer() {
                     )}
                 </div>
 
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="lg:col-span-9 space-y-6">
+                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8">
                         <div className="space-y-3">
                             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 px-1">Candidate Allocation (X)</h2>
                             <ChartJSWrapper

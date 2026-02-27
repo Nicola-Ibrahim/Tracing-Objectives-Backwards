@@ -99,9 +99,9 @@ export default function DataHubContainer() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Control Side Panel */}
-                <div className="lg:col-span-1 space-y-6">
+                <div className="lg:col-span-3 space-y-6">
                     <Card title="Source Selection">
                         <DatasetSelector
                             datasets={datasets}
@@ -125,8 +125,8 @@ export default function DataHubContainer() {
                 </div>
 
                 {/* Exploration Plots Section */}
-                <div className="lg:col-span-3">
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="lg:col-span-9">
+                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between px-1">
                                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">Decision Space (X)</h2>
