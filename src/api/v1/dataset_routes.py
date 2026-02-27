@@ -8,7 +8,14 @@ from ...modules.dataset.application.generation import (
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ..dependencies import get_dataset_repository, get_generation_dataset_service
+from ...modules.generation.domain.interfaces.base_context_repository import (
+    BaseContextRepository,
+)
+from ..dependencies import (
+    get_context_repository,
+    get_dataset_repository,
+    get_generation_dataset_service,
+)
 from ..schemas.dataset import (
     DatasetDetailResponse,
     DatasetGenerationRequest,
@@ -32,6 +39,7 @@ async def list_datasets(
 async def get_dataset_context(
     dataset_name: str,
     repository: FileSystemDatasetRepository = Depends(get_dataset_repository),
+    context_repository: BaseContextRepository = Depends(get_context_repository),
 ):
     """
     Retrieve the original and normalized coordinates for a specific dataset.
@@ -49,11 +57,20 @@ async def get_dataset_context(
     for i in range(objs.shape[1]):
         bounds[f"obj_{i}"] = (float(np.min(objs[:, i])), float(np.max(objs[:, i])))
 
+    # Check training status
+    is_trained = False
+    try:
+        context = context_repository.load(dataset_name)
+        is_trained = getattr(context, "is_trained", True)
+    except FileNotFoundError:
+        is_trained = False
+
     return DatasetResponse(
         name=dataset.name,
         original_objectives=[tuple(row) for row in dataset.objectives.tolist()],
         original_decisions=[row.tolist() for row in dataset.decisions],
         bounds=bounds,
+        is_trained=is_trained,
     )
 
 
@@ -61,6 +78,7 @@ async def get_dataset_context(
 async def get_dataset_coordinates(
     dataset_name: str,
     repository: FileSystemDatasetRepository = Depends(get_dataset_repository),
+    context_repository: BaseContextRepository = Depends(get_context_repository),
 ):
     """
     Retrieve the raw (X, y) coordinates and bounds for a specific dataset.
@@ -88,12 +106,21 @@ async def get_dataset_coordinates(
             if any(np.allclose(obj, p_obj) for p_obj in pareto_front):
                 is_pareto[i] = True
 
+    # Check training status
+    is_trained = False
+    try:
+        context = context_repository.load(dataset_name)
+        is_trained = getattr(context, "is_trained", True)
+    except FileNotFoundError:
+        is_trained = False
+
     return DatasetDetailResponse(
         name=dataset.name,
         X=[row.tolist() for row in dataset.decisions],
         y=[row.tolist() for row in dataset.objectives],
         is_pareto=is_pareto,
         bounds=bounds,
+        is_trained=is_trained,
     )
 
 

@@ -6,7 +6,7 @@ from ...dataset.domain.interfaces.base_visualizer import BaseVisualizer
 from ...shared.domain.interfaces.base_logger import BaseLogger
 from ..domain.interfaces.base_context_repository import BaseContextRepository
 from ..domain.services.barycentric_locator import BarycentricLocator
-from ..domain.services.candidate_ranker import CandidateRanker, GenerationResult
+from ..domain.services.candidate_ranker import CandidateRanker, RankingResult
 from ..domain.services.dirichlet_sampler import DirichletSampler
 from ..infrastructure.optimizers.trust_region import TrustRegionOptimizer
 
@@ -68,7 +68,7 @@ class GenerateCoherentCandidatesService:
         self._logger = logger
         self._visualizer = visualizer
 
-    def execute(self, config: GenerationConfig) -> GenerationResult:
+    def execute(self, config: GenerationConfig) -> RankingResult:
         self._logger.log_info(
             f"Starting generation for '{config.dataset_name}' with target {config.target_objective}"
         )
@@ -136,7 +136,7 @@ class GenerateCoherentCandidatesService:
             candidate_decisions_norm
         )
 
-        # 6. Filter & Rank (in norm space)
+        # 6. Filter & Rank (Result is UN-NORMALIZED)
         result = CandidateRanker.rank(
             candidates=candidate_decisions_norm,
             predicted_objectives=predicted_objectives_norm,
@@ -144,31 +144,16 @@ class GenerateCoherentCandidatesService:
             pathway=pathway,
             anchor_indices=anchor_indices,
             is_inside_mesh=is_inside,
+            objective_transforms=context.get_objectives_transforms(),
+            decision_transforms=context.get_decisions_transforms(),
             error_threshold=config.error_threshold,
         )
 
-        # 7. Un-normalize the accepted candidates and their predicted objectives
-        accepted_candidates_raw = result.candidates.copy()
-        for t in reversed(context.get_decisions_transforms()):
-            accepted_candidates_raw = t.inverse_transform(accepted_candidates_raw)
-
-        accepted_predictions_raw = result.predicted_objectives.copy()
-        for t in reversed(context.get_objectives_transforms()):
-            accepted_predictions_raw = t.inverse_transform(accepted_predictions_raw)
-
-        from dataclasses import replace
-
-        result = replace(
-            result,
-            candidates=accepted_candidates_raw,
-            predicted_objectives=accepted_predictions_raw,
-        )
-
         self._logger.log_info(
-            f"Generated {len(result.candidates)} un-normalized candidates after ranking."
+            f"Generated {len(result.candidates)} un-normalized candidates. Winner: {result.winner_point.flatten()}"
         )
 
-        # 8. Plot results if visualizer is available
+        # 7. Plot results if visualizer is available
         if self._visualizer:
             self._logger.log_info("Generating context visualization plots...")
 
@@ -187,12 +172,16 @@ class GenerateCoherentCandidatesService:
             )
 
         return {
-            "dataset_name": config.dataset_name,
-            "pathway": result.pathway,
-            "target_objective": config.target_objective,
-            "candidate_objectives": result.predicted_objectives,
-            "candidate_decisions": result.candidates,
-            "residual_errors": result.residual_errors,
+            "pathway": pathway,
+            "target_objective": tuple(target_arr_raw.flatten().tolist()),
+            "candidate_decisions": [row.tolist() for row in result.candidates],
+            "candidate_objectives": [
+                tuple(row) for row in result.predicted_objectives.tolist()
+            ],
+            "residual_errors": result.residual_errors.tolist(),
             "anchor_indices": result.anchor_indices,
             "is_inside_mesh": result.is_inside_mesh,
+            "winner_index": result.winner_index,
+            "winner_point": tuple(result.winner_point.flatten().tolist()),
+            "winner_decision": result.winner_decision.flatten().tolist(),
         }

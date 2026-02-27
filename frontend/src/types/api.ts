@@ -4,6 +4,7 @@ export interface Dataset {
     original_objectives: [number, number][];
     original_decisions: number[][]; // D-dimensional bounds/anchors
     bounds: Record<string, [number, number]>;
+    is_trained: boolean;
 }
 
 // Corresponds to backend GenerationRequest
@@ -24,6 +25,9 @@ export interface GenerationResponse {
     residual_errors: number[];
     anchor_indices: number[];
     is_inside_mesh: boolean;
+    winner_index: number;
+    winner_point: [number, number];
+    winner_decision: number[];
 }
 export type Vector = number[];
 
@@ -34,6 +38,7 @@ export interface DatasetDetailResponse {
     y: Vector[];
     is_pareto: boolean[];
     bounds: Record<string, [number, number]>;
+    is_trained: boolean;
 }
 
 export interface DatasetGenerationRequest {

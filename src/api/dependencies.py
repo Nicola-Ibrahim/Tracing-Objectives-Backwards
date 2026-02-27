@@ -5,6 +5,7 @@ from ..modules.dataset.infrastructure.repositories.dataset_repository import (
 from ..modules.generation.application.generate_candidates import (
     GenerateCoherentCandidatesService,
 )
+from ..modules.generation.application.prepare_context import PrepareContextService
 from ..modules.generation.infrastructure.repositories.context_repo import (
     FileSystemContextRepository,
 )
@@ -32,5 +33,14 @@ def get_generation_dataset_service() -> GenerateDatasetService:
     logger = CMDLogger(name="DatasetGenAPI")
     return GenerateDatasetService(
         data_model_repository=get_dataset_repository(),
+        logger=logger,
+    )
+
+
+def get_train_context_service() -> PrepareContextService:
+    logger = CMDLogger(name="ContextAPI")
+    return PrepareContextService(
+        dataset_repository=get_dataset_repository(),
+        context_repository=get_context_repository(),
         logger=logger,
     )

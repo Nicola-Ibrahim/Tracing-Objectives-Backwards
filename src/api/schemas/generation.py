@@ -19,3 +19,6 @@ class GenerationResponse(BaseModel):
     residual_errors: List[float]  # M sorted errors
     anchor_indices: List[int]  # Used to plot the boundary simplex
     is_inside_mesh: bool
+    winner_index: int
+    winner_point: Tuple[float, float]
+    winner_decision: List[float]

@@ -53,7 +53,11 @@ export interface ChartDataset {
     showLine?: boolean;
     borderColor?: string;
     borderWidth?: number;
+    pointStyle?: PointStyle;
+    borderDash?: number[];
 }
+
+import { PointStyle } from "chart.js";
 
 interface ChartJSWrapperProps {
     title: string;
@@ -221,8 +225,9 @@ const ChartJSWrapper: React.FC<ChartJSWrapperProps> = ({
             borderColor: ds.borderColor ?? ds.backgroundColor,
             pointBorderColor: "#ffffff", // Plotly-style white border around points
             pointBorderWidth: 1.5,
-            pointStyle: "circle",
+            pointStyle: ds.pointStyle ?? "circle",
             pointHoverBorderWidth: 2,
+            borderDash: ds.borderDash ?? [],
         })),
     }), [datasets]);
 

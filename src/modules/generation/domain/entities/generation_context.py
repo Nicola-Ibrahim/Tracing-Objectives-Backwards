@@ -37,6 +37,11 @@ class GenerationContext(BaseModel):
         ..., description="The Explicitly Evaluated Surrogate Model Step"
     )
 
+    is_trained: bool = Field(
+        default=True,
+        description="Flag indicating if the context has been fully trained",
+    )
+
     created_at: datetime = Field(default_factory=datetime.now)
 
     def model_post_init(self, __context):

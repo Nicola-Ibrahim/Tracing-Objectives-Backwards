@@ -86,7 +86,17 @@ class PrepareContextService:
         decision_transforms = []
         objective_transforms = []
 
-        for t_cfg in params.transforms:
+        transforms_to_process = params.transforms
+        if not transforms_to_process:
+            self._logger.log_info(
+                "No transforms provided. Using default MinMaxScaler for both decision and objective spaces."
+            )
+            transforms_to_process = [
+                {"type": "min_max", "target": "decisions", "params": {}},
+                {"type": "min_max", "target": "objectives", "params": {}},
+            ]
+
+        for t_cfg in transforms_to_process:
             target_str = t_cfg.get("target")
             transform = self._transformer_factory.create(t_cfg)
 
@@ -95,12 +105,14 @@ class PrepareContextService:
                 target = TransformTarget.DECISIONS
             elif target_str == "objectives":
                 target = TransformTarget.OBJECTIVES
+            else:
+                target = TransformTarget.OBJECTIVES  # Fallback
 
             setattr(transform, "target", target)
 
             if target_str == "decisions":
                 decision_transforms.append(transform)
-            if target_str == "objectives":
+            elif target_str == "objectives":
                 objective_transforms.append(transform)
 
         anchors_norm = self._fit_and_transform(decisions_raw, decision_transforms)
@@ -128,6 +140,7 @@ class PrepareContextService:
             tau=tau,
             transforms=decision_transforms + objective_transforms,
             surrogate_step=surrogate_model,
+            is_trained=True,
         )
 
         self._context_repository.save(context)

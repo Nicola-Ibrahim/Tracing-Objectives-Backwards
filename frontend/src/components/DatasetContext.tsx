@@ -19,6 +19,7 @@ interface DatasetContextType {
         decX: [number, number] | null;
         decY: [number, number] | null;
     };
+    refreshDatasetData: () => Promise<void>;
 }
 
 const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
@@ -71,55 +72,56 @@ export const DatasetProvider: React.FC<{ children: React.ReactNode }> = ({ child
         refreshDatasets();
     }, []); // Initial load
 
-    useEffect(() => {
-        if (!selectedDataset) {
-            setBaselineData(null);
-            setRanges({ objX: null, objY: null, decX: null, decY: null });
-            return;
-        }
-
+    const refreshDatasetData = useCallback(async () => {
+        if (!selectedDataset) return;
         setIsLoading(true);
-        fetchDatasetData(selectedDataset)
-            .then((data) => {
-                setBaselineData(data);
+        try {
+            const data = await fetchDatasetData(selectedDataset);
+            setBaselineData(data);
+            // ... (rest of normalization logic)
+            const padding = 0.05;
+            const newRanges: DatasetContextType["ranges"] = {
+                objX: null,
+                objY: null,
+                decX: null,
+                decY: null,
+            };
 
-                const padding = 0.05;
-                const newRanges: DatasetContextType["ranges"] = {
-                    objX: null,
-                    objY: null,
-                    decX: null,
-                    decY: null,
-                };
+            if (data.bounds.obj_0 && data.bounds.obj_1) {
+                const o0 = data.bounds.obj_0;
+                const o1 = data.bounds.obj_1;
+                const span0 = o0[1] - o0[0];
+                const span1 = o1[1] - o1[0];
+                newRanges.objX = [o0[0] - (span0 || 1) * padding, o0[1] + (span0 || 1) * padding];
+                newRanges.objY = [o1[0] - (span1 || 1) * padding, o1[1] + (span1 || 1) * padding];
+            }
 
-                if (data.bounds.obj_0 && data.bounds.obj_1) {
-                    const o0 = data.bounds.obj_0;
-                    const o1 = data.bounds.obj_1;
-                    const span0 = o0[1] - o0[0];
-                    const span1 = o1[1] - o1[0];
-                    newRanges.objX = [o0[0] - (span0 || 1) * padding, o0[1] + (span0 || 1) * padding];
-                    newRanges.objY = [o1[0] - (span1 || 1) * padding, o1[1] + (span1 || 1) * padding];
+            if (data.X.length > 0) {
+                const x0 = data.X.map((v: Vector) => v[0]).filter(v => typeof v === 'number' && !isNaN(v));
+                const x1 = data.X.map((v: Vector) => v[1]).filter(v => typeof v === 'number' && !isNaN(v));
+
+                if (x0.length > 0 && x1.length > 0) {
+                    const minX0 = Math.min(...x0);
+                    const maxX0 = Math.max(...x0);
+                    const minX1 = Math.min(...x1);
+                    const maxX1 = Math.max(...x1);
+                    const spanX0 = maxX0 - minX0;
+                    const spanX1 = maxX1 - minX1;
+                    newRanges.decX = [minX0 - (spanX0 || 1) * padding, maxX0 + (spanX0 || 1) * padding];
+                    newRanges.decY = [minX1 - (spanX1 || 1) * padding, maxX1 + (spanX1 || 1) * padding];
                 }
-
-                if (data.X.length > 0) {
-                    const x0 = data.X.map((v: Vector) => v[0]).filter(v => typeof v === 'number' && !isNaN(v));
-                    const x1 = data.X.map((v: Vector) => v[1]).filter(v => typeof v === 'number' && !isNaN(v));
-
-                    if (x0.length > 0 && x1.length > 0) {
-                        const minX0 = Math.min(...x0);
-                        const maxX0 = Math.max(...x0);
-                        const minX1 = Math.min(...x1);
-                        const maxX1 = Math.max(...x1);
-                        const spanX0 = maxX0 - minX0;
-                        const spanX1 = maxX1 - minX1;
-                        newRanges.decX = [minX0 - (spanX0 || 1) * padding, maxX0 + (spanX0 || 1) * padding];
-                        newRanges.decY = [minX1 - (spanX1 || 1) * padding, maxX1 + (spanX1 || 1) * padding];
-                    }
-                }
-                setRanges(newRanges);
-            })
-            .catch((err) => showToast(err.message, "error"))
-            .finally(() => setIsLoading(false));
+            }
+            setRanges(newRanges);
+        } catch (err: any) {
+            showToast(err.message, "error");
+        } finally {
+            setIsLoading(false);
+        }
     }, [selectedDataset, showToast]);
+
+    useEffect(() => {
+        refreshDatasetData();
+    }, [selectedDataset, refreshDatasetData]);
 
     return (
         <DatasetContext.Provider
@@ -130,6 +132,7 @@ export const DatasetProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 isLoading,
                 selectDataset,
                 refreshDatasets,
+                refreshDatasetData,
                 ranges,
             }}
         >

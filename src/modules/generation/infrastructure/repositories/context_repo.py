@@ -34,6 +34,7 @@ class FileSystemContextRepository(BaseContextRepository):
         metadata = {
             "dataset_name": context.dataset_name,
             "tau": context.tau,
+            "is_trained": context.is_trained,
             "created_at": context.created_at.isoformat(),
         }
 
@@ -145,4 +146,5 @@ class FileSystemContextRepository(BaseContextRepository):
             tau=metadata["tau"],
             transforms=transforms,
             surrogate_step=surrogate_step,
+            is_trained=metadata.get("is_trained", True),
         )
