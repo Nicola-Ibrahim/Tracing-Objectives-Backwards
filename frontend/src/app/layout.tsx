@@ -5,6 +5,8 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 
 import { ToastProvider } from "@/components/ui/ToastContext";
+import { DatasetProvider } from "@/components/DatasetContext";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,16 +34,20 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
         <ToastProvider>
-          <div className="max-w-[1400px] mx-auto px-4 py-8">
-            <header className="mb-12">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Tracing Objectives Backwards
-              </h1>
-              <p className="text-slate-500">Pareto-Optimized Candidate Generation</p>
-            </header>
-            <Navigation />
-            <main>{children}</main>
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading application...</div>}>
+            <DatasetProvider>
+              <div className="max-w-[1400px] mx-auto px-4 py-8">
+                <header className="mb-12">
+                  <h1 className="text-3xl font-bold text-foreground mb-2">
+                    Tracing Objectives Backwards
+                  </h1>
+                  <p className="text-slate-500">Pareto-Optimized Candidate Generation</p>
+                </header>
+                <Navigation />
+                <main>{children}</main>
+              </div>
+            </DatasetProvider>
+          </Suspense>
         </ToastProvider>
       </body>
     </html>
