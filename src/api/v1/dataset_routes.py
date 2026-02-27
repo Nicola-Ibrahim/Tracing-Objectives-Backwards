@@ -1,11 +1,19 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 
+from ...modules.dataset.application.generation import (
+    DatasetConfiguration,
+    GenerateDatasetService,
+)
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ..dependencies import get_dataset_repository
-from ..schemas.dataset import DatasetDetailResponse, DatasetResponse
+from ..dependencies import get_dataset_repository, get_generation_dataset_service
+from ..schemas.dataset import (
+    DatasetDetailResponse,
+    DatasetGenerationRequest,
+    DatasetResponse,
+)
 
 router = APIRouter()
 
@@ -70,9 +78,43 @@ async def get_dataset_coordinates(
     for i in range(objs.shape[1]):
         bounds[f"obj_{i}"] = (float(np.min(objs[:, i])), float(np.max(objs[:, i])))
 
+    # Calculate Pareto mask by comparing with the stored pareto front if available
+    is_pareto = [False] * objs.shape[0]
+    if dataset.pareto is not None and dataset.pareto.front is not None:
+        # Simple exact match for pre-computed pareto front
+        pareto_front = dataset.pareto.front
+        for i, obj in enumerate(objs):
+            # Using isclose to handle potential floating point precision issues
+            if any(np.allclose(obj, p_obj) for p_obj in pareto_front):
+                is_pareto[i] = True
+
     return DatasetDetailResponse(
         name=dataset.name,
         X=[row.tolist() for row in dataset.decisions],
         y=[row.tolist() for row in dataset.objectives],
+        is_pareto=is_pareto,
         bounds=bounds,
     )
+
+
+@router.post("/generate")
+async def generate_dataset(
+    request: DatasetGenerationRequest,
+    service: GenerateDatasetService = Depends(get_generation_dataset_service),
+):
+    """
+    Generate a new COCOEX dataset.
+    """
+    config = DatasetConfiguration(
+        problem_id=request.function_id,
+        n_var=request.n_var,
+        population_size=request.population_size,
+        generations=request.generations,
+        dataset_name=request.dataset_name,
+    )
+
+    try:
+        path = service.execute(config)
+        return {"status": "success", "path": str(path), "name": request.dataset_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

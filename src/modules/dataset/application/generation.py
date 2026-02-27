@@ -27,7 +27,7 @@ class DatasetConfiguration(BaseModel):
 
     population_size: int = Field(200, gt=0, description="Size of the population.")
 
-    generations: int = Field(16, gt=1, description="Number of generations.")
+    generations: int = Field(16, ge=0, description="Number of generations.")
     save_history: bool = Field(
         True, description="Whether to save the optimization history."
     )

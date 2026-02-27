@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { fetchDatasets, generateCandidates, fetchDatasetData } from "@/lib/apiClient";
 import { GenerationRequest, GenerationResponse, DatasetDetailResponse, Vector } from "@/types/api";
-import PlotlyWrapper from "@/components/PlotlyWrapper";
+import ChartJSWrapper, { ChartDataset, ChartDataPoint } from "@/components/ChartJSWrapper";
 import DatasetSelector from "@/components/DatasetSelector";
+import DatasetGenerator from "@/components/DatasetGenerator";
 import { Card, Button, Input } from "@/components/ui";
 import { useToast } from "@/components/ui/ToastContext";
 
@@ -31,17 +32,24 @@ export default function GeneratePage() {
 
     const { showToast } = useToast();
 
+    const refreshDatasets = async (selectName?: string) => {
+        try {
+            const data = await fetchDatasets();
+            setDatasets(data);
+            if (selectName) {
+                setSelectedDataset(selectName);
+            } else if (data.length > 0 && !selectedDataset) {
+                setSelectedDataset(data[0]);
+            }
+        } catch (err: any) {
+            showToast(err.message, "error");
+        }
+    };
+
     // Load available datasets on mount
     useEffect(() => {
-        fetchDatasets()
-            .then((data) => {
-                setDatasets(data);
-                if (data.length > 0 && !selectedDataset) {
-                    setSelectedDataset(data[0]);
-                }
-            })
-            .catch((err) => showToast(err.message, "error"));
-    }, [showToast, selectedDataset]);
+        refreshDatasets();
+    }, [showToast]);
 
     // Load coordinates when dataset selection changes
     useEffect(() => {
@@ -108,105 +116,115 @@ export default function GeneratePage() {
     };
 
     // Prepare Objective Space Plot Data
-    const objectivePlotData: any[] = [];
+    const objectiveDatasets: ChartDataset[] = [];
     if (baselineData) {
-        objectivePlotData.push({
-            x: baselineData.y.map((o: Vector) => o[0]),
-            y: baselineData.y.map((o: Vector) => o[1]),
-            mode: "markers",
-            type: "scattergl",
-            name: "Baseline Data",
-            marker: { color: "#cbd5e1", size: 4, opacity: 0.5 },
+        // Split into baseline and pareto
+        const baselinePoints: ChartDataPoint[] = [];
+        const paretoPoints: ChartDataPoint[] = [];
+
+        baselineData.y.forEach((o: Vector, i: number) => {
+            const pt = { x: o[0], y: o[1] };
+            if (baselineData.is_pareto?.[i]) {
+                paretoPoints.push(pt);
+            } else {
+                baselinePoints.push(pt);
+            }
         });
+
+        objectiveDatasets.push({
+            label: "Baseline Data",
+            data: baselinePoints,
+            backgroundColor: "rgba(203, 213, 225, 0.4)", // slate-300 with opacity
+        });
+
+        if (paretoPoints.length > 0) {
+            objectiveDatasets.push({
+                label: "Pareto Front",
+                data: paretoPoints,
+                backgroundColor: "#10b981", // emerald-500
+                pointRadius: 6,
+            });
+        }
     }
+
     if (result) {
-        objectivePlotData.push({
-            x: result.candidate_objectives.map((o: Vector) => o[0]),
-            y: result.candidate_objectives.map((o: Vector) => o[1]),
-            mode: "markers",
-            type: "scatter",
-            name: "Generated Candidates",
-            marker: {
-                color: "#6366f1",
-                size: 10,
-                opacity: 0.9,
-                line: { width: 1.5, color: "white" }
-            },
+        objectiveDatasets.push({
+            label: "Generated Candidates",
+            data: result.candidate_objectives.map((o: Vector) => ({ x: o[0], y: o[1] })),
+            backgroundColor: "#6366f1", // indigo-500
+            pointRadius: 8,
+            pointHoverRadius: 10,
         });
-        objectivePlotData.push({
-            x: [result.target_objective[0]],
-            y: [result.target_objective[1]],
-            mode: "markers",
-            type: "scatter",
-            name: "Target Objective",
-            marker: {
-                color: "#ef4444",
-                size: 16,
-                symbol: "cross",
-                line: { width: 2, color: "white" },
-            },
+
+        objectiveDatasets.push({
+            label: "Target Objective",
+            data: [{ x: result.target_objective[0], y: result.target_objective[1] }],
+            backgroundColor: "#ef4444", // red-500
+            pointRadius: 12,
         });
     }
 
     // Prepare Decision Space Plot Data
-    const decisionPlotData: any[] = [];
+    const decisionDatasets: ChartDataset[] = [];
     if (baselineData) {
-        decisionPlotData.push({
-            x: baselineData.X.map((x: Vector) => x[0]),
-            y: baselineData.X.map((x: Vector) => x[1]),
-            mode: "markers",
-            type: "scattergl",
-            name: "Baseline Designs",
-            marker: { color: "#94a3b8", size: 4, opacity: 0.5 },
+        const baselinePoints: ChartDataPoint[] = [];
+        const paretoPoints: ChartDataPoint[] = [];
+
+        baselineData.X.forEach((x: Vector, i: number) => {
+            const pt = { x: x[0], y: x[1] };
+            if (baselineData.is_pareto?.[i]) {
+                paretoPoints.push(pt);
+            } else {
+                baselinePoints.push(pt);
+            }
         });
+
+        decisionDatasets.push({
+            label: "Baseline Designs",
+            data: baselinePoints,
+            backgroundColor: "rgba(148, 163, 184, 0.4)", // slate-400
+        });
+
+        if (paretoPoints.length > 0) {
+            decisionDatasets.push({
+                label: "Pareto Optimal Decisions",
+                data: paretoPoints,
+                backgroundColor: "#059669", // emerald-600
+                pointRadius: 6,
+            });
+        }
     }
+
     if (result) {
-        // Find anchors if available
         if (result.anchor_indices && baselineData) {
             const anchorsX = result.anchor_indices.map((idx) => baselineData.X[idx]);
 
-            // Add dashed lines between anchors (simplex edges)
             if (anchorsX.length >= 3) {
                 const closedAnchors = [...anchorsX, anchorsX[0]];
-                decisionPlotData.push({
-                    x: closedAnchors.map((v: Vector) => v[0]),
-                    y: closedAnchors.map((v: Vector) => v[1]),
-                    mode: "lines",
-                    type: "scatter",
-                    name: "Support Simplex",
-                    line: { dash: "dash", width: 2, color: "#f59e0b" },
-                    hoverinfo: "none",
-                    showlegend: false,
+                decisionDatasets.push({
+                    label: "Support Simplex",
+                    data: closedAnchors.map((v: Vector) => ({ x: v[0], y: v[1] })),
+                    backgroundColor: "transparent",
+                    borderColor: "#f59e0b", // amber-500
+                    showLine: true,
+                    borderWidth: 2,
+                    pointRadius: 0,
                 });
             }
 
-            decisionPlotData.push({
-                x: anchorsX.map((v: Vector) => v[0]),
-                y: anchorsX.map((v: Vector) => v[1]),
-                mode: "markers",
-                type: "scatter",
-                name: "Context Anchors",
-                marker: {
-                    color: "#f59e0b",
-                    size: 14,
-                    symbol: "diamond-open",
-                    line: { width: 2.5 }
-                },
+            decisionDatasets.push({
+                label: "Context Anchors",
+                data: anchorsX.map((v: Vector) => ({ x: v[0], y: v[1] })),
+                backgroundColor: "#f59e0b",
+                pointRadius: 10,
             });
         }
 
-        decisionPlotData.push({
-            x: result.candidate_decisions.map((x: Vector) => x[0]),
-            y: result.candidate_decisions.map((x: Vector) => x[1]),
-            mode: "markers",
-            type: "scatter",
-            name: "Candidate Designs",
-            marker: {
-                color: "#8b5cf6",
-                size: 10,
-                opacity: 0.9,
-                line: { width: 1.5, color: "white" }
-            },
+        decisionDatasets.push({
+            label: "Candidate Designs",
+            data: result.candidate_decisions.map((x: Vector) => ({ x: x[0], y: x[1] })),
+            backgroundColor: "#8b5cf6", // violet-500
+            pointRadius: 8,
         });
     }
 
@@ -271,6 +289,8 @@ export default function GeneratePage() {
                     </form>
                 </Card>
 
+                <DatasetGenerator onSuccess={(name) => refreshDatasets(name)} />
+
                 {result && (
                     <Card title="Generation Insight">
                         <div className="space-y-3">
@@ -306,28 +326,13 @@ export default function GeneratePage() {
                     {/* Decision Space Plot */}
                     <Card title="Decision Space (X)">
                         <div className="h-[450px]">
-                            <PlotlyWrapper
-                                data={decisionPlotData}
-                                layout={{
-                                    autosize: true,
-                                    margin: { l: 40, r: 20, t: 40, b: 40 },
-                                    xaxis: {
-                                        title: { text: "Dimension 1" },
-                                        gridcolor: "#f1f5f9",
-                                        range: decXRange || undefined
-                                    },
-                                    yaxis: {
-                                        title: { text: "Dimension 2" },
-                                        gridcolor: "#f1f5f9",
-                                        range: decYRange || undefined
-                                    },
-                                    plot_bgcolor: "white",
-                                    paper_bgcolor: "white",
-                                    showlegend: true,
-                                    legend: { orientation: "h", y: -0.2 }
-                                }}
-                                style={{ width: "100%", height: "100%" }}
-                                useResizeHandler={true}
+                            <ChartJSWrapper
+                                title="Decision Space"
+                                datasets={decisionDatasets}
+                                xAxisTitle="Dimension 1"
+                                yAxisTitle="Dimension 2"
+                                xRange={decXRange || undefined}
+                                yRange={decYRange || undefined}
                             />
                         </div>
                     </Card>
@@ -335,28 +340,13 @@ export default function GeneratePage() {
                     {/* Objective Space Plot */}
                     <Card title="Objective Space (y)">
                         <div className="h-[450px]">
-                            <PlotlyWrapper
-                                data={objectivePlotData}
-                                layout={{
-                                    autosize: true,
-                                    margin: { l: 40, r: 20, t: 40, b: 40 },
-                                    xaxis: {
-                                        title: { text: "Objective 1" },
-                                        gridcolor: "#f1f5f9",
-                                        range: objXRange || undefined
-                                    },
-                                    yaxis: {
-                                        title: { text: "Objective 2" },
-                                        gridcolor: "#f1f5f9",
-                                        range: objYRange || undefined
-                                    },
-                                    plot_bgcolor: "white",
-                                    paper_bgcolor: "white",
-                                    showlegend: true,
-                                    legend: { orientation: "h", y: -0.2 }
-                                }}
-                                style={{ width: "100%", height: "100%" }}
-                                useResizeHandler={true}
+                            <ChartJSWrapper
+                                title="Objective Space"
+                                datasets={objectiveDatasets}
+                                xAxisTitle="Objective 1"
+                                yAxisTitle="Objective 2"
+                                xRange={objXRange || undefined}
+                                yRange={objYRange || undefined}
                             />
                         </div>
                     </Card>

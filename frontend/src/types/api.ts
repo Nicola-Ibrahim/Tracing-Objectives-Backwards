@@ -32,5 +32,14 @@ export interface DatasetDetailResponse {
     name: string;
     X: Vector[];
     y: Vector[];
+    is_pareto: boolean[];
     bounds: Record<string, [number, number]>;
+}
+
+export interface DatasetGenerationRequest {
+    function_id: number;
+    population_size: number;
+    n_var: number;
+    generations: number;
+    dataset_name: string;
 }

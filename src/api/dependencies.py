@@ -1,3 +1,4 @@
+from ..modules.dataset.application.generation import GenerateDatasetService
 from ..modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
@@ -23,5 +24,13 @@ def get_generation_service() -> GenerateCoherentCandidatesService:
     return GenerateCoherentCandidatesService(
         context_repository=get_context_repository(),
         dataset_repository=get_dataset_repository(),
+        logger=logger,
+    )
+
+
+def get_generation_dataset_service() -> GenerateDatasetService:
+    logger = CMDLogger(name="DatasetGenAPI")
+    return GenerateDatasetService(
+        data_model_repository=get_dataset_repository(),
         logger=logger,
     )
