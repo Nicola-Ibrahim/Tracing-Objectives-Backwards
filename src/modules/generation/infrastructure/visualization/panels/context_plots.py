@@ -14,6 +14,7 @@ def create_combined_context_figure(
     candidate_objectives: np.ndarray,
     original_decisions: np.ndarray,
     candidate_decisions: np.ndarray,
+    anchor_indices: list[int] | None = None,
 ) -> go.Figure:
     """
     Creates a single figure with two subplots:
@@ -46,6 +47,24 @@ def create_combined_context_figure(
         show_legend=True,
     )
 
+    # 1.5 Anchor Simplex (Decisions)
+    if anchor_indices is not None and len(anchor_indices) > 0:
+        poly_dec = original_decisions[anchor_indices]
+        poly_dec = np.vstack([poly_dec, poly_dec[0]])  # Close the polygon
+        fig.add_trace(
+            go.Scatter(
+                x=poly_dec[:, 0],
+                y=poly_dec[:, 1],
+                mode="lines+markers",
+                name="Simplex Anchors",
+                line=dict(color="#27ae60", width=2, dash="dash"),  # Nephritis (Green)
+                marker=dict(symbol="cross", size=10, color="#27ae60"),
+                showlegend=True,
+            ),
+            row=1,
+            col=1,
+        )
+
     # 2. Generated Candidates (Decisions)
     add_scatter_overlay(
         fig,
@@ -74,6 +93,24 @@ def create_combined_context_figure(
         opacity=0.3,
         color="#bdc3c7",  # Silver
     )
+
+    # 1.5 Anchor Simplex (Objectives)
+    if anchor_indices is not None and len(anchor_indices) > 0:
+        poly_obj = original_objectives[anchor_indices]
+        poly_obj = np.vstack([poly_obj, poly_obj[0]])  # Close the polygon
+        fig.add_trace(
+            go.Scatter(
+                x=poly_obj[:, 0],
+                y=poly_obj[:, 1],
+                mode="lines+markers",
+                name="Simplex Anchors (Obj)",
+                line=dict(color="#27ae60", width=2, dash="dash"),  # Nephritis (Green)
+                marker=dict(symbol="cross", size=10, color="#27ae60"),
+                showlegend=False,
+            ),
+            row=1,
+            col=2,
+        )
 
     # 2. Generated Candidates (Objectives)
     add_scatter_overlay(

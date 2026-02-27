@@ -182,6 +182,7 @@ class GenerateCoherentCandidatesService:
                     "target_objective": config.target_objective,
                     "candidate_objectives": result.predicted_objectives,
                     "candidate_decisions": result.candidates,
+                    "anchor_indices": result.anchor_indices,
                 }
             )
 

@@ -34,7 +34,7 @@ def main(
 
     config = GenerationConfig(
         dataset_name=dataset_name,
-        target_objective=[417, 1160],
+        target_objective=[400, 1600],
         n_samples=10,
         concentration_factor=10.0,
         trust_radius=0.05,

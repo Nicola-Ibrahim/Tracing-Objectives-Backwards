@@ -19,6 +19,8 @@ dependencies = [
     "pandas>=2.2.3",
     "pip>=25.1.1",
     "plotly[express]>=6.0.1",
+    "fastapi[standard]>=0.115.0",
+    "uvicorn>=0.30.0",
     "pydantic>=2.11.5",
     "pykrige>=1.7.2",
     "pymoo>=0.6.1.3",
@@ -37,6 +39,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "poethepoet>=0.40.0",
+    "pytest-playwright>=0.5.0",
 ]
 
 
@@ -139,7 +142,6 @@ help = "REPORT: Visualize historical diagnostics from the auditor."
 # 5. Performance Visualization (Specific Lenses)
 # ====================================================================================
 
-[tool.poe.tasks.viz-perf-inv]
-shell = "python -m src.cli.evaluating.visualize_model_performance"
-help = "VIZ PERF INVERSE: Detailed plots for a run. Usage: uv run poe"
-  
+[tool.poe.tasks.serve]
+shell = "fastapi dev src/api/main.py"
+help = "SERVE: Run the FastAPI web server. Usage: poe serve"

@@ -19,3 +19,7 @@ class BaseDatasetRepository(ABC):
     @abstractmethod
     def load(self, name: str) -> Dataset:
         """Retrieve the dataset aggregate by name."""
+
+    @abstractmethod
+    def list_all(self) -> list[str]:
+        """List all available dataset names."""

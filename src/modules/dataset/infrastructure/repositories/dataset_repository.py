@@ -85,5 +85,16 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             pareto=pareto,
         )
 
+    def list_all(self) -> list[str]:
+        """List all available dataset names by checking for raw subdirectories."""
+        datasets = []
+        if not self.base_path.exists():
+            return []
+
+        for p in self.base_path.iterdir():
+            if p.is_dir() and self._raw_dir(p.name).exists():
+                datasets.append(p.name)
+        return sorted(datasets)
+
     def _raw_dir(self, name: str) -> Path:
         return self.base_path / name / "raw"

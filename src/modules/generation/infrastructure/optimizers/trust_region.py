@@ -48,17 +48,24 @@ class TrustRegionOptimizer:
         results = []
         rng = np.random.default_rng()
 
-        for _ in range(n_candidates):
-            # Start from random points within the strict trust region to find multiple candidates
-            x0 = rng.uniform(lower_bound, upper_bound)
+        import warnings
 
-            res = minimize(
-                objective_function,
-                x0,
-                method="trust-constr",
-                bounds=bounds,
-                options={"maxiter": 50, "disp": False},  # Keep it fast for real-time
-            )
-            results.append(res.x)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            for _ in range(n_candidates):
+                # Start from random points within the strict trust region to find multiple candidates
+                x0 = rng.uniform(lower_bound, upper_bound)
+
+                res = minimize(
+                    objective_function,
+                    x0,
+                    method="trust-constr",
+                    bounds=bounds,
+                    options={
+                        "maxiter": 50,
+                        "disp": False,
+                    },  # Keep it fast for real-time
+                )
+                results.append(res.x)
 
         return np.vstack(results)
