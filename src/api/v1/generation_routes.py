@@ -1,33 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from ...modules.dataset.infrastructure.repositories.dataset_repository import (
-    FileSystemDatasetRepository,
-)
 from ...modules.generation.application.generate_candidates import (
     GenerateCoherentCandidatesService,
     GenerationConfig,
 )
-from ...modules.generation.infrastructure.repositories.context_repo import (
-    FileSystemContextRepository,
-)
-from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from ..dependencies import get_generation_service
 from ..schemas.generation import GenerationRequest, GenerationResponse
 
 router = APIRouter()
 
-# Instantiate dependencies
-context_repo = FileSystemContextRepository()
-dataset_repo = FileSystemDatasetRepository()
-logger = CMDLogger(name="GenerationAPI")
-service = GenerateCoherentCandidatesService(
-    context_repository=context_repo,
-    dataset_repository=dataset_repo,
-    logger=logger,
-)
-
 
 @router.post("/generate", response_model=GenerationResponse)
-async def generate_candidates(request: GenerationRequest):
+async def generate_candidates(
+    request: GenerationRequest,
+    service: GenerateCoherentCandidatesService = Depends(get_generation_service),
+):
     """
     Generate coherent candidates for a target objective.
     """
@@ -44,19 +31,19 @@ async def generate_candidates(request: GenerationRequest):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.log_error(f"Generation failed: {str(e)}")
+        service.logger.log_error(f"Generation failed: {str(e)}")
         raise HTTPException(
             status_code=500, detail="Internal server error during generation."
         )
 
     return GenerationResponse(
-        pathway=result.pathway,
-        target_objective=tuple(result.target_objective.flatten().tolist()),
-        candidate_decisions=[row.tolist() for row in result.candidates],
+        pathway=result["pathway"],
+        target_objective=result["target_objective"],
+        candidate_decisions=[row.tolist() for row in result["candidate_decisions"]],
         candidate_objectives=[
-            tuple(row) for row in result.predicted_objectives.tolist()
+            tuple(row) for row in result["candidate_objectives"].tolist()
         ],
-        residual_errors=result.residual_errors.tolist(),
-        anchor_indices=result.anchor_indices,
-        is_inside_mesh=result.is_inside_mesh,
+        residual_errors=result["residual_errors"].tolist(),
+        anchor_indices=result["anchor_indices"],
+        is_inside_mesh=result["is_inside_mesh"],
     )

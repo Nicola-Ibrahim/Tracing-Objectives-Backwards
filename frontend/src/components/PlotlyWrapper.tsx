@@ -21,9 +21,11 @@ interface PlotlyWrapperProps {
     layout: Partial<Plotly.Layout>;
     config?: Partial<Plotly.Config>;
     className?: string;
+    style?: React.CSSProperties;
+    useResizeHandler?: boolean;
 }
 
-export default function PlotlyWrapper({ data, layout, config, className }: PlotlyWrapperProps) {
+export default function PlotlyWrapper({ data, layout, config, className, style, useResizeHandler }: PlotlyWrapperProps) {
     return (
         <div className={className}>
             <Plot
@@ -31,9 +33,28 @@ export default function PlotlyWrapper({ data, layout, config, className }: Plotl
                 layout={{
                     autosize: true,
                     margin: { t: 40, r: 40, l: 60, b: 60 },
-                    font: { family: "var(--font-geist-sans)" },
+                    font: {
+                        family: "var(--font-geist-sans), sans-serif",
+                        color: "#475569"
+                    },
                     paper_bgcolor: "rgba(0,0,0,0)",
                     plot_bgcolor: "rgba(0,0,0,0)",
+                    xaxis: {
+                        gridcolor: "#f1f5f9",
+                        linecolor: "#f1f5f9",
+                        zerolinecolor: "#f1f5f9",
+                        tickfont: { size: 11 }
+                    },
+                    yaxis: {
+                        gridcolor: "#f1f5f9",
+                        linecolor: "#f1f5f9",
+                        zerolinecolor: "#f1f5f9",
+                        tickfont: { size: 11 }
+                    },
+                    transition: {
+                        duration: 500,
+                        easing: "cubic-in-out"
+                    },
                     ...layout,
                 }}
                 config={{
@@ -42,8 +63,8 @@ export default function PlotlyWrapper({ data, layout, config, className }: Plotl
                     modeBarButtonsToRemove: ["lasso2d", "select2d"],
                     ...config,
                 }}
-                style={{ width: "100%", height: "100%", minHeight: "400px" }}
-                useResizeHandler
+                style={style || { width: "100%", height: "100%", minHeight: "400px" }}
+                useResizeHandler={useResizeHandler}
             />
         </div>
     );

@@ -25,3 +25,12 @@ export interface GenerationResponse {
     anchor_indices: number[];
     is_inside_mesh: boolean;
 }
+export type Vector = number[];
+
+// Corresponds to backend DatasetDetailResponse
+export interface DatasetDetailResponse {
+    name: string;
+    X: Vector[];
+    y: Vector[];
+    bounds: Record<string, [number, number]>;
+}

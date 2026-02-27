@@ -186,4 +186,13 @@ class GenerateCoherentCandidatesService:
                 }
             )
 
-        return result
+        return {
+            "dataset_name": config.dataset_name,
+            "pathway": result.pathway,
+            "target_objective": config.target_objective,
+            "candidate_objectives": result.predicted_objectives,
+            "candidate_decisions": result.candidates,
+            "residual_errors": result.residual_errors,
+            "anchor_indices": result.anchor_indices,
+            "is_inside_mesh": result.is_inside_mesh,
+        }
