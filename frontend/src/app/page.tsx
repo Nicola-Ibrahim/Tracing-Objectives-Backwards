@@ -129,18 +129,18 @@ export default function ExplorationPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="h-[400px]">
               <ChartJSWrapper
-                title="Objective Space"
-                datasets={objectiveDatasets}
-                xAxisTitle="Objective 1"
-                yAxisTitle="Objective 2"
-              />
-            </div>
-            <div className="h-[400px]">
-              <ChartJSWrapper
                 title="Decision Space"
                 datasets={decisionDatasets}
                 xAxisTitle="Dimension 1"
                 yAxisTitle="Dimension 2"
+              />
+            </div>
+            <div className="h-[400px]">
+              <ChartJSWrapper
+                title="Objective Space"
+                datasets={objectiveDatasets}
+                xAxisTitle="Objective 1"
+                yAxisTitle="Objective 2"
               />
             </div>
           </div>

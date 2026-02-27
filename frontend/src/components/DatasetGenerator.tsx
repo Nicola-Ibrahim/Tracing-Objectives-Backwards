@@ -50,58 +50,64 @@ const DatasetGenerator: React.FC<DatasetGeneratorProps> = ({ onSuccess }) => {
     };
 
     return (
-        <Card title="COCOEX Generator">
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Function ID (1-55)</label>
-                    <input
+        <div className="space-y-4">
+            <h3 className="text-md font-bold text-slate-800 px-1">Benchmark Factory</h3>
+            <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-500 ml-1">COCOEX Function</label>
+                        <input
+                            type="number"
+                            min={1}
+                            max={55}
+                            value={functionId}
+                            onChange={(e) => setFunctionId(parseInt(e.target.value))}
+                            className="w-full px-3 py-2 bg-white/50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                        />
+                    </div>
+                    <Input
+                        label="Population"
                         type="number"
-                        min={1}
-                        max={55}
-                        value={functionId}
-                        onChange={(e) => setFunctionId(parseInt(e.target.value))}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-md text-sm"
+                        value={popSize}
+                        onChange={(e) => setPopSize(parseInt(e.target.value))}
+                        className="py-2"
                     />
                 </div>
 
-                <Input
-                    label="Population Size"
-                    type="number"
-                    value={popSize}
-                    onChange={(e) => setPopSize(parseInt(e.target.value))}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                     <Input
                         label="Dimensions"
                         type="number"
                         value={nVar}
                         onChange={(e) => setNVar(parseInt(e.target.value))}
+                        className="py-2"
                     />
                     <Input
-                        label="Opt. Gen (0=Random)"
+                        label="Opt. Gen"
                         type="number"
                         value={generations}
                         onChange={(e) => setGenerations(parseInt(e.target.value))}
+                        className="py-2"
                     />
                 </div>
 
                 <Input
-                    label="Custom Name"
-                    placeholder="e.g. my_benchmark_f1"
+                    label="Dataset Alias"
+                    placeholder="e.g. f1_2d_100"
                     value={datasetName}
                     onChange={(e) => setDatasetName(e.target.value)}
+                    className="py-2"
                 />
 
                 <Button
                     type="submit"
-                    className="w-full mt-2"
+                    className="w-full py-3 mt-2 shadow-md shadow-primary/10"
                     disabled={isGenerating}
                 >
-                    {isGenerating ? "Generating..." : "Generate Dataset"}
+                    {isGenerating ? "Building..." : "Build Benchmark"}
                 </Button>
             </form>
-        </Card>
+        </div>
     );
 };
 

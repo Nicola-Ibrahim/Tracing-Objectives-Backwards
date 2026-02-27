@@ -32,7 +32,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
         <ToastProvider>
-          <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="max-w-[1400px] mx-auto px-4 py-8">
             <header className="mb-12">
               <h1 className="text-3xl font-bold text-foreground mb-2">
                 Tracing Objectives Backwards

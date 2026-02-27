@@ -7,16 +7,18 @@ interface DatasetSelectorProps {
     selectedDataset: string;
     onSelect: (name: string) => void;
     isLoading?: boolean;
+    className?: string;
 }
 
 export default function DatasetSelector({
     datasets,
     selectedDataset,
     onSelect,
-    isLoading
+    isLoading,
+    className = ""
 }: DatasetSelectorProps) {
     return (
-        <div className="space-y-1.5">
+        <div className={`space-y-1.5 ${className}`}>
             <label className="text-sm font-semibold text-slate-700 ml-1">
                 Dataset Source
             </label>
