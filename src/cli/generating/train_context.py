@@ -3,9 +3,9 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.generation.application.prepare_context import (
-    PrepareContextParams,
-    PrepareContextService,
+from ...modules.generation.application.train_context import (
+    TrainContextParams,
+    TrainContextService,
 )
 from ...modules.generation.infrastructure.repositories.context_repo import (
     FileSystemContextRepository,
@@ -21,7 +21,7 @@ def main(dataset_name: str):
     """
     logger = CMDLogger(name="PrepareContextLogger")
 
-    params = PrepareContextParams(
+    params = TrainContextParams(
         dataset_name=dataset_name,
         k_neighbors=5,
         transforms=[
@@ -30,7 +30,7 @@ def main(dataset_name: str):
         ],
     )
 
-    service = PrepareContextService(
+    service = TrainContextService(
         dataset_repository=FileSystemDatasetRepository(),
         context_repository=FileSystemContextRepository(),
         logger=logger,

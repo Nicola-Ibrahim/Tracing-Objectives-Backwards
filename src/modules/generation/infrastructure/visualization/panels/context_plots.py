@@ -14,13 +14,19 @@ def create_combined_context_figure(
     candidate_objectives: np.ndarray,
     original_decisions: np.ndarray,
     candidate_decisions: np.ndarray,
-    anchor_indices: list[int] | None = None,
+    vertices_indices: list[int] | None = None,
 ) -> go.Figure:
     """
     Creates a single figure with two subplots:
-    1. Objective Space (Target vs Context)
-    2. Decision Space (Generated vs Context x1, x2)
+    1. Decision Space (Generated vs Context x1, x2)
+    2. Objective Space (Target vs Context)
     """
+    # 0. Ensure inputs are numpy arrays (handles lists from serializable application results)
+    original_objectives = np.asarray(original_objectives)
+    target_objective = np.asarray(target_objective).flatten()
+    candidate_objectives = np.asarray(candidate_objectives)
+    original_decisions = np.asarray(original_decisions)
+    candidate_decisions = np.asarray(candidate_decisions)
     fig = make_subplots(
         rows=1,
         cols=2,
@@ -48,17 +54,19 @@ def create_combined_context_figure(
     )
 
     # 1.5 Anchor Simplex (Decisions)
-    if anchor_indices is not None and len(anchor_indices) > 0:
-        poly_dec = original_decisions[anchor_indices]
+    if vertices_indices is not None and len(vertices_indices) > 0:
+        poly_dec = original_decisions[vertices_indices]
         poly_dec = np.vstack([poly_dec, poly_dec[0]])  # Close the polygon
         fig.add_trace(
             go.Scatter(
                 x=poly_dec[:, 0],
                 y=poly_dec[:, 1],
                 mode="lines+markers",
-                name="Simplex Anchors",
-                line=dict(color="#27ae60", width=2, dash="dash"),  # Nephritis (Green)
-                marker=dict(symbol="cross", size=10, color="#27ae60"),
+                name="Simplex Anchors (Dec)",
+                line=dict(color="#e67e22", width=2, dash="dash"),  # Carrot (Orange)
+                marker=dict(symbol="triangle-up", size=10, color="#e67e22"),
+                fill="toself",
+                fillcolor="rgba(230, 126, 34, 0.1)",
                 showlegend=True,
             ),
             row=1,
@@ -95,8 +103,8 @@ def create_combined_context_figure(
     )
 
     # 1.5 Anchor Simplex (Objectives)
-    if anchor_indices is not None and len(anchor_indices) > 0:
-        poly_obj = original_objectives[anchor_indices]
+    if vertices_indices is not None and len(vertices_indices) > 0:
+        poly_obj = original_objectives[vertices_indices]
         poly_obj = np.vstack([poly_obj, poly_obj[0]])  # Close the polygon
         fig.add_trace(
             go.Scatter(
@@ -104,8 +112,10 @@ def create_combined_context_figure(
                 y=poly_obj[:, 1],
                 mode="lines+markers",
                 name="Simplex Anchors (Obj)",
-                line=dict(color="#27ae60", width=2, dash="dash"),  # Nephritis (Green)
-                marker=dict(symbol="cross", size=10, color="#27ae60"),
+                line=dict(color="#e67e22", width=2, dash="dash"),  # Carrot (Orange)
+                marker=dict(symbol="triangle-up", size=10, color="#e67e22"),
+                fill="toself",
+                fillcolor="rgba(230, 126, 34, 0.1)",
                 showlegend=False,
             ),
             row=1,

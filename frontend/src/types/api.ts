@@ -14,6 +14,7 @@ export interface GenerationRequest {
     n_samples: number;
     trust_radius: number;
     concentration_factor?: number; // Optional, defaults to 10.0
+    error_threshold?: number;
 }
 
 // Corresponds to backend GenerationResponse
@@ -22,12 +23,13 @@ export interface GenerationResponse {
     target_objective: [number, number];
     candidate_decisions: number[][];
     candidate_objectives: [number, number][];
-    residual_errors: number[];
-    anchor_indices: number[];
-    is_inside_mesh: boolean;
-    winner_index: number;
-    winner_point: [number, number];
-    winner_decision: number[];
+    objective_space_residual_sorted: number[];
+    vertices_indices: number[];
+    is_simplex_found: boolean;
+    is_coherent: boolean;
+    best_index: number;
+    best_objective: [number, number];
+    best_decision: number[];
 }
 export type Vector = number[];
 

@@ -4,9 +4,9 @@ from ...modules.generation.application.generate_candidates import (
     GenerateCoherentCandidatesService,
     GenerationConfig,
 )
-from ...modules.generation.application.prepare_context import (
-    PrepareContextParams,
-    PrepareContextService,
+from ...modules.generation.application.train_context import (
+    TrainContextParams,
+    TrainContextService,
 )
 from ..dependencies import get_generation_service, get_train_context_service
 from ..schemas.dataset import TrainingRequest, TrainingResponse
@@ -29,6 +29,7 @@ async def generate_candidates(
         n_samples=request.n_samples,
         trust_radius=request.trust_radius,
         concentration_factor=request.concentration_factor,
+        error_threshold=request.error_threshold,
     )
 
     try:
@@ -36,9 +37,9 @@ async def generate_candidates(
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        print(e)
+        print(f"Generation error: {e}")
         raise HTTPException(
-            status_code=500, detail="Internal server error during generation."
+            status_code=500, detail=f"Internal server error during generation: {str(e)}"
         )
 
     return GenerationResponse(
@@ -46,26 +47,28 @@ async def generate_candidates(
         target_objective=result["target_objective"],
         candidate_decisions=result["candidate_decisions"],
         candidate_objectives=result["candidate_objectives"],
-        residual_errors=result["residual_errors"],
-        anchor_indices=result["anchor_indices"],
-        is_inside_mesh=result["is_inside_mesh"],
-        winner_index=result["winner_index"],
-        winner_point=result["winner_point"],
-        winner_decision=result["winner_decision"],
+        objective_space_residual_sorted=result["objective_space_residual_sorted"],
+        vertices_indices=result["vertices_indices"],
+        is_simplex_found=result["is_simplex_found"],
+        is_coherent=result["is_coherent"],
+        best_index=result["best_index"],
+        best_objective=result["best_objective"],
+        best_decision=result["best_decision"],
     )
 
 
 @router.post("/train", response_model=TrainingResponse)
 async def train_context(
     request: TrainingRequest,
-    service: PrepareContextService = Depends(get_train_context_service),
+    service: TrainContextService = Depends(get_train_context_service),
 ):
     """
     Train (fit) surrogate models for a dataset context.
     """
     try:
-        params = PrepareContextParams(dataset_name=request.dataset_name)
+        params = TrainContextParams(dataset_name=request.dataset_name)
         service.execute(params)
         return TrainingResponse(dataset_name=request.dataset_name, status="completed")
     except Exception as e:
+        print(f"Training error: {e}")
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")

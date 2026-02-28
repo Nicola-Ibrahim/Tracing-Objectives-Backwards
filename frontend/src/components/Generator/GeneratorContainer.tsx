@@ -27,6 +27,7 @@ export default function GeneratorContainer() {
     const [targetObj2, setTargetObj2] = useState<number>(0);
     const [nSamples, setNSamples] = useState<number>(50);
     const [trustRadius, setTrustRadius] = useState<number>(0.05);
+    const [errorThreshold, setErrorThreshold] = useState<number | undefined>(undefined);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isTraining, setIsTraining] = useState(false);
     const [result, setResult] = useState<GenerationResponse | null>(null);
@@ -61,6 +62,7 @@ export default function GeneratorContainer() {
             target_objective: [targetObj1, targetObj2],
             n_samples: nSamples,
             trust_radius: trustRadius,
+            error_threshold: errorThreshold,
         };
 
         try {
@@ -106,8 +108,8 @@ export default function GeneratorContainer() {
     }
 
     if (result) {
-        if (result.anchor_indices && baselineData) {
-            const anchorsY = result.anchor_indices.map((idx) => baselineData.y[idx]);
+        if (result.vertices_indices && baselineData) {
+            const anchorsY = result.vertices_indices.map((idx: number) => baselineData.y[idx]);
             objectiveDatasets.push({
                 label: "Context Anchors",
                 data: anchorsY.map((v: Vector) => ({ x: v[0], y: v[1] })),
@@ -137,7 +139,7 @@ export default function GeneratorContainer() {
         // Highlight Winner Candidate in Gold
         objectiveDatasets.push({
             label: "Winner Candidate",
-            data: [{ x: result.winner_point[0], y: result.winner_point[1] }],
+            data: [{ x: result.best_objective[0], y: result.best_objective[1] }],
             backgroundColor: "#fbbf24", // Amber-400 (Gold)
             pointRadius: 14,
             pointHoverRadius: 16,
@@ -151,7 +153,7 @@ export default function GeneratorContainer() {
             label: "Optimal Vector",
             data: [
                 { x: result.target_objective[0], y: result.target_objective[1] },
-                { x: result.winner_point[0], y: result.winner_point[1] }
+                { x: result.best_objective[0], y: result.best_objective[1] }
             ],
             backgroundColor: "transparent",
             borderColor: "#ef4444", // Red matching target
@@ -194,8 +196,8 @@ export default function GeneratorContainer() {
     }
 
     if (result) {
-        if (result.anchor_indices && baselineData) {
-            const anchorsX = result.anchor_indices.map((idx) => baselineData.X[idx]);
+        if (result.vertices_indices && baselineData) {
+            const anchorsX = result.vertices_indices.map((idx: number) => baselineData.X[idx]);
             if (anchorsX.length >= 3) {
                 const closedAnchors = [...anchorsX, anchorsX[0]];
                 decisionDatasets.push({
@@ -226,7 +228,7 @@ export default function GeneratorContainer() {
         // Highlight Winner Decision in Decision Space
         decisionDatasets.push({
             label: "Winner Design",
-            data: [{ x: result.winner_decision[0], y: result.winner_decision[1] }],
+            data: [{ x: result.best_decision[0], y: result.best_decision[1] }],
             backgroundColor: "#fbbf24",
             pointRadius: 12,
             pointStyle: 'star',
@@ -323,6 +325,14 @@ export default function GeneratorContainer() {
                                         value={trustRadius}
                                         onChange={(e) => setTrustRadius(parseFloat(e.target.value))}
                                     />
+                                    <Input
+                                        label="Error Threshold"
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="No filtering"
+                                        value={errorThreshold || ""}
+                                        onChange={(e) => setErrorThreshold(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                    />
                                 </div>
 
                                 <Button
@@ -351,10 +361,10 @@ export default function GeneratorContainer() {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-lg font-black text-slate-900 leading-tight">
-                                            Winner: [{result.winner_point[0].toFixed(3)}, {result.winner_point[1].toFixed(3)}]
+                                            Winner: [{result.best_objective[0].toFixed(3)}, {result.best_objective[1].toFixed(3)}]
                                         </p>
                                         <p className="text-[10px] text-amber-700 font-bold uppercase tracking-tight">
-                                            Error: {result.residual_errors[result.winner_index].toFixed(5)}
+                                            Error: {result.objective_space_residual_sorted[result.best_index].toFixed(5)}
                                         </p>
                                     </div>
                                 </div>
@@ -370,8 +380,14 @@ export default function GeneratorContainer() {
                                 </div>
                                 <div className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-xl border border-slate-100">
                                     <span className="text-slate-500 font-medium">Model Validity</span>
-                                    <span className={`font-bold ${result.is_inside_mesh ? "text-green-600" : "text-amber-600"}`}>
-                                        {result.is_inside_mesh ? "Verified (Inside Mesh)" : "Extrapolated (Outside Mesh)"}
+                                    <span className={`font-bold ${result.is_simplex_found ? "text-green-600" : "text-amber-600"}`}>
+                                        {result.is_simplex_found ? "Verified (Inside Mesh)" : "Extrapolated (Outside Mesh)"}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-slate-500 font-medium">Coherence</span>
+                                    <span className={`font-bold ${result.is_coherent ? "text-green-600" : "text-amber-600"}`}>
+                                        {result.is_coherent ? "Coherent" : "Incoherent"}
                                     </span>
                                 </div>
                             </div>

@@ -3,88 +3,156 @@ from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
+from scipy.spatial import Delaunay
 
 from ....modeling.domain.interfaces.base_transform import BaseTransformer
 
 
 class GenerationContext(BaseModel):
     """
-    Represents the pre-computed geometric and statistical environment
-    for real-time candidate generation against a specific dataset.
-    Now structured with explicit normalizer transformations and embedded surrogate to map
-    backward steps coherently.
+    Rich Aggregate Root representing the environment for generation.
+    It encapsulates state and enforces its own domain rules (normalization and coherence).
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 
     dataset_name: str = Field(..., description="Identifier of the source dataset")
-    objectives: np.ndarray = Field(
-        ..., description="Objective-space points (N x 2), used as Delaunay vertices"
+    space_points: np.ndarray = Field(
+        ..., description="Points forming the Delaunay mesh (N x 2)"
     )
-    anchors_norm: np.ndarray = Field(
+    # mesh_vertices: np.ndarray = Field(
+    #     ...,
+    #     description="Normalized objective-space points (N x 2), used as Delaunay vertices",
+    # )
+    decision_vertices: np.ndarray = Field(
         ..., description="Normalized decision-space points (N x D)"
     )
     tau: float = Field(..., gt=0, description="Coherence threshold")
-
-    # Standardized transformers following the trained_pipeline pattern
-    transforms: list[BaseTransformer] = Field(
+    transforms: list[tuple[BaseTransformer, Any]] = Field(
         default_factory=list,
-        description="Ordered sequence of fitted preprocessing transforms",
+        description="Ordered sequence of fitted preprocessing transforms with their targets",
     )
-
-    # Local Forward Surrogate
-    surrogate_step: Any = Field(
+    surrogate_estimator: Any = Field(
         ..., description="The Explicitly Evaluated Surrogate Model Step"
     )
-
+    mesh: Delaunay = Field(
+        ..., description="The Delaunay triangulation of the space points"
+    )
     is_trained: bool = Field(
         default=True,
         description="Flag indicating if the context has been fully trained",
     )
-
     created_at: datetime = Field(default_factory=datetime.now)
 
-    def model_post_init(self, __context):
-        if self.objectives.ndim != 2 or self.objectives.shape[1] != 2:
-            raise ValueError("objectives must be a 2D array with shape (N, 2)")
-        if self.objectives.shape[0] < 4:
-            raise ValueError(
-                "objectives shape[0] must be >= 4 for non-degenerate 2D triangulation"
-            )
-        if self.anchors_norm.shape[0] != self.objectives.shape[0]:
-            raise ValueError("anchors_norm must be row-aligned with objectives")
+    def normalize_target(self, target: np.ndarray) -> np.ndarray:
+        """Applies internal transforms to an incoming target objective."""
+        target_norm = target.copy()
+        for t in self.get_objectives_transforms():
+            target_norm = t.transform(target_norm)
+        return target_norm
 
-    def evaluate_simplex_reliability(self, anchor_candidates: np.ndarray) -> bool:
+    def decision_transform(self, decision: np.ndarray) -> np.ndarray:
+        """Applies internal transforms to an incoming decision objective."""
+        decision_norm = decision.copy()
+        for t in self.get_decisions_transforms():
+            decision_norm = t.transform(decision_norm)
+        return decision_norm
+
+    def decision_detransform(self, decision_norm: np.ndarray) -> np.ndarray:
+        """Applies internal transforms to an incoming decision objective."""
+        decision = decision_norm.copy()
+        for t in reversed(self.get_decisions_transforms()):
+            decision = t.inverse_transform(decision)
+        return decision
+
+    def objective_transform(self, objective: np.ndarray) -> np.ndarray:
+        """Applies internal transforms to an incoming objective objective."""
+        objective_norm = objective.copy()
+        for t in self.get_objectives_transforms():
+            objective_norm = t.transform(objective_norm)
+        return objective_norm
+
+    def objective_detransform(self, objective_norm: np.ndarray) -> np.ndarray:
+        """Applies internal transforms to an incoming objective objective."""
+        objective = objective_norm.copy()
+        for t in reversed(self.get_objectives_transforms()):
+            objective = t.inverse_transform(objective)
+        return objective
+
+    def evaluate_coherence(self, vertices_indices: list[int]) -> bool:
+        """Enforces the coherence domain rule based on the tau threshold
+        Checks if all pairwise distances between vertices are less than or equal to tau.
         """
-        Domain service acting as a safeguard to prevent generation of physically impossible configurations.
-        Evaluates whether a set of geometric vertices forming a facet is smaller than the local coherence threshold.
+        triangle_vertices = self.decision_vertices[vertices_indices]
 
-        Args:
-            anchor_candidates: (N, D) array of normalized decision configurations for the anchors.
-
-        Returns:
-            True if coherent (all pairwise distances <= tau), False otherwise.
-        """
-        if len(anchor_candidates) < 2:
+        if len(triangle_vertices) < 2:
             return True
 
-        # Calculate pairwise euclidean distances
-        diffs = anchor_candidates[:, None, :] - anchor_candidates[None, :, :]
+        # Calculate pairwise distances between vertices
+        diffs = triangle_vertices[:, None, :] - triangle_vertices[None, :, :]
         dists = np.linalg.norm(diffs, axis=-1)
-
-        # Get upper triangle, excluding diagonal
-        i, j = np.triu_indices(len(anchor_candidates), k=1)
+        i, j = np.triu_indices(len(triangle_vertices), k=1)
         pairwise_dists = dists[i, j]
-
         return bool(np.all(pairwise_dists <= self.tau))
+
+    def locate(self, target: np.ndarray) -> tuple[list[int], np.ndarray, bool]:
+        """
+        Locates the target within the Delaunay mesh and return the triangle.
+
+        Args:
+            target: (1, 2) or (2,) array representing the target objective.
+            space_points: (N, 2) array of known points forming the mesh.
+
+        Returns:
+            anchor_indices: List of original indices (in `space_points`) forming the local geometry.
+            weights: Barycentric weights corresponding to the anchors.
+            is_inside: True if the target falls inside the convex hull.
+        """
+        target = np.asarray(target).reshape(1, -1)
+        if target.shape[1] != 2:
+            raise ValueError("Target must be a 2D coordinate")
+
+        # find the single triangle that the target landed inside
+        simplex_idx = self.mesh.find_simplex(target)[0]
+
+        # if target is inside the mesh, use Delaunay triangulation
+        # and return the vertices indices and the barycentric weights
+        # if simplex index is positive, means a Triangle was found
+        if simplex_idx != -1:
+            transform = self.mesh.transform[simplex_idx]
+            inv_T = transform[:2, :2]
+            r = transform[2, :]
+
+            b = inv_T.dot(target[0] - r)
+            weights = np.r_[b, 1.0 - b.sum()]  # barycentric weights
+            vertices_indices = self.mesh.simplices[
+                simplex_idx
+            ].tolist()  # indices of the vertices (corners) forming the triangle
+            is_simplex_found = True
+
+            # check if the triangle is coherent (not dangerously stretched out)
+            is_coherent = self.evaluate_coherence(vertices_indices)
+            return vertices_indices, weights, is_simplex_found, is_coherent
+
+        # if target is outside the mesh, find the nearest point in space_points
+        # and return the nearest point index and the barycentric weights
+        # if simplex index is negative, means no triangle was found
+        else:
+            distances = np.linalg.norm(self.space_points - target, axis=1)
+            closest_vertex_idx = int(np.argmin(distances))
+            vertices_indices = [closest_vertex_idx]
+            weights = np.array([1.0])
+            is_simplex_found = False
+            is_coherent = False
+            return vertices_indices, weights, is_simplex_found, is_coherent
 
     def get_decisions_transforms(self) -> list[BaseTransformer]:
         from ....modeling.domain.interfaces.base_transform import TransformTarget
 
         return [
             t
-            for t in self.transforms
-            if getattr(t, "target", None) in (TransformTarget.DECISIONS, "decisions")
+            for t, target in self.transforms
+            if target in (TransformTarget.DECISIONS, "decisions")
         ]
 
     def get_objectives_transforms(self) -> list[BaseTransformer]:
@@ -92,6 +160,6 @@ class GenerationContext(BaseModel):
 
         return [
             t
-            for t in self.transforms
-            if getattr(t, "target", None) in (TransformTarget.OBJECTIVES, "objectives")
+            for t, target in self.transforms
+            if target in (TransformTarget.OBJECTIVES, "objectives")
         ]

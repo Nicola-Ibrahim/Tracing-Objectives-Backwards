@@ -1,3 +1,5 @@
+from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ...dataset.domain.interfaces.base_visualizer import BaseVisualizer
 from ...shared.domain.interfaces.base_logger import BaseLogger
 from ..domain.config import GenerationConfig
 from ..domain.interfaces.base_context_repository import BaseContextRepository
@@ -6,29 +8,37 @@ from ..domain.services.generation import (
     GenerationResult,
 )
 
-# Removed GenerationConfig class - moved to domain/config.py
 
+class VisualizeGenerationUseCase:
+    """
+    Consolidated application usecase that handles both candidate generation
+    and their visualization against the background context.
+    Directly depends on the domain service and context repository.
+    """
 
-class GenerateCoherentCandidatesService:
     def __init__(
         self,
         context_repository: BaseContextRepository,
         generation_domain_service: CandidateGenerationDomainService,
+        dataset_repository: BaseDatasetRepository,
+        visualizer: BaseVisualizer,
         logger: BaseLogger,
     ):
         self._context_repository = context_repository
         self._generation_domain_service = generation_domain_service
+        self._dataset_repository = dataset_repository
+        self._visualizer = visualizer
         self._logger = logger
 
     def execute(self, config: GenerationConfig) -> dict:
         self._logger.log_info(
-            f"Starting generation for '{config.dataset_name}' with target {config.target_objective}"
+            f"Executing VisualizeGenerationUseCase for dataset '{config.dataset_name}'"
         )
 
         # 1. Load context
         context = self._context_repository.load(config.dataset_name)
 
-        # 2. Delegate the heavy lifting to the Domain Service
+        # 2. Generate Candidates (Domain Service)
         result: GenerationResult = self._generation_domain_service.generate(
             context=context, config=config
         )
@@ -37,6 +47,28 @@ class GenerateCoherentCandidatesService:
             f"Generated candidates via {result.pathway} pathway. "
             f"Winner: {result.best_objective_raw.flatten()}"
         )
+
+        # 3. Visualize Results
+        self._logger.log_info(
+            f"Generating context visualization plots for '{config.dataset_name}'..."
+        )
+
+        # Load original dataset to get context points for plotting
+        dataset = self._dataset_repository.load(config.dataset_name)
+
+        # Trigger visualization
+        self._visualizer.plot(
+            {
+                "original_objectives": dataset.objectives,
+                "original_decisions": dataset.decisions,
+                "target_objective": config.target_objective,
+                "candidate_objectives": result.candidate_objectives_raw,
+                "candidate_decisions": result.candidate_decisions_raw,
+                "vertices_indices": result.vertices_indices,
+            }
+        )
+
+        self._logger.log_info("VisualizeGenerationUseCase completed successfully.")
 
         # Return formatted dictionary
         return {

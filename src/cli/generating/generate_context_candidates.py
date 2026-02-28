@@ -1,11 +1,11 @@
 import click
 
-from ...modules.dataset.infrastructure.repositories.dataset_repository import (
-    FileSystemDatasetRepository,
-)
 from ...modules.generation.application.generate_candidates import (
     GenerateCoherentCandidatesService,
-    GenerationConfig,
+)
+from ...modules.generation.domain.config import GenerationConfig
+from ...modules.generation.domain.services.generation import (
+    CandidateGenerationDomainService,
 )
 from ...modules.generation.infrastructure.repositories.context_repo import (
     FileSystemContextRepository,
@@ -25,12 +25,7 @@ def main(
     Real-time step: Generate physically coherent design candidates for a specific target objective.
     """
     logger = CMDLogger(name="GenerateCoherentCandidatesLogger")
-    service = GenerateCoherentCandidatesService(
-        context_repository=FileSystemContextRepository(),
-        dataset_repository=FileSystemDatasetRepository(),
-        logger=logger,
-        visualizer=PlotlyContextVisualizer(),
-    )
+    domain_service = CandidateGenerationDomainService()
 
     config = GenerationConfig(
         dataset_name=dataset_name,
@@ -39,6 +34,11 @@ def main(
         concentration_factor=10.0,
         trust_radius=0.05,
         error_threshold=None,
+    )
+    service = GenerateCoherentCandidatesService(
+        context_repository=FileSystemContextRepository(),
+        generation_domain_service=domain_service,
+        logger=logger,
     )
 
     service.execute(config)

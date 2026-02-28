@@ -1,5 +1,3 @@
-from .barycentric_locator import BarycentricLocator
-from .candidate_ranker import CandidateRanker
-from .dirichlet_sampler import DirichletSampler
+from .candidate_ranker import CandidateRanker, RankingResult
 
-__all__ = ["BarycentricLocator", "DirichletSampler", "CandidateRanker"]
+__all__ = ["CandidateRanker", "RankingResult"]

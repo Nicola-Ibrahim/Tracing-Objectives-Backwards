@@ -33,7 +33,7 @@ class PlotlyContextVisualizer(BaseVisualizer):
             candidate_objectives=data["candidate_objectives"],
             original_decisions=data["original_decisions"],
             candidate_decisions=data["candidate_decisions"],
-            anchor_indices=data.get("anchor_indices"),
+            vertices_indices=data.get("vertices_indices"),
         )
 
         # 2. Show

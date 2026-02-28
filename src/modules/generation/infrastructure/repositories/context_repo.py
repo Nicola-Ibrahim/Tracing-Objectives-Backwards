@@ -44,26 +44,24 @@ class FileSystemContextRepository(BaseContextRepository):
         arrays_path = context_dir / "arrays.npz"
         np.savez(
             arrays_path,
-            objectives=context.objectives,
-            anchors_norm=context.anchors_norm,
+            space_points=context.space_points,
+            decision_vertices=context.decision_vertices,
         )
 
         def save_transforms(transforms_list, folder_name):
             t_base_dir = context_dir / folder_name
             t_base_dir.mkdir(exist_ok=True)
-            for idx, transform in enumerate(transforms_list):
+            for idx, transform_tuple in enumerate(transforms_list):
+                transform, target = transform_tuple
                 t_type = transform.config.get("type", "unknown")
                 t_dir = t_base_dir / f"{idx}_{t_type}"
                 t_dir.mkdir(exist_ok=True)
 
                 # Copy config and append target for restoration later
                 config_to_save = transform.config.copy()
-                if hasattr(transform, "target"):
-                    config_to_save["target"] = (
-                        transform.target.value
-                        if hasattr(transform.target, "value")
-                        else str(transform.target)
-                    )
+                config_to_save["target"] = (
+                    target.value if hasattr(target, "value") else str(target)
+                )
 
                 self._json_file_handler.save(config_to_save, t_dir / "config.json")
                 self._pickle_handler.save(
@@ -73,7 +71,10 @@ class FileSystemContextRepository(BaseContextRepository):
         save_transforms(context.transforms, "transforms")
 
         surrogate_path = context_dir / "surrogate_step.pkl"
-        self._pickle_handler.save(context.surrogate_step, surrogate_path)
+        self._pickle_handler.save(context.surrogate_estimator, surrogate_path)
+
+        mesh_path = context_dir / "mesh.pkl"
+        self._pickle_handler.save(context.mesh, mesh_path)
 
     def load(self, dataset_name: str) -> GenerationContext:
         context_dir = self._get_context_dir(dataset_name)
@@ -85,6 +86,7 @@ class FileSystemContextRepository(BaseContextRepository):
         metadata_path = context_dir / "metadata.toml"
         arrays_path = context_dir / "arrays.npz"
         surrogate_path = context_dir / "surrogate_step.pkl"
+        mesh_path = context_dir / "mesh.pkl"
 
         if not metadata_path.exists():
             raise FileNotFoundError(f"Metadata not found for dataset '{dataset_name}'.")
@@ -94,13 +96,17 @@ class FileSystemContextRepository(BaseContextRepository):
             raise FileNotFoundError(
                 f"Surrogate model not found for dataset '{dataset_name}'."
             )
+        if not mesh_path.exists():
+            raise FileNotFoundError(
+                f"Delaunay mesh not found for dataset '{dataset_name}'."
+            )
 
         payload = self._toml_file_handler.load(metadata_path)
         metadata = payload.get("metadata", {})
 
         with np.load(arrays_path) as arrays:
-            objectives = arrays["objectives"]
-            anchors_norm = arrays["anchors_norm"]
+            space_points = arrays["space_points"]
+            decision_vertices = arrays["decision_vertices"]
 
         def load_transforms(folder_name):
             transforms = []
@@ -114,7 +120,7 @@ class FileSystemContextRepository(BaseContextRepository):
                     config = self._json_file_handler.load(d / "config.json")
                     state = self._pickle_handler.load(d / "fitted_state.pkl")
 
-                    # Extract target string if saved, removing it from config passed to hydration logic
+                    # Extract target string if saved
                     target_str = config.pop("target", None)
 
                     transform = TransformerFactory.from_checkpoint(config, state)
@@ -130,21 +136,23 @@ class FileSystemContextRepository(BaseContextRepository):
                         except ValueError:
                             # Fallback to string literal
                             target = target_str
-                        setattr(transform, "target", target)
-
-                    transforms.append(transform)
+                        transforms.append((transform, target))
+                    else:
+                        transforms.append(transform)
             return transforms
 
         transforms = load_transforms("transforms")
 
-        surrogate_step = self._pickle_handler.load(surrogate_path)
+        surrogate_estimator = self._pickle_handler.load(surrogate_path)
+        mesh = self._pickle_handler.load(mesh_path)
 
         return GenerationContext(
             dataset_name=dataset_name,
-            objectives=objectives,
-            anchors_norm=anchors_norm,
+            space_points=space_points,
+            decision_vertices=decision_vertices,
             tau=metadata["tau"],
             transforms=transforms,
-            surrogate_step=surrogate_step,
+            surrogate_estimator=surrogate_estimator,
+            mesh=mesh,
             is_trained=metadata.get("is_trained", True),
         )
