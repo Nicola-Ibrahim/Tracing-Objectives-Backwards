@@ -3,7 +3,6 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel, Field
 from scipy.spatial import Delaunay
-from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.neighbors import NearestNeighbors
 
 from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
@@ -62,10 +61,17 @@ class TrainContextService:
             current_data = t.transform(current_data)
         return current_data
 
-    def _train_surrogate(self, X_norm: np.ndarray, y_norm: np.ndarray):
-        # A simple domain factory explicit to the generation context
-        estimator = GaussianProcessRegressor(random_state=42)
-        estimator.fit(X_norm, y_norm)
+    def _train_surrogate(self, X: np.ndarray, y: np.ndarray):
+        from ...modeling.infrastructure.estimators.deterministic.rbf import (
+            RBFEstimator,
+            RBFEstimatorParams,
+        )
+
+        # Use the formal RBFEstimator wrapper with default params for now
+        # neighbors=10 is the default in RBFEstimatorParams
+        params = RBFEstimatorParams(n_neighbors=10)
+        estimator = RBFEstimator(params)
+        estimator.fit(X, y)
         return estimator
 
     def execute(self, params: TrainContextParams) -> GenerationContext:
@@ -110,6 +116,10 @@ class TrainContextService:
         # Create the mesh for the objective space
         mesh = Delaunay(objectives_norm)
 
+        # Build the spatial index for the objective space (for out-of-mesh lookups)
+        objective_knn = NearestNeighbors(n_neighbors=1)
+        objective_knn.fit(objectives_norm)
+
         # Creating the GenerationContext
         context = GenerationContext(
             dataset_name=params.dataset_name,
@@ -117,6 +127,7 @@ class TrainContextService:
             decision_vertices=decisions_norm,
             tau=tau,
             mesh=mesh,
+            objective_knn=objective_knn,
             transforms=decision_transforms + objective_transforms,
             surrogate_estimator=surrogate_estimator,
             is_trained=True,

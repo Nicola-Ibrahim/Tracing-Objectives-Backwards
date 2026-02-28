@@ -76,6 +76,9 @@ class FileSystemContextRepository(BaseContextRepository):
         mesh_path = context_dir / "mesh.pkl"
         self._pickle_handler.save(context.mesh, mesh_path)
 
+        knn_path = context_dir / "objective_knn.pkl"
+        self._pickle_handler.save(context.objective_knn, knn_path)
+
     def load(self, dataset_name: str) -> GenerationContext:
         context_dir = self._get_context_dir(dataset_name)
         if not context_dir.exists():
@@ -87,6 +90,7 @@ class FileSystemContextRepository(BaseContextRepository):
         arrays_path = context_dir / "arrays.npz"
         surrogate_path = context_dir / "surrogate_step.pkl"
         mesh_path = context_dir / "mesh.pkl"
+        knn_path = context_dir / "objective_knn.pkl"
 
         if not metadata_path.exists():
             raise FileNotFoundError(f"Metadata not found for dataset '{dataset_name}'.")
@@ -99,6 +103,10 @@ class FileSystemContextRepository(BaseContextRepository):
         if not mesh_path.exists():
             raise FileNotFoundError(
                 f"Delaunay mesh not found for dataset '{dataset_name}'."
+            )
+        if not knn_path.exists():
+            raise FileNotFoundError(
+                f"Objective KNN index not found for dataset '{dataset_name}'."
             )
 
         payload = self._toml_file_handler.load(metadata_path)
@@ -145,6 +153,7 @@ class FileSystemContextRepository(BaseContextRepository):
 
         surrogate_estimator = self._pickle_handler.load(surrogate_path)
         mesh = self._pickle_handler.load(mesh_path)
+        objective_knn = self._pickle_handler.load(knn_path)
 
         return GenerationContext(
             dataset_name=dataset_name,
@@ -153,6 +162,7 @@ class FileSystemContextRepository(BaseContextRepository):
             tau=metadata["tau"],
             transforms=transforms,
             surrogate_estimator=surrogate_estimator,
+            objective_knn=objective_knn,
             mesh=mesh,
             is_trained=metadata.get("is_trained", True),
         )

@@ -152,4 +152,6 @@ coverage/
 
 # Misc
 .DS_Store
-*.pem
+*.pem*.pyc
+.venv/
+.vscode/

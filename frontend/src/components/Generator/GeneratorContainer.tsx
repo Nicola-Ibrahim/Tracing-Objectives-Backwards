@@ -136,16 +136,16 @@ export default function GeneratorContainer() {
             pointStyle: 'rectRot',
         });
 
-        // Highlight Winner Candidate in Gold
+        // Highlight Winner Candidate in Pink
         objectiveDatasets.push({
             label: "Winner Candidate",
             data: [{ x: result.best_objective[0], y: result.best_objective[1] }],
-            backgroundColor: "#fbbf24", // Amber-400 (Gold)
+            backgroundColor: "#f472b6", // Pink-400
             pointRadius: 14,
             pointHoverRadius: 16,
             pointStyle: 'star',
-            borderColor: "#d97706",
-            borderWidth: 2,
+            borderColor: "#db2777", // Pink-600
+            borderWidth: 3,
         });
 
         // Vector Line: Target -> Winner
@@ -229,11 +229,11 @@ export default function GeneratorContainer() {
         decisionDatasets.push({
             label: "Winner Design",
             data: [{ x: result.best_decision[0], y: result.best_decision[1] }],
-            backgroundColor: "#fbbf24",
+            backgroundColor: "#f472b6",
             pointRadius: 12,
             pointStyle: 'star',
-            borderColor: "#d97706",
-            borderWidth: 2,
+            borderColor: "#db2777",
+            borderWidth: 3,
         });
     }
 
@@ -354,16 +354,16 @@ export default function GeneratorContainer() {
                     {result && (
                         <Card title="Optimization Insight">
                             <div className="space-y-4">
-                                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 space-y-2">
+                                <div className="p-4 bg-pink-50 rounded-2xl border border-pink-100 space-y-2">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                                        <span className="text-xs font-bold text-amber-900 uppercase tracking-widest">Optimal Match Found</span>
+                                        <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                                        <span className="text-xs font-bold text-pink-900 uppercase tracking-widest">Optimal Match Found</span>
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-lg font-black text-slate-900 leading-tight">
                                             Winner: [{result.best_objective[0].toFixed(3)}, {result.best_objective[1].toFixed(3)}]
                                         </p>
-                                        <p className="text-[10px] text-amber-700 font-bold uppercase tracking-tight">
+                                        <p className="text-[10px] text-pink-700 font-bold uppercase tracking-tight">
                                             Error: {result.objective_space_residual_sorted[result.best_index].toFixed(5)}
                                         </p>
                                     </div>

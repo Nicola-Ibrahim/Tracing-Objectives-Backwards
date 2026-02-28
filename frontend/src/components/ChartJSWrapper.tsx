@@ -223,7 +223,7 @@ const ChartJSWrapper: React.FC<ChartJSWrapperProps> = ({
             ...ds,
             borderWidth: ds.showLine ? (ds.borderWidth ?? 2) : 1.5,
             borderColor: ds.borderColor ?? ds.backgroundColor,
-            pointBorderColor: "#ffffff", // Plotly-style white border around points
+            pointBorderColor: ds.borderColor ?? "#ffffff", // Plotly-style white border around points, unless specified
             pointBorderWidth: 1.5,
             pointStyle: ds.pointStyle ?? "circle",
             pointHoverBorderWidth: 2,

@@ -119,7 +119,7 @@ class RBFEstimator(DeterministicEstimator):
             y=X_unique, d=y_unique, neighbors=self.neighbors, kernel=self.kernel
         )
 
-    def infer(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
+    def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         if self._model is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
 
@@ -133,3 +133,29 @@ class RBFEstimator(DeterministicEstimator):
             )
 
         return self._model(X)
+
+    def to_checkpoint(self) -> dict:
+        """
+        Serialize model state to a checkpoint dictionary.
+        Note: Currently RBFInterpolator is also picked in repository logic.
+        """
+        if self._model is None:
+            raise RuntimeError("Estimator not fitted.")
+
+        return {
+            "params": self.params.model_dump(),
+            "X_dim": self._X_dim,
+            "y_dim": self._y_dim,
+            # We don't serialize the RBFInterpolator to JSON/TOML easily,
+            # but this satisfies the abstract interface.
+            # GenerationContext uses pickle for the actual persistence.
+        }
+
+    @classmethod
+    def from_checkpoint(cls, parameters: dict) -> "RBFEstimator":
+        """Reconstruct from checkpoint."""
+        params = RBFEstimatorParams(**parameters["params"])
+        instance = cls(params)
+        instance._X_dim = parameters.get("X_dim")
+        instance._y_dim = parameters.get("y_dim")
+        return instance

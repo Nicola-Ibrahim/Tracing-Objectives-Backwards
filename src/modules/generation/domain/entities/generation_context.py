@@ -4,6 +4,7 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 from scipy.spatial import Delaunay
+from sklearn.neighbors import NearestNeighbors
 
 from ....modeling.domain.interfaces.base_transform import BaseTransformer
 
@@ -20,10 +21,7 @@ class GenerationContext(BaseModel):
     space_points: np.ndarray = Field(
         ..., description="Points forming the Delaunay mesh (N x 2)"
     )
-    # mesh_vertices: np.ndarray = Field(
-    #     ...,
-    #     description="Normalized objective-space points (N x 2), used as Delaunay vertices",
-    # )
+
     decision_vertices: np.ndarray = Field(
         ..., description="Normalized decision-space points (N x D)"
     )
@@ -34,6 +32,9 @@ class GenerationContext(BaseModel):
     )
     surrogate_estimator: Any = Field(
         ..., description="The Explicitly Evaluated Surrogate Model Step"
+    )
+    objective_knn: NearestNeighbors = Field(
+        ..., description="Spatial search structure (KDTree) for the objective space"
     )
     mesh: Delaunay = Field(
         ..., description="The Delaunay triangulation of the space points"
@@ -95,18 +96,21 @@ class GenerationContext(BaseModel):
         pairwise_dists = dists[i, j]
         return bool(np.all(pairwise_dists <= self.tau))
 
-    def locate(self, target: np.ndarray) -> tuple[list[int], np.ndarray, bool]:
+    def locate(self, target: np.ndarray) -> tuple[list[int], np.ndarray, bool, bool]:
         """
-        Locates the target within the Delaunay mesh and return the triangle.
+        Locates the target within the Delaunay mesh or its nearest neighbor.
+
+        Uses the Delaunay triangulation if the target is within the convex hull.
+        Falls back to an optimized KNN lookup (KDTree) if the target is outside.
 
         Args:
             target: (1, 2) or (2,) array representing the target objective.
-            space_points: (N, 2) array of known points forming the mesh.
 
         Returns:
-            anchor_indices: List of original indices (in `space_points`) forming the local geometry.
-            weights: Barycentric weights corresponding to the anchors.
-            is_inside: True if the target falls inside the convex hull.
+            anchor_indices: List of original indices forming the local geometry or nearest point.
+            weights: Barycentric weights for Delaunay, or [1.0] for KNN.
+            is_simplex_found: True if the target is inside a Delaunay simplex.
+            is_coherent: True if the local geometry is coherent (not stretched).
         """
         target = np.asarray(target).reshape(1, -1)
         if target.shape[1] != 2:
@@ -138,8 +142,8 @@ class GenerationContext(BaseModel):
         # and return the nearest point index and the barycentric weights
         # if simplex index is negative, means no triangle was found
         else:
-            distances = np.linalg.norm(self.space_points - target, axis=1)
-            closest_vertex_idx = int(np.argmin(distances))
+            _, indices = self.objective_knn.kneighbors(target)
+            closest_vertex_idx = int(indices[0][0])
             vertices_indices = [closest_vertex_idx]
             weights = np.array([1.0])
             is_simplex_found = False
