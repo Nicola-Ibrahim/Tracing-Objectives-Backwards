@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useDataset } from "@/components/DatasetContext";
 import ChartJSWrapper, { ChartDataset, ChartDataPoint } from "@/components/ChartJSWrapper";
 import DatasetSelector from "@/components/DatasetSelector";
@@ -8,6 +8,8 @@ import { Card, Button, Input } from "@/components/ui";
 import { useToast } from "@/components/ui/ToastContext";
 import { generateCandidates, trainDataset } from "@/lib/apiClient";
 import { Dataset, GenerationRequest, GenerationResponse, Vector } from "@/types/api";
+import DistanceGate from "./DistanceGate";
+import ZoomedScatterPlot from "./ZoomedScatterPlot";
 
 export default function GeneratorContainer() {
     const {
@@ -25,9 +27,8 @@ export default function GeneratorContainer() {
     // Generation State
     const [targetObj1, setTargetObj1] = useState<number>(0);
     const [targetObj2, setTargetObj2] = useState<number>(0);
-    const [nSamples, setNSamples] = useState<number>(50);
+    const [nSamples, setNSamples] = useState<number>(10);
     const [trustRadius, setTrustRadius] = useState<number>(0.05);
-    const [errorThreshold, setErrorThreshold] = useState<number | undefined>(undefined);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isTraining, setIsTraining] = useState(false);
     const [result, setResult] = useState<GenerationResponse | null>(null);
@@ -62,7 +63,6 @@ export default function GeneratorContainer() {
             target_objective: [targetObj1, targetObj2],
             n_samples: nSamples,
             trust_radius: trustRadius,
-            error_threshold: errorThreshold,
         };
 
         try {
@@ -76,93 +76,130 @@ export default function GeneratorContainer() {
         }
     };
 
-    // Prepare Objective Space Plot Data
-    const objectiveDatasets: ChartDataset[] = [];
-    if (baselineData) {
-        const baselinePoints: ChartDataPoint[] = [];
-        const paretoPoints: ChartDataPoint[] = [];
+    // Unified Objective Space Plot Data construction
+    const objectiveDatasets = useMemo(() => {
+        const datasets: ChartDataset[] = [];
 
-        baselineData.y.forEach((o: Vector, i: number) => {
-            const pt = { x: o[0], y: o[1] };
-            if (baselineData.is_pareto?.[i]) {
-                paretoPoints.push(pt);
-            } else {
-                baselinePoints.push(pt);
+        if (baselineData) {
+            const baselinePoints: ChartDataPoint[] = [];
+            const paretoPoints: ChartDataPoint[] = [];
+
+            baselineData.y.forEach((o: Vector, i: number) => {
+                const pt = { x: o[0], y: o[1] };
+                if (baselineData.is_pareto?.[i]) {
+                    paretoPoints.push(pt);
+                } else {
+                    baselinePoints.push(pt);
+                }
+            });
+
+            datasets.push({
+                label: "Baseline Data",
+                data: baselinePoints,
+                backgroundColor: "rgba(203, 213, 225, 0.4)",
+                pointRadius: 4,
+            });
+
+            if (paretoPoints.length > 0) {
+                // Sort by X for proper line drawing
+                const sortedPareto = [...paretoPoints].sort((a, b) => a.x - b.x);
+                datasets.push({
+                    label: "Pareto Front",
+                    data: sortedPareto,
+                    backgroundColor: "#10b981",
+                    borderColor: "#10b981",
+                    showLine: true,
+                    pointRadius: 6,
+                    borderWidth: 2,
+                    tension: 0.1, // Slight curve smoothing
+                });
             }
-        });
+        }
 
-        objectiveDatasets.push({
-            label: "Baseline Data",
-            data: baselinePoints,
-            backgroundColor: "rgba(203, 213, 225, 0.4)",
-        });
+        if (result) {
+            if (result.vertices_indices && baselineData) {
+                const anchorsY = result.vertices_indices.map((idx: number) => baselineData.y[idx]);
+                datasets.push({
+                    label: "Context Anchors",
+                    data: anchorsY.map((v: Vector) => ({ x: v[0], y: v[1] })),
+                    backgroundColor: "#f59e0b",
+                    pointRadius: 10,
+                    pointHoverRadius: 12,
+                });
+            }
 
-        if (paretoPoints.length > 0) {
-            objectiveDatasets.push({
-                label: "Pareto Front",
-                data: paretoPoints,
+            datasets.push({
+                label: "Generated Candidates",
+                data: result.candidate_objectives.map((o: Vector) => ({ x: o[0], y: o[1] })),
+                backgroundColor: "#4f46e5",
+                pointRadius: 8,
+                pointHoverRadius: 10,
+            });
+
+            datasets.push({
+                label: "Target Objective",
+                data: [{ x: result.target_objective[0], y: result.target_objective[1] }],
+                backgroundColor: "#ef4444",
+                pointRadius: 12,
+                pointHoverRadius: 14,
+                pointStyle: 'rectRot',
+            });
+
+            datasets.push({
+                label: "Best Candidate",
+                data: [{ x: result.best_objective[0], y: result.best_objective[1] }],
                 backgroundColor: "#10b981",
-                pointRadius: 6,
+                pointRadius: 14,
+                pointHoverRadius: 16,
+                pointStyle: 'star',
+                borderColor: "#059669",
+                borderWidth: 3,
+            });
+
+            datasets.push({
+                label: "Optimal Vector",
+                data: [
+                    { x: result.target_objective[0], y: result.target_objective[1] },
+                    { x: result.best_objective[0], y: result.best_objective[1] }
+                ],
+                backgroundColor: "transparent",
+                borderColor: "#ef4444",
+                showLine: true,
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
             });
         }
-    }
 
-    if (result) {
-        if (result.vertices_indices && baselineData) {
-            const anchorsY = result.vertices_indices.map((idx: number) => baselineData.y[idx]);
-            objectiveDatasets.push({
-                label: "Context Anchors",
-                data: anchorsY.map((v: Vector) => ({ x: v[0], y: v[1] })),
-                backgroundColor: "#f59e0b", // Amber-500
-                pointRadius: 10,
-                pointHoverRadius: 12,
-            });
-        }
+        return datasets;
+    }, [baselineData, result]);
 
-        objectiveDatasets.push({
-            label: "Generated Candidates",
-            data: result.candidate_objectives.map((o: Vector) => ({ x: o[0], y: o[1] })),
-            backgroundColor: "#4f46e5", // Indigo-600
-            pointRadius: 8,
-            pointHoverRadius: 10,
+    // Filter and sanitize datasets for any NaN/Infinity
+    const sanitizePoint = (p: { x: any; y: any }) => (
+        typeof p.x === 'number' && isFinite(p.x) &&
+        typeof p.y === 'number' && isFinite(p.y)
+    );
+
+    // Calculate RAW Standard Deviation (σ) for residuals based on Target as Mean
+    const rawSigma = useMemo(() => {
+        if (!result) return 0.05;
+        const rawTarget = result.target_objective;
+
+        // Calculate squared residuals relative to user target
+        const sqResiduals = result.candidate_objectives.map(o => {
+            const dx = o[0] - rawTarget[0];
+            const dy = o[1] - rawTarget[1];
+            return dx * dx + dy * dy;
         });
 
-        objectiveDatasets.push({
-            label: "Target Objective",
-            data: [{ x: result.target_objective[0], y: result.target_objective[1] }],
-            backgroundColor: "#ef4444",
-            pointRadius: 12,
-            pointHoverRadius: 14,
-            pointStyle: 'rectRot',
-        });
+        const n = sqResiduals.length;
+        if (n === 0) return 0.05;
 
-        // Highlight Winner Candidate in Pink
-        objectiveDatasets.push({
-            label: "Winner Candidate",
-            data: [{ x: result.best_objective[0], y: result.best_objective[1] }],
-            backgroundColor: "#f472b6", // Pink-400
-            pointRadius: 14,
-            pointHoverRadius: 16,
-            pointStyle: 'star',
-            borderColor: "#db2777", // Pink-600
-            borderWidth: 3,
-        });
-
-        // Vector Line: Target -> Winner
-        objectiveDatasets.push({
-            label: "Optimal Vector",
-            data: [
-                { x: result.target_objective[0], y: result.target_objective[1] },
-                { x: result.best_objective[0], y: result.best_objective[1] }
-            ],
-            backgroundColor: "transparent",
-            borderColor: "#ef4444", // Red matching target
-            showLine: true,
-            borderWidth: 2,
-            borderDash: [5, 5],
-            pointRadius: 0,
-        });
-    }
+        // σ = sqrt(mean of squared distances from target)
+        // This makes the target the theoretical center/mean of the distribution
+        const meanSqResidual = sqResiduals.reduce((a, b) => a + b, 0) / n;
+        return Math.sqrt(meanSqResidual);
+    }, [result]);
 
     // Prepare Decision Space Plot Data
     const decisionDatasets: ChartDataset[] = [];
@@ -225,14 +262,14 @@ export default function GeneratorContainer() {
             pointHoverRadius: 10,
         });
 
-        // Highlight Winner Decision in Decision Space
+        // Highlight Best Candidate in Decision Space
         decisionDatasets.push({
-            label: "Winner Design",
+            label: "Best Candidate",
             data: [{ x: result.best_decision[0], y: result.best_decision[1] }],
-            backgroundColor: "#f472b6",
+            backgroundColor: "#10b981",
             pointRadius: 12,
             pointStyle: 'star',
-            borderColor: "#db2777",
+            borderColor: "#059669",
             borderWidth: 3,
         });
     }
@@ -296,15 +333,19 @@ export default function GeneratorContainer() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <Input
                                             label="Objective 1"
+                                            description="Target for Metric 1"
                                             type="number"
                                             step="0.01"
+                                            placeholder="0.0"
                                             value={targetObj1}
                                             onChange={(e) => setTargetObj1(parseFloat(e.target.value))}
                                         />
                                         <Input
                                             label="Objective 2"
+                                            description="Target for Metric 2"
                                             type="number"
                                             step="0.01"
+                                            placeholder="0.0"
                                             value={targetObj2}
                                             onChange={(e) => setTargetObj2(parseFloat(e.target.value))}
                                         />
@@ -314,24 +355,20 @@ export default function GeneratorContainer() {
                                 <div className="space-y-4">
                                     <Input
                                         label="Batch Size"
+                                        description="Number of designs to generate"
                                         type="number"
+                                        placeholder="50"
                                         value={nSamples}
                                         onChange={(e) => setNSamples(parseInt(e.target.value))}
                                     />
                                     <Input
                                         label="Search Radius"
+                                        description="Trust region in design space"
                                         type="number"
                                         step="0.01"
+                                        placeholder="0.05"
                                         value={trustRadius}
                                         onChange={(e) => setTrustRadius(parseFloat(e.target.value))}
-                                    />
-                                    <Input
-                                        label="Error Threshold"
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="No filtering"
-                                        value={errorThreshold || ""}
-                                        onChange={(e) => setErrorThreshold(e.target.value ? parseFloat(e.target.value) : undefined)}
                                     />
                                 </div>
 
@@ -354,41 +391,78 @@ export default function GeneratorContainer() {
                     {result && (
                         <Card title="Optimization Insight">
                             <div className="space-y-4">
-                                <div className="p-4 bg-pink-50 rounded-2xl border border-pink-100 space-y-2">
+                                <div className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100 space-y-5">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-                                        <span className="text-xs font-bold text-pink-900 uppercase tracking-widest">Optimal Match Found</span>
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-xs font-bold text-emerald-900 uppercase tracking-widest">Best Candidate Summary</span>
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-lg font-black text-slate-900 leading-tight">
-                                            Winner: [{result.best_objective[0].toFixed(3)}, {result.best_objective[1].toFixed(3)}]
-                                        </p>
-                                        <p className="text-[10px] text-pink-700 font-bold uppercase tracking-tight">
-                                            Error: {result.objective_space_residual_sorted[result.best_index].toFixed(5)}
-                                        </p>
+
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <h4 className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest ml-1">Performance (y)</h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-emerald-200/50">
+                                                    <p className="text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Metric 1</p>
+                                                    <p className="text-xs font-black text-slate-900">{result.best_objective[0].toFixed(4)}</p>
+                                                </div>
+                                                <div className="bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-emerald-200/50">
+                                                    <p className="text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Metric 2</p>
+                                                    <p className="text-xs font-black text-slate-900">{result.best_objective[1].toFixed(4)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h4 className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest ml-1">Design (X)</h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {result.best_decision.slice(0, 4).map((val, idx) => (
+                                                    <div key={idx} className="bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-emerald-200/50">
+                                                        <p className="text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Dim {idx + 1}</p>
+                                                        <p className="text-xs font-black text-slate-900">{val.toFixed(4)}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-3xl border border-emerald-500/20 shadow-inner">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest leading-none mb-1">Residual Distance</span>
+                                                <span className="text-[9px] font-medium text-emerald-500 uppercase">Confidence Level</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-sm font-black text-emerald-600 leading-none mb-1">{result.objective_space_residual_sorted[result.best_index].toFixed(6)}</div>
+                                                <div className="text-[10px] font-bold text-emerald-700">{rawSigma > 0 ? (result.objective_space_residual_sorted[result.best_index] / rawSigma).toFixed(2) : "0.00"}σ</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <span className="text-slate-500 font-medium">Trajectory</span>
-                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${result.pathway === "coherent"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-amber-100 text-amber-700"
-                                        }`}>
-                                        {result.pathway}
-                                    </span>
+                                <div className="space-y-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-500 font-medium">Target Positioning</span>
+                                        <span className={`font-bold ${result.is_simplex_found ? "text-green-600" : "text-amber-600"}`}>
+                                            {result.is_simplex_found ? "In-Mesh" : "Out-of-Mesh"}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-medium">
+                                        {result.is_simplex_found
+                                            ? "Target lies inside the trusted Delaunay mesh formed by known data points."
+                                            : "Target is outside the known data envelope; optimization relies on the nearest neighbor."}
+                                    </p>
                                 </div>
-                                <div className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <span className="text-slate-500 font-medium">Model Validity</span>
-                                    <span className={`font-bold ${result.is_simplex_found ? "text-green-600" : "text-amber-600"}`}>
-                                        {result.is_simplex_found ? "Verified (Inside Mesh)" : "Extrapolated (Outside Mesh)"}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <span className="text-slate-500 font-medium">Coherence</span>
-                                    <span className={`font-bold ${result.is_coherent ? "text-green-600" : "text-amber-600"}`}>
-                                        {result.is_coherent ? "Coherent" : "Incoherent"}
-                                    </span>
+
+                                <div className="space-y-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-500 font-medium">Coherence</span>
+                                        <span className={`font-bold ${result.is_coherent ? "text-green-600" : "text-amber-600"}`}>
+                                            {result.is_coherent ? "Coherent" : "Stretched"}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-medium">
+                                        {result.is_coherent
+                                            ? "Decision-space vertices are proximal and within the trained distance limit (τ)."
+                                            : "Decision-space vertices are too far apart relative to the training threshold (τ)."}
+                                    </p>
                                 </div>
                             </div>
                         </Card>
@@ -420,6 +494,27 @@ export default function GeneratorContainer() {
                             />
                         </div>
                     </div>
+
+                    {result && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                            <div className="space-y-3">
+                                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 px-1">Coherence Check</h2>
+                                <DistanceGate
+                                    distances={result.vertice_distances}
+                                    tau={result.tau}
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 px-1">Micro-Validation Focus</h2>
+                                <ZoomedScatterPlot
+                                    title="Acceptance Radius (σ)"
+                                    datasets={objectiveDatasets}
+                                    sigma={rawSigma}
+                                    targetPoint={{ x: result.target_objective[0], y: result.target_objective[1] }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

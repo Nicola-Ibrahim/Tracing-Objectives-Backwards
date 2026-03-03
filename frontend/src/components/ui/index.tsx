@@ -51,15 +51,23 @@ export function Button({
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
+    description?: string;
 }
 
-export function Input({ label, className = "", ...props }: InputProps) {
+export function Input({ label, description, className = "", value, ...props }: InputProps) {
+    // Safely handle NaN values by converting them to empty string
+    const safeValue = typeof value === "number" && isNaN(value) ? "" : value;
+
     return (
         <div className="space-y-1.5 w-full">
-            {label && <label className="text-sm font-semibold text-slate-700 ml-1">{label}</label>}
+            <div className="flex flex-col gap-0.5 ml-1">
+                {label && <label className="text-sm font-semibold text-slate-700">{label}</label>}
+                {description && <p className="text-[10px] text-slate-400 font-medium leading-tight">{description}</p>}
+            </div>
             <input
                 className={`w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm ${className}`}
                 {...props}
+                value={safeValue}
             />
         </div>
     );
