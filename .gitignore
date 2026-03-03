@@ -127,9 +127,8 @@ sdd-*/
 docs/dev
 
 # Extension system
-.specify/extensions/.cache/
-.specify/extensions/.backup/
-.specify/extensions/*/local-config.yml
+.specify/
+specs/
 
 # AI Assistant local state
 .agent/

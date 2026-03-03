@@ -12,6 +12,12 @@ Welcome to the internal documentation for **Tracing Objectives Backwards**. This
 
 ---
 
+## 🏛 Architecture & Design
+
+- **[Domain Architecture](architecture/README.md)**: System overview, module responsibilities, DDD layers, and internal documentation for all 5 bounded contexts.
+
+---
+
 ## 🧠 Conceptual Guides
 
 - **[Inverse Design Pipeline](processes/inverse-design-pipeline.md)**: The "Heart" of the project – how we map objectives back to decisions.
