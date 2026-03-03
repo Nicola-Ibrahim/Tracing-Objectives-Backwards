@@ -54,6 +54,9 @@ async def generate_candidates(
         best_index=result["best_index"],
         best_objective=result["best_objective"],
         best_decision=result["best_decision"],
+        tau=result["tau"],
+        vertice_distances=result["vertice_distances"],
+        all_residuals=result["all_residuals"],
     )
 
 

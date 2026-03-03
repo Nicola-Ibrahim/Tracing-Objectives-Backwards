@@ -11,6 +11,9 @@ class GenerationRequest(BaseModel):
     concentration_factor: float = Field(default=10.0, gt=0)
     error_threshold: float | None = Field(default=None, gt=0)
 
+    class Config:
+        allow_inf_nan = False
+
 
 class GenerationResponse(BaseModel):
     pathway: Literal["coherent", "incoherent"]
@@ -24,3 +27,9 @@ class GenerationResponse(BaseModel):
     best_index: int
     best_objective: Tuple[float, float]
     best_decision: List[float]
+    tau: float
+    vertice_distances: List[float]
+    all_residuals: List[float]
+
+    class Config:
+        allow_inf_nan = False

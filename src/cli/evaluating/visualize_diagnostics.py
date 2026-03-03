@@ -1,9 +1,6 @@
 import click
 
 from ...modules.evaluation.application.use_cases import (
-    InverseEstimatorDiagnosticCandidate as InverseEstimatorCandidate,
-)
-from ...modules.evaluation.application.use_cases import (
     VisualizeInverseEstimatorDiagnosticParams,
     VisualizeInverseEstimatorDiagnosticService,
 )
@@ -28,20 +25,20 @@ def cli():
     params = VisualizeInverseEstimatorDiagnosticParams(
         dataset_name="cocoex_f5",
         inverse_estimator_candidates=[
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=8),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=10),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=12),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=13),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=2),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=3),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=4),
-            InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=5),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=6),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=7),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=8),
-            # InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=9),
+            {"type": EstimatorTypeEnum.MDN, "version": 8},
+            {"type": EstimatorTypeEnum.MDN, "version": 10},
+            # {"type": EstimatorTypeEnum.MDN, "version": 12},
+            # {"type": EstimatorTypeEnum.MDN, "version": 13},
+            {"type": EstimatorTypeEnum.CVAE, "version": 1},
+            {"type": EstimatorTypeEnum.CVAE, "version": 2},
+            {"type": EstimatorTypeEnum.INN, "version": 1},
+            # {"type": EstimatorTypeEnum.INN, "version": 3},
+            # {"type": EstimatorTypeEnum.INN, "version": 4},
+            {"type": EstimatorTypeEnum.INN, "version": 5},
+            # {"type": EstimatorTypeEnum.INN, "version": 6},
+            # {"type": EstimatorTypeEnum.INN, "version": 7},
+            # {"type": EstimatorTypeEnum.INN, "version": 8},
+            # {"type": EstimatorTypeEnum.INN, "version": 9},
         ],
     )
 

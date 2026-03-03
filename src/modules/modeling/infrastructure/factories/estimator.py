@@ -1,14 +1,17 @@
-from typing import Any, Callable, Dict
+from typing import Annotated, Any, Callable, Dict, Union
 
-from ...application.registry import ESTIMATOR_PARAM_REGISTRY
+from pydantic import Field
+
 from ...domain.enums.estimator_type import (
     EstimatorTypeEnum,
 )
+from ...domain.enums.metric_key import DefaultValidationMetricEnum
 from ...domain.interfaces.base_estimator import (
     BaseEstimator,
 )
 from ...domain.value_objects.estimator_params import (
     EstimatorParamsBase,
+    ValidationMetricConfig,
 )
 from ...infrastructure.estimators.deterministic import (
     GaussianProcessEstimator,
@@ -18,12 +21,64 @@ from ...infrastructure.estimators.deterministic import (
 )
 from ...infrastructure.estimators.deterministic.coco_biobj_function import (
     COCOEstimator,
+    COCOEstimatorParams,
 )
+from ...infrastructure.estimators.deterministic.gaussian_process import (
+    GaussianProcessEstimatorParams,
+)
+from ...infrastructure.estimators.deterministic.nearest_neighbors import (
+    NearestNeighborsEstimatorParams,
+)
+from ...infrastructure.estimators.deterministic.nn import (
+    NeuralNetworkEstimatorParams,
+)
+from ...infrastructure.estimators.deterministic.rbf import RBFEstimatorParams
 from ...infrastructure.estimators.probabilistic import (
     CVAEEstimator,
     INNEstimator,
     MDNEstimator,
 )
+from ...infrastructure.estimators.probabilistic.cvae import CVAEEstimatorParams
+from ...infrastructure.estimators.probabilistic.inn import INNEstimatorParams
+from ...infrastructure.estimators.probabilistic.mdn import MDNEstimatorParams
+
+DEFAULT_VALIDATION_METRICS: tuple[DefaultValidationMetricEnum, ...] = (
+    DefaultValidationMetricEnum.MSE,
+    DefaultValidationMetricEnum.MAE,
+    DefaultValidationMetricEnum.R2,
+)
+
+ESTIMATOR_PARAM_REGISTRY: dict[EstimatorTypeEnum, type[EstimatorParamsBase]] = {
+    EstimatorTypeEnum.COCO: COCOEstimatorParams,
+    EstimatorTypeEnum.CVAE: CVAEEstimatorParams,
+    EstimatorTypeEnum.GAUSSIAN_PROCESS_ND: GaussianProcessEstimatorParams,
+    EstimatorTypeEnum.INN: INNEstimatorParams,
+    EstimatorTypeEnum.MDN: MDNEstimatorParams,
+    EstimatorTypeEnum.NEAREST_NEIGHBORS_ND: NearestNeighborsEstimatorParams,
+    EstimatorTypeEnum.NEURAL_NETWORK_ND: NeuralNetworkEstimatorParams,
+    EstimatorTypeEnum.RBF: RBFEstimatorParams,
+}
+
+EstimatorParams = Annotated[
+    Union[
+        COCOEstimatorParams,
+        NeuralNetworkEstimatorParams,
+        NearestNeighborsEstimatorParams,
+        RBFEstimatorParams,
+        GaussianProcessEstimatorParams,
+        MDNEstimatorParams,
+        CVAEEstimatorParams,
+        INNEstimatorParams,
+    ],
+    Field(discriminator="type"),
+]
+
+
+def default_metric_configs() -> list[ValidationMetricConfig]:
+    return [
+        ValidationMetricConfig(type=metric.value, params={})
+        for metric in DEFAULT_VALIDATION_METRICS
+    ]
 
 
 class EstimatorFactory:
