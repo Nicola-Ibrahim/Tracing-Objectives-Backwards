@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master's Thesis Defense: Tracing the Objectives Backwards</title>
+
+    <!-- Reveal.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css" id="theme">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #60a5fa;
+            --secondary: #4f46e5;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --surface: rgba(255, 255, 255, 0.8);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+        }
+
+        @keyframes meshGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .reveal {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(-45deg, #f8fafc, #eff6ff, #f5f3ff, #f8fafc);
+            background-size: 400% 400%;
+            animation: meshGradient 15s ease infinite;
+            color: var(--text-main);
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+            font-family: 'Outfit', sans-serif;
+            text-transform: none;
+            color: var(--text-main);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Bento Card Style - Enhanced Glassmorphism */
+        .bento-card {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            text-align: left;
+            height: 100%;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .bento-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 45px 0 rgba(31, 38, 135, 0.12);
+            border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .display-font { font-family: 'Outfit', sans-serif; }
+
+        .slide-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 1rem;
+            background: rgba(37, 99, 235, 0.08);
+            backdrop-filter: blur(4px);
+            color: var(--primary);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .slide-badge:hover {
+            background: rgba(37, 99, 235, 0.15);
+            transform: scale(1.05);
+        }
+
+        .formula-box {
+            background: rgba(241, 245, 249, 0.5);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.02);
+        }
+
+        /* Dark Bento Card with Glow */
+        .bento-card-dark {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .bento-card-dark:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 25px rgba(37, 99, 235, 0.2), 0 15px 45px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        /* SVG drawing animations */
+        .animate-draw {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+        }
+
+        .visible .animate-draw {
+            animation: draw 3s forwards ease-in-out;
+        }
+
+        @keyframes draw {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Custom Reveal modifications */
+        .reveal .slides { text-align: left; }
+        .reveal .progress { height: 8px; background: rgba(0,0,0,0.03); }
+        .reveal .progress span { background: var(--primary); border-radius: 0 4px 4px 0; }
+        .reveal .controls { color: var(--primary); }
+
+        /* Fragment animations */
+        .fragment.blur {
+            filter: blur(5px);
+            transition: all 0.6s ease;
+        }
+        .fragment.blur.visible {
+            filter: blur(0);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- ================= SLIDE 1: HERO ================= -->
+            <section data-auto-animate>
+                <div class="flex flex-col justify-center h-full space-y-8">
+                    <span class="slide-badge">Part I &bull; Slide 1</span>
+                    <h1 class="text-5xl lg:text-7xl font-extrabold leading-tight display-font">
+                        Tracing the Objectives Backwards:<br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
+                            Data-Driven Inverse Exploration
+                        </span>
+                    </h1>
+                    
+                    <div class="grid grid-cols-3 gap-6 mt-12">
+                        <div class="bento-card bg-white/50 backdrop-blur-sm">
+                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">Candidate</p>
+                            <p class="text-lg font-bold text-slate-800">[Your Name]</p>
+                        </div>
+                        <div class="bento-card bg-white/50 backdrop-blur-sm">
+                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">Supervisors</p>
+                            <p class="text-lg font-bold text-slate-800">[Supervisor 1] & [2]</p>
+                        </div>
+                        <div class="bento-card bg-white/50 backdrop-blur-sm">
+                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">University</p>
+                            <p class="text-lg font-bold text-slate-800">Paderborn University</p>
+                        </div>
+                    </div>
+
+                    <aside class="notes">
+                        "Good morning. Today, I will present my research on 'Tracing the Objectives Backwards.' We will
+                        explore how generative machine learning can solve one of the most persistent 'headaches' in
+                        modern engineering: finding the right design when you only know the desired performance."
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 2: OUTLINE ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge">Part I &bull; Slide 2</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font">The Outline</h2>
+                <div class="grid grid-cols-2 gap-8 h-[60vh]">
+                    <div class="bento-card border-l-4 border-l-blue-500 fragment fade-up">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">I. The Motivation</h3>
+                        <ul class="space-y-3 text-slate-600 text-sm">
+                            <li class="fragment fade-in"><i class="fas fa-cogs text-blue-400 mr-2"></i> Engineering Context</li>
+                            <li class="fragment fade-in"><i class="fas fa-brain text-blue-400 mr-2"></i> Hadamard & Ill-Posedness</li>
+                            <li class="fragment fade-in"><i class="fas fa-chart-line text-blue-400 mr-2"></i> The "Average" Trap</li>
+                        </ul>
+                    </div>
+                    <div class="bento-card border-l-4 border-l-indigo-500 fragment fade-up">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">II. Methodology</h3>
+                        <ul class="space-y-3 text-slate-600 text-sm">
+                            <li class="fragment fade-in"><i class="fas fa-project-diagram text-indigo-400 mr-2"></i> Propose-Check Framework</li>
+                            <li class="fragment fade-in"><i class="fas fa-network-wired text-indigo-400 mr-2"></i> Probabilistic Engines</li>
+                        </ul>
+                    </div>
+                    <div class="bento-card border-l-4 border-l-purple-500 fragment fade-up">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">III. Experimental Results</h3>
+                        <ul class="space-y-3 text-slate-600 text-sm">
+                            <li class="fragment fade-in"><i class="fas fa-flask text-purple-400 mr-2"></i> COCO F5 Benchmark</li>
+                            <li class="fragment fade-in"><i class="fas fa-chart-bar text-purple-400 mr-2"></i> ECDF & Calibration</li>
+                        </ul>
+                    </div>
+                    <div class="bento-card border-l-4 border-l-emerald-500 fragment fade-up">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">IV. Conclusion</h3>
+                        <ul class="space-y-3 text-slate-600 text-sm">
+                            <li class="fragment fade-in"><i class="fas fa-rocket text-emerald-400 mr-2"></i> Hybrid AI Roadmap</li>
+                            <li class="fragment fade-in"><i class="fas fa-check-circle text-emerald-400 mr-2"></i> Key Takeaways</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 3: ENGINEERING CONTEXT ================= -->
+            <section data-auto-animate>
+                <div class="h-full flex flex-col justify-center">
+                    <span class="slide-badge">Part II &bull; Slide 1</span>
+                    <h2 class="text-4xl font-extrabold mb-8 display-font text-gradient">The Engineering Landscape</h2>
+                    <div class="grid grid-cols-2 gap-12 items-center">
+                        <div class="space-y-8 fragment fade-right">
+                            <div class="bento-card">
+                                <h4 class="font-bold text-blue-600 text-lg mb-2 flex items-center gap-2"><i class="fas fa-exchange-alt"></i> The Shift</h4>
+                                <p class="text-slate-600 text-sm">Complex systems requiring advanced multi-functional optimization.</p>
+                            </div>
+                            <div class="bento-card bento-card-dark text-white border-none shadow-xl">
+                                <h4 class="font-bold text-amber-400 text-lg mb-2 flex items-center gap-2 animate-pulse"><i class="fas fa-fire-alt"></i> The Conflict</h4>
+                                <p class="text-slate-300 text-sm">Competing objectives: e.g., <span class="text-white font-semibold underline decoration-amber-500/50">thermal efficiency vs. weight.</span></p>
+                            </div>
+                        </div>
+                        <div class="relative fragment fade-left">
+                            <img src="https://images.unsplash.com/photo-1581092335397-9583eb92d232?auto=format&fit=crop&q=80&w=600&h=600" class="rounded-3xl shadow-2xl w-full grayscale border border-slate-200">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 4: WHY IS IT HARD? ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge text-red-600 bg-red-100">Part II &bull; Slide 2</span>
+                <h2 class="text-4xl font-extrabold mb-8 display-font text-gradient">Hadamard’s Well-Posedness</h2>
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="bento-card hover:border-red-300 fragment zoom-in">
+                        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mb-6"><i class="fas fa-cube"></i></div>
+                        <h4 class="font-bold text-lg mb-3">1. Existence</h4>
+                        <p class="text-sm text-slate-600 mb-8">Does a solution \( x \) exist for target \( y^* \)?</p>
+                    </div>
+                    <div class="bento-card hover:border-red-300 relative fragment zoom-in">
+                        <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">CORE ISSUE</div>
+                        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mb-6"><i class="fas fa-sitemap"></i></div>
+                        <h4 class="font-bold text-lg mb-3">2. Uniqueness</h4>
+                        <p class="text-sm text-slate-600 mb-8">Is there only ONE solution? (The One-to-Many problem)</p>
+                    </div>
+                    <div class="bento-card hover:border-red-300 fragment zoom-in">
+                        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mb-6"><i class="fas fa-water"></i></div>
+                        <h4 class="font-bold text-lg mb-3">3. Stability</h4>
+                        <p class="text-sm text-slate-600 mb-8">Stability is rare in complex inverse landscapes.</p>
+                    </div>
+                </div>
+                <aside class="notes">
+                    "Uniqueness is the biggest hurdle. Because many designs can produce the same result, a model that only gives one answer—or an average—is flawed."
+                </aside>
+            </section>
+
+            <!-- ================= SLIDE 5: ILL-POSEDNESS ================= -->
+            <section data-auto-animate>
+                <div class="h-full flex flex-col justify-center">
+                    <span class="slide-badge text-red-600 bg-red-100">Part II &bull; Slide 3</span>
+                    <h2 class="text-4xl font-extrabold mb-8 display-font text-gradient">The Core Problem: Ill-Posedness</h2>
+                    <div class="bento-card bg-slate-900 text-white p-12">
+                        <div class="grid grid-cols-5 gap-12 items-center">
+                            <div class="col-span-3">
+                                <div class="formula-box text-slate-900 bg-white mb-8 text-center text-3xl font-bold py-6">
+                                    \[ f^{-1}(y^*) \rightarrow \{x_1, x_2, \dots\} \]
+                                </div>
+                                <p class="text-slate-300 text-lg">
+                                    Inverse is <span class="text-red-400 font-bold">Ill-Posed</span>. Mapping from \( y \to x \) is ambiguous.
+                                </p>
+                            </div>
+                            <div class="col-span-2 space-y-6 border-l border-slate-700 pl-8">
+                                <div class="flex items-start gap-4">
+                                    <i class="fas fa-compress-arrows-alt text-xl text-red-400 mt-1"></i>
+                                    <div>
+                                        <h4 class="font-bold">Information Loss</h4>
+                                        <p class="text-xs text-slate-400">Forward process 'collapses' features.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <i class="fas fa-code-branch text-xl text-red-400 mt-1"></i>
+                                    <div>
+                                        <h4 class="font-bold">Ambiguity</h4>
+                                        <p class="text-xs text-slate-400">One result maps to countless configurations.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 6: AVERAGE TRAP ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge text-red-600 bg-red-100">Part II &bull; Slide 4</span>
+                <h2 class="text-4xl font-extrabold mb-8 display-font text-gradient">The "Average" Trap</h2>
+                <div class="grid grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-red-700 mb-6">Regression Fails Inverse Problems</h3>
+                        <p class="text-slate-700 text-lg mb-6">MSE loss attempts to find the <b>mean</b> design. In physics, the mean is often <span class="text-red-500 font-bold underline">invalid</span>.</p>
+                        <div class="formula-box bg-red-50 border border-red-100 text-center py-6">
+                            \[ \hat{x} = E[x|y] \quad \text{but} \quad f(\hat{x}) \neq y^* \]
+                        </div>
+                    </div>
+                    <div class="bento-card bg-slate-50 relative">
+                         <svg viewBox="0 0 300 150" class="w-full h-48">
+                            <path d="M 50 100 Q 150 20 250 100" fill="none" stroke="#cbd5e1" stroke-width="40" stroke-linecap="round" />
+                            <circle cx="80" cy="80" r="10" fill="#3b82f6" />
+                            <circle cx="220" cy="80" r="10" fill="#3b82f6" />
+                            <circle cx="150" cy="80" r="12" fill="#ef4444" />
+                            <text x="150" y="115" text-anchor="middle" font-size="12" font-weight="bold" fill="#ef4444">INVALID AVERAGE</text>
+                        </svg>
+                        <p class="text-sm italic border-l-4 border-amber-400 pl-4 mt-6">"The average of a tuxedo and a swimsuit is neither formal nor waterproof."</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 7: MISSION ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 1</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font text-gradient">Target-Driven Inverse Exploration</h2>
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="bento-card border-t-4 border-t-blue-500">
+                        <i class="fas fa-crosshairs text-3xl text-blue-500 mb-6"></i>
+                        <h4 class="font-bold text-lg mb-2">Objective</h4>
+                        <p class="text-sm text-slate-600">Specifying target \( y^* \) and receiving feasible candidates \( \{\hat{x}_k\} \).</p>
+                    </div>
+                    <div class="bento-card border-t-4 border-t-indigo-500">
+                        <i class="fas fa-map-marked-alt text-3xl text-indigo-500 mb-6"></i>
+                        <h4 class="font-bold text-lg mb-2">Innovation</h4>
+                        <p class="text-sm text-slate-600">Moving from single-point optimization to distribution exploration.</p>
+                    </div>
+                    <div class="bento-card border-t-4 border-t-emerald-500">
+                        <i class="fas fa-concierge-bell text-3xl text-emerald-500 mb-6"></i>
+                        <h4 class="font-bold text-lg mb-2">Utility</h4>
+                        <p class="text-sm text-slate-600">A "menu" of valid options for the designer, not a black box.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 8: WORKFLOW ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 3</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font text-gradient">The Propose-Check Workflow</h2>
+                <div class="flex flex-col space-y-4 max-w-4xl">
+                     <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-lg border border-slate-700 flex items-center justify-between fragment fade-left">
+                        <div>
+                            <span class="text-xs text-blue-400 font-bold uppercase tracking-widest">Step 1</span>
+                            <h4 class="text-2xl font-bold">PROPOSE</h4>
+                        </div>
+                        <p class="text-slate-400">Sample diverse candidates from \( q_\theta(x|y^*) \)</p>
+                    </div>
+                    <div class="bg-blue-600 text-white p-8 rounded-3xl shadow-lg flex items-center justify-between fragment fade-left">
+                        <div>
+                            <span class="text-xs text-blue-200 font-bold uppercase tracking-widest">Step 2</span>
+                            <h4 class="text-2xl font-bold">CHECK</h4>
+                        </div>
+                        <p class="text-blue-100">Verify validity via forward surrogate \( E(\hat{x}) \)</p>
+                    </div>
+                    <div class="bg-emerald-500 text-white p-8 rounded-3xl shadow-lg flex items-center justify-between fragment fade-left">
+                        <div>
+                            <span class="text-xs text-emerald-100 font-bold uppercase tracking-widest">Step 3</span>
+                            <h4 class="text-2xl font-bold">RANK</h4>
+                        </div>
+                        <p class="text-emerald-50">Select best-shot or multiple diverse designs</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 9: ARCHITECTURES ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge bg-indigo-100 text-indigo-700">Part III &bull; Slide 4</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font text-gradient">Probabilistic Engines</h2>
+                <div class="grid grid-cols-3 gap-8">
+                     <div class="bento-card hover:bg-blue-50 transition-colors fragment fade-up">
+                        <i class="fas fa-mountain text-4xl text-blue-500 mb-6"></i>
+                        <h4 class="text-2xl font-bold mb-4">MDN</h4>
+                        <p class="text-xs font-bold uppercase text-slate-400 mb-4">Mixture Density</p>
+                        <p class="text-sm text-slate-600">Models multiple Gaussian "peaks" to define distinct solution islands.</p>
+                        <div class="formula-box text-center bg-slate-100 py-3 fragment blur">\( \sum \pi_k \mathcal{N}(\mu_k, \Sigma_k) \)</div>
+                    </div>
+                    <div class="bento-card hover:bg-indigo-50 transition-colors fragment fade-up">
+                        <i class="fas fa-cloud text-4xl text-indigo-500 mb-6"></i>
+                        <h4 class="text-2xl font-bold mb-4">CVAE</h4>
+                        <p class="text-xs font-bold uppercase text-slate-400 mb-4">Conditional VAE</p>
+                        <p class="text-sm text-slate-600">Uses latent variable \( z \) to navigate the design manifold.</p>
+                        <div class="formula-box text-center bg-slate-100 py-3 fragment blur">\( z \sim \mathcal{N}(0, I) \)</div>
+                    </div>
+                    <div class="bento-card hover:bg-emerald-50 transition-colors fragment fade-up">
+                        <i class="fas fa-sync-alt text-4xl text-emerald-500 mb-6"></i>
+                        <h4 class="text-2xl font-bold mb-4">INN</h4>
+                        <p class="text-xs font-bold uppercase text-slate-400 mb-4">Invertible NN</p>
+                        <p class="text-sm text-slate-600">Bijective mapping preserving all information across directions.</p>
+                        <div class="formula-box text-center bg-slate-100 py-3 fragment blur">\( (x) \leftrightarrow (y, z) \)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 10: CASE STUDY ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge bg-purple-100 text-purple-700">Part IV &bull; Slide 1</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font text-gradient">Case Study: COCO F5 Benchmark</h2>
+                <div class="grid grid-cols-2 gap-12 items-center">
+                    <div class="space-y-8">
+                         <div class="bento-card border-l-4 border-l-purple-500">
+                            <h4 class="font-bold flex items-center gap-3"><i class="fas fa-database text-purple-500"></i> Dataset</h4>
+                            <p class="text-sm text-slate-600">8,000 paired samples derived from NSGA-II traces.</p>
+                        </div>
+                        <div class="bento-card border-l-4 border-l-amber-500">
+                            <h4 class="font-bold flex items-center gap-3"><i class="fas fa-exclamation-triangle text-amber-500"></i> Challenge</h4>
+                            <p class="text-sm text-slate-600">Sharp Ridges & non-differentiable landscapes that break standard solvers.</p>
+                        </div>
+                    </div>
+                    <div class="bento-card bg-slate-900 border-none relative h-64 flex items-center justify-center">
+                        <svg viewBox="0 0 400 300" class="w-full h-full p-8">
+                            <polygon points="50,250 100,100 150,220 200,80 250,190 300,50 350,250" fill="indigo" opacity="0.4" class="fragment fade-in" />
+                            <polyline points="50,250 100,100 150,220 200,80 250,190 300,50 350,250" fill="none" stroke="white" stroke-width="3" class="animate-draw" />
+                        </svg>
+                        <div class="absolute bottom-4 text-white text-[10px] font-bold uppercase tracking-widest">Jagged Landscape</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SLIDE 11: ECDF RESULTS ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge bg-purple-100 text-purple-700">Part IV &bull; Slide 3</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font text-gradient">Precision: Who Hits the Mark?</h2>
+                <div class="grid grid-cols-2 gap-8 items-center">
+                     <div class="space-y-6">
+                        <div class="bento-card border-l-4 border-l-blue-500">
+                            <h4 class="font-bold text-sm">MDN (v8) & INN (v5) Lead</h4>
+                            <p class="text-xs text-slate-500">Vastly superior resolution at microscopic levels.</p>
+                        </div>
+                        <div class="bento-card border-l-4 border-l-red-500">
+                            <h4 class="font-bold text-sm">The CVAE Gap</h4>
+                            <p class="text-xs text-slate-500">Blured performance; only rises at loose tolerances (\( 10^{-4} \)).</p>
+                        </div>
+                    </div>
+                    <div class="bento-card bg-slate-50">
+                        <h4 class="text-[10px] font-bold uppercase text-slate-400 mb-4">Precision ECDF (Log Scale)</h4>
+                        <div class="h-48 w-full border-l-2 border-b-2 border-slate-300 relative">
+                             <svg viewBox="0 0 100 100" class="w-full h-full" preserveAspectRatio="none">
+                                <polyline points="0,100 60,80 80,40 100,10" fill="none" stroke="#ef4444" stroke-width="3" class="animate-draw" /> <!-- CVAE -->
+                                <polyline points="0,100 20,72 40,40 60,10 100,2" fill="none" stroke="#3b82f6" stroke-width="4" class="animate-draw" /> <!-- MDN -->
+                            </svg>
+                            <div class="flex justify-around mt-4 text-[10px] font-bold">
+                                <span class="text-blue-600">MDN</span>
+                                <span class="text-red-500">CVAE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- ================= SLIDE 12: CONCLUSION ================= -->
+            <section data-auto-animate>
+                <span class="slide-badge bg-emerald-100 text-emerald-700">Part V &bull; Slide 2</span>
+                <h2 class="text-4xl font-extrabold mb-12 display-font text-gradient">Tracing the Future</h2>
+                <div class="grid grid-cols-3 gap-6 mb-12">
+                    <div class="bento-card text-center fragment zoom-in">
+                        <i class="fas fa-check-circle text-4xl text-blue-500 mb-6"></i>
+                        <h4 class="font-bold mb-2">Validated</h4>
+                        <p class="text-xs text-slate-500">Propose-Check handles one-to-many mappings.</p>
+                    </div>
+                    <div class="bento-card text-center fragment zoom-in" data-fragment-index="1">
+                        <i class="fas fa-balance-scale-right text-4xl text-indigo-500 mb-6"></i>
+                        <h4 class="font-bold mb-2">Dual-Metrics</h4>
+                        <p class="text-xs text-slate-500">Established Plausibility & Reliability standards.</p>
+                    </div>
+                    <div class="bento-card text-center fragment zoom-in" data-fragment-index="2">
+                        <i class="fas fa-medal text-4xl text-emerald-500 mb-6"></i>
+                        <h4 class="font-bold mb-2">Winners</h4>
+                        <p class="text-xs text-slate-500"><b>MDN</b> for precision, <b>INN</b> for calibration.</p>
+                    </div>
+                </div>
+                <div class="bento-card bento-card-dark text-white text-center py-12 fragment fade-up">
+                    <h1 class="text-4xl font-black mb-4 text-gradient">Thank You!</h1>
+                    <p class="text-slate-400">Questions & Discussion</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Reveal.js JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/math/math.js"></script>
+
+    <script>
+        Reveal.initialize({
+            hash: true,
+            center: true,
+            transition: 'convex',
+            transitionSpeed: 'slow',
+            plugins: [ RevealMath.MathJax3 ],
+            margin: 0.1,
+            minScale: 0.2,
+            maxScale: 2.0,
+            backgroundTransition: 'zoom'
+        });
+    </script>
+</body>
+
+</html>
