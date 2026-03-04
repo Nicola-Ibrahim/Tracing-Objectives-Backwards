@@ -45,6 +45,13 @@ class BaseEstimator(ABC):
         else:
             return "ND"
 
+    def _ensure_fitted(self) -> None:
+        """Raises RuntimeError if the mapper is not fitted."""
+        if self._X_dim is None:
+            raise RuntimeError(
+                f"Estimator '{self.type}' is not fitted. Call .fit() first."
+            )
+
     @property
     def type(self) -> str:
         """

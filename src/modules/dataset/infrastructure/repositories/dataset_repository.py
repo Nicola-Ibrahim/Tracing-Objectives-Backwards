@@ -27,6 +27,14 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         self._save_raw(dataset)
         return self.base_path / dataset.name
 
+    def delete(self, name: str) -> None:
+        """Deletes a dataset and all its files from the filesystem."""
+        dataset_dir = self.base_path / name
+        if dataset_dir.exists():
+            import shutil
+
+            shutil.rmtree(dataset_dir)
+
     def load(self, name: str) -> Dataset:
         """
         Load the Dataset aggregate.

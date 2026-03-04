@@ -120,6 +120,8 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
         np.save(engine_dir / "train_indices.npy", engine.data_split.train_indices)
         np.save(engine_dir / "test_indices.npy", engine.data_split.test_indices)
 
+        return next_version
+
     def load(
         self, dataset_name: str, solver_type: str, version: int | None = None
     ) -> InverseMappingEngine:
@@ -219,7 +221,7 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
             created_at=datetime.fromisoformat(metadata["created_at"]),
         )
 
-    def list(self, dataset_name: str, solver_type: str | None = None) -> list[dict]:
+    def list_all(self, dataset_name: str, solver_type: str | None = None) -> list[dict]:
         """
         Lists engine versions. If solver_type is provided, lists for that solver.
         Otherwise, lists all for the dataset.
@@ -250,3 +252,37 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
                             continue
 
         return sorted(engine_summaries, key=lambda x: x["created_at"], reverse=True)
+
+    def list_engines(self, dataset_name: str) -> list[dict]:
+        """Lists all trained engines for a dataset across all solver types."""
+        return self.list_all(dataset_name)
+
+    def delete_all_for_dataset(self, dataset_name: str) -> int:
+        """Deletes all engine versions for a given dataset."""
+        dataset_dir = self._base_storage_path / dataset_name
+        count = 0
+        if dataset_dir.exists():
+            # Count the version directories before deleting
+            for s_dir in dataset_dir.iterdir():
+                if s_dir.is_dir():
+                    for v_dir in s_dir.iterdir():
+                        if v_dir.is_dir() and v_dir.name.startswith("v"):
+                            count += 1
+
+            import shutil
+
+            shutil.rmtree(dataset_dir)
+        return count
+
+    def delete_specific_engine(
+        self, dataset_name: str, solver_type: str, version: int
+    ) -> bool:
+        """Deletes a specific engine version."""
+        solver_dir = self._get_solver_dir(dataset_name, solver_type)
+        version_dir = self._find_version_dir(solver_dir, version)
+        if version_dir and version_dir.exists():
+            import shutil
+
+            shutil.rmtree(version_dir)
+            return True
+        return False

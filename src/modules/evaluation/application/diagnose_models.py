@@ -3,27 +3,27 @@ from typing import Literal
 import numpy as np
 from pydantic import BaseModel, Field
 
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....modules.inverse.domain.entities.inverse_mapping_engine import (
+from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ...inverse.domain.entities.inverse_mapping_engine import (
     InverseMappingEngine,
 )
-from ....modules.inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
+from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
 )
-from ....shared.domain.interfaces.base_logger import BaseLogger
-from ...domain.aggregates.diagnostic_result import DiagnosticResult
-from ...domain.entities.accuracy_lens import AccuracyLens
-from ...domain.entities.reliability_lens import ReliabilityLens
-from ...domain.interfaces.base_diagnostic_repository import (
+from ...shared.domain.interfaces.base_logger import BaseLogger
+from ..domain.aggregates.diagnostic_result import DiagnosticResult
+from ..domain.entities.accuracy_lens import AccuracyLens
+from ..domain.entities.reliability_lens import ReliabilityLens
+from ..domain.interfaces.base_diagnostic_repository import (
     BaseDiagnosticRepository,
 )
-from ...domain.services.generative_distribution_auditor import (
+from ..domain.services.generative_distribution_auditor import (
     GenerativeDistributionAuditor,
 )
-from ...domain.services.spatial_candidate_auditor import (
+from ..domain.services.spatial_candidate_auditor import (
     SpatialCandidateAuditor,
 )
-from ...domain.value_objects.estimator import Estimator
+from ..domain.value_objects.estimator import Estimator
 
 
 class InverseEngineCandidate(BaseModel):
@@ -76,27 +76,33 @@ class DiagnoseInverseModelsService:
         self._diag_repo = diagnostic_repository
         self._logger = logger
 
-    def execute(self, params: DiagnoseInverseModelsParams) -> None:
+    def execute(self, params: DiagnoseInverseModelsParams) -> dict:
         self._logger.log_info(
             f"Starting Diagnostic Compute for engines on dataset '{params.dataset_name}'"
         )
 
         dataset = self._data_repo.load(params.dataset_name)
 
-        engines = self._initialize_engines(
+        engines_to_diagnose = self._initialize_engines(
             candidates=params.inverse_engine_candidates,
             dataset_name=params.dataset_name,
         )
 
-        for engine, version in engines:
-            self._logger.log_info(f"Diagnosing {engine.solver.type()} (v{version})")
+        ecdf_results = {}
+        pit_results = {}
+        mace_results = {}
+        engine_names = []
+        warnings = []
+
+        for engine, version in engines_to_diagnose:
+            engine_name = f"{engine.solver.type()} (v{version})"
+            engine_names.append(engine_name)
+            self._logger.log_info(f"Diagnosing {engine_name}")
 
             # 1. Get test split from engine
             test_indices = engine.data_split.test_indices
             if len(test_indices) == 0:
-                self._logger.log_warning(
-                    f"Engine {engine.solver.type()} has no test split. Skipping."
-                )
+                warnings.append(f"Engine {engine_name} has no test split. Skipping.")
                 continue
 
             X_test_raw = dataset.objectives[test_indices]
@@ -107,9 +113,6 @@ class DiagnoseInverseModelsService:
             y_test_norm = engine.transform_decision(y_test_raw)
 
             # 3. Batch generate candidates for each test target
-            # Note: For large test sets, this might need batching.
-            # Current implementation of solvers handles single targets.
-
             n_test = len(X_test_norm)
             all_candidates_X_norm = []
             all_candidates_y_norm = []
@@ -119,27 +122,13 @@ class DiagnoseInverseModelsService:
                 res = engine.solver.generate(
                     target_y_norm, n_samples=params.num_samples
                 )
-
-                # candidates_X are decisions, candidates_y are objectives (forward simulated)
                 all_candidates_X_norm.append(res.candidates_X)
-
-                # candidates_y from solver is already forward simulated but might be in physical space
-                # or normalized space depending on solver implementation.
-                # In GBPI, it uses forward_estimator.predict(candidates_X).
-                # Since candidates_X is normalized, forward_estimator.predict returns normalized y.
                 all_candidates_y_norm.append(res.candidates_y)
 
-            all_candidates_X_norm = np.stack(
-                all_candidates_X_norm
-            )  # (n_test, n_samples, d_x)
-            all_candidates_y_norm = np.stack(
-                all_candidates_y_norm
-            )  # (n_test, n_samples, d_y)
+            all_candidates_X_norm = np.stack(all_candidates_X_norm)
+            all_candidates_y_norm = np.stack(all_candidates_y_norm)
 
             # Accuracy Domain (Objective Space)
-            # Reference target is X_test_norm (the target objectives)
-
-            # We need training objectives in normalized space for the spatial auditor (to calculate tau/density)
             y_train_norm = engine.transform_objective(
                 dataset.objectives[engine.data_split.train_indices]
             )
@@ -152,7 +141,6 @@ class DiagnoseInverseModelsService:
             )
 
             # Reliability Domain (Decision Space)
-            # Truth is y_test_norm (the true decisions)
             generative_audit = GenerativeDistributionAuditor.audit(
                 samples=all_candidates_X_norm,
                 truth=y_test_norm,
@@ -169,19 +157,19 @@ class DiagnoseInverseModelsService:
                 num_samples=params.num_samples,
                 scale_method=params.scale_method,
                 accuracy=AccuracyLens(
-                    discrepancy_scores=spatial_audit.discrepancy_scores,
-                    best_shot_scores=spatial_audit.best_shot_scores,
-                    rank_indices=spatial_audit.rank_indices,
-                    systematic_bias=spatial_audit.bias,
-                    cloud_dispersion=spatial_audit.dispersion,
+                    discrepancy_scores=spatial_audit.discrepancy_scores.tolist(),
+                    best_shot_scores=spatial_audit.best_shot_scores.tolist(),
+                    rank_indices=spatial_audit.rank_indices.tolist(),
+                    systematic_bias=float(spatial_audit.bias),
+                    cloud_dispersion=float(spatial_audit.dispersion),
                     summary=spatial_audit.summary,
                 ),
                 reliability=ReliabilityLens(
-                    pit_values=generative_audit.pit_values,
-                    calibration_error=generative_audit.calibration_error,
-                    crps=generative_audit.crps,
-                    diversity=generative_audit.diversity,
-                    interval_width=generative_audit.interval_width,
+                    pit_values=generative_audit.pit_values.tolist(),
+                    calibration_error=float(generative_audit.calibration_error),
+                    crps=float(generative_audit.crps),
+                    diversity=float(generative_audit.diversity),
+                    interval_width=float(generative_audit.interval_width),
                     summary=generative_audit.summary,
                     calibration_curve=generative_audit.calibration_curve,
                 ),
@@ -189,6 +177,33 @@ class DiagnoseInverseModelsService:
 
             # Persist Result
             self._diag_repo.save(result)
+
+            # Format for Response
+            ecdf_results[engine_name] = self._calculate_ecdf(
+                spatial_audit.discrepancy_scores
+            )
+            pit_results[engine_name] = generative_audit.pit_values.tolist()
+            mace_results[engine_name] = float(generative_audit.calibration_error)
+
+        return {
+            "dataset_name": params.dataset_name,
+            "engines": engine_names,
+            "ecdf": ecdf_results,
+            "pit": pit_results,
+            "mace": mace_results,
+            "warnings": warnings,
+        }
+
+    def _calculate_ecdf(self, data: np.ndarray) -> dict:
+        """Helper to calculate Empirical Cumulative Distribution Function points."""
+        x = np.sort(data)
+        y = np.arange(1, len(x) + 1) / len(x)
+        # Resample to 100 points if too large for bandwidth
+        if len(x) > 100:
+            indices = np.linspace(0, len(x) - 1, 100).astype(int)
+            x = x[indices]
+            y = y[indices]
+        return {"x": x.tolist(), "y": y.tolist()}
 
     def _initialize_engines(
         self,

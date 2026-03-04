@@ -73,20 +73,54 @@ class GenerateCoherentCandidatesService:
             f"Winner: {result.best_objective_raw.flatten()}"
         )
 
-        # Return formatted dictionary
+        # # Return formatted dictionary
+        # common_fields = {
+        #     "solver_type": config.solver_type,
+        #     "target_objective": result.target_objective_raw.tolist(),
+        #     "candidate_decisions": result.candidate_decisions_raw.tolist(),
+        #     "candidate_objectives": result.candidate_objectives_raw.tolist(),
+        #     "best_index": result.best_index,
+        #     "best_objective": result.best_objective_raw.flatten().tolist(),
+        #     "best_decision": result.best_decision_raw.flatten().tolist(),
+        #     "all_residuals": result.all_residuals.tolist(),
+        # }
+
+        # metadata = {
+        #     "pathway": result.pathway,
+        #     "objective_space_residual_sorted": result.objective_space_residual_sorted.tolist(),
+        #     "vertices_indices": result.metadata.get("vertices_indices", []),
+        #     "tau": result.metadata.get("tau"),
+        #     "vertice_distances": result.metadata.get("vertice_distances", []),
+        #     "is_simplex_found": result.metadata.get("is_simplex_found", False),
+        #     "is_coherent": result.metadata.get("is_coherent", False),
+        # }
+
+        # # Merge results from domain service metadata if any
+        # solver_metadata = result.metadata.copy()
+        # # Remove already extracted fields
+        # for key in [
+        #     "vertices_indices",
+        #     "tau",
+        #     "vertice_distances",
+        #     "is_simplex_found",
+        #     "is_coherent",
+        # ]:
+        #     solver_metadata.pop(key, None)
+
+        # metadata.update(solver_metadata)
+
+        # common_fields["metadata"] = metadata
+
         return {
-            "pathway": result.pathway,
-            "target_objective": result.target_objective_raw.tolist(),
+            "solver_type": config.solver_type,
+            "target_objective": result.target_objective_raw.flatten().tolist(),
             "candidate_decisions": result.candidate_decisions_raw.tolist(),
-            "candidate_objectives": result.candidate_objectives_raw.tolist(),
-            "objective_space_residual_sorted": result.objective_space_residual_sorted.tolist(),
+            "candidate_objectives": [
+                tuple(obj) for obj in result.candidate_objectives_raw.tolist()
+            ],
+            "best_index": result.best_index,
             "best_objective": result.best_objective_raw.flatten().tolist(),
             "best_decision": result.best_decision_raw.flatten().tolist(),
             "all_residuals": result.all_residuals.tolist(),
-            "best_index": result.best_index,
-            "vertices_indices": result.metadata.get("vertices_indices", []),
-            "tau": result.metadata.get("tau"),
-            "vertice_distances": result.metadata.get("vertice_distances", []),
-            "is_simplex_found": result.metadata.get("is_simplex_found", False),
-            "is_coherent": result.metadata.get("is_coherent", False),
+            "metadata": result.metadata,
         }

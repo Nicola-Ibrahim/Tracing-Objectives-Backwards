@@ -1,15 +1,15 @@
 import numpy as np
 from pydantic import BaseModel, Field
 
-from ....dataset.domain.entities.dataset import Dataset
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....modules.inverse.domain.entities.inverse_mapping_engine import (
+from ...dataset.domain.entities.dataset import Dataset
+from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ...inverse.domain.entities.inverse_mapping_engine import (
     InverseMappingEngine,
 )
-from ....modules.inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
+from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
 )
-from ...domain.interfaces.base_visualizer import BaseVisualizer
+from ..domain.interfaces.base_visualizer import BaseVisualizer
 
 
 class InverseEngineCandidate(BaseModel):

@@ -76,7 +76,10 @@ class TrainInverseMappingEngineService:
             current_data = t.transform(current_data)
         return current_data
 
-    def execute(self, params: TrainInverseMappingEngineParams) -> InverseMappingEngine:
+    def execute(self, params: TrainInverseMappingEngineParams) -> dict:
+        import time
+
+        start_time = time.time()
         self._logger.log_info(
             f"Preparing generation context for '{params.dataset_name}'"
         )
@@ -132,9 +135,17 @@ class TrainInverseMappingEngineService:
                 y_train_norm = t.transform(y_train_norm)
 
         # Train the solver
-        solver = self._solvers_factory.create(
-            params.solver.type, **params.solver.params
-        )
+        solver_params = params.solver.params.copy()
+        if params.solver.type == "GBPI":
+            # Supply defaults if missing to ensure successful instantiation
+            if "n_neighbors" not in solver_params:
+                solver_params["n_neighbors"] = 5
+            if "trust_radius" not in solver_params:
+                solver_params["trust_radius"] = 0.05
+            if "concentration_factor" not in solver_params:
+                solver_params["concentration_factor"] = 10.0
+
+        solver = self._solvers_factory.create(params.solver.type, **solver_params)
         solver.train(X=X_train_norm, y=y_train_norm)
 
         # Create Value Objects
@@ -154,7 +165,25 @@ class TrainInverseMappingEngineService:
             data_split=data_split,
         )
 
-        self._inverse_mapping_engine_repository.save(engine)
-        self._logger.log_info("InverseMappingEngine saved successfully.")
+        # Assigned version
+        version = self._inverse_mapping_engine_repository.save(engine)
+        self._logger.log_info(f"InverseMappingEngine saved successfully (v{version}).")
 
-        return engine
+        duration = time.time() - start_time
+
+        transform_summary = [
+            f"{t.__class__.__name__}({label})" for label, t in all_fitted_transforms
+        ]
+
+        return {
+            "dataset_name": params.dataset_name,
+            "solver_type": params.solver.type,
+            "engine_version": version,
+            "status": "completed",
+            "duration_seconds": duration,
+            "n_train_samples": len(train_indices),
+            "n_test_samples": len(test_indices),
+            "split_ratio": params.split_ratio,
+            "transform_summary": transform_summary,
+            "training_history": solver.history(),
+        }

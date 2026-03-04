@@ -8,13 +8,14 @@ from .middleware import (
     pydantic_validation_exception_handler,
     validation_exception_handler,
 )
-from .v1.dataset_routes import router as dataset_router
-from .v1.generation_routes import router as generation_router
+from .v1.datasets.routes import router as datasets_router
+from .v1.evaluation.routes import router as evaluation_router
+from .v1.inverse.routes import router as inverse_router
 
 app = FastAPI(
     title="Tracing Objectives Backwards API",
-    description="API for dataset exploration and coherent candidate generation.",
-    version="0.1.0",
+    description="API for dataset exploration, multi-engine inverse mapping, and evaluation.",
+    version="1.0.0",
 )
 
 # Exception handlers
@@ -37,8 +38,14 @@ async def health_check():
 
 
 # Include routers
-app.include_router(dataset_router, prefix="/api/v1/datasets", tags=["Datasets"])
-app.include_router(generation_router, prefix="/api/v1/generation", tags=["Generation"])
+app.include_router(datasets_router, prefix="/api/v1/datasets", tags=["Datasets"])
+app.include_router(inverse_router, prefix="/api/v1/inverse", tags=["Inverse Mapping"])
+app.include_router(evaluation_router, prefix="/api/v1/evaluation", tags=["Evaluation"])
 
 # Mount static files
-app.mount("/", StaticFiles(directory="frontend", html=True), name="ui")
+# Note: Keep this if the backend serves the frontend.
+# If using next.js dev server, this can be commented out or kept as fallback.
+try:
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="ui")
+except Exception:
+    pass

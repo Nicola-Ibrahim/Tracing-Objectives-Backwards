@@ -42,8 +42,8 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         self.trust_radius = trust_radius
         self.concentration_factor = concentration_factor
         self.estimator = estimator
-        self.space_points = None
-        self.decision_vertices = None
+
+        self.X = None
         self.tau = None
         self.mesh = None
         self.objective_knn = None
@@ -55,7 +55,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
     def _ensure_fitted(self):
         if (
             self.forward_estimator is None
-            or self.decision_vertices is None
+            or self.X is None
             or self.tau is None
             or self.mesh is None
             or self.objective_knn is None
@@ -71,7 +71,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
             is_coherent: True if all pairwise distances <= tau.
             pairwise_dists: List of pairwise Euclidean distances.
         """
-        triangle_vertices = self.decision_vertices[vertices_indices]
+        triangle_vertices = self.X[vertices_indices]
 
         if len(triangle_vertices) < 2:
             return True, []
@@ -133,7 +133,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
                 anchor_distances,
             )
 
-        # if target is outside the mesh, find the nearest point in space_points
+        # if target is outside the mesh, find the nearest point in y
         # and return the nearest point index and the barycentric weights
         # if simplex index is negative, means no triangle was found
         else:
@@ -171,7 +171,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
             candidates_X = DirichletSampling(
                 concentration_factor=self.concentration_factor
             ).sample(
-                vertices=self.decision_vertices[vertices_indices],
+                vertices=self.X[vertices_indices],
                 weights=weights,
                 n_samples=n_samples,
             )
@@ -182,7 +182,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
                 target_y=target_y,
                 trust_radius=self.trust_radius,
             ).sample(
-                vertices=self.decision_vertices[vertices_indices],
+                vertices=self.X[vertices_indices],
                 weights=weights,
                 n_samples=n_samples,
             )
@@ -236,7 +236,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         """
         self.mesh = Delaunay(y)
 
-    def _build_objective_knn(self, y: np.ndarray):
+    def _build_y_knn(self, y: np.ndarray):
         """
         Builds the spatial index for the objective space (for out-of-mesh lookups)
         It is used to find the nearest neighbor of a target point that is outside the mesh.
@@ -263,8 +263,13 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         self._build_mesh(y)
 
         # Store the raw training data
-        self.decision_vertices = X
-        self.space_points = y
+        self.X = X
 
         # Build the spatial index for the objective space (for out-of-mesh lookups)
-        self._build_objective_knn(y)
+        self._build_y_knn(y)
+
+    def history(self) -> dict[str, Any]:
+        """Returns the history of the solver."""
+        return {
+            "tau": self.tau,
+        }

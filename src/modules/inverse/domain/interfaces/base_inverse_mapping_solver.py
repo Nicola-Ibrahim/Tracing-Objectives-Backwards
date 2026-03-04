@@ -26,6 +26,11 @@ class AbstractInverseMappingSolver(ABC):
         raise NotImplementedError("Solver type not implemented.")
 
     @abstractmethod
+    def history(self) -> dict[str, Any]:
+        """Returns the history of the solver."""
+        raise NotImplementedError("History not implemented.")
+
+    @abstractmethod
     def _ensure_fitted(self) -> None:
         """Raises RuntimeError if the solver is not fitted."""
         raise RuntimeError("Solver not fitted. Call 'train' first.")

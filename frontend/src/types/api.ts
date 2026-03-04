@@ -10,6 +10,7 @@ export interface Dataset {
 // Corresponds to backend GenerationRequest
 export interface GenerationRequest {
     dataset_name: string;
+    solver_type?: string;
     target_objective: [number, number];
     n_samples: number;
     trust_radius: number;
@@ -24,10 +25,11 @@ export interface GenerationResponse {
     candidate_objectives: [number, number][];
     objective_space_residual_sorted: number[];
     vertices_indices: number[];
-    tau: number;
-    vertice_distances: number[];
-    is_simplex_found: boolean;
-    is_coherent: boolean;
+    tau?: number;
+    vertice_distances?: number[];
+    is_simplex_found?: boolean;
+    is_coherent?: boolean;
+    solver_type?: string;
     best_index: number;
     best_objective: [number, number];
     best_decision: number[];
@@ -51,4 +53,37 @@ export interface DatasetGenerationRequest {
     n_var: number;
     generations: number;
     dataset_name: string;
+}
+
+export interface EngineDiagnosticCandidate {
+    solver_type: string;
+    version: number;
+    run_number?: number;
+}
+
+export interface DiagnoseModelsRequest {
+    dataset_name: string;
+    inverse_engine_candidates: EngineDiagnosticCandidate[];
+}
+
+export interface Point {
+    x: number;
+    y: number;
+}
+
+export interface PlotSeries {
+    label: string;
+    data: Point[];
+    color?: string;
+}
+
+export interface DiagnosticResultsPayload {
+    dataset_name: string;
+    x_space_ecdf: PlotSeries[];
+    y_space_pit_cdf: PlotSeries[];
+    y_space_mace_bars: {
+        labels: string[];
+        values: number[];
+        colors: string[];
+    };
 }

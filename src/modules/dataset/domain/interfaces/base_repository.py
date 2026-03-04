@@ -17,6 +17,10 @@ class BaseDatasetRepository(ABC):
         """Persist the dataset aggregate. Returns the path where it was saved."""
 
     @abstractmethod
+    def delete(self, name: str) -> None:
+        """Deletes a dataset by name."""
+
+    @abstractmethod
     def load(self, name: str) -> Dataset:
         """Retrieve the dataset aggregate by name."""
 

@@ -69,19 +69,7 @@ class CandidateGenerationDomainService:
             best_objective_raw=engine.detransform_objective(rank_result.best_objective),
             best_decision_raw=engine.detransform_decision(rank_result.best_decision),
             objective_space_residual_sorted=rank_result.objective_space_residual_sorted,
-            metadata={
-                "tau": engine.solver.tau if hasattr(engine.solver, "tau") else None,
-                "vertice_distances": generation_result.metadata.get(
-                    "anchor_distances", []
-                ),
-                "is_simplex_found": generation_result.metadata.get(
-                    "is_simplex_found", False
-                ),
-                "is_coherent": generation_result.metadata.get("is_coherent", False),
-                "vertices_indices": generation_result.metadata.get(
-                    "vertices_indices", []
-                ),
-            },
             best_index=rank_result.best_index,
             all_residuals=all_residuals,
+            metadata=generation_result.metadata,
         )

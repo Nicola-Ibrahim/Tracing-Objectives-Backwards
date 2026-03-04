@@ -9,10 +9,11 @@ class BaseInverseMappingEngineRepository(ABC):
     """
 
     @abstractmethod
-    def save(self, engine: InverseMappingEngine) -> None:
+    def save(self, engine: InverseMappingEngine) -> int:
         """
         Persists an InverseMappingEngine entity.
         Calculates version automatically based on existing ones.
+        Returns the assigned version number.
         """
         pass
 
@@ -27,7 +28,7 @@ class BaseInverseMappingEngineRepository(ABC):
         pass
 
     @abstractmethod
-    def list(self, dataset_name: str, solver_type: str | None = None) -> list[dict]:
+    def list_all(self, dataset_name: str, solver_type: str | None = None) -> list[dict]:
         """
         Lists summaries of persisted engines for a given dataset and optional solver type.
         Returns a list of dictionaries with metadata (version, solver_type, created_at, etc.).
@@ -40,5 +41,29 @@ class BaseInverseMappingEngineRepository(ABC):
     ) -> InverseMappingEngine:
         """
         Loads a specific engine version by its number.
+        """
+        pass
+
+    @abstractmethod
+    def list_engines(self, dataset_name: str) -> list[dict]:
+        """
+        Lists all trained engines for a dataset across all solver types.
+        """
+        pass
+
+    @abstractmethod
+    def delete_all_for_dataset(self, dataset_name: str) -> int:
+        """
+        Deletes all engine versions for a given dataset.
+        Returns the number of engines removed.
+        """
+        pass
+
+    @abstractmethod
+    def delete_specific_engine(
+        self, dataset_name: str, solver_type: str, version: int
+    ) -> bool:
+        """
+        Deletes a specific engine version.
         """
         pass

@@ -1,12 +1,9 @@
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-import Navigation from "@/components/Navigation";
-
-import { ToastProvider } from "@/components/ui/ToastContext";
-import { DatasetProvider } from "@/components/DatasetContext";
-import { Suspense } from "react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/Sidebar";
+import { QueryProvider } from "@/providers/query-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,9 +15,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Pareto Optimization",
-  description: "Tracing Objectives Backwards - Candidate Generation",
+export const metadata = {
+  title: "Tracing Objectives Backwards",
+  description: "Advanced Inverse Mapping & Optimization Workbench",
 };
 
 export default function RootLayout({
@@ -31,24 +28,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >
-        <ToastProvider>
-          <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading application...</div>}>
-            <DatasetProvider>
-              <div className="max-w-[1600px] mx-auto px-4 py-8">
-                <header className="mb-12">
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
-                    Tracing Objectives Backwards
-                  </h1>
-                  <p className="text-slate-500">Pareto-Optimized Candidate Generation</p>
-                </header>
-                <Navigation />
-                <main>{children}</main>
+        <QueryProvider>
+          <TooltipProvider>
+            <SidebarProvider>
+              <div className="flex min-h-screen w-full">
+                <AppSidebar />
+                <main className="flex-1 overflow-auto bg-slate-50/50 p-6">
+                  {children}
+                </main>
               </div>
-            </DatasetProvider>
-          </Suspense>
-        </ToastProvider>
+            </SidebarProvider>
+          </TooltipProvider>
+        </QueryProvider>
       </body>
     </html>
   );
