@@ -2,7 +2,6 @@ from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, Field
-from sklearn.model_selection import train_test_split
 
 from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
 from ...modeling.domain.interfaces.base_transform import BaseTransformer
@@ -36,17 +35,13 @@ class TrainInverseMappingEngineParams(BaseModel):
     transforms: list[dict[str, Any]] = Field(
         default_factory=list, description="Ordered list of transformer configurations"
     )
-    split_ratio: float = Field(
-        default=0.2, ge=0.0, le=1.0, description="Ratio of data used for testing"
-    )
-    random_state: int = Field(default=42, description="Random seed for reproducibility")
 
 
 class TrainInverseMappingEngineService:
     """
     Orchestrates the offline context preparation for generation:
     1. Loads dataset
-    2. Splits data into train and test sets
+    2. Uses pre-computed train/test split from dataset
     3. Fits data normalizers on the training data
     4. Transforms data into normalized space
     5. Fits the inverse solver internally
@@ -86,31 +81,14 @@ class TrainInverseMappingEngineService:
 
         # Loading the dataset
         dataset = self._dataset_repository.load(params.dataset_name)
-        objectives_raw = dataset.objectives
-        decisions_raw = dataset.decisions
 
-        # Split data into train and test
-        total_samples = len(objectives_raw)
-        indices = np.arange(total_samples)
-
-        if params.split_ratio > 0.0:
-            train_indices, test_indices = train_test_split(
-                indices,
-                test_size=params.split_ratio,
-                random_state=params.random_state,
-                shuffle=True,
-            )
-        else:
-            train_indices = indices
-            test_indices = np.array([], dtype=int)
+        # Use pre-computed split from dataset entity
+        X_train, y_train = dataset.get_train_data()
+        X_test, y_test = dataset.get_test_data()
 
         self._logger.log_info(
-            f"Split data into {len(train_indices)} training and {len(test_indices)} testing samples."
+            f"Retrieved pre-computed split from dataset: {len(X_train)} training and {len(X_test)} testing samples."
         )
-
-        # Slice data for training
-        X_train = decisions_raw[train_indices]
-        y_train = objectives_raw[train_indices]
 
         # Fitting the transforms (only on training data)
         all_fitted_transforms = []
@@ -150,10 +128,10 @@ class TrainInverseMappingEngineService:
 
         # Create Value Objects
         data_split = DataSplit(
-            train_indices=train_indices,
-            test_indices=test_indices,
-            split_ratio=params.split_ratio,
-            random_state=params.random_state,
+            train_indices=dataset.train_indices,
+            test_indices=dataset.test_indices,
+            split_ratio=dataset.split_ratio,
+            random_state=dataset.random_state,
         )
         transform_pipeline = TransformPipeline(transforms=all_fitted_transforms)
 
@@ -181,9 +159,9 @@ class TrainInverseMappingEngineService:
             "engine_version": version,
             "status": "completed",
             "duration_seconds": duration,
-            "n_train_samples": len(train_indices),
-            "n_test_samples": len(test_indices),
-            "split_ratio": params.split_ratio,
+            "n_train_samples": len(dataset.train_indices),
+            "n_test_samples": len(dataset.test_indices),
+            "split_ratio": dataset.split_ratio,
             "transform_summary": transform_summary,
             "training_history": solver.history(),
         }

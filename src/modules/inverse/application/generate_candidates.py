@@ -4,7 +4,7 @@ from ...shared.domain.interfaces.base_logger import BaseLogger
 from ..domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
 )
-from ..domain.services.generation import CandidateGenerationDomainService
+from ..domain.services.generation import CandidateGeneration
 
 
 class GenerationConfig(BaseModel):
@@ -61,15 +61,15 @@ class GenerateCandidatesService:
             config.dataset_name, solver_type=config.solver_type, version=config.version
         )
 
-        # 2. Delegate the heavy lifting to the Domain Service
-        result = CandidateGenerationDomainService.generate(
-            target_objective=config.target_objective,
+        # 2. Generate candidates using the engine's solver
+        result = CandidateGeneration.generate(
             engine=engine,
+            target_objective=config.target_objective,
             n_samples=config.n_samples,
         )
 
         self._logger.log_info(
-            f"Generated {len(result.candidate_objectives)} candidates. "
+            f"Generated {result.candidate_objectives.shape[0]} candidates. "
             f"Winner @{result.best_index}: {result.best_candidate_objective.flatten()}"
         )
 

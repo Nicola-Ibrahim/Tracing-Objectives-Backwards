@@ -22,8 +22,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { TrainEngineRequest } from "../types";
-import { BrainCircuit, Loader2 } from "lucide-react";
+import { TrainEngineRequest } from "../types"; // Assuming split_ratio is removed from this imported type
+import { BrainCircuit, Loader2, Settings2 } from "lucide-react";
+import { z } from "zod";
 
 interface TrainEngineFormProps {
     datasets: string[];
@@ -41,7 +42,6 @@ export function TrainEngineForm({
         defaultValues: {
             dataset_name: "",
             solver_type: "GBPI",
-            split_ratio: 0.8,
             gbpi_params: {
                 n_neighbors: 10,
                 trust_radius: 0.1,
@@ -69,7 +69,6 @@ export function TrainEngineForm({
                 type: values.solver_type,
                 params: solverParams || {},
             },
-            split_ratio: values.split_ratio,
             // Default transforms if not provided in simple form
             transforms: [
                 { target: "decisions", type: "standard" },
@@ -242,28 +241,5 @@ export function TrainEngineForm({
                 </Button>
             </form>
         </Form>
-    );
-}
-
-// Re-using icon for header
-function Settings2(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            {...props}
-        >
-            <path d="M20 7h-9" />
-            <path d="M14 17H5" />
-            <circle cx="17" cy="17" r="3" />
-            <circle cx="7" cy="7" r="3" />
-        </svg>
     );
 }

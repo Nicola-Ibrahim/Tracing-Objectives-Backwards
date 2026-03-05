@@ -12,7 +12,6 @@ export interface TrainEngineRequest {
   dataset_name: string;
   solver: SolverConfig;
   transforms: TransformConfig[];
-  split_ratio?: number;
 }
 
 export interface TrainEngineResponse {

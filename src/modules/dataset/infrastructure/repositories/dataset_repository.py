@@ -55,6 +55,10 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             "decisions": dataset.decisions,
             "objectives": dataset.objectives,
             "pareto": dataset.pareto,
+            "train_indices": dataset.train_indices,
+            "test_indices": dataset.test_indices,
+            "split_ratio": dataset.split_ratio,
+            "random_state": dataset.random_state,
             "created_at": dataset.created_at,
         }
         raw_dir = self._raw_dir(dataset.name)
@@ -76,6 +80,9 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         raise FileNotFoundError(f"Raw dataset '{name}' not found.")
 
     def _rebuild_dataset(self, payload: dict[str, Any], name: str) -> Dataset:
+        import numpy as np
+        from sklearn.model_selection import train_test_split
+
         pareto_payload = payload.get("pareto", {})
         pareto = (
             pareto_payload
@@ -86,11 +93,39 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             )
         )
 
+        train_indices = payload.get("train_indices")
+        test_indices = payload.get("test_indices")
+        split_ratio = payload.get("split_ratio", 0.2)
+        random_state = payload.get("random_state", 42)
+
+        # If indices are missing (legacy data), compute them now
+        objectives = payload.get("objectives")
+        if (
+            train_indices is None or len(train_indices) == 0
+        ) and objectives is not None:
+            total_samples = len(objectives)
+            indices = np.arange(total_samples)
+
+            if split_ratio > 0.0:
+                train_indices, test_indices = train_test_split(
+                    indices,
+                    test_size=split_ratio,
+                    random_state=random_state,
+                    shuffle=True,
+                )
+            else:
+                train_indices = indices
+                test_indices = np.array([], dtype=int)
+
         return Dataset.create(
             name=payload.get("name", name),
             decisions=payload.get("decisions"),
-            objectives=payload.get("objectives"),
+            objectives=objectives,
             pareto=pareto,
+            train_indices=train_indices,
+            test_indices=test_indices,
+            split_ratio=split_ratio,
+            random_state=random_state,
         )
 
     def list_all(self) -> list[str]:

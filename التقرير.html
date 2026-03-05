@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقرير الرسومي لمتابعة المشاريع الصغيرة</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#1e3a8a', // blue-900
+                        secondary: '#3b82f6', // blue-500
+                        accent: '#f59e0b', // amber-500
+                        danger: '#ef4444', // red-500
+                        success: '#10b981', // emerald-500
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        @media print {
+            body { background-color: white; }
+            .glass-card { box-shadow: none; border: 1px solid #e5e7eb; break-inside: avoid; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 font-sans">
+
+    <!-- Header Section -->
+    <header class="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-center glass-card p-6 rounded-2xl border-t-4 border-t-primary">
+        <div class="flex items-center gap-4 mb-4 md:mb-0">
+            <div class="bg-primary/10 p-3 rounded-xl text-primary">
+                <i class="ph-fill ph-chart-line-up text-4xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">التقرير الدوري لمتابعة المشاريع الصغيرة</h1>
+                <p class="text-gray-500 mt-1">برنامج المايكرو - الاطمئنان على المستفيدين (عينة 100 مشروع)</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <p class="text-sm text-gray-500 font-semibold">تاريخ التقرير</p>
+            <p class="text-lg font-bold text-primary">آذار 2026</p>
+            <button onclick="window.print()" class="no-print mt-2 bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-800 transition flex items-center justify-center gap-2 w-full">
+                <i class="ph ph-printer"></i> طباعة التقرير
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
+
+        <!-- KPI Cards -->
+        <div class="md:col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="glass-card p-6 rounded-2xl border-r-4 border-r-secondary flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-semibold mb-1">إجمالي المشاريع في العينة</p>
+                    <h3 class="text-3xl font-bold text-gray-800">100</h3>
+                </div>
+                <i class="ph-fill ph-briefcase text-4xl text-secondary opacity-80"></i>
+            </div>
+            
+            <div class="glass-card p-6 rounded-2xl border-r-4 border-r-success flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-semibold mb-1">مشاريع مستمرة ومستقرة</p>
+                    <h3 class="text-3xl font-bold text-gray-800">97%</h3>
+                </div>
+                <i class="ph-fill ph-check-circle text-4xl text-success opacity-80"></i>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl border-r-4 border-r-danger flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-semibold mb-1">مشاريع مغلقة / متعثرة</p>
+                    <h3 class="text-3xl font-bold text-gray-800">3%</h3>
+                </div>
+                <i class="ph-fill ph-warning-circle text-4xl text-danger opacity-80"></i>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl border-r-4 border-r-accent flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-semibold mb-1">حالات تتطلب تدخل عاجل</p>
+                    <h3 class="text-3xl font-bold text-gray-800">2</h3>
+                </div>
+                <i class="ph-fill ph-bell-ringing text-4xl text-accent opacity-80"></i>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="md:col-span-4 glass-card p-6 rounded-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-chart-pie text-primary"></i> حالة المشاريع
+            </h2>
+            <div class="relative h-64 w-full">
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <ul class="space-y-2">
+                    <li class="flex items-start gap-2">
+                        <i class="ph-fill ph-x-circle text-danger mt-1"></i>
+                        <span><strong>مشروع 8 (بانوس طرطريان):</strong> ملغى، باع العدة وسافر دون تسديد الأقساط.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-fill ph-x-circle text-danger mt-1"></i>
+                        <span><strong>مشروع 73 (عزيز تركماني):</strong> مغلق.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="ph-fill ph-info text-accent mt-1"></i>
+                        <span><strong>مشروع 66 (ماكي العجي):</strong> نقلت سكنها (تحتاج تحديث بيانات).</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="md:col-span-8 glass-card p-6 rounded-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-chart-bar text-primary"></i> التوزيع المهني للمشاريع (القطاعات)
+            </h2>
+            <div class="relative h-72 w-full">
+                <canvas id="sectorsChart"></canvas>
+            </div>
+            <p class="mt-4 text-sm text-gray-500 text-center">تتنوع المشاريع بشكل صحي يغطي احتياجات السوق المختلفة.</p>
+        </div>
+
+        <!-- Challenges Section -->
+        <div class="md:col-span-12 glass-card p-6 rounded-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <i class="ph-fill ph-target text-primary"></i> تحليل الصعوبات والتحديات
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Stable -->
+                <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                    <div class="bg-emerald-100 text-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mb-3">
+                        <i class="ph-fill ph-smiley text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-emerald-800 mb-2">الاستقرار (لا يوجد صعوبات)</h3>
+                    <p class="text-sm text-emerald-700 leading-relaxed">نسبة كبيرة جداً أفادوا بعدم وجود صعوبات، والبعض وصف الوضع بـ "الجيد" مما يدل على نجاح التمويل في خلق استقرار مالي لهم (مثل: التصوير، الخياطة، الحدادة).</p>
+                </div>
+
+                <!-- Market -->
+                <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                    <div class="bg-blue-100 text-blue-600 w-10 h-10 rounded-full flex items-center justify-center mb-3">
+                        <i class="ph-fill ph-trend-down text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-blue-800 mb-2">ركود السوق وضعف الطلب</h3>
+                    <p class="text-sm text-blue-700 leading-relaxed">
+                        تكررت عبارات "شغل خفيف، قلة ورشات". يعود ذلك إلى أسباب موسمية (موسم شتوي، ما بعد الأعياد) والوضع الاقتصادي العام وضعف القدرة الشرائية للزبائن.
+                    </p>
+                </div>
+
+                <!-- Logistical -->
+                <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl">
+                    <div class="bg-orange-100 text-orange-600 w-10 h-10 rounded-full flex items-center justify-center mb-3">
+                        <i class="ph-fill ph-buildings text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-orange-800 mb-2">تحديات لوجستية وتشغيلية</h3>
+                    <p class="text-sm text-orange-700 leading-relaxed">
+                        مشاكل مثل ضيق مساحة العمل، مواقع غير مناسبة للمحلات (مشروع 79)، غلاء أسعار الكهرباء (مشروع 89)، وانقطاع المياه في الصناعة (مشروع 102).
+                    </p>
+                </div>
+
+                <!-- Social/Health -->
+                <div class="bg-purple-50 border border-purple-100 p-4 rounded-xl">
+                    <div class="bg-purple-100 text-purple-600 w-10 h-10 rounded-full flex items-center justify-center mb-3">
+                        <i class="ph-fill ph-heart-beat text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-purple-800 mb-2">حالات صحية واجتماعية</h3>
+                    <p class="text-sm text-purple-700 leading-relaxed">
+                        مشروع (7): المستفيد فقد بصره بإحدى عينيه ويحتاج مساعدة بالعمل الليلي.<br>
+                        مشروع (123): ضغط مادي إضافي بسبب التزامات عائلية (ابن في البكالوريا).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Urgent Actions & Recommendations -->
+        <div class="md:col-span-5 flex flex-col gap-6">
+            <div class="bg-red-50 border border-red-200 p-6 rounded-2xl shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-16 h-16 bg-red-100 rounded-bl-full -mr-4 -mt-4"></div>
+                <h2 class="text-xl font-bold text-red-800 mb-4 flex items-center gap-2 relative z-10">
+                    <i class="ph-fill ph-warning text-red-600"></i> حالات تستدعي التدخل السريع
+                </h2>
+                <div class="space-y-4 relative z-10">
+                    <div class="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">حرج</span>
+                            <h3 class="font-bold text-gray-800">مشروع 68 (ماريا سباغ)</h3>
+                        </div>
+                        <p class="text-sm text-gray-600">المالك سيرفع الإيجار وهي لا تملك القدرة على الدفع وتبحث عن بديل. المشروع مهدد بالإغلاق الكامل ما لم يتم دعمها في تأمين المحل.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded">متابعة إدارية</span>
+                            <h3 class="font-bold text-gray-800">مشروع 8 (بانوس طرطريان)</h3>
+                        </div>
+                        <p class="text-sm text-gray-600">المستفيد قام ببيع العدة والسفر للخارج ولم يسدد الأقساط. تحتاج الحالة لفتح ملف و اتخاذ إجراءات قانونية/إدارية لضمان الحقوق.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-7 glass-card p-6 rounded-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-lightbulb text-primary"></i> التوصيات المقترحة لإدارة البرنامج
+            </h2>
+            <ul class="space-y-4 mt-6">
+                <li class="flex items-start gap-4 p-4 hover:bg-gray-50 rounded-xl transition">
+                    <div class="bg-blue-100 text-blue-600 p-2 rounded-lg shrink-0">
+                        <i class="ph-fill ph-lifebuoy text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">التدخل المباشر للإيجارات والبنية التحتية</h3>
+                        <p class="text-gray-600 text-sm mt-1">التواصل الفوري مع مشروع ماريا سباغ. كما يُنصح بالتواصل مع الجهات المعنية أو البلدية بخصوص مشروع (102) لإصلاح انقطاع المياه في المنطقة الصناعية.</p>
+                    </div>
+                </li>
+                <li class="flex items-start gap-4 p-4 hover:bg-gray-50 rounded-xl transition">
+                    <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg shrink-0">
+                        <i class="ph-fill ph-student text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">التوجيه المهني والتسويقي (Coaching)</h3>
+                        <p class="text-gray-600 text-sm mt-1">تقديم ورش عمل مصغرة لأصحاب المهن الحرفية (تحديداً التمديدات والدهان) حول "التسويق الشخصي" واستخدام وسائل التواصل الاجتماعي لجلب ورشات عمل لتجاوز ركود السوق.</p>
+                    </div>
+                </li>
+                <li class="flex items-start gap-4 p-4 hover:bg-gray-50 rounded-xl transition">
+                    <div class="bg-purple-100 text-purple-600 p-2 rounded-lg shrink-0">
+                        <i class="ph-fill ph-file-search text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">متابعة حالات التسرب</h3>
+                        <p class="text-gray-600 text-sm mt-1">تفعيل الجانب القانوني والإداري للتعامل مع حالات بيع المنح والسفر كإجراء رادع وموثق.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+    </main>
+
+    <footer class="max-w-7xl mx-auto mt-8 text-center text-gray-400 text-sm pb-8">
+        تم إعداد هذا التقرير بناءً على تحليل عينة الاطمئنان على المستفيدين - 2026
+    </footer>
+
+    <!-- Chart Configuration Scripts -->
+    <script>
+        // Set default font for Chart.js
+        Chart.defaults.font.family = "'Cairo', sans-serif";
+        Chart.defaults.color = '#4b5563';
+
+        // 1. Status Chart (Donut)
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['مشاريع مستمرة', 'مغلقة / متعثرة'],
+                datasets: [{
+                    data: [97, 3],
+                    backgroundColor: [
+                        '#10b981', // success
+                        '#ef4444'  // danger
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        rtl: true,
+                        labels: { padding: 20, font: { size: 14, family: "'Cairo', sans-serif" } }
+                    }
+                }
+            }
+        });
+
+        // 2. Sectors Chart (Bar)
+        const ctxSectors = document.getElementById('sectorsChart').getContext('2d');
+        new Chart(ctxSectors, {
+            type: 'bar',
+            data: {
+                labels: [
+                    'الحرف والإنشاءات (تمديدات، نجار، حداد)', 
+                    'العناية الشخصية (حلاقة، تجميل)', 
+                    'الخياطة والألبسة', 
+                    'الغذائيات والضيافة', 
+                    'الخدمات والفنون (تصوير، DJ)'
+                ],
+                datasets: [{
+                    label: 'نسبة التوزع التقديرية (%)',
+                    data: [42, 23, 15, 12, 8],
+                    backgroundColor: '#3b82f6', // secondary
+                    borderRadius: 6,
+                    barThickness: 'flex',
+                    maxBarThickness: 40
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { rtl: true }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { display: true, color: '#f3f4f6' },
+                        title: { display: true, text: 'النسبة المئوية (%)' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 13, family: "'Cairo', sans-serif" } }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

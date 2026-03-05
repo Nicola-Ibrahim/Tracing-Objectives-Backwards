@@ -4,8 +4,11 @@ import { DatasetInfo, DatasetDetails } from "./types";
 /**
  * Fetch detailed dataset information including coordinates for plotting.
  */
-export const getDatasetDetails = async (datasetName: string): Promise<DatasetDetails> => {
-  return apiClient.get(`/api/v1/datasets/${datasetName}`);
+export const getDatasetDetails = async (
+  datasetName: string,
+  split: "train" | "test" | "all" = "train"
+): Promise<DatasetDetails> => {
+  return apiClient.get(`/api/v1/datasets/${datasetName}`, { params: { split } });
 };
 
 /**

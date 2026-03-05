@@ -6,7 +6,6 @@ import { z } from "zod";
 export const trainEngineSchema = z.object({
   dataset_name: z.string().min(1, "Dataset is required"),
   solver_type: z.enum(["GBPI", "MDN", "probabilistic"]),
-  split_ratio: z.coerce.number().min(0.5).max(0.95).default(0.8),
   
   // Solver-specific Params (Nested)
   gbpi_params: z.object({

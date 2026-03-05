@@ -4,7 +4,7 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from ..entities.inverse_mapping_engine import InverseMappingEngine
-from .candidate_ranker import CandidateRanker
+from .ranking import CandidatesRanker
 
 
 class GenerationResult(BaseModel):
@@ -21,7 +21,7 @@ class GenerationResult(BaseModel):
     metadata: dict[str, Any]
 
 
-class CandidateGenerationDomainService:
+class CandidateGeneration:
     """
     Pure domain service responsible for the algorithmic generation,
     prediction, ranking, and detransformation of candidates.
@@ -43,14 +43,16 @@ class CandidateGenerationDomainService:
             target_y=target_objective_norm, n_samples=n_samples
         )
 
-        # 3. Rank candidates
-        rank_result = CandidateRanker.rank(
-            candidates_X=generation_result.candidates_X,
+        # 3. Prepare Metadata
+        metadata = generation_result.metadata.copy()
+
+        # 4. Rank candidates
+        rank_result = CandidatesRanker.rank(
             candidates_y=generation_result.candidates_y,
             target_objective=target_objective_norm,
         )
 
-        # 4. Detransform to Raw Space
+        # 5. Detransform to Raw Space
         return GenerationResult(
             candidate_decisions=engine.detransform_decision(
                 generation_result.candidates_X
@@ -66,5 +68,5 @@ class CandidateGenerationDomainService:
                 generation_result.candidates_X[rank_result.best_index].reshape(1, -1)
             ),
             best_candidate_residual=rank_result.best_candidate_residual,
-            metadata=generation_result.metadata,
+            metadata=metadata,
         )

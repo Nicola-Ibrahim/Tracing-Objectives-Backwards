@@ -24,6 +24,7 @@ const generateDatasetSchema = z.object({
     n_var: z.coerce.number().min(2).max(10),
     population_size: z.coerce.number().min(10).max(1000),
     generations: z.coerce.number().min(1).max(100),
+    split_ratio: z.coerce.number().min(0).max(0.5),
 });
 
 type GenerateDatasetFormValues = z.infer<typeof generateDatasetSchema>;
@@ -42,6 +43,7 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
             n_var: 5,
             population_size: 100,
             generations: 20,
+            split_ratio: 0.2,
         },
     });
 
@@ -128,6 +130,21 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                                 )}
                             />
                         </div>
+
+                        <FormField
+                            control={form.control}
+                            name="split_ratio"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Test Split Ratio (0.0 - 0.5)</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} type="number" step="0.05" className="bg-white" />
+                                    </FormControl>
+                                    <FormDescription className="text-[10px] italic">Ratio of data reserved for testing (holdout set).</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         <Button
                             type="submit"

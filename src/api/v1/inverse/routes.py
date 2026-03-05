@@ -51,29 +51,11 @@ async def train_engine(
         dataset_name=request.dataset_name,
         solver=SolverConfig(type=request.solver.type, params=request.solver.params),
         transforms=request.transforms,
-        split_ratio=request.split_ratio,
-        random_state=request.random_state,
     )
 
     try:
-        # Note: US1/T016 will update execute() to return a rich result dict.
-        # For now, we handle identifying if it returns an entity or a dict.
+        # Note: US1/T016 updated execute() to return a rich result dict.
         result = service.execute(params)
-
-        if not isinstance(result, dict):
-            # Temporary manual mapping until T016 is implemented
-            return TrainEngineResponse(
-                dataset_name=result.dataset_name,
-                solver_type=result.solver.type(),
-                engine_version=1,  # Placeholder
-                status="completed",
-                duration_seconds=0.0,
-                n_train_samples=len(result.data_split.train_indices),
-                n_test_samples=len(result.data_split.test_indices),
-                split_ratio=result.data_split.split_ratio,
-                loss_history=[],
-                transform_summary=[],
-            )
         return TrainEngineResponse(**result)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

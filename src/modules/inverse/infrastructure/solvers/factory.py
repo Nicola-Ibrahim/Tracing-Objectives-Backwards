@@ -4,13 +4,15 @@ from ....modeling.infrastructure.estimators.mdn_estimator import MDNEstimator
 from ...domain.interfaces.base_inverse_mapping_solver import (
     AbstractInverseMappingSolver,
 )
-from .gbpi.solver import GBPIInverseSolver
+from .gbpi.gbpi_solver import GBPIInverseSolver
+from .gbpi.tda_gbpi_solver import TDAGBPIInverseSolver
 from .prob.solver import ProbabilisticInverseSolver
 
 
 class SolversFactory:
     _registry = {
         "GBPI": GBPIInverseSolver,
+        "TDA-GBPI": TDAGBPIInverseSolver,
         "probabilistic": ProbabilisticInverseSolver,
     }
 

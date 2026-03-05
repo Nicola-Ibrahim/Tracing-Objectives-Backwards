@@ -7,6 +7,9 @@ export interface DatasetInfo {
 }
 
 export interface DatasetDetails extends DatasetInfo {
+  samples: number;
+  objectives_count: number;
+  decisions_count: number;
   X: number[][];
   y: number[][];
   is_pareto: boolean[];

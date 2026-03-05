@@ -37,13 +37,20 @@ async def list_datasets(
 @router.get("/{dataset_name}", response_model=DatasetDetailResponse)
 async def get_dataset_details(
     dataset_name: str,
+    split: str = "train",
     service: GetDatasetDetailsService = Depends(get_dataset_details_service),
 ):
     """
     Retrieve full details for a specific dataset including X, y, Pareto mask, and engines.
+    Can be filtered by split (train, test, all).
     """
     try:
-        return service.execute(dataset_name)
+        if split not in ["train", "test", "all"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid split parameter. Must be 'train', 'test', or 'all'.",
+            )
+        return service.execute(dataset_name, split=split)
     except FileNotFoundError:
         raise HTTPException(
             status_code=404, detail=f"Dataset '{dataset_name}' not found."
@@ -64,6 +71,8 @@ async def generate_dataset(
         population_size=request.population_size,
         generations=request.generations,
         dataset_name=request.dataset_name,
+        split_ratio=request.split_ratio,
+        random_state=request.random_state,
     )
 
     try:

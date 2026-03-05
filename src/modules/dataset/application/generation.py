@@ -33,6 +33,11 @@ class DatasetConfiguration(BaseModel):
     )
     verbose: bool = Field(False, description="Whether to print verbose output.")
 
+    split_ratio: float = Field(
+        0.2, ge=0.0, lt=1.0, description="Ratio of data used for testing."
+    )
+    random_state: int = Field(42, description="Random seed for reproducibility.")
+
     dataset_name: str = Field(..., description="Identifier for the dataset.")
 
 
@@ -64,6 +69,9 @@ class GenerateDatasetService:
         Returns:
             Path: The file path where the generated dataset is saved.
         """
+        import numpy as np
+        from sklearn.model_selection import train_test_split
+
         self._logger.log_info(
             f"Starting dataset generation for problem {config.problem_id} "
             f"({config.n_var} variables, 2 objectives)"
@@ -105,12 +113,31 @@ class GenerateDatasetService:
                 front=raw_data.pareto_front,
             )
 
-        # 7. Create the Dataset aggregate (merged from DatasetGenerationService)
+        # 7. Compute train/test split
+        total_samples = len(raw_data.objectives)
+        indices = np.arange(total_samples)
+
+        if config.split_ratio > 0.0:
+            train_indices, test_indices = train_test_split(
+                indices,
+                test_size=config.split_ratio,
+                random_state=config.random_state,
+                shuffle=True,
+            )
+        else:
+            train_indices = indices
+            test_indices = np.array([], dtype=int)
+
+        # 8. Create the Dataset aggregate (merged from DatasetGenerationService)
         dataset = Dataset.create(
             name=config.dataset_name,
             decisions=raw_data.decisions,
             objectives=raw_data.objectives,
             pareto=pareto,
+            train_indices=train_indices,
+            test_indices=test_indices,
+            split_ratio=config.split_ratio,
+            random_state=config.random_state,
         )
 
         if dataset.pareto is not None:

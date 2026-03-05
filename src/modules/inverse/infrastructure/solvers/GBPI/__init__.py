@@ -1,3 +1,3 @@
-from .solver import GBPIInverseSolver
+from .gbpi_solver import GBPIInverseSolver
 
 __all__ = ["GBPIInverseSolver"]

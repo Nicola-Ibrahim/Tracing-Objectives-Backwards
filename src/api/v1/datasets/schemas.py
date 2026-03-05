@@ -19,6 +19,9 @@ class EngineInfo(BaseModel):
 
 class DatasetDetailResponse(BaseModel):
     name: str
+    samples: int
+    objectives_count: int
+    decisions_count: int
     X: list[list[float]]
     y: list[list[float]]
     is_pareto: list[bool]
@@ -30,7 +33,9 @@ class DatasetGenerationRequest(BaseModel):
     function_id: int
     population_size: int = 200
     n_var: int = 2
-    generations: int = 20
+    generations: int = 16
+    split_ratio: float = 0.2
+    random_state: int = 42
     dataset_name: str
 
 

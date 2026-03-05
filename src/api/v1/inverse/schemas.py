@@ -15,8 +15,6 @@ class TrainEngineRequest(BaseModel):
     dataset_name: str
     solver: SolverConfigSchema
     transforms: List[dict] = Field(default_factory=list)
-    split_ratio: float = 0.2
-    random_state: int = 42
 
 
 class EpochMetric(BaseModel):

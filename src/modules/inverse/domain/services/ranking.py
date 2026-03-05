@@ -24,22 +24,17 @@ class RankingResult(BaseModel):
         pass
 
 
-class CandidateRanker:
+class CandidatesRanker:
     """
     Domain service for comparing predicted objectives against a target and ranking candidates.
     """
 
     @staticmethod
-    def rank(
-        candidates_X: np.ndarray,
-        candidates_y: np.ndarray,
-        target_objective: np.ndarray,
-    ) -> RankingResult:
+    def rank(candidates_y: np.ndarray, target_objective: np.ndarray) -> RankingResult:
         """
         Ranks candidates by residual error.
 
         Args:
-            candidates_X: (M, D) array of generated candidates decisions.
             candidates_y: (M, 2) array of surrogate-predicted objectives.
             target_objective: (1, 2) or (2,) array of the requested target.
 
@@ -55,10 +50,10 @@ class CandidateRanker:
         sort_indices = np.argsort(y_space_residuals)
 
         # Identify the global winner (best index in original unsorted arrays)
-        original_best_index = int(sort_indices[0])
+        best_index = int(sort_indices[0])
 
         return RankingResult(
             sort_indices=sort_indices,
-            best_index=original_best_index,
-            best_candidate_residual=y_space_residuals[original_best_index],
+            best_index=best_index,
+            best_candidate_residual=y_space_residuals[best_index],
         )
