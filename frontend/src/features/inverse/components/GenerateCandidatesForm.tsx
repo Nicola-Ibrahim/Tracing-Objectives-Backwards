@@ -50,7 +50,7 @@ export function GenerateCandidatesForm({
             engine_id: "",
             objective1: 0.5,
             objective2: 0.5,
-            num_candidates: 50,
+            n_samples: 5,
         },
     });
 
@@ -90,7 +90,7 @@ export function GenerateCandidatesForm({
             solver_type,
             version: parseInt(versionStr),
             target_objective,
-            num_candidates: values.num_candidates,
+            n_samples: values.n_samples,
             // Hidden defaults
             trust_radius: 0.05,
             concentration_factor: 10.0,
@@ -201,10 +201,10 @@ export function GenerateCandidatesForm({
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                     <FormField
                         control={form.control as any}
-                        name="num_candidates"
+                        name="n_samples"
                         render={({ field }) => (
-                            <FormItem className="max-w-[150px]">
-                                <FormLabel className="text-[10px] font-bold uppercase text-slate-500">Cohort Size</FormLabel>
+                            <FormItem className="max-w-[200px]">
+                                <FormLabel className="text-[10px] font-bold uppercase text-slate-500">Number of Candidates</FormLabel>
                                 <FormControl>
                                     <Input type="number" {...field} className="bg-white" />
                                 </FormControl>

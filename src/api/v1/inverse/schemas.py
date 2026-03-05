@@ -57,7 +57,7 @@ class GenerateResponse(BaseModel):
     best_index: int
     best_objective: Tuple[float, float]
     best_decision: List[float]
-    all_residuals: List[float]
+    y_space_residuals: List[float]
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

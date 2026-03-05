@@ -73,18 +73,6 @@ class GenerateCoherentCandidatesService:
             f"Winner: {result.best_objective_raw.flatten()}"
         )
 
-        # # Return formatted dictionary
-        # common_fields = {
-        #     "solver_type": config.solver_type,
-        #     "target_objective": result.target_objective_raw.tolist(),
-        #     "candidate_decisions": result.candidate_decisions_raw.tolist(),
-        #     "candidate_objectives": result.candidate_objectives_raw.tolist(),
-        #     "best_index": result.best_index,
-        #     "best_objective": result.best_objective_raw.flatten().tolist(),
-        #     "best_decision": result.best_decision_raw.flatten().tolist(),
-        #     "all_residuals": result.all_residuals.tolist(),
-        # }
-
         # metadata = {
         #     "pathway": result.pathway,
         #     "objective_space_residual_sorted": result.objective_space_residual_sorted.tolist(),
@@ -121,6 +109,6 @@ class GenerateCoherentCandidatesService:
             "best_index": result.best_index,
             "best_objective": result.best_objective_raw.flatten().tolist(),
             "best_decision": result.best_decision_raw.flatten().tolist(),
-            "all_residuals": result.all_residuals.tolist(),
+            "y_space_residuals": result.y_space_residuals.tolist(),
             "metadata": result.metadata,
         }

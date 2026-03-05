@@ -13,9 +13,9 @@ class RankingResult(BaseModel):
         ...,
         description="(M,) Array of indices that sort the candidates by residual error",
     )
-    objective_space_residual_sorted: np.ndarray = Field(
+    y_space_residuals: np.ndarray = Field(
         ...,
-        description="(M,) Array of residual errors vs target (Calculated in Normalized space)",
+        description="(M,) Array of residual errors vs target",
     )
     best_index: int = Field(
         ..., description="Index of the best candidate in this result"
@@ -56,17 +56,17 @@ class CandidateRanker:
         target = np.asarray(target_objective).reshape(1, candidates_y.shape[1])
 
         # 1. Calculate Euclidean residual errors between predicted and target objectives
-        y_space_residual = np.linalg.norm(candidates_y - target, axis=1)
+        y_space_residuals = np.linalg.norm(candidates_y - target, axis=1)
 
         # 2. Sort EVERYTHING by residual error first (identify global best)
-        sort_indices = np.argsort(y_space_residual)
+        sort_indices = np.argsort(y_space_residuals)
 
         # Identify the global winner (best index in original unsorted arrays)
         original_best_index = int(sort_indices[0])
 
         return RankingResult(
             sort_indices=sort_indices,
-            objective_space_residual_sorted=y_space_residual[sort_indices],
+            y_space_residuals=y_space_residuals[sort_indices],
             best_index=original_best_index,
             best_objective=candidates_y[original_best_index].reshape(1, -1),
             best_decision=candidates_X[original_best_index].reshape(1, -1),

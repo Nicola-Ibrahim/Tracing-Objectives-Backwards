@@ -76,7 +76,7 @@ class VisualizeGenerationUseCase:
             "target_objective": result.target_objective_raw.flatten().tolist(),
             "candidate_decisions": result.candidate_decisions_raw.tolist(),
             "candidate_objectives": result.candidate_objectives_raw.tolist(),
-            "objective_space_residual_sorted": result.objective_space_residual_sorted.tolist(),
+            "y_space_residuals": result.y_space_residuals.tolist(),
             "is_simplex_found": result.is_simplex_found,
             "is_coherent": result.is_coherent,
             "best_index": result.best_index,

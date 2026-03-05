@@ -27,7 +27,7 @@ export interface TrainEngineResponse {
 export interface CandidateGenerationRequest {
   dataset_name: string;
   target_objective: number[];
-  num_candidates: number;
+  n_samples: number;
   solver_type?: string;
   version?: number;
   trust_radius?: number;
@@ -42,7 +42,7 @@ export interface CandidateGenerationResponse {
   best_index: number;
   best_decision: number[];
   best_objective: number[];
-  all_residuals: number[];
+  y_space_residuals: number[];
   metadata: Record<string, any>;
 }
 

@@ -23,7 +23,7 @@ export interface GenerationResponse {
     target_objective: [number, number];
     candidate_decisions: number[][];
     candidate_objectives: [number, number][];
-    objective_space_residual_sorted: number[];
+    y_space_residuals: number[];
     vertices_indices: number[];
     tau?: number;
     vertice_distances?: number[];
@@ -33,7 +33,6 @@ export interface GenerationResponse {
     best_index: number;
     best_objective: [number, number];
     best_decision: number[];
-    all_residuals: number[];
 }
 export type Vector = number[];
 

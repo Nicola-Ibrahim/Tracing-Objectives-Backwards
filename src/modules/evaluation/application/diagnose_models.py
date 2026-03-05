@@ -194,6 +194,61 @@ class DiagnoseInverseModelsService:
             "warnings": warnings,
         }
 
+    def get_cached_diagnostics(
+        self, params: DiagnoseInverseModelsParams
+    ) -> dict | None:
+        """
+        Retrieves formatted diagnostic results from the repository if they exist for ALL engines.
+        Returns formatted result dict or None if any engine is missing.
+        """
+        ecdf_results = {}
+        pit_results = {}
+        mace_results = {}
+        engine_names = []
+        warnings = []
+
+        try:
+            # Resolve actual versions first
+            engines_to_check = self._initialize_engines(
+                candidates=params.inverse_engine_candidates,
+                dataset_name=params.dataset_name,
+            )
+
+            for engine, version in engines_to_check:
+                engine_name = f"{engine.solver.type()} (v{version})"
+                engine_names.append(engine_name)
+
+                # Try to load latest run
+                try:
+                    cached = self._diag_repo.get_latest_run(
+                        estimator_type=engine.solver.type(),
+                        estimator_version=version,
+                        dataset_name=params.dataset_name,
+                    )
+
+                    # Found it, extract metrics
+                    ecdf_results[engine_name] = self._calculate_ecdf(
+                        np.array(cached.accuracy.discrepancy_scores)
+                    )
+                    pit_results[engine_name] = cached.reliability.pit_values
+                    mace_results[engine_name] = cached.reliability.calibration_error
+
+                except (FileNotFoundError, IndexError):
+                    # Cache miss for this specific engine
+                    return None
+
+            return {
+                "dataset_name": params.dataset_name,
+                "engines": engine_names,
+                "ecdf": ecdf_results,
+                "pit": pit_results,
+                "mace": mace_results,
+                "warnings": warnings,
+            }
+        except Exception as e:
+            self._logger.log_error(f"Error checking diagnostic cache: {str(e)}")
+            return None
+
     def _calculate_ecdf(self, data: np.ndarray) -> dict:
         """Helper to calculate Empirical Cumulative Distribution Function points."""
         x = np.sort(data)

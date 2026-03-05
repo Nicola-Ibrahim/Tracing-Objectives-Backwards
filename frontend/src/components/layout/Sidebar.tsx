@@ -55,9 +55,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return (
         <Sidebar collapsible="icon" {...props} className="border-r border-slate-200">
             <SidebarHeader className="border-b border-slate-200 py-4 px-3">
-                <div className="flex items-center gap-2 font-semibold text-slate-900 overflow-hidden">
-                    <BrainCircuit className="h-6 w-6 text-indigo-600 shrink-0" />
-                    <span className="truncate group-data-[collapsible=icon]:hidden">Tracing Objectives</span>
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2 font-semibold text-slate-900 overflow-hidden">
+                        <BrainCircuit className="h-6 w-6 text-indigo-600 shrink-0" />
+                        <span className="truncate group-data-[collapsible=icon]:hidden">Tracing Objectives</span>
+                    </div>
+                    <Link
+                        href="/"
+                        className="group-data-[collapsible=icon]:hidden flex items-center gap-2 px-2 py-1.5 text-xs font-bold text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors border border-indigo-100"
+                    >
+                        <LayoutDashboard className="h-3.5 w-3.5" />
+                        Back to Landing
+                    </Link>
                 </div>
             </SidebarHeader>
             <SidebarContent>

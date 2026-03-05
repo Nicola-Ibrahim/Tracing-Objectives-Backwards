@@ -9,6 +9,13 @@ export const diagnoseEngines = async (params: DiagnoseRequest): Promise<Diagnose
 };
 
 /**
+ * Retrieve existing diagnostics from database if available.
+ */
+export const diagnoseEnginesCached = async (params: DiagnoseRequest): Promise<DiagnoseResponse> => {
+  return apiClient.post("/api/v1/evaluation/diagnose/cached", params);
+};
+
+/**
  * Check performance for a single engine.
  */
 export const checkPerformance = async (params: PerformanceRequest): Promise<PerformanceResponse> => {
