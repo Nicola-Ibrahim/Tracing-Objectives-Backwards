@@ -55,9 +55,9 @@ class GenerateResponse(BaseModel):
     candidate_decisions: List[List[float]]
     candidate_objectives: List[Tuple[float, float]]
     best_index: int
-    best_objective: Tuple[float, float]
-    best_decision: List[float]
-    y_space_residuals: List[float]
+    best_candidate_objective: Tuple[float, float]
+    best_candidate_decision: List[float]
+    best_candidate_residual: float
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

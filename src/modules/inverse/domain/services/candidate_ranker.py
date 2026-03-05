@@ -13,18 +13,11 @@ class RankingResult(BaseModel):
         ...,
         description="(M,) Array of indices that sort the candidates by residual error",
     )
-    y_space_residuals: np.ndarray = Field(
-        ...,
-        description="(M,) Array of residual errors vs target",
-    )
     best_index: int = Field(
         ..., description="Index of the best candidate in this result"
     )
-    best_objective: np.ndarray = Field(
-        ..., description="(1, 2) The best performance vector (Raw/Un-normalized)"
-    )
-    best_decision: np.ndarray = Field(
-        ..., description="(1, D) The best decision vector (Raw/Un-normalized)"
+    best_candidate_residual: float = Field(
+        ..., description="Residual error of the best candidate"
     )
 
     def __post_init__(self):
@@ -66,8 +59,6 @@ class CandidateRanker:
 
         return RankingResult(
             sort_indices=sort_indices,
-            y_space_residuals=y_space_residuals[sort_indices],
             best_index=original_best_index,
-            best_objective=candidates_y[original_best_index].reshape(1, -1),
-            best_decision=candidates_X[original_best_index].reshape(1, -1),
+            best_candidate_residual=y_space_residuals[original_best_index],
         )

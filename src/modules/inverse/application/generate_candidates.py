@@ -42,7 +42,7 @@ class GenerationConfig(BaseModel):
         pass
 
 
-class GenerateCoherentCandidatesService:
+class GenerateCandidatesService:
     def __init__(
         self,
         inverse_mapping_engine_repository: BaseInverseMappingEngineRepository,
@@ -69,46 +69,20 @@ class GenerateCoherentCandidatesService:
         )
 
         self._logger.log_info(
-            f"Generated candidates via {result.pathway} pathway. "
-            f"Winner: {result.best_objective_raw.flatten()}"
+            f"Generated {len(result.candidate_objectives)} candidates. "
+            f"Winner @{result.best_index}: {result.best_candidate_objective.flatten()}"
         )
-
-        # metadata = {
-        #     "pathway": result.pathway,
-        #     "objective_space_residual_sorted": result.objective_space_residual_sorted.tolist(),
-        #     "vertices_indices": result.metadata.get("vertices_indices", []),
-        #     "tau": result.metadata.get("tau"),
-        #     "vertice_distances": result.metadata.get("vertice_distances", []),
-        #     "is_simplex_found": result.metadata.get("is_simplex_found", False),
-        #     "is_coherent": result.metadata.get("is_coherent", False),
-        # }
-
-        # # Merge results from domain service metadata if any
-        # solver_metadata = result.metadata.copy()
-        # # Remove already extracted fields
-        # for key in [
-        #     "vertices_indices",
-        #     "tau",
-        #     "vertice_distances",
-        #     "is_simplex_found",
-        #     "is_coherent",
-        # ]:
-        #     solver_metadata.pop(key, None)
-
-        # metadata.update(solver_metadata)
-
-        # common_fields["metadata"] = metadata
 
         return {
             "solver_type": config.solver_type,
-            "target_objective": result.target_objective_raw.flatten().tolist(),
-            "candidate_decisions": result.candidate_decisions_raw.tolist(),
+            "target_objective": config.target_objective,
+            "candidate_decisions": result.candidate_decisions.tolist(),
             "candidate_objectives": [
-                tuple(obj) for obj in result.candidate_objectives_raw.tolist()
+                tuple(obj) for obj in result.candidate_objectives.tolist()
             ],
             "best_index": result.best_index,
-            "best_objective": result.best_objective_raw.flatten().tolist(),
-            "best_decision": result.best_decision_raw.flatten().tolist(),
-            "y_space_residuals": result.y_space_residuals.tolist(),
+            "best_candidate_objective": result.best_candidate_objective.flatten().tolist(),
+            "best_candidate_decision": result.best_candidate_decision.flatten().tolist(),
+            "best_candidate_residual": result.best_candidate_residual,
             "metadata": result.metadata,
         }

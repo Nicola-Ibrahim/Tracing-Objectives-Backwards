@@ -1,7 +1,7 @@
 import click
 
 from ...modules.inverse.application.generate_candidates import (
-    GenerateCoherentCandidatesService,
+    GeneratCandidatesService,
     GenerationConfig,
 )
 from ...modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
@@ -31,7 +31,7 @@ def main(dataset_name: str, solver_type: str, version: int | None):
         solver_type=solver_type,
         version=version,
     )
-    service = GenerateCoherentCandidatesService(
+    service = GeneratCandidatesService(
         inverse_mapping_engine_repository=FileSystemInverseMappingEngineRepository(),
         logger=logger,
     )

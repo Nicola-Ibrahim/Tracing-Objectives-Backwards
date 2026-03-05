@@ -48,8 +48,8 @@ export function GenerateCandidatesForm({
         defaultValues: {
             dataset_name: "",
             engine_id: "",
-            objective1: 0.5,
-            objective2: 0.5,
+            objective1: 420,
+            objective2: 1400,
             n_samples: 5,
         },
     });

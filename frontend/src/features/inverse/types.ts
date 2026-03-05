@@ -40,9 +40,9 @@ export interface CandidateGenerationResponse {
   candidate_decisions: number[][];
   candidate_objectives: number[][];
   best_index: number;
-  best_decision: number[];
-  best_objective: number[];
-  y_space_residuals: number[];
+  best_candidate_decision: number[];
+  best_candidate_objective: number[];
+  best_candidate_residual: number;
   metadata: Record<string, any>;
 }
 

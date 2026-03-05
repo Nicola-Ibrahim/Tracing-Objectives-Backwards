@@ -101,7 +101,7 @@ export default function GeneratePage() {
                                 )}
 
                                 {(result || datasetDetails) ? (
-                                    <Card className="border-indigo-100 shadow-md">
+                                    <Card className="border-indigo-100 shadow-md overflow-hidden w-full min-w-0">
                                         <CardHeader className="bg-indigo-50/30 border-b border-indigo-100 py-4">
                                             <CardTitle className="text-sm font-bold text-indigo-900 uppercase tracking-wider">
                                                 {result ? "Generation Results" : "Dataset Preview"}

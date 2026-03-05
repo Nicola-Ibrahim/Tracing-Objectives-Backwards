@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from ....modules.inverse.application.generate_candidates import (
-    GenerateCoherentCandidatesService,
+    GenerateCandidatesService,
     GenerationConfig,
 )
 from ....modules.inverse.application.list_engines import ListEnginesService
@@ -84,7 +84,7 @@ async def train_engine(
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_candidates(
     request: GenerateRequest,
-    service: GenerateCoherentCandidatesService = Depends(get_generation_service),
+    service: GenerateCandidatesService = Depends(get_generation_service),
 ):
     """
     Generate candidate designs for a target objective using a trained engine.

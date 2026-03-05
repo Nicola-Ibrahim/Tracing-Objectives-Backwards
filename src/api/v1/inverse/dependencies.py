@@ -2,7 +2,7 @@ from ....modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ....modules.inverse.application.generate_candidates import (
-    GenerateCoherentCandidatesService,
+    GenerateCandidatesService,
 )
 from ....modules.inverse.application.list_engines import ListEnginesService
 from ....modules.inverse.application.train_inverse_mapping_engine import (
@@ -31,9 +31,9 @@ def get_train_service() -> TrainInverseMappingEngineService:
     )
 
 
-def get_generation_service() -> GenerateCoherentCandidatesService:
+def get_generation_service() -> GenerateCandidatesService:
     logger = CMDLogger(name="InverseGenerationAPI")
-    return GenerateCoherentCandidatesService(
+    return GenerateCandidatesService(
         inverse_mapping_engine_repository=get_inverse_mapping_engine_repository(),
         logger=logger,
     )

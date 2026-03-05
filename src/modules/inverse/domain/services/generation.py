@@ -12,14 +12,12 @@ class GenerationResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    pathway: str
-    target_objective_raw: np.ndarray
-    candidate_decisions_raw: np.ndarray
-    candidate_objectives_raw: np.ndarray
+    candidate_decisions: np.ndarray
+    candidate_objectives: np.ndarray
     best_index: int
-    best_objective_raw: np.ndarray
-    best_decision_raw: np.ndarray
-    y_space_residuals: np.ndarray
+    best_candidate_objective: np.ndarray
+    best_candidate_decision: np.ndarray
+    best_candidate_residual: float
     metadata: dict[str, Any]
 
 
@@ -45,28 +43,28 @@ class CandidateGenerationDomainService:
             target_y=target_objective_norm, n_samples=n_samples
         )
 
-        print("Generation result:")
-        print(generation_result.metadata)
-
-        # 4. Rank candidates
+        # 3. Rank candidates
         rank_result = CandidateRanker.rank(
             candidates_X=generation_result.candidates_X,
             candidates_y=generation_result.candidates_y,
             target_objective=target_objective_norm,
         )
 
-        candidate_X_sorted = generation_result.candidates_X[rank_result.sort_indices]
-        candidate_y_sorted = generation_result.candidates_y[rank_result.sort_indices]
-
-        # 7. Detransform to Raw Space
+        # 4. Detransform to Raw Space
         return GenerationResult(
-            pathway=generation_result.metadata.get("pathway", "unknown"),
-            target_objective_raw=target_objective,
-            candidate_decisions_raw=engine.detransform_decision(candidate_X_sorted),
-            candidate_objectives_raw=engine.detransform_objective(candidate_y_sorted),
-            best_objective_raw=engine.detransform_objective(rank_result.best_objective),
-            best_decision_raw=engine.detransform_decision(rank_result.best_decision),
-            y_space_residuals=rank_result.y_space_residuals,
+            candidate_decisions=engine.detransform_decision(
+                generation_result.candidates_X
+            ),
+            candidate_objectives=engine.detransform_objective(
+                generation_result.candidates_y
+            ),
             best_index=rank_result.best_index,
+            best_candidate_objective=engine.detransform_objective(
+                generation_result.candidates_y[rank_result.best_index].reshape(1, -1)
+            ),
+            best_candidate_decision=engine.detransform_decision(
+                generation_result.candidates_X[rank_result.best_index].reshape(1, -1)
+            ),
+            best_candidate_residual=rank_result.best_candidate_residual,
             metadata=generation_result.metadata,
         )
