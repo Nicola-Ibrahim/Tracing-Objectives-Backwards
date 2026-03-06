@@ -75,18 +75,18 @@ export default function EvaluationPage() {
                     )}
 
                     {result ? (
-                        <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-8 animate-in slide-in-from-bottom-2 fade-in duration-700">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <PerformanceChart
                                     title="ECDF (Calibration)"
-                                    description="Empirical Cumulative Distribution Function of residuals."
+                                    description="Empirical Cumulative Distribution Function of residuals. Lower area under curve (closer to top-left) indicates better accuracy."
                                     data={result.ecdf}
                                     xAxisLabel="Normalized Residual"
                                     yAxisLabel="Cumulative Prob."
                                 />
                                 <PerformanceChart
                                     title="PIT (Probabilistic Calibration)"
-                                    description="Probability Integral Transform for uncertainty depth."
+                                    description="Calibration of uncertainty. A perfectly calibrated model follows the diagonal ideal line."
                                     data={result.pit}
                                     xAxisLabel="PIT Value"
                                     yAxisLabel="Cumulative Frequency"
@@ -94,29 +94,29 @@ export default function EvaluationPage() {
                                 />
                             </div>
 
-                            <Card className="border-slate-200">
-                                <CardHeader className="py-4 border-b">
-                                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                        <TableIcon className="h-4 w-4 text-slate-400" />
-                                        MACE (Mean Absolute Calibration Error)
+                            <Card className="border-slate-200/60 bg-white/50 backdrop-blur-md shadow-sm overflow-hidden">
+                                <CardHeader className="py-5 bg-slate-50/30 border-b border-slate-200/40">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800">
+                                        <TableIcon className="h-4 w-4 text-indigo-500" />
+                                        Performance Summary Metrics
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <Table>
-                                        <TableHeader className="bg-slate-50/50">
-                                            <TableRow>
-                                                <TableHead>Engine Identifier</TableHead>
-                                                <TableHead className="text-right">MACE Score</TableHead>
-                                                <TableHead className="text-center">Performance Status</TableHead>
+                                        <TableHeader className="bg-slate-50/20">
+                                            <TableRow className="hover:bg-transparent border-slate-100">
+                                                <TableHead className="font-semibold text-slate-600">Engine Identifier</TableHead>
+                                                <TableHead className="text-right font-semibold text-slate-600">MACE Score</TableHead>
+                                                <TableHead className="text-center font-semibold text-slate-600">Performance Status</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {Object.entries(result.mace).map(([engine, score]) => (
-                                                <TableRow key={engine}>
-                                                    <TableCell className="font-medium text-slate-700">{engine}</TableCell>
-                                                    <TableCell className="text-right font-mono text-sm">{score.toFixed(4)}</TableCell>
+                                                <TableRow key={engine} className="border-slate-100/60 hover:bg-slate-50/30 transition-colors">
+                                                    <TableCell className="font-semibold text-slate-700">{engine}</TableCell>
+                                                    <TableCell className="text-right font-mono text-sm font-bold text-indigo-600">{score.toFixed(4)}</TableCell>
                                                     <TableCell className="text-center">
-                                                        <Badge variant={score < 0.05 ? "default" : "secondary"} className={score < 0.05 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200" : ""}>
+                                                        <Badge variant={score < 0.05 ? "default" : "secondary"} className={score < 0.05 ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-emerald-100 px-3" : "bg-slate-100 text-slate-600 border-slate-200 px-3"}>
                                                             {score < 0.05 ? "Highly Calibrated" : "Minor Drift"}
                                                         </Badge>
                                                     </TableCell>

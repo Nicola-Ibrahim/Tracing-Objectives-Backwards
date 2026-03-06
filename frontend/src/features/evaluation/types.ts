@@ -10,9 +10,13 @@ export interface DiagnoseRequest {
   scale_method: "sd" | "mad" | "iqr";
 }
 
-export interface MetricPlotData {
+export interface MetricSeries {
   x: number[];
-  y: Record<string, number[]>; // key is engine label (e.g. GBPI_v1)
+  y: number[];
+}
+
+export interface MetricPlotData {
+  [engineLabel: string]: MetricSeries;
 }
 
 export interface DiagnoseResponse {

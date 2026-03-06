@@ -27,7 +27,6 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         n_neighbors: int,
         trust_radius: float,
         concentration_factor: float,
-        estimator: Any = None,
     ):
         """
         Initializes the GBPISolver.
@@ -41,7 +40,6 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         self.n_neighbors = n_neighbors
         self.trust_radius = trust_radius
         self.concentration_factor = concentration_factor
-        self.estimator = estimator
 
         self.X = None
         self.tau = None
@@ -171,7 +169,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
             candidates_X = DirichletSampling(
                 concentration_factor=self.concentration_factor
             ).sample(
-                vertices=self.X[vertices_indices],
+                vertices_X=self.X[vertices_indices],
                 weights=weights,
                 n_samples=n_samples,
             )
@@ -182,7 +180,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
                 target_y=target_y,
                 trust_radius=self.trust_radius,
             ).sample(
-                vertices=self.X[vertices_indices],
+                vertices_X=self.X[vertices_indices],
                 weights=weights,
                 n_samples=n_samples,
             )
@@ -243,7 +241,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         Args:
             y: (N, D) array representing the objective space points
         """
-        self.objective_knn = NearestNeighbors(n_neighbors=1)
+        self.objective_knn = NearestNeighbors(n_neighbors=5)
         self.objective_knn.fit(y)
 
     def train(self, X: np.ndarray, y: np.ndarray) -> None:

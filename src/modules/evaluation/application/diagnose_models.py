@@ -182,7 +182,8 @@ class DiagnoseInverseModelsService:
             ecdf_results[engine_name] = self._calculate_ecdf(
                 spatial_audit.discrepancy_scores
             )
-            pit_results[engine_name] = generative_audit.pit_values.tolist()
+            # PIT values represent cumulative density [0, 1]. ECDF of PIT values allows for calibration plotting (Ideal is x=y).
+            pit_results[engine_name] = self._calculate_ecdf(generative_audit.pit_values)
             mace_results[engine_name] = float(generative_audit.calibration_error)
 
         return {
@@ -230,8 +231,12 @@ class DiagnoseInverseModelsService:
                     ecdf_results[engine_name] = self._calculate_ecdf(
                         np.array(cached.accuracy.discrepancy_scores)
                     )
-                    pit_results[engine_name] = cached.reliability.pit_values
-                    mace_results[engine_name] = cached.reliability.calibration_error
+                    pit_results[engine_name] = self._calculate_ecdf(
+                        np.array(cached.reliability.pit_values)
+                    )
+                    mace_results[engine_name] = float(
+                        cached.reliability.calibration_error
+                    )
 
                 except (FileNotFoundError, IndexError):
                     # Cache miss for this specific engine

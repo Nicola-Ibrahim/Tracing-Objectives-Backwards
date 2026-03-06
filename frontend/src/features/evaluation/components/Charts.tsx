@@ -45,33 +45,37 @@ export function PerformanceChart({
     showIdeal = false
 }: PerformanceChartProps) {
     const colors = [
-        "rgba(99, 102, 241, 1)",   // Indigo
-        "rgba(245, 158, 11, 1)",   // Amber
-        "rgba(16, 185, 129, 1)",   // Emerald
-        "rgba(239, 68, 68, 1)",    // Red
-        "rgba(139, 92, 246, 1)",   // Violet
+        "rgba(255, 99, 132, 1)",   // Vibrant Pink
+        "rgba(54, 162, 235, 1)",   // Modern Blue
+        "rgba(255, 206, 86, 1)",   // Soft Yellow
+        "rgba(75, 192, 192, 1)",   // Teal
+        "rgba(153, 102, 255, 1)",  // Purple
+        "rgba(255, 159, 64, 1)",   // Orange
     ];
 
-    const datasets = Object.keys(data.y).map((label, index) => ({
+    const datasets = Object.keys(data).map((label, index) => ({
         label,
-        data: data.x.map((xVal, i) => ({ x: xVal, y: data.y[label][i] })),
+        data: data[label].x.map((xVal, i) => ({ x: xVal, y: data[label].y[i] })),
         borderColor: colors[index % colors.length],
-        backgroundColor: colors[index % colors.length].replace("1)", "0.1)"),
-        borderWidth: 2,
+        backgroundColor: colors[index % colors.length].replace("1)", "0.08)"),
+        borderWidth: 3,
         pointRadius: 0,
-        tension: 0.1,
+        pointHoverRadius: 4,
+        pointBackgroundColor: colors[index % colors.length],
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2,
+        tension: 0.4, // Smoother curves
+        fill: true,   // Add area fill
     }));
 
     if (showIdeal) {
-        // Add an "Ideal" 45-degree line or target line if needed
-        // For PIT, ideal is uniform (diagonal if plotting CDF, or flat if plotting histogram - here we assume CDF-like data)
         datasets.push({
-            label: "Ideal",
-            data: data.x.map(xVal => ({ x: xVal, y: xVal })), // Assumes x and y are [0, 1]
-            borderColor: "rgba(0, 0, 0, 0.2)",
+            label: "Ideal Calibration",
+            data: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+            borderColor: "rgba(100, 116, 139, 0.4)",
             backgroundColor: "transparent",
-            borderWidth: 1,
-            borderDash: [5, 5],
+            borderWidth: 1.5,
+            borderDash: [6, 4],
             pointRadius: 0,
         } as any);
     }
@@ -81,22 +85,71 @@ export function PerformanceChart({
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+            mode: "index" as const,
+            intersect: false,
+        },
         scales: {
             x: {
                 type: "linear" as const,
-                title: { display: true, text: xAxisLabel, font: { size: 10 } },
-                grid: { color: "rgba(0,0,0,0.05)" },
+                title: {
+                    display: true,
+                    text: xAxisLabel,
+                    font: { size: 11, weight: 600, family: "inherit" },
+                    color: "rgb(71, 85, 105)",
+                    padding: { top: 10 }
+                },
+                grid: { color: "rgba(226, 232, 240, 0.5)", borderDash: [2, 2] },
+                ticks: { font: { size: 10 }, color: "rgb(100, 116, 139)" }
             },
             y: {
-                title: { display: true, text: yAxisLabel, font: { size: 10 } },
-                grid: { color: "rgba(0,0,0,0.05)" },
+                title: {
+                    display: true,
+                    text: yAxisLabel,
+                    font: { size: 11, weight: 600, family: "inherit" },
+                    color: "rgb(71, 85, 105)",
+                    padding: { bottom: 10 }
+                },
+                grid: { color: "rgba(226, 232, 240, 0.5)", borderDash: [2, 2] },
+                ticks: { font: { size: 10 }, color: "rgb(100, 116, 139)" },
                 min: 0,
                 max: 1.05,
             },
         },
         plugins: {
-            legend: { position: "bottom" as const, labels: { boxWidth: 12, font: { size: 11 } } },
-            tooltip: { mode: "index" as const, intersect: false },
+            legend: {
+                position: "bottom" as const,
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: "circle",
+                    padding: 20,
+                    boxWidth: 8,
+                    font: { size: 11, weight: 500 },
+                    color: "rgb(71, 85, 105)"
+                }
+            },
+            tooltip: {
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                titleColor: "rgb(15, 23, 42)",
+                bodyColor: "rgb(71, 85, 105)",
+                borderColor: "rgba(226, 232, 240, 1)",
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 4,
+                usePointStyle: true,
+                titleFont: { size: 12, weight: 700 },
+                bodyFont: { size: 11 },
+                callbacks: {
+                    label: function (context: any) {
+                        let label = context.dataset.label || "";
+                        if (label) label += ": ";
+                        if (context.parsed.y !== null) {
+                            label += context.parsed.y.toFixed(3);
+                        }
+                        return label;
+                    }
+                }
+            },
         },
     };
 

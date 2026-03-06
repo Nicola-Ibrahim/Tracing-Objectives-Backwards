@@ -17,7 +17,7 @@ class DirichletSampling:
         self._concentration_factor = concentration_factor
 
     def sample(
-        self, vertices: np.ndarray, weights: np.ndarray, n_samples: int
+        self, vertices_X: np.ndarray, weights: np.ndarray, n_samples: int
     ) -> np.ndarray:
         """
         Samples a cloud of new candidates distributed tightly around the target.
@@ -41,4 +41,4 @@ class DirichletSampling:
         weight_samples = rng.dirichlet(alpha, size=n_samples)
 
         # Map weight samples to decision space
-        return np.dot(weight_samples, vertices)
+        return np.dot(weight_samples, vertices_X)

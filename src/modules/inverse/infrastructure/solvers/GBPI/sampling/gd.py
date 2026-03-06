@@ -30,7 +30,7 @@ class GradientDescentSampling:
 
     def sample(
         self,
-        vertices: np.ndarray,
+        vertices_X: np.ndarray,
         weights: np.ndarray,
         n_samples: int,
     ) -> np.ndarray:
@@ -49,8 +49,7 @@ class GradientDescentSampling:
 
         # Determine base anchor from weights (highest weight anchor)
         best_anchor_idx = int(np.argmax(weights))
-        base_anchor = vertices[best_anchor_idx]
-
+        base_anchor = vertices_X[best_anchor_idx]
         target = np.asarray(self._target_y).flatten()
 
         # Define bounds for the trust region, keeping within [0, 1] absolute bounds

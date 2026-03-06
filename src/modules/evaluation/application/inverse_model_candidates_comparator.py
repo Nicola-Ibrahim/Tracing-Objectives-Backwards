@@ -14,11 +14,11 @@ class SelectionResult:
 
     best_index: int
     best_distance: float
-    best_decision: np.ndarray
-    best_objective: np.ndarray
-    all_distances: np.ndarray  # For visualization
-    sorted_candidates: np.ndarray
-    sorted_objectives: np.ndarray
+    best_decision: list
+    best_objective: list
+    all_distances: list  # For visualization
+    sorted_candidates: list
+    sorted_objectives: list
 
 
 class InverseModelsCandidatesComparator:
@@ -117,9 +117,9 @@ class InverseModelsCandidatesComparator:
         return SelectionResult(
             best_index=0,
             best_distance=float(sorted_distances[0]),
-            best_decision=sorted_candidates[0],
-            best_objective=sorted_objectives[0],
-            all_distances=sorted_distances,
-            sorted_candidates=sorted_candidates,
-            sorted_objectives=sorted_objectives,
+            best_decision=sorted_candidates[0].tolist(),
+            best_objective=sorted_objectives[0].tolist(),
+            all_distances=sorted_distances.tolist(),
+            sorted_candidates=sorted_candidates.tolist(),
+            sorted_objectives=sorted_objectives.tolist(),
         )
