@@ -6,7 +6,15 @@ import {
   CandidateGenerationRequest,
   CandidateGenerationResponse,
   EngineListItem,
+  SolversDiscoveryResponse,
 } from "./types";
+
+/**
+ * Fetch all available solvers and their parameters.
+ */
+export const getSolvers = async (): Promise<SolversDiscoveryResponse> => {
+  return apiClient.get("/api/v1/inverse/solvers");
+};
 
 /**
  * Fetch all available datasets.

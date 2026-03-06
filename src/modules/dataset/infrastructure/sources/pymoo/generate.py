@@ -3,9 +3,9 @@ from dataclasses import dataclass
 import numpy as np
 
 from ....domain.interfaces.base_data_source import BaseDataSource
-from .algorithms import NSGAII, NSGA2Config
-from .minimizer import Minimizer, MinimizerConfig
-from .problems.cocoex import COCOBiObjectiveProblem
+from .core.algorithms import NSGAII, NSGA2Config
+from .core.minimizer import Minimizer, MinimizerConfig
+from .problems.cocoex import COCOBiObjectiveProblem, COCOBiObjectiveProblemConfig
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ class RawDataPayload:
     """Pareto-optimal objectives, shape (n_pareto, n_objs). None if not computed."""
 
 
-class PymooOptimizationGenerator(BaseDataSource):
+class PymooGenerator(BaseDataSource):
     """
     A true Facade: The client knows NOTHING about PyMOO.
     It only passes domain-level configurations (Pydantic models, dicts, or strings).
@@ -40,13 +40,14 @@ class PymooOptimizationGenerator(BaseDataSource):
 
     def __init__(
         self,
-        problem_config: COCOBiObjectiveProblem,
+        problem_config: COCOBiObjectiveProblemConfig,
         algorithm_config: NSGA2Config,
         minimizer_config: MinimizerConfig,
     ):
         """
         The client passes pure data/configs, no PyMOO objects.
         """
+
         self.problem_config = problem_config
         self.algorithm_config = algorithm_config
         self.minimizer_config = minimizer_config

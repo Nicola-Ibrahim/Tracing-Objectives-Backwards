@@ -1,17 +1,16 @@
-from typing import Any
+import time
+from typing import Any, Dict, List
 
-import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ...modeling.domain.interfaces.base_transform import BaseTransformer
 from ...modeling.infrastructure.factories.transformer import TransformerFactory
 from ...shared.domain.interfaces.base_logger import BaseLogger
 from ..domain.entities.inverse_mapping_engine import InverseMappingEngine
 from ..domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
 )
-from ..domain.value_objects.data_split import DataSplit
+from ..domain.services.generation import CandidateGeneration
 from ..domain.value_objects.transform_pipeline import TransformPipeline
 from ..infrastructure.solvers.factory import SolversFactory
 
@@ -37,15 +36,30 @@ class TrainInverseMappingEngineParams(BaseModel):
     )
 
 
-class TrainInverseMappingEngineService:
+class GenerationConfig(BaseModel):
     """
-    Orchestrates the offline context preparation for generation:
-    1. Loads dataset
-    2. Uses pre-computed train/test split from dataset
-    3. Fits data normalizers on the training data
-    4. Transforms data into normalized space
-    5. Fits the inverse solver internally
-    6. Persists the InverseMappingEngine with versioned hierarchy and value objects
+    User-configurable parameters for the generation pipeline.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    dataset_name: str = Field(..., description="Name of the dataset")
+    target_objective: tuple[float, float] = Field(
+        ..., description="Target objective coordinates (2D)"
+    )
+    solver_type: str = Field(default="GBPI", description="Type of solver to use")
+    version: int | None = Field(
+        default=None, description="Specific engine version number to use (optional)"
+    )
+    n_samples: int = Field(
+        default=50, ge=1, description="Number of Dirichlet weight samples"
+    )
+
+
+class InverseService:
+    """
+    Consolidated application service for inverse mapping operations.
+    Handles training engines, generating candidates, and listing engines.
     """
 
     def __init__(
@@ -62,93 +76,55 @@ class TrainInverseMappingEngineService:
         self._transformer_factory = transformer_factory
         self._solvers_factory = solvers_factory
 
-    def _fit_and_transform(
-        self, data: np.ndarray, transforms: list[tuple[str, BaseTransformer]]
-    ) -> np.ndarray:
-        current_data = data.copy()
-        for _, t in transforms:
-            t.fit(current_data)
-            current_data = t.transform(current_data)
-        return current_data
-
-    def execute(self, params: TrainInverseMappingEngineParams) -> dict:
-        import time
-
+    def train_engine(self, params: TrainInverseMappingEngineParams) -> dict:
+        """
+        Orchestrates training of an inverse mapping engine.
+        """
         start_time = time.time()
         self._logger.log_info(
             f"Preparing generation context for '{params.dataset_name}'"
         )
 
-        # Loading the dataset
         dataset = self._dataset_repository.load(params.dataset_name)
-
-        # Use pre-computed split from dataset entity
-        X_train, y_train = dataset.get_train_data()
-        X_test, y_test = dataset.get_test_data()
+        X, y = dataset.get_train_data()
 
         self._logger.log_info(
-            f"Retrieved pre-computed split from dataset: {len(X_train)} training and {len(X_test)} testing samples."
+            f"Retrieved pre-computed split from dataset: {len(X)} training"
         )
 
-        # Fitting the transforms (only on training data)
         all_fitted_transforms = []
-
         for t_cfg in params.transforms:
             target_type = t_cfg.get("target")
             transform = self._transformer_factory.create(t_cfg)
             all_fitted_transforms.append((target_type, transform))
 
-        # We need to transform X_train and y_train for solver training
-        # Note: Logic here assumes transforms are applied sequentially per target type
-        X_train_norm = X_train.copy()
+        X_norm = X.copy()
         for label, t in all_fitted_transforms:
             if label == "decisions":
-                t.fit(X_train_norm)
-                X_train_norm = t.transform(X_train_norm)
+                t.fit(X_norm)
+                X_norm = t.transform(X_norm)
 
-        y_train_norm = y_train.copy()
+        y_norm = y.copy()
         for label, t in all_fitted_transforms:
             if label == "objectives":
-                t.fit(y_train_norm)
-                y_train_norm = t.transform(y_train_norm)
+                t.fit(y_norm)
+                y_norm = t.transform(y_norm)
 
-        # Train the solver
-        solver_params = params.solver.params.copy()
-        if params.solver.type == "GBPI":
-            # Supply defaults if missing to ensure successful instantiation
-            if "n_neighbors" not in solver_params:
-                solver_params["n_neighbors"] = 5
-            if "trust_radius" not in solver_params:
-                solver_params["trust_radius"] = 0.05
-            if "concentration_factor" not in solver_params:
-                solver_params["concentration_factor"] = 10.0
+        solver = self._solvers_factory.create(params.solver.type, params.solver.params)
+        solver.train(X=X_norm, y=y_norm)
 
-        solver = self._solvers_factory.create(params.solver.type, **solver_params)
-        solver.train(X=X_train_norm, y=y_train_norm)
-
-        # Create Value Objects
-        data_split = DataSplit(
-            train_indices=dataset.train_indices,
-            test_indices=dataset.test_indices,
-            split_ratio=dataset.split_ratio,
-            random_state=dataset.random_state,
-        )
         transform_pipeline = TransformPipeline(transforms=all_fitted_transforms)
 
-        # Create the engine
         engine = InverseMappingEngine.create(
             dataset_name=params.dataset_name,
             solver=solver,
             transform_pipeline=transform_pipeline,
-            data_split=data_split,
         )
 
-        # Assigned version
         version = self._inverse_mapping_engine_repository.save(engine)
         self._logger.log_info(f"InverseMappingEngine saved successfully (v{version}).")
 
         duration = time.time() - start_time
-
         transform_summary = [
             f"{t.__class__.__name__}({label})" for label, t in all_fitted_transforms
         ]
@@ -165,3 +141,52 @@ class TrainInverseMappingEngineService:
             "transform_summary": transform_summary,
             "training_history": solver.history(),
         }
+
+    def generate_candidates(self, config: GenerationConfig) -> dict:
+        """
+        Generates candidate designs for a target objective using a trained engine.
+        """
+        self._logger.log_info(
+            f"Starting generation for '{config.dataset_name}' with target {config.target_objective}"
+        )
+
+        engine = self._inverse_mapping_engine_repository.load(
+            config.dataset_name, solver_type=config.solver_type, version=config.version
+        )
+
+        result = CandidateGeneration.generate(
+            engine=engine,
+            target_objective=config.target_objective,
+            n_samples=config.n_samples,
+        )
+
+        self._logger.log_info(
+            f"Generated {result.candidate_objectives.shape[0]} candidates. "
+            f"Winner @{result.best_index}: {result.best_candidate_objective.flatten()}"
+        )
+
+        return {
+            "solver_type": config.solver_type,
+            "target_objective": config.target_objective,
+            "candidate_decisions": result.candidate_decisions.tolist(),
+            "candidate_objectives": [
+                tuple(obj) for obj in result.candidate_objectives.tolist()
+            ],
+            "best_index": result.best_index,
+            "best_candidate_objective": result.best_candidate_objective.flatten().tolist(),
+            "best_candidate_decision": result.best_candidate_decision.flatten().tolist(),
+            "best_candidate_residual": result.best_candidate_residual,
+            "metadata": result.metadata,
+        }
+
+    def list_engines(self, dataset_name: str) -> List[Dict[str, Any]]:
+        """Lists all trained engines for a dataset."""
+        engines = self._inverse_mapping_engine_repository.list_all(dataset_name)
+        return [
+            {
+                "solver_type": e["solver_type"],
+                "version": e["version"],
+                "created_at": e["created_at"],
+            }
+            for e in engines
+        ]

@@ -31,13 +31,11 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
         trust_radius: float,
         concentration_factor: float,
         hole_penalty_factor: float = 1.5,  # New: Ratio to detect a topological hole
-        estimator: Any = None,
     ):
         self.n_neighbors = n_neighbors
         self.trust_radius = trust_radius
         self.concentration_factor = concentration_factor
         self.hole_penalty_factor = hole_penalty_factor
-        self.estimator = estimator
 
         self.X = None
         self.mesh = None

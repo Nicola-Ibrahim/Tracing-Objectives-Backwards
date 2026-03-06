@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getDatasets } from "@/features/inverse/api";
-import { getDatasetDetails, generateDataset } from "@/features/dataset/api";
+import { getDatasets, getDatasetDetails, generateDataset } from "@/features/dataset/api";
 import { DatasetPlot } from "@/features/dataset/components/DatasetPlot";
 import { GenerateDatasetForm } from "@/features/dataset/components/GenerateDatasetForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,8 +80,8 @@ export default function DatasetsPage() {
             </div>
 
             <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
-                <DialogContent className="sm:max-w-[600px] border-slate-200">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-[750px] p-0 overflow-hidden border-slate-200 shadow-2xl h-[85vh] flex flex-col">
+                    <DialogHeader className="p-6 border-b border-slate-100 shrink-0">
                         <DialogTitle className="text-xl font-bold flex items-center gap-2">
                             <Wand2 className="h-5 w-5 text-indigo-600" />
                             Generate New Dataset
@@ -91,7 +90,7 @@ export default function DatasetsPage() {
                             Configure parameters for multi-objective dataset synthesis.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
+                    <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-200">
                         <GenerateDatasetForm
                             onSubmit={(vals) => generateMutation.mutate(vals)}
                             isLoading={generateMutation.isPending}

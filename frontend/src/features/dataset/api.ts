@@ -1,5 +1,12 @@
 import { apiClient } from "@/lib/api-client";
-import { DatasetInfo, DatasetDetails } from "./types";
+import { DatasetInfo, DatasetDetails, GeneratorsDiscoveryResponse, DatasetGenerationRequest } from "./types";
+
+/**
+ * Fetch available dataset generators and their parameters.
+ */
+export const getGenerators = async (): Promise<GeneratorsDiscoveryResponse> => {
+  return apiClient.get("/api/v1/datasets/generators");
+};
 
 /**
  * Fetch detailed dataset information including coordinates for plotting.
@@ -12,8 +19,15 @@ export const getDatasetDetails = async (
 };
 
 /**
+ * Fetch all available datasets.
+ */
+export const getDatasets = async (): Promise<DatasetInfo[]> => {
+  return apiClient.get("/api/v1/datasets");
+};
+
+/**
  * Trigger generation of a new synthetic dataset.
  */
-export const generateDataset = async (params: any): Promise<any> => {
+export const generateDataset = async (params: DatasetGenerationRequest): Promise<any> => {
   return apiClient.post("/api/v1/datasets/generate", params);
 };

@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
 
-from ....shared.domain.interfaces.base_logger import BaseLogger
-from ...domain.interfaces.base_diagnostic_repository import (
+from ...shared.domain.interfaces.base_logger import BaseLogger
+from ..domain.interfaces.base_diagnostic_repository import (
     BaseDiagnosticRepository,
 )
-from ...domain.interfaces.base_visualizer import BaseVisualizer
+from ..domain.interfaces.base_visualizer import BaseVisualizer
 
 
 class InverseEngineDiagnosticCandidate(BaseModel):
@@ -45,7 +45,7 @@ class VisualizeInverseEstimatorDiagnosticService:
         visualizer: BaseVisualizer,
         logger: BaseLogger,
     ):
-        self._diag_repo = diagnostic_repository
+        self._diagnostic_repository = diagnostic_repository
         self._visualizer = visualizer
         self._logger = logger
 
@@ -56,7 +56,7 @@ class VisualizeInverseEstimatorDiagnosticService:
 
         # 1. Fetch requested runs using repository batch logic
         try:
-            results_map_entities = self._diag_repo.get_batch(
+            results_map_entities = self._diagnostic_repository.get_batch(
                 estimators=params.inverse_engine_candidates,
                 dataset_name=params.dataset_name,
             )

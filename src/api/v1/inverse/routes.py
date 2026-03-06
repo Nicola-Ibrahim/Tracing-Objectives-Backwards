@@ -1,24 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from ....modules.inverse.application.generate_candidates import (
-    GenerateCandidatesService,
+from ....modules.inverse.application.inverse_service import (
     GenerationConfig,
-)
-from ....modules.inverse.application.list_engines import ListEnginesService
-from ....modules.inverse.application.train_inverse_mapping_engine import (
+    InverseService,
     SolverConfig,
     TrainInverseMappingEngineParams,
-    TrainInverseMappingEngineService,
 )
-from .dependencies import (
-    get_generation_service,
-    get_list_engines_service,
-    get_train_service,
-)
+from ....modules.inverse.infrastructure.solvers.factory import SolversFactory
+from .dependencies import get_inverse_service, get_solvers_factory
 from .schemas import (
     EngineListItem,
     GenerateRequest,
     GenerateResponse,
+    SolversDiscoveryResponse,
     TrainEngineRequest,
     TrainEngineResponse,
 )
@@ -26,27 +20,25 @@ from .schemas import (
 router = APIRouter()
 
 
+@router.get("/solvers", response_model=SolversDiscoveryResponse)
+async def list_available_solvers(
+    factory: SolversFactory = Depends(get_solvers_factory),
+):
+    """
+    List all available inverse mapping solvers and their required parameters.
+    """
+    schemas = factory.get_solver_schemas()
+    return SolversDiscoveryResponse(solvers=schemas)
+
+
 @router.post("/train", response_model=TrainEngineResponse, status_code=201)
 async def train_engine(
     request: TrainEngineRequest,
-    service: TrainInverseMappingEngineService = Depends(get_train_service),
+    service: InverseService = Depends(get_inverse_service),
 ):
     """
     Train an inverse mapping engine for a dataset.
     """
-    # Validate solver
-    supported_solvers = ["GBPI", "MDN"]
-    if request.solver.type not in supported_solvers:
-        if request.solver.type in ["CVAE", "INN"]:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Solver type '{request.solver.type}' is not yet implemented. Coming soon.",
-            )
-        raise HTTPException(
-            status_code=422,
-            detail=f"Unknown solver type: '{request.solver.type}'. Supported: {supported_solvers}",
-        )
-
     params = TrainInverseMappingEngineParams(
         dataset_name=request.dataset_name,
         solver=SolverConfig(type=request.solver.type, params=request.solver.params),
@@ -54,8 +46,7 @@ async def train_engine(
     )
 
     try:
-        # Note: US1/T016 updated execute() to return a rich result dict.
-        result = service.execute(params)
+        result = service.train_engine(params)
         return TrainEngineResponse(**result)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -66,7 +57,7 @@ async def train_engine(
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_candidates(
     request: GenerateRequest,
-    service: GenerateCandidatesService = Depends(get_generation_service),
+    service: InverseService = Depends(get_inverse_service),
 ):
     """
     Generate candidate designs for a target objective using a trained engine.
@@ -77,13 +68,10 @@ async def generate_candidates(
         solver_type=request.solver_type,
         version=request.version,
         n_samples=request.n_samples,
-        trust_radius=request.trust_radius,
-        concentration_factor=request.concentration_factor,
-        error_threshold=request.error_threshold,
     )
 
     try:
-        result = service.execute(config)
+        result = service.generate_candidates(config)
         return GenerateResponse(**result)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -94,12 +82,12 @@ async def generate_candidates(
 @router.get("/engines/{dataset_name}", response_model=list[EngineListItem])
 async def list_engines_for_dataset(
     dataset_name: str,
-    service: ListEnginesService = Depends(get_list_engines_service),
+    service: InverseService = Depends(get_inverse_service),
 ):
     """
     List all trained engines for a specific dataset.
     """
-    engines = service.execute(dataset_name)
+    engines = service.list_engines(dataset_name)
     return [
         EngineListItem(
             solver_type=e["solver_type"],

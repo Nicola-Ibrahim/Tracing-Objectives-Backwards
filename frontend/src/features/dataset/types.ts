@@ -15,3 +15,30 @@ export interface DatasetDetails extends DatasetInfo {
   is_pareto: boolean[];
   bounds: Record<string, [number, number]>;
 }
+
+export interface ParameterDefinition {
+  name: string;
+  type: string;
+  required: boolean;
+  default: any | null;
+  options?: any[] | null;
+  description?: string | null;
+}
+
+export interface GeneratorSchema {
+  id: string;
+  name: string;
+  parameters: ParameterDefinition[];
+}
+
+export interface GeneratorsDiscoveryResponse {
+  generators: GeneratorSchema[];
+}
+
+export interface DatasetGenerationRequest {
+  dataset_name: string;
+  generator_type: string;
+  params: Record<string, any>;
+  split_ratio?: number;
+  random_state?: number;
+}

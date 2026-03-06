@@ -3,7 +3,7 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.diagnose_models import (
+from ...modules.evaluation.application.diagnose_engines import (
     DiagnoseInverseModelsParams,
     DiagnoseInverseModelsService,
     InverseEngineCandidate,

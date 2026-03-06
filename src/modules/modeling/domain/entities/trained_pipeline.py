@@ -69,7 +69,7 @@ class TrainedPipeline(BaseModel):
     )
 
     def get_decisions_transforms(self) -> list[BaseTransformer]:
-        from ..interfaces.base_transform import TransformTarget
+        from ..enums.transform_target import TransformTarget
 
         return [
             t
@@ -79,7 +79,7 @@ class TrainedPipeline(BaseModel):
         ]
 
     def get_objectives_transforms(self) -> list[BaseTransformer]:
-        from ..interfaces.base_transform import TransformTarget
+        from ..enums.transform_target import TransformTarget
 
         return [
             t

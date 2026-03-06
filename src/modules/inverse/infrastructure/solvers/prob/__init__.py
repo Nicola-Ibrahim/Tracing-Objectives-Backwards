@@ -1,3 +1,3 @@
-from .solver import ProbabilisticInverseSolver
+from .mdn_solver import MDNProbabilisticInverseSolver
 
-__all__ = ["ProbabilisticInverseSolver"]
+__all__ = ["MDNProbabilisticInverseSolver"]

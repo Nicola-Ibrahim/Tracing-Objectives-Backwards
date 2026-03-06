@@ -1,6 +1,26 @@
 from datetime import datetime
+from typing import Any, List
 
 from pydantic import BaseModel, Field
+
+
+class ParameterDefinition(BaseModel):
+    name: str
+    type: str
+    required: bool
+    default: Any | None = None
+    options: list[Any] | None = None
+    description: str | None = None
+
+
+class GeneratorSchema(BaseModel):
+    id: str
+    name: str
+    parameters: List[ParameterDefinition]
+
+
+class GeneratorsDiscoveryResponse(BaseModel):
+    generators: List[GeneratorSchema]
 
 
 class DatasetSummary(BaseModel):
@@ -30,13 +50,13 @@ class DatasetDetailResponse(BaseModel):
 
 
 class DatasetGenerationRequest(BaseModel):
-    function_id: int
-    population_size: int = 200
-    n_var: int = 2
-    generations: int = 16
+    dataset_name: str
+    generator_type: str = "coco_pymoo"
+    params: dict[str, Any] = Field(
+        default_factory=dict, description="Generator-specific hyperparameters"
+    )
     split_ratio: float = 0.2
     random_state: int = 42
-    dataset_name: str
 
 
 class DatasetGenerationResponse(BaseModel):

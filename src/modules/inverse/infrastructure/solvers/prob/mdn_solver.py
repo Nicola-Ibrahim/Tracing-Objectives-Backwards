@@ -2,8 +2,9 @@ from typing import Any
 
 import numpy as np
 
-from .....modeling.domain.interfaces.base_estimator import (
-    ProbabilisticEstimator,
+from .....modeling.infrastructure.estimators.probabilistic.mdn import MDNEstimatorParams
+from .....modeling.infrastructure.factories.estimator import (
+    EstimatorFactory,
 )
 from ....domain.interfaces.base_inverse_mapping_solver import (
     AbstractInverseMappingSolver,
@@ -11,16 +12,16 @@ from ....domain.interfaces.base_inverse_mapping_solver import (
 )
 
 
-class ProbabilisticInverseSolver(AbstractInverseMappingSolver):
+class MDNProbabilisticInverseSolver(AbstractInverseMappingSolver):
     """
     Adapter that executes inverse mapping by sampling from a probabilistic estimator.
     """
 
-    def __init__(self, estimator: ProbabilisticEstimator):
-        self.estimator = estimator
+    def __init__(self, params: MDNEstimatorParams):
+        self.estimator = EstimatorFactory.create(type="MDN", params=params)
 
     def type(self) -> str:
-        return self.estimator.type
+        return "MDN-Probabilistic"
 
     def _ensure_fitted(self) -> None:
         self.estimator._ensure_fitted()

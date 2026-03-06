@@ -99,44 +99,44 @@ class EstimatorFactory:
         EstimatorTypeEnum.INN.value: INNEstimator,
     }
 
-    def create(self, params: EstimatorParamsBase | dict[str, Any]) -> BaseEstimator:
+    # -------- Forward models --------
+    _forward_registry: Dict[str, Callable[..., BaseEstimator]] = {
+        "coco_biobj": lambda **p: COCOEstimator(
+            params=ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum.COCO](**p)
+        ),
+    }
+
+    def create(
+        self, type: EstimatorTypeEnum, params: EstimatorParamsBase
+    ) -> BaseEstimator:
         """
         Creates and returns an instance of an interpolator based on the specified type
         by looking it up in the factory's registry.
 
         Args:
-            type (EstimatorTypeEnum): The enum type indicating which interpolator
+            type (EstimatorTypeEnum): The enum type indicating which estimator
                                                   to create.
             params (dict[str, Any]): A dictionary of parameters to pass to the
-                                     interpolator's constructor.
+                                     estimator's constructor.
 
         Returns:
-            BaseEstimator: An initialized instance of the requested interpolator.
+            BaseEstimator: An initialized instance of the requested estimator.
 
         Raises:
             ValueError: If the provided type is not registered in the factory.
         """
 
-        if isinstance(params, EstimatorParamsBase):
-            estimator_params = params
-            mapper_class_type = estimator_params.type
-        else:
-            mapper_class_type = params.get("type")
-            params_model = ESTIMATOR_PARAM_REGISTRY.get(mapper_class_type)
-            if params_model is None:
-                raise ValueError(
-                    f"Unsupported estimator params type: {mapper_class_type!r}"
-                )
-            allowed = set(params_model.model_fields.keys())
-            filtered = {k: v for k, v in params.items() if k in allowed}
-            estimator_params = params_model.model_validate(filtered)
+        params_model = ESTIMATOR_PARAM_REGISTRY.get(type)
+        if params_model is None:
+            raise ValueError(f"Unsupported estimator params type: {type!r}")
+        allowed = set(params_model.model_fields.keys())
+        filtered = {k: v for k, v in params.items() if k in allowed}
+        estimator_params = params_model.model_validate(filtered)
 
         try:
-            mapper_ctor = self._registry[mapper_class_type]
+            mapper_ctor = self._registry[type]
         except KeyError as e:
-            raise ValueError(
-                f"Unknown or unsupported interpolator type: {mapper_class_type}"
-            ) from e
+            raise ValueError(f"Unknown or unsupported estimator type: {type}") from e
 
         return mapper_ctor(params=estimator_params)
 
@@ -152,13 +152,6 @@ class EstimatorFactory:
             raise ValueError(f"Unknown estimator type: {estimator_type}") from e
         params = {k: v for k, v in config.items() if k != "type"}
         return ctor.from_checkpoint(**params)
-
-    # -------- Forward models --------
-    _forward_registry: Dict[str, Callable[..., BaseEstimator]] = {
-        "coco_biobj": lambda **p: COCOEstimator(
-            params=ESTIMATOR_PARAM_REGISTRY[EstimatorTypeEnum.COCO](**p)
-        ),
-    }
 
     def create_forward(self, config: dict[str, Any]) -> BaseEstimator:
         """Create a forward objective evaluator (forward decision mapper).

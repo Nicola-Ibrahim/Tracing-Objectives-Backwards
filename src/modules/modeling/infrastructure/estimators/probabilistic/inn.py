@@ -15,7 +15,6 @@ Reference:
     Dinh et al. "Density estimation using Real NVP" (2017)
 """
 
-from enum import Enum
 from typing import Literal
 
 import numpy as np
@@ -27,14 +26,9 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
+from ....domain.enums.inn_optimizer import INNOptimizerEnum
 from ....domain.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.value_objects.estimator_params import EstimatorParamsBase
-
-
-class INNOptimizerEnum(Enum):
-    ADAM = "adam"
-    ADAMW = "adamw"
-    SGD = "sgd"
 
 
 class INNEstimatorParams(EstimatorParamsBase):

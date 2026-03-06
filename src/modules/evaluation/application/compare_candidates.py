@@ -1,18 +1,17 @@
 from typing import Any
 
-import numpy as np
 from pydantic import BaseModel, Field
 
-from ....dataset.domain.entities.dataset import Dataset
-from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ....modules.inverse.domain.entities.inverse_mapping_engine import (
+from ...dataset.domain.entities.dataset import Dataset
+from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ...inverse.domain.entities.inverse_mapping_engine import (
     InverseMappingEngine,
 )
-from ....modules.inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
+from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
 )
-from ....shared.domain.interfaces.base_logger import BaseLogger
-from ...domain.interfaces.base_visualizer import BaseVisualizer
+from ...shared.domain.interfaces.base_logger import BaseLogger
+from ..domain.interfaces.base_visualizer import BaseVisualizer
 from .inverse_model_candidates_comparator import InverseModelsCandidatesComparator
 
 
@@ -55,13 +54,11 @@ class CompareInverseModelCandidatesService:
 
     def __init__(
         self,
-        comparator: InverseModelsCandidatesComparator,
         engine_repository: BaseInverseMappingEngineRepository,
         data_repository: BaseDatasetRepository,
         logger: BaseLogger,
         visualizer: BaseVisualizer,
     ):
-        self._comparator = comparator
         self._engine_repository = engine_repository
         self._data_repository = data_repository
         self._logger = logger
@@ -77,17 +74,13 @@ class CompareInverseModelCandidatesService:
 
         dataset: Dataset = self._data_repository.load(params.dataset_name)
 
-        target_objective_raw = np.array(params.target_objective, dtype=float).reshape(
-            1, -1
-        )
-
         engines = self._initialize_engines(
             candidates=params.inverse_engines, dataset_name=params.dataset_name
         )
 
-        workflow_output = self._comparator.compare(
+        workflow_output = InverseModelsCandidatesComparator.compare(
             engines=engines,
-            target_objective_raw=target_objective_raw,
+            target_objective=params.target_objective,
             n_samples=params.n_samples,
         )
 
@@ -100,7 +93,7 @@ class CompareInverseModelCandidatesService:
                 "dataset_name": dataset.name,
                 "pareto_front": dataset.pareto.front if dataset.pareto else [],
                 "pareto_set": dataset.pareto.set if dataset.pareto else [],
-                "target_objective": target_objective_raw,
+                "target_objective": params.target_objective,
                 "generators": generator_runs,
             }
         )

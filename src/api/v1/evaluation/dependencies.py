@@ -1,10 +1,10 @@
 from ....modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ....modules.evaluation.application.check_performance import (
+from ....modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceService,
 )
-from ....modules.evaluation.application.diagnose_models import (
+from ....modules.evaluation.application.diagnose_engines import (
     DiagnoseInverseModelsService,
 )
 from ....modules.evaluation.infrastructure.repositories.diagnostic_repository import (

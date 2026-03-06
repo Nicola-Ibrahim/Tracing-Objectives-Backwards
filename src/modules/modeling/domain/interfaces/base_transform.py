@@ -1,14 +1,7 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import Any
 
 import numpy as np
-
-
-class TransformTarget(Enum):
-    DECISIONS = "decisions"
-    OBJECTIVES = "objectives"
-    BOTH = "both"
 
 
 class BaseTransformer(ABC):

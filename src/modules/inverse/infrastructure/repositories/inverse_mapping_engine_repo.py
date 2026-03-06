@@ -1,8 +1,6 @@
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
-
 from ....modeling.infrastructure.factories.transformer import TransformerFactory
 from ....shared.config import ROOT_PATH
 from ....shared.infrastructure.processing.files.json import JsonFileHandler
@@ -12,7 +10,6 @@ from ...domain.entities.inverse_mapping_engine import InverseMappingEngine
 from ...domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
 )
-from ...domain.value_objects.data_split import DataSplit
 from ...domain.value_objects.transform_pipeline import TransformPipeline
 
 
@@ -111,14 +108,7 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
                 transform.get_fitted_state(), t_dir / "fitted_state.pkl"
             )
 
-        # 4. Save DataSplit
-        split_data = {
-            "split_ratio": engine.data_split.split_ratio,
-            "random_state": engine.data_split.random_state,
-        }
-        self._json_file_handler.save(split_data, engine_dir / "data_split.json")
-        np.save(engine_dir / "train_indices.npy", engine.data_split.train_indices)
-        np.save(engine_dir / "test_indices.npy", engine.data_split.test_indices)
+        # 4. DataSplit is no longer saved here as it's managed by the dataset module
 
         return next_version
 
@@ -185,39 +175,10 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
                 transform = TransformerFactory.from_checkpoint(config, state)
                 transforms_list.append((label, transform))
 
-        # 3. Load DataSplit
-        split_path = engine_dir / "data_split.json"
-        if split_path.exists():
-            split_meta = self._json_file_handler.load(split_path)
-        else:
-            split_meta = {"split_ratio": 0.2, "random_state": 42}
-
-        train_indices_path = engine_dir / "train_indices.npy"
-        test_indices_path = engine_dir / "test_indices.npy"
-
-        train_indices = (
-            np.load(train_indices_path)
-            if train_indices_path.exists()
-            else np.array([], dtype=int)
-        )
-        test_indices = (
-            np.load(test_indices_path)
-            if test_indices_path.exists()
-            else np.array([], dtype=int)
-        )
-
-        data_split = DataSplit(
-            train_indices=train_indices,
-            test_indices=test_indices,
-            split_ratio=split_meta.get("split_ratio", 0.2),
-            random_state=split_meta.get("random_state", 42),
-        )
-
         return InverseMappingEngine(
             dataset_name=metadata["dataset_name"],
             solver=solver,
             transform_pipeline=TransformPipeline(transforms=transforms_list),
-            data_split=data_split,
             created_at=datetime.fromisoformat(metadata["created_at"]),
         )
 

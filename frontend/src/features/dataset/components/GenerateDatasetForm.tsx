@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { getGenerators } from "../api";
+import { DynamicConfigForm } from "@/components/common/DynamicConfigForm";
 import {
     Form,
     FormControl,
@@ -16,55 +19,95 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, PlusCircle } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Loader2, PlusCircle, Wand2 } from "lucide-react";
+import { GeneratorSchema } from "../types";
 
 const generateDatasetSchema = z.object({
     dataset_name: z.string().min(3, "Name must be at least 3 characters"),
-    function_id: z.coerce.number().min(1).max(24),
-    n_var: z.coerce.number().min(2).max(10),
-    population_size: z.coerce.number().min(10).max(1000),
-    generations: z.coerce.number().min(1).max(100),
-    split_ratio: z.coerce.number().min(0).max(0.5),
+    generator_type: z.string().min(1, "Generator type is required"),
+    split_ratio: z.coerce.number().min(0).max(0.5).default(0.2),
+    random_state: z.coerce.number().default(42),
 });
 
 type GenerateDatasetFormValues = z.infer<typeof generateDatasetSchema>;
 
 interface GenerateDatasetFormProps {
-    onSubmit: (values: GenerateDatasetFormValues) => void;
+    onSubmit: (values: any) => void;
     isLoading?: boolean;
 }
 
 export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDatasetFormProps) {
+    const [dynamicParams, setDynamicParams] = useState<Record<string, any>>({});
+    const [isDynamicValid, setIsDynamicValid] = useState(true);
+    const [selectedGenerator, setSelectedGenerator] = useState<GeneratorSchema | null>(null);
+
+    const { data: discovery, isLoading: isLoadingDiscovery } = useQuery({
+        queryKey: ["generators-discovery"],
+        queryFn: getGenerators,
+    });
+
     const form = useForm<GenerateDatasetFormValues>({
         resolver: zodResolver(generateDatasetSchema) as any,
         defaultValues: {
             dataset_name: "",
-            function_id: 1,
-            n_var: 5,
-            population_size: 100,
-            generations: 20,
+            generator_type: "coco_pymoo",
             split_ratio: 0.2,
+            random_state: 42,
         },
     });
 
+    const generators = discovery?.generators || [];
+
+    useEffect(() => {
+        if (generators.length > 0) {
+            const defaultGen = generators.find(g => g.id === "coco_pymoo") || generators[0];
+            setSelectedGenerator(defaultGen);
+            form.setValue("generator_type", defaultGen.id);
+        }
+    }, [generators, form]);
+
+    const handleGeneratorChange = (genId: string) => {
+        const gen = generators.find(g => g.id === genId);
+        if (gen) {
+            setSelectedGenerator(gen);
+            form.setValue("generator_type", genId);
+        }
+    };
+
+    const handleFormSubmit = (values: GenerateDatasetFormValues) => {
+        onSubmit({
+            ...values,
+            params: dynamicParams,
+        });
+    };
+
+    if (isLoadingDiscovery) {
+        return (
+            <div className="flex flex-col items-center justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
+                <p className="text-sm text-slate-500 font-medium tracking-wide">Initializing generators...</p>
+            </div>
+        );
+    }
+
     return (
-        <Card className="border-slate-200 shadow-sm bg-white">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                    <PlusCircle className="h-5 w-5 text-indigo-600" />
-                    <CardTitle className="text-lg font-bold text-slate-800">Generate Dataset</CardTitle>
-                </div>
-                <CardDescription>Configure synthetic dataset parameters (COCOEX benchmark)</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-6">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
                             name="dataset_name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Dataset Name</FormLabel>
+                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Dataset Identification</FormLabel>
                                     <FormControl>
                                         <Input {...field} placeholder="e.g. baseline_exp_01" className="bg-white" />
                                     </FormControl>
@@ -73,64 +116,54 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                             )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="function_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase text-slate-500">Function ID (1-24)</FormLabel>
+                        <FormField
+                            control={form.control}
+                            name="generator_type"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Engine Type</FormLabel>
+                                    <Select
+                                        onValueChange={handleGeneratorChange}
+                                        defaultValue={field.value}
+                                    >
                                         <FormControl>
-                                            <Input {...field} type="number" className="bg-white" />
+                                            <SelectTrigger className="bg-white">
+                                                <SelectValue placeholder="Select generator" />
+                                            </SelectTrigger>
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="n_var"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase text-slate-500">Decision Dims (n_var)</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="number" className="bg-white" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
+                                        <SelectContent>
+                                            {generators.map((gen) => (
+                                                <SelectItem key={gen.id} value={gen.id}>
+                                                    {gen.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    {selectedGenerator && (
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Wand2 className="h-4 w-4 text-indigo-500" />
+                                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">
+                                    {selectedGenerator.name} Configuration
+                                </h4>
+                            </div>
+                            <DynamicConfigForm
+                                parameters={selectedGenerator.parameters}
+                                onChange={(vals, valid) => {
+                                    setDynamicParams(vals);
+                                    setIsDynamicValid(valid);
+                                }}
                             />
                         </div>
+                    )}
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="population_size"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase text-slate-500">Pop Size</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="number" className="bg-white" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="generations"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase text-slate-500">Generations</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="number" className="bg-white" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
                         <FormField
                             control={form.control}
                             name="split_ratio"
@@ -140,29 +173,42 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                                     <FormControl>
                                         <Input {...field} type="number" step="0.05" className="bg-white" />
                                     </FormControl>
-                                    <FormDescription className="text-[10px] italic">Ratio of data reserved for testing (holdout set).</FormDescription>
+                                    <FormDescription className="text-[10px] italic">Ratio of data reserved for testing.</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-
-                        <Button
-                            type="submit"
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Generating...
-                                </>
-                            ) : (
-                                "Start Generation Pipeline"
+                        <FormField
+                            control={form.control}
+                            name="random_state"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Random Seed</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} type="number" className="bg-white" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )}
-                        </Button>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
+                        />
+                    </div>
+
+                    <Button
+                        type="submit"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+                        disabled={isLoading || !isDynamicValid}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Synthesizing...
+                            </>
+                        ) : (
+                            "Start Generation Pipeline"
+                        )}
+                    </Button>
+                </form>
+            </Form>
+        </div>
     );
 }

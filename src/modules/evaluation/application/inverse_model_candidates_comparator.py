@@ -27,10 +27,10 @@ class InverseModelsCandidatesComparator:
     candidate decisions for a target objective.
     """
 
+    @staticmethod
     def compare(
-        self,
         engines: dict[str, InverseMappingEngine],
-        target_objective_raw: np.ndarray,
+        target_objective: np.ndarray,
         n_samples: int,
     ) -> dict[str, Any]:
         """
@@ -46,28 +46,23 @@ class InverseModelsCandidatesComparator:
         for name, engine in engines.items():
             # 1. Transform target to engine's normalized space
             target_norm = engine.transform_objective(
-                target_objective_raw.reshape(1, -1)
+                target_objective.reshape(1, -1)
             ).flatten()
 
             # 2. Generate (Batch generates candidates and forward simulates them)
-            res = engine.solver.generate(target_norm, n_samples=n_samples)
-
-            # candidates_X (decisions) and candidates_y (objectives, simulated)
-            # Solvers return normalized values if trained on normalized data.
-            candidates_norm_X = res.candidates_X
-            candidates_norm_y = res.candidates_y
+            res = engine.solver.generate(target_y=target_norm, n_samples=n_samples)
 
             # 3. Denormalize for physical space display
-            candidates_raw_X = engine.detransform_decision(candidates_norm_X)
-            candidates_raw_y = engine.detransform_objective(candidates_norm_y)
+            candidates_raw_X = engine.inverse_transform_decision(res.candidates_X)
+            candidates_raw_y = engine.inverse_transform_objective(res.candidates_y)
 
             # 4. Select (Sort all candidates by distance in normalized objective space)
             if len(candidates_raw_X) > 0:
                 selection = self._select(
-                    candidates_raw=candidates_raw_X,
-                    predicted_objectives_norm=candidates_norm_y,
-                    target_objective_norm=target_norm,
-                    predicted_objectives_raw=candidates_raw_y,
+                    candidates_X_raw=candidates_raw_X,
+                    target_y_norm=target_norm,
+                    candidates_y_norm=res.candidates_y,
+                    candidates_y_raw=candidates_raw_y,
                 )
 
                 generator_runs.append(
@@ -98,21 +93,21 @@ class InverseModelsCandidatesComparator:
 
     def _select(
         self,
-        candidates_raw: np.ndarray,
-        predicted_objectives_norm: np.ndarray,
-        target_objective_norm: np.ndarray,
-        predicted_objectives_raw: np.ndarray,
+        candidates_X_raw: np.ndarray,
+        target_y_norm: np.ndarray,
+        candidates_y_norm: np.ndarray,
+        candidates_y_raw: np.ndarray,
     ) -> SelectionResult:
         """Returns selection result with candidates sorted by NORMALIZED distance."""
         distances = np.linalg.norm(
-            predicted_objectives_norm - target_objective_norm.reshape(1, -1), axis=1
+            candidates_y_norm - target_y_norm.reshape(1, -1), axis=1
         )
 
         # Sort all arrays by distance
         sort_idx = np.argsort(distances)
         sorted_distances = distances[sort_idx]
-        sorted_candidates = candidates_raw[sort_idx]
-        sorted_objectives = predicted_objectives_raw[sort_idx]
+        sorted_candidates = candidates_X_raw[sort_idx]
+        sorted_objectives = candidates_y_raw[sort_idx]
 
         return SelectionResult(
             best_index=0,

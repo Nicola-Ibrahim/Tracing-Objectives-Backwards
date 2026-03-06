@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { generateCandidatesSchema, GenerateCandidatesFormValues } from "./generate-schema";
 import {
     Form,
@@ -11,7 +12,6 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-    FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { CandidateGenerationRequest, EngineListItem } from "../types";
-import { Play, Loader2, Info } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
 import { listEnginesForDataset } from "../api";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,7 +42,6 @@ export function GenerateCandidatesForm({
 }: GenerateCandidatesFormProps) {
     const [engines, setEngines] = useState<EngineListItem[]>([]);
     const [fetchingEngines, setFetchingEngines] = useState(false);
-
     const form = useForm<GenerateCandidatesFormValues>({
         resolver: zodResolver(generateCandidatesSchema) as any,
         defaultValues: {
@@ -56,7 +55,6 @@ export function GenerateCandidatesForm({
 
     const datasetName = form.watch("dataset_name");
     const engineId = form.watch("engine_id");
-    const selectedEngine = engines.find(e => `${e.solver_type}_v${e.version}` === engineId);
 
     useEffect(() => {
         if (datasetName) {
@@ -69,10 +67,7 @@ export function GenerateCandidatesForm({
                 })
                 .finally(() => setFetchingEngines(false));
 
-            // Notify parent of dataset change
             onDatasetChange?.(datasetName);
-
-            // Reset engine selection when dataset changes
             form.setValue("engine_id", "");
         } else {
             setEngines([]);
@@ -80,6 +75,7 @@ export function GenerateCandidatesForm({
             onDatasetChange?.("");
         }
     }, [datasetName, form, onDatasetChange]);
+
 
     const handleInternalSubmit = async (values: GenerateCandidatesFormValues) => {
         const [solver_type, versionStr] = values.engine_id.split("_v");
@@ -91,9 +87,6 @@ export function GenerateCandidatesForm({
             version: parseInt(versionStr),
             target_objective,
             n_samples: values.n_samples,
-            // Hidden defaults
-            trust_radius: 0.05,
-            concentration_factor: 10.0,
         };
 
         await onSubmit(request);
@@ -111,13 +104,13 @@ export function GenerateCandidatesForm({
                         name="dataset_name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Reference Dataset</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Reference Dataset</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     defaultValue={field.value}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="bg-white">
                                             <SelectValue placeholder="Select dataset" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -139,14 +132,14 @@ export function GenerateCandidatesForm({
                         name="engine_id"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Inference Engine</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Inference Engine</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value}
                                     disabled={!datasetName || fetchingEngines}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="bg-white">
                                             <SelectValue
                                                 placeholder={fetchingEngines ? "Loading..." : "Select engine"}
                                             />
@@ -175,9 +168,9 @@ export function GenerateCandidatesForm({
                         name="objective1"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Objective 1 (f1)</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Objective 1 (f1)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
+                                    <Input type="number" step="0.01" {...field} className="bg-white" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -188,9 +181,9 @@ export function GenerateCandidatesForm({
                         name="objective2"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Objective 2 (f2)</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Objective 2 (f2)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
+                                    <Input type="number" step="0.01" {...field} className="bg-white" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -212,15 +205,12 @@ export function GenerateCandidatesForm({
                             </FormItem>
                         )}
                     />
-                    <div className="text-[10px] italic text-slate-400 mt-6 bg-slate-50 px-2 py-1 rounded">
-                        Using optimized sampler
-                    </div>
                 </div>
 
                 <Button
                     type="submit"
                     disabled={isLoading || !form.watch("engine_id")}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-6 mt-4"
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
                 >
                     {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />

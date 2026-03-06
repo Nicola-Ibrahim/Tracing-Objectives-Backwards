@@ -3,7 +3,7 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.check_performance import (
+from ...modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceParams,
     CheckModelPerformanceService,
     InverseEngineCandidate,

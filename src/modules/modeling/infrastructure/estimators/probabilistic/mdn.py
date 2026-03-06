@@ -21,7 +21,6 @@ Reference:
     Bishop, C. "Mixture Density Networks" (1994)
 """
 
-from enum import Enum
 from typing import Literal, Sequence
 
 import numpy as np
@@ -46,31 +45,12 @@ from torch.distributions import (
 from torch.utils.data import DataLoader, TensorDataset
 from umap import UMAP
 
+from ....domain.enums.activation_function import ActivationFunctionEnum
+from ....domain.enums.distribution_family import DistributionFamilyEnum
 from ....domain.enums.estimator_type import EstimatorTypeEnum
+from ....domain.enums.optimizer_function import OptimizerFunctionEnum
 from ....domain.interfaces.base_estimator import ProbabilisticEstimator
 from ....domain.value_objects.estimator_params import EstimatorParamsBase
-
-
-class ActivationFunctionEnum(Enum):
-    RELU = "relu"
-    TANH = "tanh"
-    SIGMOID = "sigmoid"
-    SOFTPLUS = "softplus"
-    IDENTITY = "identity"
-    ELU = "elu"
-
-
-class DistributionFamilyEnum(Enum):
-    NORMAL = "normal"
-    LAPLACE = "laplace"
-    LOGNORMAL = "lognormal"
-
-
-class OptimizerFunctionEnum(Enum):
-    SGD = "sgd"
-    ADAM = "adam"
-    RMSPROP = "rmsprop"
-    GRADIENT_DESCENT = "gradient_descent"
 
 
 class MDNEstimatorParams(EstimatorParamsBase):

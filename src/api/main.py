@@ -41,11 +41,3 @@ async def health_check():
 app.include_router(datasets_router, prefix="/api/v1/datasets", tags=["Datasets"])
 app.include_router(inverse_router, prefix="/api/v1/inverse", tags=["Inverse Mapping"])
 app.include_router(evaluation_router, prefix="/api/v1/evaluation", tags=["Evaluation"])
-
-# Mount static files
-# Note: Keep this if the backend serves the frontend.
-# If using next.js dev server, this can be commented out or kept as fallback.
-try:
-    app.mount("/", StaticFiles(directory="frontend", html=True), name="ui")
-except Exception:
-    pass

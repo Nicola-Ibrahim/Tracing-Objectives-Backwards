@@ -1,3 +1,15 @@
+import { ParameterDefinition } from "../dataset/types";
+
+export interface SolverSchema {
+  id: string;
+  name: string;
+  parameters: ParameterDefinition[];
+}
+
+export interface SolversDiscoveryResponse {
+  solvers: SolverSchema[];
+}
+
 export interface SolverConfig {
   type: string;
   params: Record<string, any>;
@@ -29,8 +41,7 @@ export interface CandidateGenerationRequest {
   n_samples: number;
   solver_type?: string;
   version?: number;
-  trust_radius?: number;
-  concentration_factor?: number;
+  params?: Record<string, any>;
 }
 
 export interface CandidateGenerationResponse {

@@ -1,4 +1,3 @@
-import numpy as np
 from pydantic import BaseModel, Field
 
 from ...dataset.domain.entities.dataset import Dataset
@@ -38,20 +37,6 @@ class CheckModelPerformanceParams(BaseModel):
     )
 
 
-class TransformWrapper:
-    """Adapts TransformPipeline to the visualizer's expected interface."""
-
-    def __init__(self, transform_fn, detransform_fn):
-        self._transform_fn = transform_fn
-        self._detransform_fn = detransform_fn
-
-    def transform(self, X):
-        return self._transform_fn(X)
-
-    def inverse_transform(self, X):
-        return self._detransform_fn(X)
-
-
 class CheckModelPerformanceService:
     def __init__(
         self,
@@ -73,39 +58,28 @@ class CheckModelPerformanceService:
         # Load dataset
         dataset: Dataset = self._data_repository.load(name=params.dataset_name)
 
-        X_raw = dataset.objectives
-        y_raw = dataset.decisions
-
-        # Split using the engine's stored split
-        train_idx = engine.data_split.train_indices
-        test_idx = engine.data_split.test_indices
-
-        X_train, X_test = (
-            X_raw[train_idx],
-            X_raw[test_idx] if len(test_idx) > 0 else np.array([]),
-        )
-        y_train, y_test = (
-            y_raw[train_idx],
-            y_raw[test_idx] if len(test_idx) > 0 else np.array([]),
-        )
+        X_train, y_train = dataset.get_train_data()
+        X_test, y_test = dataset.get_test_data()
 
         # 2) Visualize the model performance and fitted curve
         payload = {
-            "estimator": engine.solver,  # Visualizer might need to call .sample()
+            "estimator": engine.solver,
             "X_train": X_train,
             "y_train": y_train,
             "X_test": X_test,
             "y_test": y_test,
-            "X_normalizer": TransformWrapper(
-                engine.transform_objective, engine.detransform_objective
-            ),
-            "y_normalizer": TransformWrapper(
-                engine.transform_decision, engine.detransform_decision
-            ),
+            "X_transform": [
+                engine.transform_decision,
+                engine.inverse_transform_decision,
+            ],
+            "y_transform": [
+                engine.transform_objective,
+                engine.inverse_transform_objective,
+            ],
             "non_linear": False,
             "n_samples": params.n_samples,
             "title": f"Fitted {engine.solver.type()} (v{params.engine.version or 'latest'})",
-            "training_history": {},  # Solver might not have history now
+            "training_history": {},
             "dataset_name": dataset.name,
         }
 

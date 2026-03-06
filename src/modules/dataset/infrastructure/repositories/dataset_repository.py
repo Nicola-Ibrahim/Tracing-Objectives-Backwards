@@ -119,8 +119,8 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
 
         return Dataset.create(
             name=payload.get("name", name),
-            decisions=payload.get("decisions"),
-            objectives=objectives,
+            X=payload.get("decisions"),
+            y=objectives,
             pareto=pareto,
             train_indices=train_indices,
             test_indices=test_indices,

@@ -54,17 +54,17 @@ class CandidateGeneration:
 
         # 5. Detransform to Raw Space
         return GenerationResult(
-            candidate_decisions=engine.detransform_decision(
+            candidate_decisions=engine.inverse_transform_decision(
                 generation_result.candidates_X
             ),
-            candidate_objectives=engine.detransform_objective(
+            candidate_objectives=engine.inverse_transform_objective(
                 generation_result.candidates_y
             ),
             best_index=rank_result.best_index,
-            best_candidate_objective=engine.detransform_objective(
+            best_candidate_objective=engine.inverse_transform_objective(
                 generation_result.candidates_y[rank_result.best_index].reshape(1, -1)
             ),
-            best_candidate_decision=engine.detransform_decision(
+            best_candidate_decision=engine.inverse_transform_decision(
                 generation_result.candidates_X[rank_result.best_index].reshape(1, -1)
             ),
             best_candidate_residual=rank_result.best_candidate_residual,

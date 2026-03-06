@@ -2,11 +2,12 @@ def test_diagnose_models_success(client, mock_diagnose_service):
     mock_diagnose_service.execute.return_value = {
         "dataset_name": "test_ds",
         "engines": ["GBPI"],
-        "ecdf": {},
-        "pit": {},
-        "mace": {},
+        "ecdf": {"GBPI": {"x": [0, 1], "y": [0, 1]}},
+        "pit": {"GBPI": {"x": [0, 1], "y": [0, 1]}},
+        "mace": {"GBPI": 0.01},
         "warnings": [],
     }
+    mock_diagnose_service.get_cached_diagnostics.return_value = None
     payload = {
         "dataset_name": "test_ds",
         "candidates": [{"solver_type": "GBPI"}],

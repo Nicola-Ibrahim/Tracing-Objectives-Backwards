@@ -4,6 +4,25 @@ from typing import Any, List, Tuple
 from pydantic import BaseModel, Field
 
 
+class ParameterDefinition(BaseModel):
+    name: str
+    type: str
+    required: bool
+    default: Any | None = None
+    options: list[Any] | None = None
+    description: str | None = None
+
+
+class SolverSchema(BaseModel):
+    id: str
+    name: str
+    parameters: List[ParameterDefinition]
+
+
+class SolversDiscoveryResponse(BaseModel):
+    solvers: List[SolverSchema]
+
+
 class SolverConfigSchema(BaseModel):
     type: str = Field(..., description="Solver type discriminator (e.g., GBPI, MDN)")
     params: dict[str, Any] = Field(
@@ -42,9 +61,6 @@ class GenerateRequest(BaseModel):
     version: int | None = None
     target_objective: Tuple[float, float]
     n_samples: int = Field(default=50, ge=1, le=1000)
-    trust_radius: float = Field(default=0.05, gt=0, le=1)
-    concentration_factor: float = Field(default=10.0, gt=0)
-    error_threshold: float | None = Field(default=None, gt=0)
 
 
 class GenerateResponse(BaseModel):
