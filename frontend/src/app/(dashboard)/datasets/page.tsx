@@ -1,16 +1,17 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getDatasets, getDatasetDetails, generateDataset } from "@/features/dataset/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDatasets, getDatasetDetails, generateDataset, deleteDatasets } from "@/features/dataset/api";
 import { DatasetPlot } from "@/features/dataset/components/DatasetPlot";
 import { GenerateDatasetForm } from "@/features/dataset/components/GenerateDatasetForm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, FileText, Activity, Layers, Loader2, Search, X, Wand2 } from "lucide-react";
+import { Database, FileText, Activity, Layers, Loader2, Search, X, Wand2, Trash2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/ToastContext";
 import {
     Dialog,
     DialogContent,
@@ -23,7 +24,12 @@ export default function DatasetsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDatasetName, setSelectedDatasetName] = useState<string | null>(null);
     const [showGenerator, setShowGenerator] = useState(false);
+    const [selectedNames, setSelectedNames] = useState<string[]>([]);
+    const [datasetToDelete, setDatasetToDelete] = useState<string | null>(null);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
     const queryClient = useQueryClient();
+    const { showToast } = useToast();
 
     const { data: datasets = [], isLoading } = useQuery({
         queryKey: ["datasets"],
@@ -41,8 +47,40 @@ export default function DatasetsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["datasets"] });
             setShowGenerator(false);
+            showToast("Dataset generation started", "success");
         },
     });
+
+    const deleteMutation = useMutation({
+        mutationFn: (name: string) => deleteDatasets([name]),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["datasets"] });
+            setDatasetToDelete(null);
+            showToast("Dataset deleted successfully", "success");
+        },
+        onError: (err: any) => {
+            showToast(`Deletion failed: ${err.message}`, "error");
+        }
+    });
+
+    const bulkDeleteMutation = useMutation({
+        mutationFn: deleteDatasets,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["datasets"] });
+            setSelectedNames([]);
+            setIsBulkDeleting(false);
+            showToast("Datasets deleted successfully", "success");
+        },
+        onError: (err: any) => {
+            showToast(`Bulk deletion failed: ${err.message}`, "error");
+        }
+    });
+
+    const toggleSelection = (name: string) => {
+        setSelectedNames(prev =>
+            prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+        );
+    };
 
     const filteredDatasets = datasets.filter(d =>
         d.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -60,6 +98,16 @@ export default function DatasetsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {selectedNames.length > 0 && (
+                        <Button
+                            variant="destructive"
+                            onClick={() => setIsBulkDeleting(true)}
+                            className="font-bold"
+                        >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete ({selectedNames.length})
+                        </Button>
+                    )}
                     <Button
                         onClick={() => setShowGenerator(true)}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
@@ -79,8 +127,66 @@ export default function DatasetsPage() {
                 </div>
             </div>
 
+            {/* Individual Delete Confirmation */}
+            <Dialog open={!!datasetToDelete} onOpenChange={(open) => !open && setDatasetToDelete(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Confirm Deletion
+                        </DialogTitle>
+                        <DialogDescription className="py-2">
+                            Are you sure you want to delete <span className="font-bold text-slate-900">"{datasetToDelete}"</span>?
+                            This will also remove all its associated trained engines.
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setDatasetToDelete(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => datasetToDelete && deleteMutation.mutate(datasetToDelete)}
+                            disabled={deleteMutation.isPending}
+                        >
+                            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Dataset"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Delete Confirmation */}
+            <Dialog open={isBulkDeleting} onOpenChange={setIsBulkDeleting}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Confirm Bulk Deletion
+                        </DialogTitle>
+                        <DialogDescription className="py-2">
+                            You are about to delete <span className="font-bold text-slate-900">{selectedNames.length}</span> datasets.
+                            This will also remove all their associated trained engines.
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setIsBulkDeleting(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => bulkDeleteMutation.mutate(selectedNames)}
+                            disabled={bulkDeleteMutation.isPending}
+                        >
+                            {bulkDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Delete ${selectedNames.length} Datasets`}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
-                <DialogContent className="sm:max-w-[750px] p-0 overflow-hidden border-slate-200 shadow-2xl h-[85vh] flex flex-col">
+                <DialogContent className="sm:max-w-[750px] p-0 border-slate-200 shadow-2xl h-[85vh] flex flex-col">
                     <DialogHeader className="p-6 border-b border-slate-100 shrink-0">
                         <DialogTitle className="text-xl font-bold flex items-center gap-2">
                             <Wand2 className="h-5 w-5 text-indigo-600" />
@@ -103,7 +209,7 @@ export default function DatasetsPage() {
                 <DialogContent className="sm:max-w-[1000px] border-slate-200 bg-white shadow-2xl p-0 overflow-hidden">
                     {selectedDatasetName && (
                         <div className="flex flex-col h-full max-h-[90vh]">
-                            <div className="bg-slate-50 border-b border-slate-200 p-6">
+                            <div className="bg-slate-50 border-b border-slate-200 p-6 text-indigo-600">
                                 <div className="flex items-center gap-4">
                                     <div className="h-12 w-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
                                         <Activity className="h-6 w-6 text-indigo-600" />
@@ -184,12 +290,20 @@ export default function DatasetsPage() {
                     {filteredDatasets.map((dataset) => (
                         <Card
                             key={dataset.name}
-                            className={`border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden bg-white cursor-pointer ${selectedDatasetName === dataset.name ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
+                            className={`border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden bg-white ${selectedNames.includes(dataset.name) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
                                 }`}
-                            onClick={() => setSelectedDatasetName(dataset.name === selectedDatasetName ? null : dataset.name)}
                         >
-                            <div className="flex flex-row items-center p-4 gap-6">
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="flex flex-row items-center p-4 gap-4">
+                                <div className="px-2" onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                        checked={selectedNames.includes(dataset.name)}
+                                        onCheckedChange={() => toggleSelection(dataset.name)}
+                                    />
+                                </div>
+                                <div
+                                    className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() => setSelectedDatasetName(dataset.name)}
+                                >
                                     <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors">
                                         <Database className="h-5 w-5 text-slate-400 group-hover:text-indigo-600" />
                                     </div>
@@ -206,7 +320,7 @@ export default function DatasetsPage() {
                                     </div>
                                 </div>
 
-                                <div className="hidden sm:flex items-center gap-8 px-6 border-x border-slate-100">
+                                <div className="hidden sm:flex items-center gap-8 px-6 border-x border-slate-100 cursor-pointer" onClick={() => setSelectedDatasetName(dataset.name)}>
                                     <div className="flex flex-col gap-0.5 min-w-[60px]">
                                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Samples</p>
                                         <div className="flex items-center gap-1.5">
@@ -223,7 +337,7 @@ export default function DatasetsPage() {
                                     </div>
                                 </div>
 
-                                <div className="hidden md:flex items-center gap-6 pr-4">
+                                <div className="hidden md:flex items-center gap-6 pr-4 cursor-pointer" onClick={() => setSelectedDatasetName(dataset.name)}>
                                     <div className="flex flex-col gap-0.5">
                                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Features</p>
                                         <span className="text-xs font-mono font-semibold text-slate-600">{dataset.n_features}X</span>
@@ -234,9 +348,25 @@ export default function DatasetsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-end">
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 group-hover:text-indigo-600">
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600"
+                                        onClick={() => setSelectedDatasetName(dataset.name)}
+                                    >
                                         <Search className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDatasetToDelete(dataset.name);
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </div>

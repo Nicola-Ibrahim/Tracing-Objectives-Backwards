@@ -8,6 +8,7 @@ import {
     BrainCircuit,
     Settings2,
     Trello,
+    Cpu,
 } from "lucide-react";
 
 import {
@@ -43,6 +44,11 @@ const items = [
         icon: Trello,
     },
     {
+        title: "Inference Hub",
+        url: "/engines",
+        icon: Cpu,
+    },
+    {
         title: "Evaluation",
         url: "/evaluation",
         icon: LineChartIcon,
@@ -71,28 +77,65 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel className="text-slate-500 font-medium">Core Workspace</SidebarGroupLabel>
+                    <SidebarGroupLabel className="text-slate-500 font-medium italic uppercase text-[10px] tracking-widest">Core Workspace</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {items.map((item) => {
-                                const isActive = pathname.startsWith(item.url);
-                                return (
-                                    <SidebarMenuItem key={item.title}>
-                                        <SidebarMenuButton asChild tooltip={item.title} isActive={isActive}>
-                                            <Link
-                                                href={item.url}
-                                                className={cn(
-                                                    "transition-colors duration-200 flex items-center gap-2",
-                                                    isActive ? "text-indigo-600" : "text-slate-600 hover:text-slate-900"
-                                                )}
-                                            >
-                                                <item.icon className={cn("h-4 w-4", isActive && "text-indigo-600")} />
-                                                <span>{item.title}</span>
-                                            </Link>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                );
-                            })}
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Data Hub" isActive={pathname.startsWith("/datasets")}>
+                                    <Link href="/datasets" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/datasets") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Database className={cn("h-4 w-4", pathname.startsWith("/datasets") && "text-indigo-600")} />
+                                        <span className="font-bold">Data Hub</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup>
+                    <SidebarGroupLabel className="text-slate-500 font-medium italic uppercase text-[10px] tracking-widest">Inference Engine</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Train Engine" isActive={pathname.startsWith("/inverse/train")}>
+                                    <Link href="/inverse/train" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/inverse/train") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <BrainCircuit className={cn("h-4 w-4", pathname.startsWith("/inverse/train") && "text-indigo-600")} />
+                                        <span className="font-bold">Train Engine</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Inference Hub" isActive={pathname.startsWith("/engines")}>
+                                    <Link href="/engines" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/engines") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Cpu className={cn("h-4 w-4", pathname.startsWith("/engines") && "text-indigo-600")} />
+                                        <span className="font-bold">Inference Hub</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Generate Candidates" isActive={pathname.startsWith("/inverse/generate")}>
+                                    <Link href="/inverse/generate" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/inverse/generate") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Trello className={cn("h-4 w-4", pathname.startsWith("/inverse/generate") && "text-indigo-600")} />
+                                        <span className="font-bold">Generate Candidates</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup>
+                    <SidebarGroupLabel className="text-slate-500 font-medium italic uppercase text-[10px] tracking-widest">Analytics</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Evaluation" isActive={pathname.startsWith("/evaluation")}>
+                                    <Link href="/evaluation" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/evaluation") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <LineChartIcon className={cn("h-4 w-4", pathname.startsWith("/evaluation") && "text-indigo-600")} />
+                                        <span className="font-bold">Performance Evaluation</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>

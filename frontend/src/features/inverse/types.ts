@@ -57,6 +57,7 @@ export interface CandidateGenerationResponse {
 }
 
 export interface EngineListItem {
+  dataset_name?: string;
   solver_type: string;
   version: number;
   created_at: string;

@@ -14,21 +14,15 @@ def _iso_timestamp() -> str:
 class Dataset(BaseModel):
     """
     Aggregate root representing a dataset.
-
-    A Dataset knows only about its data (decisions X, objectives y) and
-    optional metadata. Pareto data is an optional enrichment provided by
-    data sources that compute it (e.g., optimization solvers). CSV or
-    simulation-based sources may have no Pareto data, or compute it
-    separately and inject it.
     """
 
     name: str = Field(..., description="Unique identifier for the dataset")
 
-    # Core data — always present
-    X: np.typing.NDArray = Field(..., description="Decision variables (X)")
-    y: np.typing.NDArray = Field(..., description="Objective values (y)")
+    # Core data
+    X: np.ndarray = Field(..., description="Decision variables (X)")
+    y: np.ndarray = Field(..., description="Objective values (y)")
 
-    # Optional enrichment — only populated when the data source provides it
+    # Optional enrichment
     pareto: Pareto | None = Field(
         None,
         description="Pareto set and front, if available from the data source",
@@ -68,14 +62,31 @@ class Dataset(BaseModel):
         cls,
         name: str,
         *,
-        X: np.typing.NDArray,
-        y: np.typing.NDArray,
-        train_indices: np.ndarray,
-        test_indices: np.ndarray,
+        X: np.ndarray,
+        y: np.ndarray,
+        train_indices: np.ndarray | None = None,
+        test_indices: np.ndarray | None = None,
         pareto: Optional[Pareto] = None,
         split_ratio: float = 0.2,
         random_state: int = 42,
     ) -> Self:
+        from sklearn.model_selection import train_test_split
+
+        if (train_indices is None or len(train_indices) == 0) and (
+            test_indices is None or len(test_indices) == 0
+        ):
+            indices = np.arange(len(X))
+            if split_ratio > 0.0:
+                train_indices, test_indices = train_test_split(
+                    indices,
+                    test_size=split_ratio,
+                    random_state=random_state,
+                    shuffle=True,
+                )
+            else:
+                train_indices = indices
+                test_indices = np.array([], dtype=int)
+
         return cls(
             name=name,
             X=X,

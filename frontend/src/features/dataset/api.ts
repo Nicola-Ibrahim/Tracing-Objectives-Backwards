@@ -31,3 +31,10 @@ export const getDatasets = async (): Promise<DatasetInfo[]> => {
 export const generateDataset = async (params: DatasetGenerationRequest): Promise<any> => {
   return apiClient.post("/api/v1/datasets/generate", params);
 };
+
+/**
+ * Delete one or multiple datasets.
+ */
+export const deleteDatasets = async (datasetNames: string[]): Promise<any> => {
+  return apiClient.post("/api/v1/datasets/delete", { dataset_names: datasetNames });
+};

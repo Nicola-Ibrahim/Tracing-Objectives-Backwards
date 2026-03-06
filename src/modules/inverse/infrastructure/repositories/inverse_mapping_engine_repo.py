@@ -247,3 +247,14 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
             shutil.rmtree(version_dir)
             return True
         return False
+
+    def list_all_versions(self) -> list[dict]:
+        """Lists all engine versions across all datasets."""
+        if not self._base_storage_path.exists():
+            return []
+
+        all_engines = []
+        for dataset_dir in self._base_storage_path.iterdir():
+            if dataset_dir.is_dir():
+                all_engines.extend(self.list_all(dataset_dir.name))
+        return sorted(all_engines, key=lambda x: x["created_at"], reverse=True)

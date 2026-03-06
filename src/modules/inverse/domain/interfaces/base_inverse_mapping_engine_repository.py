@@ -67,3 +67,10 @@ class BaseInverseMappingEngineRepository(ABC):
         Deletes a specific engine version.
         """
         pass
+
+    @abstractmethod
+    def list_all_versions(self) -> list[dict]:
+        """
+        Lists all engine versions across all datasets.
+        """
+        pass

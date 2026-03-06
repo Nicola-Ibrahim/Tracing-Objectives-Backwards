@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 
 import numpy as np
 from pydantic import BaseModel, Field
-from sklearn.model_selection import train_test_split
 
 from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import (
     BaseInverseMappingEngineRepository,
@@ -124,12 +123,26 @@ class DatasetService:
             "trained_engines": trained_engines,
         }
 
-    def delete_dataset(self, name: str) -> Dict[str, Any]:
-        """Deletes a dataset and its associated trained engines."""
-        self._repository.load(name)
-        self._repository.delete(name)
-        engines_removed = self._engine_repository.delete_all_for_dataset(name)
-        return {"name": name, "engines_removed": engines_removed}
+    def delete_datasets(self, names: List[str]) -> List[Dict[str, Any]]:
+        """Deletes multiple datasets and their associated trained engines."""
+        results = []
+        for name in names:
+            try:
+                self._repository.load(name)
+                self._repository.delete(name)
+                engines_removed = self._engine_repository.delete_all_for_dataset(name)
+                results.append(
+                    {
+                        "name": name,
+                        "engines_removed": engines_removed,
+                        "status": "deleted",
+                    }
+                )
+            except FileNotFoundError:
+                results.append({"name": name, "status": "not_found"})
+            except Exception as e:
+                results.append({"name": name, "status": "error", "error": str(e)})
+        return results
 
     def generate_dataset(self, config: DatasetConfiguration) -> Path:
         """Orchestrates dataset generation using the factory."""
@@ -150,27 +163,11 @@ class DatasetService:
                 front=raw_data.pareto_front,
             )
 
-        total_samples = len(raw_data.objectives)
-        indices = np.arange(total_samples)
-
-        if config.split_ratio > 0.0:
-            train_indices, test_indices = train_test_split(
-                indices,
-                test_size=config.split_ratio,
-                random_state=config.random_state,
-                shuffle=True,
-            )
-        else:
-            train_indices = indices
-            test_indices = np.array([], dtype=int)
-
         dataset = Dataset.create(
             name=config.dataset_name,
             X=raw_data.decisions,
             y=raw_data.objectives,
             pareto=pareto,
-            train_indices=train_indices,
-            test_indices=test_indices,
             split_ratio=config.split_ratio,
             random_state=config.random_state,
         )

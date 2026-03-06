@@ -76,6 +76,13 @@ class GenerateResponse(BaseModel):
 
 
 class EngineListItem(BaseModel):
+    dataset_name: str | None = None
     solver_type: str
     version: int
     created_at: datetime
+
+
+class BulkDeleteEnginesRequest(BaseModel):
+    engines: List[dict] = Field(
+        ..., description="List of {dataset_name, solver_type, version}"
+    )

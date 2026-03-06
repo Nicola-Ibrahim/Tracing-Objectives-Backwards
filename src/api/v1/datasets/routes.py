@@ -7,7 +7,7 @@ from ....modules.dataset.application.dataset_service import (
 from ....modules.dataset.infrastructure.sources.factory import DataGeneratorFactory
 from .dependencies import get_dataset_service, get_generator_factory
 from .schemas import (
-    DatasetDeleteResponse,
+    BulkDeleteDatasetsRequest,
     DatasetDetailResponse,
     DatasetGenerationRequest,
     DatasetGenerationResponse,
@@ -85,17 +85,17 @@ async def generate_dataset(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{dataset_name}", response_model=DatasetDeleteResponse)
-async def delete_dataset(
-    dataset_name: str,
+@router.post("/delete")
+async def delete_datasets(
+    request: BulkDeleteDatasetsRequest,
     service: DatasetService = Depends(get_dataset_service),
 ):
     """
-    Delete a dataset and all associated trained engines.
+    Delete one or multiple datasets and all associated trained engines.
     """
-    try:
-        return service.delete_dataset(dataset_name)
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=404, detail=f"Dataset '{dataset_name}' not found."
-        )
+    results = service.delete_datasets(request.dataset_names)
+    deleted_count = sum(1 for r in results if r["status"] == "deleted")
+    return {
+        "message": f"Operation completed. Deleted {deleted_count} datasets.",
+        "results": results,
+    }

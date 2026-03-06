@@ -43,3 +43,17 @@ export const listEnginesForDataset = async (datasetName: string): Promise<Engine
 export const generateCandidates = async (params: CandidateGenerationRequest): Promise<CandidateGenerationResponse> => {
   return apiClient.post("/api/v1/inverse/generate", params);
 };
+
+/**
+ * List all trained engines across all datasets.
+ */
+export const listAllEngines = async (datasetName?: string): Promise<EngineListItem[]> => {
+  return apiClient.get("/api/v1/inverse/engines", { params: { dataset_name: datasetName } });
+};
+
+/**
+ * Delete one or multiple engines.
+ */
+export const deleteEngines = async (engines: { dataset_name: string; solver_type: string; version: number }[]): Promise<any> => {
+  return apiClient.post("/api/v1/inverse/engines/delete", { engines });
+};

@@ -179,14 +179,42 @@ class InverseService:
             "metadata": result.metadata,
         }
 
-    def list_engines(self, dataset_name: str) -> List[Dict[str, Any]]:
-        """Lists all trained engines for a dataset."""
-        engines = self._inverse_mapping_engine_repository.list_all(dataset_name)
+    def list_engines(self, dataset_name: str | None = None) -> List[Dict[str, Any]]:
+        """Lists trained engines. If dataset_name is None, lists all engines."""
+        if dataset_name:
+            engines = self._inverse_mapping_engine_repository.list_all(dataset_name)
+        else:
+            engines = self._inverse_mapping_engine_repository.list_all_versions()
+
         return [
             {
+                "dataset_name": e.get("dataset_name"),
                 "solver_type": e["solver_type"],
                 "version": e["version"],
                 "created_at": e["created_at"],
             }
             for e in engines
         ]
+
+    def delete_engines(self, engine_specs: list[dict]) -> dict[str, Any]:
+        """Deletes multiple engines. engine_specs: list of {'dataset_name', 'solver_type', 'version'}"""
+        results = []
+        for spec in engine_specs:
+            try:
+                success = (
+                    self._inverse_mapping_engine_repository.delete_specific_engine(
+                        spec["dataset_name"], spec["solver_type"], spec["version"]
+                    )
+                )
+                if success:
+                    results.append({**spec, "status": "deleted"})
+                else:
+                    results.append({**spec, "status": "not_found"})
+            except Exception as e:
+                results.append({**spec, "status": "error", "error": str(e)})
+
+        return {
+            "total_requested": len(engine_specs),
+            "deleted_count": sum(1 for r in results if r["status"] == "deleted"),
+            "results": results,
+        }

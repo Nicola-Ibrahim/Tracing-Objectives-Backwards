@@ -9,6 +9,7 @@ from ....modules.inverse.application.inverse_service import (
 from ....modules.inverse.infrastructure.solvers.factory import SolversFactory
 from .dependencies import get_inverse_service, get_solvers_factory
 from .schemas import (
+    BulkDeleteEnginesRequest,
     EngineListItem,
     GenerateRequest,
     GenerateResponse,
@@ -79,6 +80,37 @@ async def generate_candidates(
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
+@router.get("/engines", response_model=list[EngineListItem])
+async def list_all_engines(
+    dataset_name: str | None = None,
+    service: InverseService = Depends(get_inverse_service),
+):
+    """
+    List trained engines with optional dataset filter.
+    """
+    engines = service.list_engines(dataset_name)
+    return [
+        EngineListItem(
+            dataset_name=e.get("dataset_name"),
+            solver_type=e["solver_type"],
+            version=e["version"],
+            created_at=e["created_at"],
+        )
+        for e in engines
+    ]
+
+
+@router.post("/engines/delete")
+async def delete_engines(
+    request: BulkDeleteEnginesRequest,
+    service: InverseService = Depends(get_inverse_service),
+):
+    """
+    Delete one or multiple trained engines.
+    """
+    return service.delete_engines(request.engines)
+
+
 @router.get("/engines/{dataset_name}", response_model=list[EngineListItem])
 async def list_engines_for_dataset(
     dataset_name: str,
@@ -90,6 +122,7 @@ async def list_engines_for_dataset(
     engines = service.list_engines(dataset_name)
     return [
         EngineListItem(
+            dataset_name=e.get("dataset_name"),
             solver_type=e["solver_type"],
             version=e["version"],
             created_at=e["created_at"],

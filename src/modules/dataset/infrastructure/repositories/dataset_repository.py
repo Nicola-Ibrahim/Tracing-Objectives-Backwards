@@ -17,8 +17,6 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
 
     def __init__(self, file_path: str | Path = "data") -> None:
         self.base_path = ROOT_PATH / file_path
-        self._legacy_raw_dir = self.base_path / "raw"
-
         self._pkl = PickleFileHandler()
         self._json = JsonFileHandler()
 
@@ -36,24 +34,16 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             shutil.rmtree(dataset_dir)
 
     def load(self, name: str) -> Dataset:
-        """
-        Load the Dataset aggregate.
-        Always loads the raw data.
-        """
+        """Load the Dataset aggregate."""
         raw_payload = self._load_raw_payload(name)
-        dataset = self._rebuild_dataset(raw_payload, name)
-        return dataset
-
-    # ------------------------------------------------------------------
-    # Raw dataset helpers
-    # ------------------------------------------------------------------
+        return self._rebuild_dataset(raw_payload, name)
 
     def _save_raw(self, dataset: Dataset) -> None:
-        # Dump only the raw fields
+        """Saves essential fields to the raw directory."""
         payload = {
             "name": dataset.name,
-            "decisions": dataset.decisions,
-            "objectives": dataset.objectives,
+            "X": dataset.X,
+            "y": dataset.y,
             "pareto": dataset.pareto,
             "train_indices": dataset.train_indices,
             "test_indices": dataset.test_indices,
@@ -67,65 +57,44 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         self._pkl.save(payload, target)
 
     def _load_raw_payload(self, name: str) -> dict[str, Any]:
+        """Loads the raw payload from the filesystem."""
         raw_dir = self._raw_dir(name)
-        candidates = [
-            raw_dir / "dataset",
-            raw_dir / name,
-        ]
+        candidate = raw_dir / "dataset"
 
-        for candidate in candidates:
-            if candidate.exists() or candidate.with_suffix(".pkl").exists():
-                return self._pkl.load(candidate)
+        if candidate.exists() or candidate.with_suffix(".pkl").exists():
+            return self._pkl.load(candidate)
 
-        raise FileNotFoundError(f"Raw dataset '{name}' not found.")
+        raise FileNotFoundError(f"Dataset '{name}' not found at {candidate}")
 
     def _rebuild_dataset(self, payload: dict[str, Any], name: str) -> Dataset:
-        import numpy as np
-        from sklearn.model_selection import train_test_split
-
-        pareto_payload = payload.get("pareto", {})
-        pareto = (
-            pareto_payload
-            if isinstance(pareto_payload, Pareto)
-            else Pareto(
-                set=pareto_payload.get("set"),
-                front=pareto_payload.get("front"),
-            )
-        )
-
-        train_indices = payload.get("train_indices")
-        test_indices = payload.get("test_indices")
-        split_ratio = payload.get("split_ratio", 0.2)
-        random_state = payload.get("random_state", 42)
-
-        # If indices are missing (legacy data), compute them now
-        objectives = payload.get("objectives")
-        if (
-            train_indices is None or len(train_indices) == 0
-        ) and objectives is not None:
-            total_samples = len(objectives)
-            indices = np.arange(total_samples)
-
-            if split_ratio > 0.0:
-                train_indices, test_indices = train_test_split(
-                    indices,
-                    test_size=split_ratio,
-                    random_state=random_state,
-                    shuffle=True,
-                )
+        """Reconstructs the Dataset aggregate from payload."""
+        pareto_payload = payload.get("pareto")
+        pareto = None
+        if pareto_payload:
+            if isinstance(pareto_payload, Pareto):
+                pareto = pareto_payload
             else:
-                train_indices = indices
-                test_indices = np.array([], dtype=int)
+                pareto = Pareto(
+                    set=pareto_payload.get("set"),
+                    front=pareto_payload.get("front"),
+                )
+
+        # Core data (X, y)
+        X = payload.get("X")
+        y = payload.get("y")
+
+        if X is None or y is None:
+            raise ValueError(f"Dataset '{name}' is missing core data (X or y).")
 
         return Dataset.create(
             name=payload.get("name", name),
-            X=payload.get("decisions"),
-            y=objectives,
+            X=X,
+            y=y,
             pareto=pareto,
-            train_indices=train_indices,
-            test_indices=test_indices,
-            split_ratio=split_ratio,
-            random_state=random_state,
+            train_indices=payload.get("train_indices", []),
+            test_indices=payload.get("test_indices", []),
+            split_ratio=payload.get("split_ratio", 0.0),
+            random_state=payload.get("random_state", 42),
         )
 
     def list_all(self) -> list[str]:
@@ -140,4 +109,5 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         return sorted(datasets)
 
     def _raw_dir(self, name: str) -> Path:
+        """Returns the raw directory for the given dataset."""
         return self.base_path / name / "raw"
