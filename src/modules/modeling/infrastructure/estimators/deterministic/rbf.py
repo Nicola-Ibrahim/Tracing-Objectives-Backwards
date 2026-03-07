@@ -25,6 +25,11 @@ class RBFEstimatorParams(EstimatorParamsBase):
     n_neighbors: int = Field(
         10, gt=0, description="Number of nearest neighbors for RBF interpolation."
     )
+    epsilon: float | None = Field(
+        None,
+        ge=0,
+        description="Shape parameter that scales the input to the radial basis function. If None, it is estimated using the average distance between nodes.",
+    )
 
     kernel: Literal[
         "linear",
@@ -60,11 +65,13 @@ class RBFEstimator(DeterministicEstimator):
         """Initialize the RBF Inverse Decision Mapper."""
         kernel = params.kernel
         n_neighbors = params.n_neighbors
+        epsilon = params.epsilon
         super().__init__()
         self.params = params
         self._model: RBFInterpolator = None
         self.neighbors = n_neighbors
         self.kernel = kernel
+        self.epsilon = epsilon
 
         valid_kernels = {
             "linear",
@@ -116,7 +123,11 @@ class RBFEstimator(DeterministicEstimator):
             )
 
         self._model = RBFInterpolator(
-            y=X_unique, d=y_unique, neighbors=self.neighbors, kernel=self.kernel
+            y=X_unique,
+            d=y_unique,
+            neighbors=self.neighbors,
+            kernel=self.kernel,
+            epsilon=self.epsilon,
         )
 
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:

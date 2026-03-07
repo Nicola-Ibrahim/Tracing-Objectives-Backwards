@@ -18,26 +18,26 @@ from .sampling.gd import GradientDescentSampling
 
 class GBPIInverseSolver(AbstractInverseMappingSolver):
     """
-    Concrete implementation of the GBPI framework.
-    It explicitly owns its specific mathematical state.
+    Concrete implementation of the Geometrically Bounded Probabilistic Inversion (GBPI) framework.
+    It explicitly owns its specific mathematical state and elegantly routes queries
+    to prevent multi-modal averaging (the Centroid Trap) and handle out-of-bounds targets.
     """
 
     def __init__(
         self,
-        n_neighbors: int,
-        trust_radius: float,
-        concentration_factor: float,
+        coherence_n_neighbors: int = 5,
+        trust_radius: float = 0.05,
+        concentration_factor: float = 100,
     ):
         """
         Initializes the GBPISolver.
 
         Args:
-            n_neighbors: The number of neighbors to use for the KNN.
-            trust_radius: The trust-region radius for the gradient descent.
+            coherence_n_neighbors: How many local X-space neighbors to use when calculating D_max (tau).
+            trust_radius: The trust-region radius for the Gradient Descent optimization.
             concentration_factor: The concentration factor for the Dirichlet distribution.
-            estimator: The estimator to use for the forward mapping.
         """
-        self.n_neighbors = n_neighbors
+        self.coherence_n_neighbors = coherence_n_neighbors
         self.trust_radius = trust_radius
         self.concentration_factor = concentration_factor
 
@@ -51,6 +51,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         return "GBPI"
 
     def _ensure_fitted(self):
+        """Ensures all necessary models and thresholds are trained before generating."""
         if (
             self.forward_estimator is None
             or self.X is None
@@ -63,129 +64,153 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
     def _evaluate_coherence(
         self, vertices_indices: list[int]
     ) -> tuple[bool, list[float]]:
-        """Enforces the coherence domain rule based on the tau threshold
-        Checks if all pairwise distances between vertices are less than or equal to tau.
+        """
+        Enforces the coherence domain rule (D_max).
+        Checks if the X-space distance between the performance anchors is safe for interpolation.
+
+        Args:
+            vertices_indices: List of dataset indices representing the 3 anchor points.
+
         Returns:
-            is_coherent: True if all pairwise distances <= tau.
-            pairwise_dists: List of pairwise Euclidean distances.
+            is_coherent: True if all pairwise distances <= tau (D_max).
+            pairwise_dists: List of the actual calculated Euclidean distances.
         """
         triangle_vertices = self.X[vertices_indices]
 
         if len(triangle_vertices) < 2:
             return True, []
 
-        # Calculate pairwise distances between vertices
         diffs = triangle_vertices[:, None, :] - triangle_vertices[None, :, :]
         dists = np.linalg.norm(diffs, axis=-1)
         i, j = np.triu_indices(len(triangle_vertices), k=1)
         pairwise_dists = dists[i, j].tolist()
+
         is_coherent = bool(np.all(np.array(pairwise_dists) <= self.tau))
         return is_coherent, pairwise_dists
 
-    def _locate(self, target: np.ndarray) -> tuple[list[int], np.ndarray, bool, bool]:
+    def _locate_in_mesh(self, target: np.ndarray) -> tuple[bool, list[int], np.ndarray]:
         """
-        Locates the target within the Delaunay mesh or its nearest neighbor.
-
-        Uses the Delaunay triangulation if the target is within the convex hull.
-        Falls back to an optimized KNN lookup (KDTree) if the target is outside.
+        STRICTLY checks if the target is physically surrounded by known data in Y-space.
 
         Args:
-            target: (1, 2) or (2,) array representing the target objective.
+            target: The user's desired 2D objective performance.
 
         Returns:
-            anchor_indices: List of original indices forming the local geometry or nearest point.
-            weights: Barycentric weights for Delaunay, or [1.0] for KNN.
-            is_simplex_found: True if the target is inside a Delaunay simplex.
-            is_coherent: True if the local geometry is coherent (not stretched).
-            anchor_distances: List of pairwise distances between anchors.
+            is_inside: True if a bounding triangle is found.
+            vertices_indices: List of the 3 anchor indices (empty if outside).
+            weights: Barycentric weights determining the target's position (empty if outside).
         """
-        target = np.asarray(target).reshape(1, -1)
-        if target.shape[1] != 2:
-            raise ValueError("Target must be a 2D coordinate")
-
-        # find the single triangle that the target landed inside
         simplex_idx = self.mesh.find_simplex(target)[0]
 
-        # if target is inside the mesh, use Delaunay triangulation
-        # and return the vertices indices and the barycentric weights
-        # if simplex index is positive, means a Triangle was found
         if simplex_idx != -1:
+            # Target is INSIDE the convex hull
             transform = self.mesh.transform[simplex_idx]
             inv_T = transform[:2, :2]
             r = transform[2, :]
 
             b = inv_T.dot(target[0] - r)
-            weights = np.r_[b, 1.0 - b.sum()]  # barycentric weights
-            vertices_indices = self.mesh.simplices[
-                simplex_idx
-            ].tolist()  # indices of the vertices (corners) forming the triangle
-            is_simplex_found = True
-
-            # check if the triangle is coherent (not dangerously stretched out)
-            is_coherent, anchor_distances = self._evaluate_coherence(vertices_indices)
-            return (
-                vertices_indices,
-                weights,
-                is_simplex_found,
-                is_coherent,
-                anchor_distances,
-            )
-
-        # if target is outside the mesh, find the nearest point in y
-        # and return the nearest point index and the barycentric weights
-        # if simplex index is negative, means no triangle was found
+            weights = np.r_[b, 1.0 - b.sum()]
+            vertices_indices = self.mesh.simplices[simplex_idx].tolist()
+            return True, vertices_indices, weights
         else:
-            _, indices = self.objective_knn.kneighbors(target)
-            closest_vertex_idx = int(indices[0][0])
-            vertices_indices = [closest_vertex_idx]
-            weights = np.array([1.0])
-            is_simplex_found = False
-            is_coherent = False
-            anchor_distances = []
-            return (
-                vertices_indices,
-                weights,
-                is_simplex_found,
-                is_coherent,
-                anchor_distances,
-            )
+            # Target is OUTSIDE the convex hull
+            return False, [], np.array([])
+
+    def _get_nearest_neighbor(self, target: np.ndarray) -> tuple[list[int], np.ndarray]:
+        """
+        Uses the global Y-space KNN to find the single absolute closest point for extrapolation.
+        """
+        _, indices = self.objective_knn.kneighbors(target)
+        closest_vertex_idx = int(indices[0][0])
+
+        return [closest_vertex_idx], np.array([1.0])
 
     def generate(self, target_y: np.ndarray, n_samples: int) -> InverseSolverResult:
-        # Check if it trained or not
+        """
+        The main traffic controller of the GBPI framework.
+        Routes the target to Interpolation, Trust-Region Optimization, or Extrapolation.
+        """
         self._ensure_fitted()
 
-        # Check if target is inside or outside the mesh
-        (
-            vertices_indices,
-            weights,
-            is_simplex_found,
-            is_coherent,
-            anchor_distances,
-        ) = self._locate(target_y)
+        target_y = np.asarray(target_y).reshape(1, -1)
+        if target_y.shape[1] != 2:
+            raise ValueError("Target must be a 2D coordinate")
 
-        # 2. Sample candidate decisions by strategy
-        if is_coherent and is_simplex_found:
-            pathway = "coherent"
-            candidates_X = DirichletSampling(
-                concentration_factor=self.concentration_factor
-            ).sample(
-                vertices_X=self.X[vertices_indices],
-                weights=weights,
-                n_samples=n_samples,
-            )
+        # --- Step 1: Locate the target in relation to the known data manifold ---
+        is_inside_mesh, vertices_indices, weights = self._locate_in_mesh(target_y)
+
+        is_coherent = False
+        anchor_distances = []
+        pathway = "unknown"
+        final_vertices_X = None
+        final_weights = None
+
+        # --- Step 2: Route to the correct mathematical pathway ---
+        if is_inside_mesh:
+            # The target is surrounded by data. Check if those data points are physically compatible.
+            is_coherent, anchor_distances = self._evaluate_coherence(vertices_indices)
+
+            if is_coherent:
+                # PATHWAY A: Safe to interpolate.
+                # The anchors share an engineering strategy. Use Dirichlet to generate diverse options.
+                pathway = "coherent"
+                final_vertices_X = self.X[vertices_indices]
+                final_weights = weights
+
+                candidates_X = DirichletSampling(
+                    concentration_factor=self.concentration_factor
+                ).sample(
+                    vertices_X=final_vertices_X,
+                    weights=final_weights,
+                    n_samples=n_samples,
+                )
+
+            else:
+                # PATHWAY B1: Incoherent Triangle (Centroid Trap avoidance).
+                # Anchors use completely different strategies. Do NOT interpolate.
+                # Find the single closest anchor to use as a base for Gradient Descent.
+                pathway = "incoherent"
+
+                best_idx_position = np.argmax(weights)
+                single_best_vertex_idx = [vertices_indices[best_idx_position]]
+
+                final_vertices_X = self.X[single_best_vertex_idx]
+                final_weights = np.array([1.0])
+
+                candidates_X = GradientDescentSampling(
+                    forward_estimator=self.forward_estimator,
+                    target_y=target_y,
+                    trust_radius=self.trust_radius,
+                ).sample(
+                    vertices_X=final_vertices_X,
+                    weights=final_weights,
+                    n_samples=n_samples,
+                )
         else:
-            pathway = "incoherent"
+            # PATHWAY B2: Out of Bounds (Extrapolation).
+            # The user asked for performance beyond the known dataset.
+            # Use global KNN to find the single best jumping-off point for Gradient Descent.
+            pathway = "extrapolation"
+
+            nn_indices, nn_weights = self._get_nearest_neighbor(target_y)
+            vertices_indices = (
+                nn_indices  # Update metadata to reflect the single point used
+            )
+
+            final_vertices_X = self.X[nn_indices]
+            final_weights = nn_weights
+
             candidates_X = GradientDescentSampling(
                 forward_estimator=self.forward_estimator,
                 target_y=target_y,
                 trust_radius=self.trust_radius,
             ).sample(
-                vertices_X=self.X[vertices_indices],
-                weights=weights,
+                vertices_X=final_vertices_X,
+                weights=final_weights,
                 n_samples=n_samples,
             )
 
-        # Predict candidates objectives
+        # --- Step 3: Predict candidates objectives to detect Pareto Sag ---
         candidates_y = self.forward_estimator.predict(candidates_X)
 
         return InverseSolverResult(
@@ -193,7 +218,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
             candidates_y=candidates_y,
             metadata={
                 "pathway": pathway,
-                "is_simplex_found": is_simplex_found,
+                "is_simplex_found": is_inside_mesh,
                 "is_coherent": is_coherent,
                 "anchor_distances": anchor_distances,
                 "vertices_indices": vertices_indices,
@@ -201,73 +226,45 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         )
 
     def _train_forward_estimator(self, X: np.ndarray, y: np.ndarray):
-        """
-        Trains the forward estimator.
-        Args:
-            X: (N, D) array representing the design space points
-            y: (N, D) array representing the objective space points
-        """
-        params = RBFEstimatorParams(n_neighbors=10)
+        """Trains the RBF surrogate to act as a fast, differentiable physical validator."""
+        params = RBFEstimatorParams(n_neighbors=7, kernel="thin_plate_spline")
         estimator = RBFEstimator(params)
         estimator.fit(X, y)
         return estimator
 
     def _calculate_coherence_threshold(self, X: np.ndarray):
         """
-        Calculates the coherence threshold (tau) based on the 95th percentile of the nearest neighbor distances.
-        Args:
-            X: (N, D) array representing the design space points
+        KNN #1: The X-Space Physics Checker (Offline).
+        Calculates D_max (tau) based on the 95th percentile of local X-space distances.
         """
-        nn = NearestNeighbors(n_neighbors=self.n_neighbors + 1)  # +1 to include self
+        nn = NearestNeighbors(n_neighbors=self.coherence_n_neighbors + 1)
         nn.fit(X)
         distances, _ = nn.kneighbors(X)
-
-        # distances[:, 1:] ignores the zero-distance to self
         self.tau = float(np.percentile(distances[:, 1:], 95))
 
     def _build_mesh(self, y: np.ndarray):
-        """
-        Builds the Delaunay triangulation of the objective space.
-        It is used to find the simplex that the target point is inside.
-        Args:
-            y: (N, D) array representing the objective space points
-        """
+        """Builds the 2D Delaunay triangulation mesh in Objective (Y) space."""
         self.mesh = Delaunay(y)
 
     def _build_y_knn(self, y: np.ndarray):
         """
-        Builds the spatial index for the objective space (for out-of-mesh lookups)
-        It is used to find the nearest neighbor of a target point that is outside the mesh.
-        Args:
-            y: (N, D) array representing the objective space points
+        KNN #2: The Y-Space Extrapolation Router (Offline).
+        Builds the spatial index for fast O(log N) out-of-bounds nearest neighbor lookups.
+        Hardcoded to 1 neighbor because Gradient Descent requires a single base design.
         """
-        self.objective_knn = NearestNeighbors(n_neighbors=5)
+        self.objective_knn = NearestNeighbors(n_neighbors=1)
         self.objective_knn.fit(y)
 
     def train(self, X: np.ndarray, y: np.ndarray) -> None:
-        """
-        Trains the GBPI solver.
-        Args:
-            X: (N, D) array representing the design space points
-            y: (N, D) array representing the objective space points
-        """
-        # Training the Surrogate Model (The actual X -> Y mapping)
+        """Executes Phase 0: System Initialization & Pre-Processing."""
         self.forward_estimator = self._train_forward_estimator(X, y)
-
-        # Computing the Coherence Threshold (tau)
         self._calculate_coherence_threshold(X)
-
-        # Create the mesh for the objective space
         self._build_mesh(y)
-
-        # Store the raw training data
         self.X = X
-
-        # Build the spatial index for the objective space (for out-of-mesh lookups)
         self._build_y_knn(y)
 
     def history(self) -> dict[str, Any]:
-        """Returns the history of the solver."""
+        """Returns the offline training artifacts."""
         return {
             "tau": self.tau,
         }

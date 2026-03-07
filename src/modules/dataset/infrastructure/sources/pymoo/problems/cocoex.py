@@ -10,10 +10,15 @@ class COCOBiObjectiveProblemConfig(BaseModel):
     """
 
     problem_id: int = Field(
-        ..., ge=1, description="The problem indices in the coco framework"
+        5, ge=1, description="The problem indices in the coco framework"
+    )
+    instance_indices: int = Field(
+        1,
+        ge=1,
+        description="The instance indices in the coco framework (affects range/shifts)",
     )
     n_var: int = Field(
-        ...,
+        2,
         ge=1,
         description="Number of decision variables in the optimization problem",
     )
@@ -33,6 +38,7 @@ class COCOBiObjectiveProblem(Problem):
         self.coco_problem = self._get_problem(
             problem_name="bbob-biobj",
             function_indices=config.problem_id,
+            instance_indices=config.instance_indices,
             dimensions=config.n_var,
         )
 
@@ -70,14 +76,12 @@ class COCOBiObjectiveProblem(Problem):
             )
 
         suite_options = (
-            f"dimensions:{dimensions} "
-            f"instance_indices:{instance_indices} "
-            f"function_indices:{function_indices}"
+            f"dimensions:{dimensions} " f"function_indices:{function_indices}"
         )
 
         suite = cocoex.Suite(
             problem_name,
-            "",
+            f"instance_indices:{instance_indices}",
             suite_options,
         )
 

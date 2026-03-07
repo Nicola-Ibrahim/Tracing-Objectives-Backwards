@@ -12,7 +12,7 @@ class NSGA2Config(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    population_size: int = Field(..., gt=0, description="Size of the population")
+    population_size: int = Field(100, gt=0, description="Size of the population")
 
     # Crossover parameters
     crossover_prob: float = Field(

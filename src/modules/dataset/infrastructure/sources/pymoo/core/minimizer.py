@@ -1,5 +1,4 @@
 from functools import cached_property
-from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -12,12 +11,12 @@ class MinimizerConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     generations: int = Field(
-        ..., gt=0, description="Number of generations must be > 0", example=100
+        6, gt=0, description="Number of generations must be > 0", example=100
     )
     save_history: bool = Field(
-        ..., description="Flag to save optimization history", example=True
+        True, description="Flag to save optimization history", example=True
     )
-    verbose: bool = Field(..., description="Flag for verbose output", example=False)
+    verbose: bool = Field(False, description="Flag for verbose output", example=False)
 
     seed: int = Field(
         42, ge=0, description="Random seed must be non-negative", example=42

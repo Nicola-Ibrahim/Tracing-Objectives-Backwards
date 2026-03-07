@@ -52,7 +52,7 @@ class GenerationConfig(BaseModel):
         default=None, description="Specific engine version number to use (optional)"
     )
     n_samples: int = Field(
-        default=50, ge=1, description="Number of Dirichlet weight samples"
+        default=10, ge=1, description="Number of Dirichlet weight samples"
     )
 
 

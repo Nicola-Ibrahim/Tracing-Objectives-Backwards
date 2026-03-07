@@ -60,7 +60,7 @@ class GenerateRequest(BaseModel):
     solver_type: str = "GBPI"
     version: int | None = None
     target_objective: Tuple[float, float]
-    n_samples: int = Field(default=50, ge=1, le=1000)
+    n_samples: int = Field(default=10, ge=1, le=1000)
 
 
 class GenerateResponse(BaseModel):
