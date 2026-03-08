@@ -27,12 +27,16 @@ export interface TrainEngineRequest {
 }
 
 export interface TrainEngineResponse {
-  version: number;
+  dataset_name: string;
+  solver_type: string;
+  engine_version: number;
+  status: string;
+  duration_seconds: number;
   n_train_samples: number;
   n_test_samples: number;
-  duration_seconds: number;
+  split_ratio: number;
+  training_history: any[];
   transform_summary: string[];
-  training_history: Record<string, any>;
 }
 
 export interface CandidateGenerationRequest {

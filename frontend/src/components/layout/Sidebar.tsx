@@ -9,6 +9,7 @@ import {
     Settings2,
     Trello,
     Cpu,
+    Layers,
 } from "lucide-react";
 
 import {
@@ -81,10 +82,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Data Hub" isActive={pathname.startsWith("/datasets")}>
-                                    <Link href="/datasets" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/datasets") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
-                                        <Database className={cn("h-4 w-4", pathname.startsWith("/datasets") && "text-indigo-600")} />
+                                <SidebarMenuButton asChild tooltip="Data Hub" isActive={pathname?.startsWith("/datasets")}>
+                                    <Link href="/datasets" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/datasets") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Database className={cn("h-4 w-4", pathname?.startsWith("/datasets") && "text-indigo-600")} />
                                         <span className="font-bold">Data Hub</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Transformation" isActive={pathname?.startsWith("/modeling/transformation-preview")}>
+                                    <Link href="/modeling/transformation-preview" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/modeling/transformation-preview") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Layers className={cn("h-4 w-4", pathname?.startsWith("/modeling/transformation-preview") && "text-indigo-600")} />
+                                        <span className="font-bold">Transformation</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -97,25 +106,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Train Engine" isActive={pathname.startsWith("/inverse/train")}>
-                                    <Link href="/inverse/train" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/inverse/train") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
-                                        <BrainCircuit className={cn("h-4 w-4", pathname.startsWith("/inverse/train") && "text-indigo-600")} />
+                                <SidebarMenuButton asChild tooltip="Train Engine" isActive={pathname?.startsWith("/inverse/train")}>
+                                    <Link href="/inverse/train" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/inverse/train") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <BrainCircuit className={cn("h-4 w-4", pathname?.startsWith("/inverse/train") && "text-indigo-600")} />
                                         <span className="font-bold">Train Engine</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Inference Hub" isActive={pathname.startsWith("/engines")}>
-                                    <Link href="/engines" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/engines") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
-                                        <Cpu className={cn("h-4 w-4", pathname.startsWith("/engines") && "text-indigo-600")} />
+                                <SidebarMenuButton asChild tooltip="Inference Hub" isActive={pathname?.startsWith("/engines")}>
+                                    <Link href="/engines" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/engines") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Cpu className={cn("h-4 w-4", pathname?.startsWith("/engines") && "text-indigo-600")} />
                                         <span className="font-bold">Inference Hub</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Generate Candidates" isActive={pathname.startsWith("/inverse/generate")}>
-                                    <Link href="/inverse/generate" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/inverse/generate") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
-                                        <Trello className={cn("h-4 w-4", pathname.startsWith("/inverse/generate") && "text-indigo-600")} />
+                                <SidebarMenuButton asChild tooltip="Generate Candidates" isActive={pathname?.startsWith("/inverse/generate")}>
+                                    <Link href="/inverse/generate" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/inverse/generate") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <Trello className={cn("h-4 w-4", pathname?.startsWith("/inverse/generate") && "text-indigo-600")} />
                                         <span className="font-bold">Generate Candidates</span>
                                     </Link>
                                 </SidebarMenuButton>
@@ -129,9 +138,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Evaluation" isActive={pathname.startsWith("/evaluation")}>
-                                    <Link href="/evaluation" className={cn("transition-colors duration-200 flex items-center gap-2", pathname.startsWith("/evaluation") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
-                                        <LineChartIcon className={cn("h-4 w-4", pathname.startsWith("/evaluation") && "text-indigo-600")} />
+                                <SidebarMenuButton asChild tooltip="Evaluation" isActive={pathname?.startsWith("/evaluation")}>
+                                    <Link href="/evaluation" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/evaluation") ? "text-indigo-600" : "text-slate-600 hover:text-slate-900")}>
+                                        <LineChartIcon className={cn("h-4 w-4", pathname?.startsWith("/evaluation") && "text-indigo-600")} />
                                         <span className="font-bold">Performance Evaluation</span>
                                     </Link>
                                 </SidebarMenuButton>

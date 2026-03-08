@@ -10,10 +10,6 @@ from ....modules.modeling.infrastructure.factories.transformer import Transforme
 from ....modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
-def get_solvers_factory() -> SolversFactory:
-    return SolversFactory()
-
-
 def get_inverse_mapping_engine_repository() -> FileSystemInverseMappingEngineRepository:
     return FileSystemInverseMappingEngineRepository()
 
@@ -25,5 +21,5 @@ def get_inverse_service() -> InverseService:
         inverse_mapping_engine_repository=get_inverse_mapping_engine_repository(),
         logger=logger,
         transformer_factory=TransformerFactory(),
-        solvers_factory=get_solvers_factory(),
+        solvers_factory=SolversFactory(),
     )

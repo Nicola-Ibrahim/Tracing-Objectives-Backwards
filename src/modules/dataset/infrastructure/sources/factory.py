@@ -70,20 +70,35 @@ class DataGeneratorFactory:
         """
         schemas = []
         for gen_id, gen_class in self._registry.items():
-            sig = inspect.signature(gen_class.__init__)
             parameters = []
 
-            for name, param in sig.parameters.items():
-                if name == "self":
-                    continue
-
-                parameters.extend(
-                    inspect_parameter(
-                        name=name,
-                        annotation=param.annotation,
-                        default=param.default,
+            # Smart check: if the class is a Pydantic model, use its fields directly
+            if is_pydantic_model(gen_class):
+                for field_name, field in gen_class.model_fields.items():
+                    parameters.extend(
+                        inspect_parameter(
+                            name=field_name,
+                            annotation=field.annotation,
+                            default=field.default
+                            if field.default != ...
+                            else inspect.Parameter.empty,
+                            description=field.description,
+                        )
                     )
-                )
+            else:
+                # Fallback to __init__ signature inspection (handles regular classes)
+                sig = inspect.signature(gen_class.__init__)
+                for name, param in sig.parameters.items():
+                    if name == "self":
+                        continue
+
+                    parameters.extend(
+                        inspect_parameter(
+                            name=name,
+                            annotation=param.annotation,
+                            default=param.default,
+                        )
+                    )
 
             schemas.append(
                 {

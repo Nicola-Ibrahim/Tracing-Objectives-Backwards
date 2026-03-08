@@ -16,7 +16,7 @@ class SelectionResult:
     best_distance: float
     best_decision: list
     best_objective: list
-    all_distances: list  # For visualization
+    all_distances: list
     sorted_candidates: list
     sorted_objectives: list
 

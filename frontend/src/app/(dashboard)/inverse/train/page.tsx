@@ -87,7 +87,7 @@ export default function TrainEnginePage() {
                                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                     <AlertTitle>Success</AlertTitle>
                                     <AlertDescription>
-                                        Engine trained successfully with Version {lastResult.data.version}.
+                                        Engine trained successfully with Version {lastResult.data.engine_version}.
                                     </AlertDescription>
                                 </Alert>
                                 <div className="grid grid-cols-2 gap-4 text-sm mt-6">

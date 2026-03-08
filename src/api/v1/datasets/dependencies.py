@@ -9,10 +9,6 @@ from ....modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo
 from ....modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
-def get_generator_factory() -> DataGeneratorFactory:
-    return DataGeneratorFactory()
-
-
 def get_dataset_repository() -> FileSystemDatasetRepository:
     return FileSystemDatasetRepository()
 

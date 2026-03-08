@@ -11,6 +11,7 @@ from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import 
     BaseInverseMappingEngineRepository,
 )
 from ...shared.domain.interfaces.base_logger import BaseLogger
+from ...shared.result import Result
 from ..domain.aggregates.diagnostic_result import DiagnosticResult
 from ..domain.entities.accuracy_lens import AccuracyLens
 from ..domain.entities.reliability_lens import ReliabilityLens
@@ -76,131 +77,147 @@ class DiagnoseInverseModelsService:
         self._diag_repo = diagnostic_repository
         self._logger = logger
 
-    def execute(self, params: DiagnoseInverseModelsParams) -> dict:
-        self._logger.log_info(
-            f"Starting Diagnostic Compute for engines on dataset '{params.dataset_name}'"
-        )
+    def execute(self, params: DiagnoseInverseModelsParams) -> Result[dict]:
+        # Check cache first
+        cached_result = self._get_cached_diagnostics(params)
+        if cached_result.is_ok:
+            return cached_result
 
-        dataset = self._data_repo.load(params.dataset_name)
-
-        engines_to_diagnose = self._initialize_engines(
-            candidates=params.inverse_engine_candidates,
-            dataset_name=params.dataset_name,
-        )
-
-        ecdf_results = {}
-        pit_results = {}
-        mace_results = {}
-        engine_names = []
-        warnings = []
-
-        for engine, version in engines_to_diagnose:
-            engine_name = f"{engine.solver.type()} (v{version})"
-            engine_names.append(engine_name)
-            self._logger.log_info(f"Diagnosing {engine_name}")
-
-            # 1. Get test split from engine
-            test_indices = engine.data_split.test_indices
-            if len(test_indices) == 0:
-                warnings.append(f"Engine {engine_name} has no test split. Skipping.")
-                continue
-
-            X_test_raw = dataset.objectives[test_indices]
-            y_test_raw = dataset.decisions[test_indices]
-
-            # 2. Transform the test split to normalized space
-            X_test_norm = engine.transform_objective(X_test_raw)
-            y_test_norm = engine.transform_decision(y_test_raw)
-
-            # 3. Batch generate candidates for each test target
-            n_test = len(X_test_norm)
-            all_candidates_X_norm = []
-            all_candidates_y_norm = []
-
-            for i in range(n_test):
-                target_y_norm = X_test_norm[i]
-                res = engine.solver.generate(
-                    target_y_norm, n_samples=params.num_samples
-                )
-                all_candidates_X_norm.append(res.candidates_X)
-                all_candidates_y_norm.append(res.candidates_y)
-
-            all_candidates_X_norm = np.stack(all_candidates_X_norm)
-            all_candidates_y_norm = np.stack(all_candidates_y_norm)
-
-            # Accuracy Domain (Objective Space)
-            y_train_norm = engine.transform_objective(
-                dataset.objectives[engine.data_split.train_indices]
+        try:
+            self._logger.log_info(
+                f"Starting Diagnostic Compute for engines on dataset '{params.dataset_name}'"
             )
 
-            spatial_audit = SpatialCandidateAuditor.audit(
-                training_objectives=y_train_norm,
-                candidates=all_candidates_y_norm,
-                reference=X_test_norm,
-                distance="euclidean",
-            )
+            dataset = self._data_repo.load(params.dataset_name)
 
-            # Reliability Domain (Decision Space)
-            generative_audit = GenerativeDistributionAuditor.audit(
-                samples=all_candidates_X_norm,
-                truth=y_test_norm,
-            )
-
-            # Create Diagnostic Result Aggregate
-            result = DiagnosticResult.create(
-                estimator=Estimator(
-                    type=engine.solver.type(),
-                    version=version,
-                    mapping_direction="inverse",
-                ),
+            engines_to_diagnose = self._initialize_engines(
+                candidates=params.inverse_engine_candidates,
                 dataset_name=params.dataset_name,
-                num_samples=params.num_samples,
-                scale_method=params.scale_method,
-                accuracy=AccuracyLens(
-                    discrepancy_scores=spatial_audit.discrepancy_scores.tolist(),
-                    best_shot_scores=spatial_audit.best_shot_scores.tolist(),
-                    rank_indices=spatial_audit.rank_indices.tolist(),
-                    systematic_bias=float(spatial_audit.bias),
-                    cloud_dispersion=float(spatial_audit.dispersion),
-                    summary=spatial_audit.summary,
-                ),
-                reliability=ReliabilityLens(
-                    pit_values=generative_audit.pit_values.tolist(),
-                    calibration_error=float(generative_audit.calibration_error),
-                    crps=float(generative_audit.crps),
-                    diversity=float(generative_audit.diversity),
-                    interval_width=float(generative_audit.interval_width),
-                    summary=generative_audit.summary,
-                    calibration_curve=generative_audit.calibration_curve,
-                ),
             )
 
-            # Persist Result
-            self._diag_repo.save(result)
+            ecdf_results = {}
+            pit_results = {}
+            mace_results = {}
+            engine_names = []
+            warnings = []
 
-            # Format for Response
-            ecdf_results[engine_name] = self._calculate_ecdf(
-                spatial_audit.discrepancy_scores
+            for engine, version in engines_to_diagnose:
+                # ... [keeping identical logic but inside try block] ...
+                engine_name = f"{engine.solver.type()} (v{version})"
+                engine_names.append(engine_name)
+                self._logger.log_info(f"Diagnosing {engine_name}")
+
+                test_indices = engine.data_split.test_indices
+                if len(test_indices) == 0:
+                    warnings.append(
+                        f"Engine {engine_name} has no test split. Skipping."
+                    )
+                    continue
+
+                X_test_raw = dataset.objectives[test_indices]
+                y_test_raw = dataset.decisions[test_indices]
+
+                X_test_norm = engine.transform_objective(X_test_raw)
+                y_test_norm = engine.transform_decision(y_test_raw)
+
+                n_test = len(X_test_norm)
+                all_candidates_X_norm = []
+                all_candidates_y_norm = []
+
+                for i in range(n_test):
+                    target_y_norm = X_test_norm[i]
+                    res = engine.solver.generate(
+                        target_y_norm, n_samples=params.num_samples
+                    )
+                    all_candidates_X_norm.append(res.candidates_X)
+                    all_candidates_y_norm.append(res.candidates_y)
+
+                all_candidates_X_norm = np.stack(all_candidates_X_norm)
+                all_candidates_y_norm = np.stack(all_candidates_y_norm)
+
+                y_train_norm = engine.transform_objective(
+                    dataset.objectives[engine.data_split.train_indices]
+                )
+
+                spatial_audit = SpatialCandidateAuditor.audit(
+                    training_objectives=y_train_norm,
+                    candidates=all_candidates_y_norm,
+                    reference=X_test_norm,
+                    distance="euclidean",
+                )
+
+                generative_audit = GenerativeDistributionAuditor.audit(
+                    samples=all_candidates_X_norm,
+                    truth=y_test_norm,
+                )
+
+                result = DiagnosticResult.create(
+                    estimator=Estimator(
+                        type=engine.solver.type(),
+                        version=version,
+                        mapping_direction="inverse",
+                    ),
+                    dataset_name=params.dataset_name,
+                    num_samples=params.num_samples,
+                    scale_method=params.scale_method,
+                    accuracy=AccuracyLens(
+                        discrepancy_scores=spatial_audit.discrepancy_scores.tolist(),
+                        best_shot_scores=spatial_audit.best_shot_scores.tolist(),
+                        rank_indices=spatial_audit.rank_indices.tolist(),
+                        systematic_bias=float(spatial_audit.bias),
+                        cloud_dispersion=float(spatial_audit.dispersion),
+                        summary=spatial_audit.summary,
+                    ),
+                    reliability=ReliabilityLens(
+                        pit_values=generative_audit.pit_values.tolist(),
+                        calibration_error=float(generative_audit.calibration_error),
+                        crps=float(generative_audit.crps),
+                        diversity=float(generative_audit.diversity),
+                        interval_width=float(generative_audit.interval_width),
+                        summary=generative_audit.summary,
+                        calibration_curve=generative_audit.calibration_curve,
+                    ),
+                )
+
+                self._diag_repo.save(result)
+
+                ecdf_results[engine_name] = self._calculate_ecdf(
+                    spatial_audit.discrepancy_scores
+                )
+                pit_results[engine_name] = self._calculate_ecdf(
+                    generative_audit.pit_values
+                )
+                mace_results[engine_name] = float(generative_audit.calibration_error)
+
+            return Result.ok(
+                {
+                    "dataset_name": params.dataset_name,
+                    "engines": engine_names,
+                    "ecdf": ecdf_results,
+                    "pit": pit_results,
+                    "mace": mace_results,
+                    "warnings": warnings,
+                }
             )
-            # PIT values represent cumulative density [0, 1]. ECDF of PIT values allows for calibration plotting (Ideal is x=y).
-            pit_results[engine_name] = self._calculate_ecdf(generative_audit.pit_values)
-            mace_results[engine_name] = float(generative_audit.calibration_error)
+        except FileNotFoundError as e:
+            return Result.fail(
+                message="Dataset or engine not found",
+                details=str(e),
+                code="NOT_FOUND",
+            )
+        except Exception as e:
+            return Result.fail(
+                message="Diagnostic failed",
+                details=str(e),
+                code="INTERNAL_ERROR",
+            )
 
-        return {
-            "dataset_name": params.dataset_name,
-            "engines": engine_names,
-            "ecdf": ecdf_results,
-            "pit": pit_results,
-            "mace": mace_results,
-            "warnings": warnings,
-        }
-
-    def get_cached_diagnostics(
+    def _get_cached_diagnostics(
         self, params: DiagnoseInverseModelsParams
-    ) -> dict | None:
+    ) -> Result[dict]:
         """
         Retrieves formatted diagnostic results from the repository if they exist for ALL engines.
-        Returns formatted result dict or None if any engine is missing.
+        Returns formatted result dict or Fail if any engine is missing.
         """
         ecdf_results = {}
         pit_results = {}
@@ -238,21 +255,37 @@ class DiagnoseInverseModelsService:
                         cached.reliability.calibration_error
                     )
 
-                except (FileNotFoundError, IndexError):
+                except (FileNotFoundError, IndexError) as e:
                     # Cache miss for this specific engine
-                    return None
+                    return Result.fail(
+                        message=f"No cached diagnostic for {engine_name}",
+                        details=str(e),
+                        code="NOT_FOUND",
+                    )
 
-            return {
-                "dataset_name": params.dataset_name,
-                "engines": engine_names,
-                "ecdf": ecdf_results,
-                "pit": pit_results,
-                "mace": mace_results,
-                "warnings": warnings,
-            }
+            return Result.ok(
+                {
+                    "dataset_name": params.dataset_name,
+                    "engines": engine_names,
+                    "ecdf": ecdf_results,
+                    "pit": pit_results,
+                    "mace": mace_results,
+                    "warnings": warnings,
+                }
+            )
+        except FileNotFoundError as e:
+            return Result.fail(
+                message="Dataset or engine not found",
+                details=str(e),
+                code="NOT_FOUND",
+            )
         except Exception as e:
             self._logger.log_error(f"Error checking diagnostic cache: {str(e)}")
-            return None
+            return Result.fail(
+                message="Cache lookup failed",
+                details=str(e),
+                code="INTERNAL_ERROR",
+            )
 
     def _calculate_ecdf(self, data: np.ndarray) -> dict:
         """Helper to calculate Empirical Cumulative Distribution Function points."""

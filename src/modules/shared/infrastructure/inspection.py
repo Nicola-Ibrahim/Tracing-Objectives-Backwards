@@ -1,8 +1,8 @@
 import inspect
 from enum import Enum
-from typing import Any, Dict, List, get_args, get_origin
+from typing import Any, Dict, List, Optional, Type, get_args, get_origin
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 def is_pydantic_model(cls: Any) -> bool:
@@ -112,3 +112,36 @@ def normalize_value(value: Any, annotation: Any) -> Any:
             return annotation(**value)
 
     return value
+
+
+def validate_model_parameters(
+    model_class: Type[BaseModel], params: Dict[str, Any]
+) -> Optional[Dict[str, str]]:
+    """
+    Validates a dictionary of parameters against a Pydantic model.
+    Returns a dictionary of field-level error messages if validation fails, else None.
+    """
+    try:
+        model_class(**params)
+        return None
+    except ValidationError as e:
+        errors = {}
+        for error in e.errors():
+            # error['loc'] is a tuple of path components
+            field_path = ".".join(str(p) for p in error["loc"])
+            errors[field_path] = error["msg"]
+        return errors
+
+
+def get_missing_arguments(func, provided_args: Dict[str, Any]) -> List[str]:
+    """
+    Inspects a function signature to find missing required arguments.
+    """
+    sig = inspect.signature(func)
+    missing = []
+    for name, param in sig.parameters.items():
+        if name == "self" or name == "cls":
+            continue
+        if param.default is inspect.Parameter.empty and name not in provided_args:
+            missing.append(name)
+    return missing

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from ....modules.inverse.application.inverse_service import (
     GenerationConfig,
@@ -6,8 +6,7 @@ from ....modules.inverse.application.inverse_service import (
     SolverConfig,
     TrainInverseMappingEngineParams,
 )
-from ....modules.inverse.infrastructure.solvers.factory import SolversFactory
-from .dependencies import get_inverse_service, get_solvers_factory
+from .dependencies import get_inverse_service
 from .schemas import (
     BulkDeleteEnginesRequest,
     EngineListItem,
@@ -23,13 +22,23 @@ router = APIRouter()
 
 @router.get("/solvers", response_model=SolversDiscoveryResponse)
 async def list_available_solvers(
-    factory: SolversFactory = Depends(get_solvers_factory),
+    service: InverseService = Depends(get_inverse_service),
 ):
     """
     List all available inverse mapping solvers and their required parameters.
     """
-    schemas = factory.get_solver_schemas()
-    return SolversDiscoveryResponse(solvers=schemas)
+    result = service.get_available_solvers()
+    return result.match(
+        on_success=lambda schemas: SolversDiscoveryResponse(solvers=schemas),
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
 
 
 @router.post("/train", response_model=TrainEngineResponse, status_code=201)
@@ -45,14 +54,31 @@ async def train_engine(
         solver=SolverConfig(type=request.solver.type, params=request.solver.params),
         transforms=request.transforms,
     )
-
-    try:
-        result = service.train_engine(params)
-        return TrainEngineResponse(**result)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+    result = service.train_engine(params)
+    return result.match(
+        on_success=lambda value: TrainEngineResponse(
+            dataset_name=value["dataset_name"],
+            solver_type=value["solver_type"],
+            engine_version=value["engine_version"],
+            status=value["status"],
+            duration_seconds=value["duration_seconds"],
+            n_train_samples=value["n_train_samples"],
+            n_test_samples=value["n_test_samples"],
+            split_ratio=value["split_ratio"],
+            training_history=value["training_history"],
+            transform_summary=value["transform_summary"],
+        ),
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if error.code == "NOT_FOUND"
+            else status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
 
 
 @router.post("/generate", response_model=GenerateResponse)
@@ -71,13 +97,30 @@ async def generate_candidates(
         n_samples=request.n_samples,
     )
 
-    try:
-        result = service.generate_candidates(config)
-        return GenerateResponse(**result)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+    result = service.generate_candidates(config)
+    return result.match(
+        on_success=lambda value: GenerateResponse(
+            solver_type=value["solver_type"],
+            target_objective=value["target_objective"],
+            candidate_decisions=value["candidate_decisions"],
+            candidate_objectives=value["candidate_objectives"],
+            best_index=value["best_index"],
+            best_candidate_objective=value["best_candidate_objective"],
+            best_candidate_decision=value["best_candidate_decision"],
+            best_candidate_residual=value["best_candidate_residual"],
+            metadata=value["metadata"],
+        ),
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if error.code == "NOT_FOUND"
+            else status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
 
 
 @router.get("/engines", response_model=list[EngineListItem])
@@ -88,16 +131,26 @@ async def list_all_engines(
     """
     List trained engines with optional dataset filter.
     """
-    engines = service.list_engines(dataset_name)
-    return [
-        EngineListItem(
-            dataset_name=e.get("dataset_name"),
-            solver_type=e["solver_type"],
-            version=e["version"],
-            created_at=e["created_at"],
-        )
-        for e in engines
-    ]
+    result = service.list_engines(dataset_name)
+    return result.match(
+        on_success=lambda value: [
+            EngineListItem(
+                dataset_name=item.get("dataset_name"),
+                solver_type=item["solver_type"],
+                version=item["version"],
+                created_at=item["created_at"],
+            )
+            for item in value
+        ],
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
 
 
 @router.post("/engines/delete")
@@ -108,7 +161,19 @@ async def delete_engines(
     """
     Delete one or multiple trained engines.
     """
-    return service.delete_engines(request.engines)
+    result = service.delete_engines(request.engines)
+
+    return result.match(
+        on_success=lambda value: value["results"],
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
 
 
 @router.get("/engines/{dataset_name}", response_model=list[EngineListItem])
@@ -119,13 +184,23 @@ async def list_engines_for_dataset(
     """
     List all trained engines for a specific dataset.
     """
-    engines = service.list_engines(dataset_name)
-    return [
-        EngineListItem(
-            dataset_name=e.get("dataset_name"),
-            solver_type=e["solver_type"],
-            version=e["version"],
-            created_at=e["created_at"],
-        )
-        for e in engines
-    ]
+    result = service.list_engines(dataset_name)
+    return result.match(
+        on_success=lambda value: [
+            EngineListItem(
+                dataset_name=item.get("dataset_name"),
+                solver_type=item["solver_type"],
+                version=item["version"],
+                created_at=item["created_at"],
+            )
+            for item in value
+        ],
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )

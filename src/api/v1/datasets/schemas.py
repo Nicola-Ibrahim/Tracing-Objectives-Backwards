@@ -67,7 +67,8 @@ class DatasetGenerationResponse(BaseModel):
 
 class DatasetDeleteResponse(BaseModel):
     name: str
-    engines_removed: int
+    engines_removed: int = 0
+    status: str
 
 
 class BulkDeleteDatasetsRequest(BaseModel):

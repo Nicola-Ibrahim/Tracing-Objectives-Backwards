@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Tuple
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -16,11 +16,11 @@ class ParameterDefinition(BaseModel):
 class SolverSchema(BaseModel):
     id: str
     name: str
-    parameters: List[ParameterDefinition]
+    parameters: list[ParameterDefinition]
 
 
 class SolversDiscoveryResponse(BaseModel):
-    solvers: List[SolverSchema]
+    solvers: list[SolverSchema]
 
 
 class SolverConfigSchema(BaseModel):
@@ -33,7 +33,7 @@ class SolverConfigSchema(BaseModel):
 class TrainEngineRequest(BaseModel):
     dataset_name: str
     solver: SolverConfigSchema
-    transforms: List[dict] = Field(default_factory=list)
+    transforms: list[dict] = Field(default_factory=list)
 
 
 class EpochMetric(BaseModel):
@@ -51,26 +51,26 @@ class TrainEngineResponse(BaseModel):
     n_train_samples: int
     n_test_samples: int
     split_ratio: float
-    loss_history: List[EpochMetric] = Field(default_factory=list)
-    transform_summary: List[str] = Field(default_factory=list)
+    training_history: list[EpochMetric] = Field(default_factory=list)
+    transform_summary: list[str] = Field(default_factory=list)
 
 
 class GenerateRequest(BaseModel):
     dataset_name: str
     solver_type: str = "GBPI"
     version: int | None = None
-    target_objective: Tuple[float, float]
+    target_objective: tuple[float, float]
     n_samples: int = Field(default=10, ge=1, le=1000)
 
 
 class GenerateResponse(BaseModel):
     solver_type: str
-    target_objective: Tuple[float, float]
-    candidate_decisions: List[List[float]]
-    candidate_objectives: List[Tuple[float, float]]
+    target_objective: tuple[float, float]
+    candidate_decisions: list[list[float]]
+    candidate_objectives: list[tuple[float, float]]
     best_index: int
-    best_candidate_objective: Tuple[float, float]
-    best_candidate_decision: List[float]
+    best_candidate_objective: tuple[float, float]
+    best_candidate_decision: list[float]
     best_candidate_residual: float
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -83,6 +83,6 @@ class EngineListItem(BaseModel):
 
 
 class BulkDeleteEnginesRequest(BaseModel):
-    engines: List[dict] = Field(
-        ..., description="List of {dataset_name, solver_type, version}"
+    engines: list[dict] = Field(
+        ..., description="list of {dataset_name, solver_type, version}"
     )

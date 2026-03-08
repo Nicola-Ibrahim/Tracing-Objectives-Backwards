@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
 from .middleware import (
@@ -11,6 +10,7 @@ from .middleware import (
 from .v1.datasets.routes import router as datasets_router
 from .v1.evaluation.routes import router as evaluation_router
 from .v1.inverse.routes import router as inverse_router
+from .v1.modeling.routes import router as modeling_router
 
 app = FastAPI(
     title="Tracing Objectives Backwards API",
@@ -41,3 +41,4 @@ async def health_check():
 app.include_router(datasets_router, prefix="/api/v1/datasets", tags=["Datasets"])
 app.include_router(inverse_router, prefix="/api/v1/inverse", tags=["Inverse Mapping"])
 app.include_router(evaluation_router, prefix="/api/v1/evaluation", tags=["Evaluation"])
+app.include_router(modeling_router, prefix="/api/v1/modeling", tags=["Modeling"])

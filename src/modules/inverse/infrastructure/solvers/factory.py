@@ -11,6 +11,7 @@ from ...domain.interfaces.base_inverse_mapping_solver import (
     AbstractInverseMappingSolver,
 )
 from .gbpi.gbpi_solver import GBPIInverseSolver
+from .gbpi.hybrid_solver import HybridGBPIInverseSolver
 from .gbpi.tda_gbpi_solver import TDAGBPIInverseSolver
 from .prob.mdn_solver import MDNProbabilisticInverseSolver
 
@@ -20,6 +21,7 @@ class SolversFactory:
         InverseSolverRegistry.GBPI: GBPIInverseSolver,
         InverseSolverRegistry.TDA_GBPI: TDAGBPIInverseSolver,
         InverseSolverRegistry.MDN: MDNProbabilisticInverseSolver,
+        InverseSolverRegistry.HYBRID_GBPI: HybridGBPIInverseSolver,
     }
 
     def create(
