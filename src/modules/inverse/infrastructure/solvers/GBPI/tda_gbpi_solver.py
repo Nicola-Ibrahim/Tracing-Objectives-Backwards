@@ -14,8 +14,9 @@ from ....domain.interfaces.base_inverse_mapping_solver import (
     AbstractInverseMappingSolver,
     InverseSolverResult,
 )
-from .sampling.dirichlet import DirichletSampling
-from .sampling.gd import GradientDescentSampling
+from .sampling.coherent import CoherentSampling
+from .sampling.extrapolation import ExtrapolationSampling
+from .sampling.incoherent import IncoherentSampling
 
 
 class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
@@ -196,7 +197,7 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
                 final_vertices_X = self.X[vertices_indices]
                 final_weights = weights
 
-                candidates_X = DirichletSampling(
+                candidates_X = CoherentSampling(
                     concentration_factor=self.concentration_factor
                 ).sample(
                     vertices_X=final_vertices_X,
@@ -215,7 +216,7 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
                 final_vertices_X = self.X[single_best_vertex_idx]
                 final_weights = np.array([1.0])
 
-                candidates_X = GradientDescentSampling(
+                candidates_X = IncoherentSampling(
                     forward_estimator=self.forward_estimator,
                     target_y=target_y,
                     trust_radius=self.trust_radius,
@@ -236,7 +237,7 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
             final_vertices_X = self.X[nn_indices]
             final_weights = nn_weights
 
-            candidates_X = GradientDescentSampling(
+            candidates_X = ExtrapolationSampling(
                 forward_estimator=self.forward_estimator,
                 target_y=target_y,
                 trust_radius=self.trust_radius,

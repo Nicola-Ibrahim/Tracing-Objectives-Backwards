@@ -13,8 +13,9 @@ from ....domain.interfaces.base_inverse_mapping_solver import (
     AbstractInverseMappingSolver,
     InverseSolverResult,
 )
-from .sampling.dirichlet import DirichletSampling
-from .sampling.gd import GradientDescentSampling
+from .sampling.coherent import CoherentSampling
+from .sampling.extrapolation import ExtrapolationSampling
+from .sampling.incoherent import IncoherentSampling
 
 
 class HybridGBPIInverseSolver(AbstractInverseMappingSolver):
@@ -148,7 +149,7 @@ class HybridGBPIInverseSolver(AbstractInverseMappingSolver):
                 pathway = "coherent_polished"
 
                 # Step 1: Get diverse, safe candidates from Dirichlet
-                raw_candidates_X = DirichletSampling(
+                raw_candidates_X = CoherentSampling(
                     concentration_factor=self.concentration_factor
                 ).sample(
                     vertices_X=self.X[vertices_indices],
@@ -164,7 +165,7 @@ class HybridGBPIInverseSolver(AbstractInverseMappingSolver):
                 best_idx_position = np.argmax(weights)
                 single_best_vertex_idx = [vertices_indices[best_idx_position]]
 
-                candidates_X = GradientDescentSampling(
+                candidates_X = IncoherentSampling(
                     forward_estimator=self.forward_estimator,
                     target_y=target_y,
                     trust_radius=self.trust_radius,
@@ -178,7 +179,7 @@ class HybridGBPIInverseSolver(AbstractInverseMappingSolver):
             nn_indices, nn_weights = self._get_nearest_neighbor(target_y)
             vertices_indices = nn_indices
 
-            candidates_X = GradientDescentSampling(
+            candidates_X = ExtrapolationSampling(
                 forward_estimator=self.forward_estimator,
                 target_y=target_y,
                 trust_radius=self.trust_radius,

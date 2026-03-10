@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class DirichletSampling:
+class CoherentSampling:
     """
     Samples barycentric weights via Dirichlet distribution to generate diverse,
     physically valid hybrid designs within a coherent simplex.
@@ -17,7 +17,7 @@ class DirichletSampling:
 
     def __init__(self, concentration_factor: float = 100.0):
         """
-        Initializes the DirichletSampling strategy.
+        Initializes the CoherentSampling strategy.
 
         Args:
             concentration_factor: The multiplier used to scale the barycentric weights into
