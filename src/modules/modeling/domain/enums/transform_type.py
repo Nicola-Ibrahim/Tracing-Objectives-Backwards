@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class TransformTypeEnum(str, Enum):
+class TransformTypeEnum(StrEnum):
     MIN_MAX = "min_max"
     STANDARD = "standard"
     UNIT_VECTOR = "unit_vector"

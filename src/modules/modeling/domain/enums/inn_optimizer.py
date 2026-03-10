@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class INNOptimizerEnum(Enum):
+class INNOptimizerEnum(StrEnum):
     ADAM = "adam"
     ADAMW = "adamw"
     SGD = "sgd"

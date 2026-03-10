@@ -52,13 +52,11 @@ class GradientDescentSampling:
         base_anchor = vertices_X[best_anchor_idx]
         target = np.asarray(self._target_y).flatten()
 
-        # Define bounds for the trust region, keeping within [0, 1] absolute bounds
-        # Ensure lower_bound <= upper_bound even if base_anchor is slightly out of [0, 1]
-        lower_bound = np.maximum(0.0, base_anchor - self._trust_radius)
-        upper_bound = np.minimum(1.0, base_anchor + self._trust_radius)
-
-        # Final safety clip: ensure upper is at least lower
-        upper_bound = np.maximum(lower_bound, upper_bound)
+        # Define bounds for the trust region based on the actual data distribution
+        # We allow a local search around the anchor, but don't strictly enforce [0, 1]
+        # if the input data doesn't actually follow that range.
+        lower_bound = base_anchor - self._trust_radius
+        upper_bound = base_anchor + self._trust_radius
 
         bounds = Bounds(lower_bound, upper_bound)
 
@@ -68,30 +66,42 @@ class GradientDescentSampling:
             # Euclidean distance to target
             return np.linalg.norm(pred - target)
 
+        # 1. Run optimization once to find the mathematical local minimum
+        # Use trust-region optimization starting from the base anchor
+        res = minimize(
+            objective_function,
+            base_anchor,
+            method="trust-constr",
+            bounds=bounds,
+            options={
+                "maxiter": 50,
+                "disp": False,
+            },
+        )
+        
+        optimal_x = np.clip(res.x, lower_bound, upper_bound)
+        
+        # 2. Add controlled noise to generate diverse candidates within the trust region
+        # We scatter samples around the optimal point, but stay strictly within bounds.
         results = []
         rng = np.random.default_rng()
-
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
-            for _ in range(n_samples):
-                # Start from random points within the strict trust region to find multiple candidates
-                x0 = rng.uniform(lower_bound, upper_bound)
-
-                res = minimize(
-                    objective_function,
-                    x0,
-                    method="trust-constr",
-                    bounds=bounds,
-                    options={
-                        "maxiter": 50,
-                        "disp": False,
-                    },  # Keep it fast for real-time
-                )
-                results.append(np.clip(res.x, lower_bound, upper_bound))
+        
+        # Adaptive noise scale based on the average width of the trust region
+        # This ensures diversity is visible regardless of the data magnitude
+        region_widths = upper_bound - lower_bound
+        noise_scale = np.mean(region_widths) * 0.15 
+        
+        for i in range(n_samples):
+            if i == 0:
+                # Keep the exact optimal point as the first candidate
+                results.append(optimal_x)
+            else:
+                # Scatter others around it
+                noise = rng.normal(0, noise_scale, size=optimal_x.shape)
+                candidate = np.clip(optimal_x + noise, lower_bound, upper_bound)
+                results.append(candidate)
 
         if not results:
-            return np.empty((0, vertices.shape[1]))
+            return np.empty((0, vertices_X.shape[1]))
 
         return np.vstack(results)

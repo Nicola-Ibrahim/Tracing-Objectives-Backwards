@@ -113,11 +113,13 @@ class AffineCouplingLayer(nn.Module):
         self.mask_type = mask_type
 
         # Create mask: 1 for unchanged part, 0 for transformed part
-        self.register_buffer("mask", self._create_mask(input_dim, mask_type))
+        mask = self._create_mask(input_dim, mask_type)
+        self.register_buffer("mask", mask)
 
-        # Number of dimensions to transform
-        split_dim = input_dim // 2
-        unchanged_dim = input_dim - split_dim
+        # Number of dimensions to transform vs. keep unchanged
+        # Derive directly from mask to handle odd input dimensions correctly
+        unchanged_dim = int(mask.sum().item())
+        split_dim = input_dim - unchanged_dim
 
         # Networks for scale (s) and translation (t)
         # Input: unchanged part + conditioning

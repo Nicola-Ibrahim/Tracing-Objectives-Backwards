@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class TransformTarget(Enum):
+class TransformTarget(StrEnum):
     DECISIONS = "decisions"
     OBJECTIVES = "objectives"
     BOTH = "both"

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class EstimatorTypeEnum(Enum):
+class EstimatorTypeEnum(StrEnum):
     """
     Defines the available types of interpolators that can be trained.
     This Enum serves as a central registry of interpolator kinds within the domain.

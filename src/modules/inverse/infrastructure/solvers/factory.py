@@ -12,6 +12,7 @@ from .gbpi.gbpi_solver import GBPIInverseSolver
 from .gbpi.hybrid_solver import HybridGBPIInverseSolver
 from .gbpi.tda_gbpi_solver import TDAGBPIInverseSolver
 from .prob.mdn_solver import MDNProbabilisticInverseSolver
+from .prob.inn_solver import INNProbabilisticInverseSolver
 
 
 class SolversFactory:
@@ -19,6 +20,7 @@ class SolversFactory:
         InverseSolverRegistry.GBPI: GBPIInverseSolver,
         InverseSolverRegistry.TDA_GBPI: TDAGBPIInverseSolver,
         InverseSolverRegistry.MDN: MDNProbabilisticInverseSolver,
+        InverseSolverRegistry.INN: INNProbabilisticInverseSolver,
         InverseSolverRegistry.HYBRID_GBPI: HybridGBPIInverseSolver,
     }
 

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class DefaultValidationMetricEnum(str, Enum):
+class DefaultValidationMetricEnum(StrEnum):
     MSE = "MSE"
     MAE = "MAE"
     R2 = "R2"

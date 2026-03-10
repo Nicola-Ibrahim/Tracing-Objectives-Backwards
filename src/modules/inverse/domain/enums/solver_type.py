@@ -1,8 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class InverseSolverRegistry(str, Enum):
+class InverseSolverRegistry(StrEnum):
     GBPI = "GBPI"
     TDA_GBPI = "TDA-GBPI"
     HYBRID_GBPI = "HYBRID-GBPI"
     MDN = "MDN"
+    INN = "INN"

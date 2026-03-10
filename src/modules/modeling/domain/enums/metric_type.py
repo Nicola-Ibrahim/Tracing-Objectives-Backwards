@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class MetricTypeEnum(str, Enum):
+class MetricTypeEnum(StrEnum):
     MSE = "MSE"
     MAE = "MAE"
     R2 = "R2"
