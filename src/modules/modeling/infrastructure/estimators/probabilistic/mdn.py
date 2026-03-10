@@ -14,7 +14,6 @@ Architecture:
 Key Features:
     - Automatic mixture component selection via BIC
     - Temperature-based sampling control
-    - GMM boost for improved conditioning
     - Flexible activation functions and optimizers
 
 Reference:
@@ -25,14 +24,10 @@ from typing import Literal, Sequence
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-import plotly.express as px
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pydantic import Field
-from sklearn.decomposition import PCA
-from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
 from torch.distributions import (
     Categorical,
@@ -43,13 +38,12 @@ from torch.distributions import (
     Normal,
 )
 from torch.utils.data import DataLoader, TensorDataset
-from umap import UMAP
 
 from ....domain.enums.activation_function import ActivationFunctionEnum
 from ....domain.enums.distribution_family import DistributionFamilyEnum
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.enums.optimizer_function import OptimizerFunctionEnum
-from ....domain.interfaces.base_estimator import ProbabilisticEstimator
+from ....domain.interfaces.base_estimator import ProbabilisticEstimator, TrainingHistory
 from ....domain.value_objects.estimator_params import EstimatorParamsBase
 
 
@@ -73,9 +67,6 @@ class MDNEstimatorParams(EstimatorParamsBase):
     distribution_family: DistributionFamilyEnum = Field(
         DistributionFamilyEnum.NORMAL,
         description="Distribution family used for mixture components.",
-    )
-    gmm_boost: bool = Field(
-        False, description="Whether to apply GMM-based initialization."
     )
     hidden_layers: list[int] = Field(
         [256, 256, 256],
@@ -241,29 +232,6 @@ class MDN(nn.Module):
 
         return MixtureSameFamily(Categorical(probs=pi), Independent(comp, 1))
 
-    def summary(self, input_size=(1,)):
-        x = torch.zeros(1, *input_size)
-        print("\nMixture Density Network (MDN) Summary\n" + "=" * 50)
-        layers = [("Input", x.shape)]
-        tmp_x = x
-        for i, layer in enumerate(self.hidden_stack):
-            tmp_x = layer(tmp_x)
-            layers.append((layer.__class__.__name__, tmp_x.shape))
-
-        pi = F.softmax(self.fc_pi(tmp_x), dim=-1)
-        mu = self.fc_mu(tmp_x).view(-1, self.num_mixtures, self.output_dim)
-        sigma = F.softplus(self.fc_sigma(tmp_x)).view(
-            -1, self.num_mixtures, self.output_dim
-        )
-
-        layers.append(("π (mixture weights)", pi.shape))
-        layers.append(("μ (means)", mu.shape))
-        layers.append(("σ (stddev)", sigma.shape))
-
-        for name, shape in layers:
-            print(f"{name:<25} │ Output Shape: {list(shape)}")
-        print("=" * 50)
-
     # ----- Forward Pass -----
     def forward(self, x: torch.Tensor):
         # Apply activation to the output of the first fully connected layer
@@ -310,29 +278,16 @@ class MDNEstimator(ProbabilisticEstimator):
 
     def __init__(self, params: MDNEstimatorParams):
         super().__init__()
+        self._params = params
         self._num_mixtures = params.num_mixtures
         self._learning_rate = params.learning_rate
-        self._distribution_family = (
-            DistributionFamilyEnum(params.distribution_family)
-            if isinstance(params.distribution_family, str)
-            else params.distribution_family
-        )
-        self._gmm_boost = params.gmm_boost
+        self._distribution_family = params.distribution_family
         self._hidden_layers = params.hidden_layers
-        self._hidden_activation_fn_name = (
-            ActivationFunctionEnum(params.hidden_activation_fn_name)
-            if isinstance(params.hidden_activation_fn_name, str)
-            else params.hidden_activation_fn_name
-        )
-        self._optimizer_fn_name = (
-            OptimizerFunctionEnum(params.optimizer_fn_name)
-            if isinstance(params.optimizer_fn_name, str)
-            else params.optimizer_fn_name
-        )
+        self._hidden_activation_fn_name = params.hidden_activation_fn_name
+        self._optimizer_fn_name = params.optimizer_fn_name
         self._verbose = params.verbose
 
         self._model: MDN | None = None
-        self._clusterer: GaussianMixture = None
         self._best_model_state_dict: dict = None
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -346,11 +301,13 @@ class MDNEstimator(ProbabilisticEstimator):
 
     @property
     def type(self) -> str:
-        return getattr(EstimatorTypeEnum, "MDN", EstimatorTypeEnum.MDN).value
+        return EstimatorTypeEnum.MDN.value
 
     # ----------------------- Fitting -----------------------
 
     def _determine_num_mixtures(self, X_y: npt.NDArray[np.float64]) -> int:
+        from sklearn.mixture import GaussianMixture
+
         lowest_bic = np.inf
         best_gmm: GaussianMixture = None
         for n_components in range(1, 7):
@@ -362,9 +319,9 @@ class MDNEstimator(ProbabilisticEstimator):
             if bic < lowest_bic:
                 lowest_bic = bic
                 best_gmm = gmm
+                best_gmm = gmm
         if best_gmm is None:
             raise RuntimeError("Failed to determine number of mixtures via BIC.")
-        self._clusterer = best_gmm
         return best_gmm.n_components
 
     def _prepare_model(self, X: npt.NDArray[np.float64], y: npt.NDArray[np.float64]):
@@ -374,12 +331,6 @@ class MDNEstimator(ProbabilisticEstimator):
         if self._num_mixtures == -1:
             self._num_mixtures = self._determine_num_mixtures(np.hstack((X, y)))
 
-        if self._gmm_boost:
-            if self._clusterer is None:
-                raise RuntimeError("GMM boost enabled but _clusterer is None.")
-            cluster_probs = self._clusterer.predict_proba(X)
-            input_dim = input_dim + cluster_probs.shape[1]
-
         self._model = MDN(
             input_dim=input_dim,
             output_dim=output_dim,
@@ -388,14 +339,19 @@ class MDNEstimator(ProbabilisticEstimator):
             hidden_activation_fn_name=self._hidden_activation_fn_name,
         ).to(self._device)
 
-    def _get_optimizer_fn(self, name: OptimizerFunctionEnum):
+    def _get_optimizer_fn(self, name: OptimizerFunctionEnum | None):
         mapping = {
             OptimizerFunctionEnum.SGD: torch.optim.SGD,
             OptimizerFunctionEnum.ADAM: torch.optim.Adam,
             OptimizerFunctionEnum.RMSPROP: torch.optim.RMSprop,
             OptimizerFunctionEnum.GRADIENT_DESCENT: torch.optim.SGD,
         }
-        return mapping[name]
+
+        # Fallback to ADAM
+        if name is None:
+            return torch.optim.Adam
+
+        return mapping.get(name, torch.optim.Adam)
 
     def _prepare_dataloaders(
         self,
@@ -511,9 +467,10 @@ class MDNEstimator(ProbabilisticEstimator):
                 best_loss = avg_val
                 self._best_model_state_dict = self._model.state_dict()
 
-            self._training_history.epochs.append(epoch)
-            self._training_history.train_loss.append(float(avg_train))
-            self._training_history.val_loss.append(float(avg_val))
+            # Log history
+            self._training_history.log(
+                epoch, train_loss=float(avg_train), val_loss=float(avg_val)
+            )
 
         if self._best_model_state_dict is not None:
             self._model.load_state_dict(self._best_model_state_dict)
@@ -640,15 +597,10 @@ class MDNEstimator(ProbabilisticEstimator):
 
     def _prepare_inputs(self, X: npt.NDArray[np.float64]) -> torch.Tensor:
         """
-        Convert to torch, optionally append GMM-boost features, and move to device.
+        Convert to torch and move to device.
         """
         device = self._model_device()
         X_t = torch.tensor(X, dtype=torch.float32, device=device)
-
-        if self._gmm_boost and self._clusterer is not None:
-            cluster_probs = self._clusterer.predict_proba(X)  # numpy
-            cp_t = torch.tensor(cluster_probs, dtype=torch.float32, device=device)
-            X_t = torch.cat([X_t, cp_t], dim=1)
 
         return X_t
 
@@ -698,8 +650,12 @@ class MDNEstimator(ProbabilisticEstimator):
         Returns:
             dict: Checkpoint containing model weights, training state, and metadata
         """
-        if self._model is None:
-            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+        self._ensure_fitted()
+        checkpoint = (
+            self._params.model_dump()
+            if hasattr(self._params, "model_dump")
+            else self._params.dict()
+        )
 
         # Keep tensors for safetensors serialization
         model_state = {
@@ -707,25 +663,15 @@ class MDNEstimator(ProbabilisticEstimator):
             for key, tensor in self._model.state_dict().items()
         }
 
-        # Serialize GMM clusterer if used
-        clusterer_state = None
-        if self._gmm_boost and self._clusterer is not None:
-            clusterer_state = {
-                "means": self._clusterer.means_.tolist(),
-                "covariances": self._clusterer.covariances_.tolist(),
-                "weights": self._clusterer.weights_.tolist(),
-                "n_components": int(self._clusterer.n_components),
-                "covariance_type": self._clusterer.covariance_type,
+        checkpoint.update(
+            {
+                "model_state": model_state,
+                "num_mixtures": int(self._num_mixtures),
+                "X_dim": int(self._X_dim) if self._X_dim is not None else None,
+                "y_dim": int(self._y_dim) if self._y_dim is not None else None,
+                "training_history": self._training_history.as_dict(),
             }
-
-        checkpoint = {
-            "model_state": model_state,
-            "num_mixtures": int(self._num_mixtures),
-            "X_dim": int(self._X_dim) if self._X_dim is not None else None,
-            "y_dim": int(self._y_dim) if self._y_dim is not None else None,
-            "clusterer_state": clusterer_state,
-            "training_history": self._training_history.as_dict(),
-        }
+        )
 
         return checkpoint
 
@@ -747,27 +693,14 @@ class MDNEstimator(ProbabilisticEstimator):
             "y_dim",
             "clusterer_state",
             "training_history",
+            "gmm_boost",
         }
         parsed_params = {}
         for key, value in parameters.items():
             # Skip checkpoint-specific fields and metadata
             if key in checkpoint_fields or key in ["type", "mapping_direction"]:
                 continue
-            # Parse enums
-            if key == "distribution_family":
-                parsed_params[key] = (
-                    DistributionFamilyEnum(value) if isinstance(value, str) else value
-                )
-            elif key == "hidden_activation_fn_name":
-                parsed_params[key] = (
-                    ActivationFunctionEnum(value) if isinstance(value, str) else value
-                )
-            elif key == "output_activation_fn_name":
-                parsed_params[key] = (
-                    ActivationFunctionEnum(value) if isinstance(value, str) else value
-                )
-            else:
-                parsed_params[key] = value
+            parsed_params[key] = value
 
         estimator_params = MDNEstimatorParams(**parsed_params)
         estimator = cls(params=estimator_params)
@@ -780,26 +713,6 @@ class MDNEstimator(ProbabilisticEstimator):
         # Rebuild PyTorch model architecture
         if estimator._X_dim is not None and estimator._y_dim is not None:
             input_dim = estimator._X_dim
-
-            # Restore GMM clusterer if it was used
-            if parameters.get("clusterer_state") is not None:
-                cs = parameters["clusterer_state"]
-                clusterer = GaussianMixture(
-                    n_components=cs["n_components"],
-                    covariance_type=cs["covariance_type"],
-                )
-                # Manually set fitted parameters
-                clusterer.means_ = np.array(cs["means"])
-                clusterer.covariances_ = np.array(cs["covariances"])
-                clusterer.weights_ = np.array(cs["weights"])
-                clusterer.precisions_cholesky_ = np.linalg.cholesky(
-                    np.linalg.inv(clusterer.covariances_)
-                )
-                estimator._clusterer = clusterer
-
-                # Adjust input dim for GMM boost
-                if estimator._gmm_boost:
-                    input_dim += cs["n_components"]
 
             # Create MDN model
             estimator._model = MDN(
@@ -825,122 +738,8 @@ class MDNEstimator(ProbabilisticEstimator):
 
         # Restore training history
         if "training_history" in parameters:
-            hist = parameters["training_history"]
-            estimator._training_history.epochs = hist.get("epochs", [])
-            estimator._training_history.train_loss = hist.get("train_loss", [])
-            estimator._training_history.val_loss = hist.get("val_loss", [])
-            for key, value in hist.items():
-                if key not in ["epochs", "train_loss", "val_loss"]:
-                    estimator._training_history.extras[key] = value
+            estimator._training_history = TrainingHistory.from_dict(
+                parameters["training_history"]
+            )
 
         return estimator
-
-
-# ======================================================================
-# Visualization & helpers
-# ======================================================================
-
-
-def plot_predict_dist(
-    model: MDNEstimator,
-    X: npt.NDArray[np.float64],
-    y: npt.NDArray[np.float64],
-    non_linear: bool = False,
-):
-    """
-    Plot conditional mixture components (μ) against reduced X, with size ~ π.
-    For multi-dimensional y, uses y[..., 0].
-    """
-    pi, mu, sigma = model.get_mixture_parameters(X)
-    X_reduced = _reduce_dim(X, non_linear).reshape(-1)
-
-    # select first output dimension for plotting if needed
-    if mu.ndim == 3 and mu.shape[-1] > 1:
-        mu_plot = mu[..., 0]
-        sigma_plot = sigma[..., 0]
-        y_plot = y[..., 0]
-    else:
-        mu_plot = mu.reshape(mu.shape[0], mu.shape[1])
-        sigma_plot = sigma.reshape(sigma.shape[0], sigma.shape[1])
-        y_plot = y.reshape(y.shape[0])
-
-    df_mixtures = pd.DataFrame(
-        {
-            "x": np.repeat(X_reduced, mu_plot.shape[1]),
-            "y": mu_plot.reshape(-1),
-            "sigma": sigma_plot.reshape(-1),
-            "pi": pi.reshape(-1),
-            "Mixture": np.tile(np.arange(mu_plot.shape[1]), mu_plot.shape[0]),
-        }
-    )
-
-    fig = px.scatter(
-        df_mixtures,
-        x="x",
-        y="y",
-        color="Mixture",
-        size="pi",
-        hover_data={"sigma": True},
-        title="Conditional Mixture Distributions",
-        labels={"x": "Reduced Input Dimension", "y": "Output (dim 0)"},
-    )
-
-    df_true = pd.DataFrame({"x": X_reduced, "y": y_plot})
-    fig.add_scatter(
-        x=df_true["x"],
-        y=df_true["y"],
-        mode="markers",
-        marker={"color": "black", "size": 5, "opacity": 0.2},
-        name="True Data",
-    )
-    fig.show()
-
-
-def plot_samples_vs_true(
-    model: MDNEstimator,
-    X: npt.NDArray[np.float64],
-    y: npt.NDArray[np.float64],
-    non_linear: bool = False,
-):
-    """
-    Compare one generated sample vs ground truth along reduced X.
-    For multi-dimensional y, uses y[..., 0].
-    """
-    samples = model.sample(X, n_samples=1)  # (n, out)
-    X_reduced = _reduce_dim(X, non_linear).reshape(-1)
-
-    s = samples
-    if s.ndim == 2 and s.shape[1] > 1:
-        s_plot = s[:, 0]
-        y_plot = y[:, 0]
-    else:
-        s_plot = s.reshape(-1)
-        y_plot = y.reshape(-1)
-
-    df = pd.DataFrame(
-        {
-            "x": np.concatenate([X_reduced, X_reduced]),
-            "y": np.concatenate([s_plot, y_plot]),
-            "Type": ["Generated Sample"] * len(s_plot) + ["True Data"] * len(y_plot),
-        }
-    )
-
-    fig = px.scatter(
-        df,
-        x="x",
-        y="y",
-        color="Type",
-        title="Generated Samples vs True Data",
-        labels={"x": "Reduced Input Dimension", "y": "Output (dim 0)"},
-        opacity=0.4,
-    )
-    fig.show()
-
-
-def _reduce_dim(
-    X: npt.NDArray[np.float64], non_linear: bool
-) -> npt.NDArray[np.float64]:
-    if X.shape[1] > 1:
-        reducer = UMAP(n_components=1) if non_linear else PCA(n_components=1)
-        return reducer.fit_transform(X)
-    return X

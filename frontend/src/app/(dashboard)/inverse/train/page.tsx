@@ -100,6 +100,24 @@ export default function TrainEnginePage() {
                                         <p className="font-bold">{lastResult.data.n_train_samples}</p>
                                     </div>
                                 </div>
+
+                                {lastResult.data.training_history && Object.keys(lastResult.data.training_history).length > 0 && (
+                                    <div className="mt-6">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-tight mb-3">Solver History & Artifacts</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(lastResult.data.training_history).map(([key, value]: [string, any]) => (
+                                                <div key={key} className="flex justify-between items-center p-2 bg-white border border-slate-100 rounded-md text-xs">
+                                                    <span className="text-slate-500 capitalize">{key.replace("_", " ")}</span>
+                                                    <span className="font-mono font-bold text-indigo-600 text-right max-w-[60%] truncate">
+                                                        {Array.isArray(value) 
+                                                            ? `[${value.length} epochs / steps]` 
+                                                            : typeof value === "number" ? value.toFixed(4) : String(value)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <Alert variant="destructive">

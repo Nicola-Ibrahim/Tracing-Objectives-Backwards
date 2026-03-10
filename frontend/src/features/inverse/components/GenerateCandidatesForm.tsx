@@ -107,7 +107,7 @@ export function GenerateCandidatesForm({
                                 <FormLabel className="text-xs font-bold uppercase text-slate-500">Reference Dataset</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
-                                    defaultValue={field.value}
+                                    value={field.value || ""}
                                 >
                                     <FormControl>
                                         <SelectTrigger className="bg-white">

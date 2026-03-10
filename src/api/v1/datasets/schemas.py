@@ -14,7 +14,7 @@ class ParameterDefinition(BaseModel):
 
 
 class GeneratorSchema(BaseModel):
-    id: str
+    type: str
     name: str
     parameters: List[ParameterDefinition]
 

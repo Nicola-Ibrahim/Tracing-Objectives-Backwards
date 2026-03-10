@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ActivationFunctionEnum(Enum):
+class ActivationFunctionEnum(StrEnum):
     RELU = "relu"
     TANH = "tanh"
     SIGMOID = "sigmoid"

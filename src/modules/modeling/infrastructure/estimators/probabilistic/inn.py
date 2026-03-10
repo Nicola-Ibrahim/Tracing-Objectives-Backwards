@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.enums.inn_optimizer import INNOptimizerEnum
-from ....domain.interfaces.base_estimator import ProbabilisticEstimator
+from ....domain.interfaces.base_estimator import ProbabilisticEstimator, TrainingHistory
 from ....domain.value_objects.estimator_params import EstimatorParamsBase
 
 
@@ -363,7 +363,7 @@ class INNEstimator(ProbabilisticEstimator):
 
     def __init__(self, params: INNEstimatorParams):
         super().__init__()
-        self.params = params
+        self._params = params
 
         # Architecture
         self._num_coupling_layers = params.num_coupling_layers
@@ -397,7 +397,7 @@ class INNEstimator(ProbabilisticEstimator):
 
     @property
     def type(self) -> str:
-        return getattr(EstimatorTypeEnum, "INN", EstimatorTypeEnum.INN).value
+        return EstimatorTypeEnum.INN.value
 
     def fit(
         self,
@@ -636,27 +636,24 @@ class INNEstimator(ProbabilisticEstimator):
 
     def _get_optimizer(self) -> torch.optim.Optimizer:
         """Create optimizer based on configuration."""
-        if self._optimizer_name == INNOptimizerEnum.ADAM:
-            return torch.optim.Adam(
-                self._flow.parameters(),
-                lr=self._learning_rate,
-                weight_decay=self._weight_decay,
-            )
-        elif self._optimizer_name == INNOptimizerEnum.ADAMW:
-            return torch.optim.AdamW(
-                self._flow.parameters(),
-                lr=self._learning_rate,
-                weight_decay=self._weight_decay,
-            )
-        elif self._optimizer_name == INNOptimizerEnum.SGD:
-            return torch.optim.SGD(
-                self._flow.parameters(),
-                lr=self._learning_rate,
-                weight_decay=self._weight_decay,
-                momentum=0.9,
-            )
-        else:
+        optimizers = {
+            INNOptimizerEnum.ADAM: torch.optim.Adam,
+            INNOptimizerEnum.ADAMW: torch.optim.AdamW,
+            INNOptimizerEnum.SGD: torch.optim.SGD,
+        }
+
+        opt_class = optimizers.get(self._optimizer_name)
+        if opt_class is None:
             raise ValueError(f"Unknown optimizer: {self._optimizer_name}")
+
+        kwargs = {
+            "lr": self._learning_rate,
+            "weight_decay": self._weight_decay,
+        }
+        if self._optimizer_name == INNOptimizerEnum.SGD:
+            kwargs["momentum"] = 0.9
+
+        return opt_class(self._flow.parameters(), **kwargs)
 
     # -------------------- Checkpoint Serialization --------------------
 
@@ -667,20 +664,26 @@ class INNEstimator(ProbabilisticEstimator):
         Returns:
             dict: Checkpoint containing flow weights and training state
         """
-        if self._flow is None:
-            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+        self._ensure_fitted()
+        checkpoint = (
+            self._params.model_dump()
+            if hasattr(self._params, "model_dump")
+            else self._params.dict()
+        )
 
         # Keep tensors for safetensors serialization (namespaced keys)
         flow_state = {
             f"flow.{k}": v.detach().cpu() for k, v in self._flow.state_dict().items()
         }
 
-        checkpoint = {
-            "model_state": flow_state,
-            "input_dim": int(self._flow.input_dim),
-            "cond_dim": int(self._flow.cond_dim),
-            "training_history": self._training_history.as_dict(),
-        }
+        checkpoint.update(
+            {
+                "model_state": flow_state,
+                "input_dim": int(self._flow.input_dim),
+                "cond_dim": int(self._flow.cond_dim),
+                "training_history": self._training_history.as_dict(),
+            }
+        )
 
         return checkpoint
 
@@ -742,12 +745,8 @@ class INNEstimator(ProbabilisticEstimator):
 
         # Restore training history
         if "training_history" in parameters:
-            hist = parameters["training_history"]
-            estimator._training_history.epochs = hist.get("epochs", [])
-            estimator._training_history.train_loss = hist.get("train_loss", [])
-            estimator._training_history.val_loss = hist.get("val_loss", [])
-            for key, value in hist.items():
-                if key not in ["epochs", "train_loss", "val_loss"]:
-                    estimator._training_history.extras[key] = value
+            estimator._training_history = TrainingHistory.from_dict(
+                parameters["training_history"]
+            )
 
         return estimator

@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ....modules.evaluation.application.check_engine_performance import (
+    CheckModelPerformanceParams,
     CheckModelPerformanceService,
 )
 from ....modules.evaluation.application.diagnose_engines import (
     DiagnoseInverseModelsParams,
     DiagnoseInverseModelsService,
-    InverseEngineCandidate,
 )
 from .dependencies import get_diagnose_service, get_performance_service
 from .schemas import (
@@ -29,8 +29,7 @@ async def diagnose_engines(
     Checks cache first to prevent redundant compute.
     """
     candidates = [
-        InverseEngineCandidate(solver_type=c.solver_type, version=c.version)
-        for c in request.candidates
+        {"solver_type": c.solver_type, "version": c.version} for c in request.candidates
     ]
     params = DiagnoseInverseModelsParams(
         dataset_name=request.dataset_name,
@@ -40,6 +39,7 @@ async def diagnose_engines(
     )
 
     result = service.execute(params)
+
     return result.match(
         on_success=lambda value: DiagnoseResponse(
             dataset_name=value["dataset_name"],
@@ -107,16 +107,15 @@ async def check_performance(
     """
     Check performance of a single engine.
     """
-    from ....modules.evaluation.application.check_engine_performance import (
-        CheckModelPerformanceParams,
-    )
 
     params = CheckModelPerformanceParams(
         dataset_name=request.dataset_name,
         engine=request.engine,
         n_samples=request.n_samples,
     )
+
     result = service.execute(params)
+
     return result.match(
         on_success=lambda value: PerformanceResponse(
             dataset_name=value["dataset_name"],

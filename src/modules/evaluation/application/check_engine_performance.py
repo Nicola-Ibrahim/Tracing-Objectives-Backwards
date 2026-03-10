@@ -32,7 +32,7 @@ class CheckModelPerformanceParams(BaseModel):
         description="Engine candidate to check.",
     )
     n_samples: int = Field(
-        default=2,
+        default=10,
         ge=1,
         description="Number of samples to generate for visualization.",
     )
@@ -98,7 +98,7 @@ class CheckModelPerformanceService:
                     },
                 }
             )
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             return Result.fail(
                 message=f"Dataset or engine not found for {params.dataset_name}",
                 details=str(e),

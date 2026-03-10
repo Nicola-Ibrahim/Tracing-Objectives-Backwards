@@ -1,7 +1,7 @@
 import { ParameterDefinition } from "../dataset/types";
 
 export interface SolverSchema {
-  id: string;
+  type: string;
   name: string;
   parameters: ParameterDefinition[];
 }
@@ -35,7 +35,7 @@ export interface TrainEngineResponse {
   n_train_samples: number;
   n_test_samples: number;
   split_ratio: number;
-  training_history: any[];
+  training_history: Record<string, any>;
   transform_summary: string[];
 }
 

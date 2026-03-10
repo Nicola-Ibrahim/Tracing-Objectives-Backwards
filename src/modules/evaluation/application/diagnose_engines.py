@@ -107,15 +107,15 @@ class DiagnoseInverseModelsService:
                 engine_names.append(engine_name)
                 self._logger.log_info(f"Diagnosing {engine_name}")
 
-                test_indices = engine.data_split.test_indices
+                test_indices = dataset.test_indices
                 if len(test_indices) == 0:
                     warnings.append(
                         f"Engine {engine_name} has no test split. Skipping."
                     )
                     continue
 
-                X_test_raw = dataset.objectives[test_indices]
-                y_test_raw = dataset.decisions[test_indices]
+                X_test_raw = dataset.y[test_indices]
+                y_test_raw = dataset.X[test_indices]
 
                 X_test_norm = engine.transform_objective(X_test_raw)
                 y_test_norm = engine.transform_decision(y_test_raw)
@@ -136,7 +136,7 @@ class DiagnoseInverseModelsService:
                 all_candidates_y_norm = np.stack(all_candidates_y_norm)
 
                 y_train_norm = engine.transform_objective(
-                    dataset.objectives[engine.data_split.train_indices]
+                    dataset.y[dataset.train_indices]
                 )
 
                 spatial_audit = SpatialCandidateAuditor.audit(
@@ -325,7 +325,7 @@ class DiagnoseInverseModelsService:
             version = candidate.version
             if version is None:
                 # Resolve version from list
-                summaries = self._engine_repository.list(
+                summaries = self._engine_repository.list_all(
                     dataset_name, candidate.solver_type
                 )
                 if summaries:

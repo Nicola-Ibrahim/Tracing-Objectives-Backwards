@@ -111,7 +111,7 @@ class InverseService:
                 if label == "objectives":
                     t.fit(y_norm)
                     y_norm = t.transform(y_norm)
-
+            
             solver = self._solvers_factory.create(
                 params.solver.type, params.solver.params
             )

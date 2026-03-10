@@ -58,14 +58,14 @@ export function TrainEngineForm({
 
     useEffect(() => {
         if (solvers.length > 0 && !selectedSolver) {
-            const defaultSolver = solvers.find(s => s.id === "GBPI") || solvers[0];
+            const defaultSolver = solvers.find(s => s.type === "GBPI") || solvers[0];
             setSelectedSolver(defaultSolver);
-            form.setValue("solver_type", defaultSolver.id);
+            form.setValue("solver_type", defaultSolver.type);
         }
     }, [solvers, form]);
 
     const handleSolverChange = (solverId: string) => {
-        const solver = solvers.find(s => s.id === solverId);
+        const solver = solvers.find(s => s.type === solverId);
         if (solver) {
             setSelectedSolver(solver);
             form.setValue("solver_type", solverId);
@@ -112,7 +112,7 @@ export function TrainEngineForm({
                                 <FormLabel className="text-xs font-bold uppercase text-slate-500">Source Dataset</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
-                                    defaultValue={field.value}
+                                    value={field.value || ""}
                                 >
                                     <FormControl>
                                         <SelectTrigger className="bg-white">
@@ -140,7 +140,7 @@ export function TrainEngineForm({
                                 <FormLabel className="text-xs font-bold uppercase text-slate-500">Architecture Strategy</FormLabel>
                                 <Select
                                     onValueChange={handleSolverChange}
-                                    defaultValue={field.value}
+                                    value={field.value || ""}
                                 >
                                     <FormControl>
                                         <SelectTrigger className="bg-white">
@@ -149,7 +149,7 @@ export function TrainEngineForm({
                                     </FormControl>
                                     <SelectContent>
                                         {solvers.map((s) => (
-                                            <SelectItem key={s.id} value={s.id}>
+                                            <SelectItem key={s.type} value={s.type}>
                                                 {s.name}
                                             </SelectItem>
                                         ))}

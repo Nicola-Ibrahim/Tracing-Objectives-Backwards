@@ -20,7 +20,7 @@ export const getSolvers = async (): Promise<SolversDiscoveryResponse> => {
  * Fetch all available datasets.
  */
 export const getDatasets = async (): Promise<DatasetInfo[]> => {
-  return apiClient.get("/api/v1/datasets"); // Removed trailing slash
+  return apiClient.get("/api/v1/datasets"); 
 };
 
 /**

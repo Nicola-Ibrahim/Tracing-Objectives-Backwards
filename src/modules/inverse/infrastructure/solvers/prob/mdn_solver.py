@@ -2,6 +2,11 @@ from typing import Any
 
 import numpy as np
 
+from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
+from .....modeling.infrastructure.estimators.deterministic.rbf import (
+    RBFEstimator,
+    RBFEstimatorParams,
+)
 from .....modeling.infrastructure.estimators.probabilistic.mdn import MDNEstimatorParams
 from .....modeling.infrastructure.factories.estimator import (
     EstimatorFactory,
@@ -18,19 +23,30 @@ class MDNProbabilisticInverseSolver(AbstractInverseMappingSolver):
     """
 
     def __init__(self, params: MDNEstimatorParams):
-        self.estimator = EstimatorFactory.create(type="MDN", params=params)
+        self.estimator = EstimatorFactory().create(
+            type=EstimatorTypeEnum.MDN, params=params
+        )
+        self.forward_estimator: RBFEstimator | None = None
 
     def type(self) -> str:
         return "MDN-Probabilistic"
 
     def _ensure_fitted(self) -> None:
         self.estimator._ensure_fitted()
+        if self.forward_estimator is None:
+            raise RuntimeError("Forward estimator not fitted. Call 'train' first.")
 
     def train(self, X: np.ndarray, y: np.ndarray) -> None:
         """
-        Fits the internal probabilistic estimator on the provided data.
+        Fits the internal probabilistic estimator and forward RBF estimator.
         """
+        # Inverse mapping: y -> X
         self.estimator.fit(y, X)
+
+        # Forward mapping for candidate evaluation: X -> y
+        rbf_params = RBFEstimatorParams(n_neighbors=7, kernel="thin_plate_spline")
+        self.forward_estimator = RBFEstimator(rbf_params)
+        self.forward_estimator.fit(X, y)
 
     def generate(self, target_y: np.ndarray, n_samples: int) -> InverseSolverResult:
         """
@@ -49,8 +65,8 @@ class MDNProbabilisticInverseSolver(AbstractInverseMappingSolver):
         candidates_raw = self.estimator.sample(query_y, n_samples=n_samples)
         candidates_x = candidates_raw.reshape(-1, candidates_raw.shape[-1])
 
-        # For a probabilistic solver, the candidates_y are conceptually 'target_y'
-        candidates_y = np.tile(target_y, (n_samples, 1))
+        # Use forward estimator to predict objective values for candidates
+        candidates_y = self.forward_estimator.predict(candidates_x)
 
         metadata = {}
         if hasattr(self.estimator, "get_log_likelihood"):

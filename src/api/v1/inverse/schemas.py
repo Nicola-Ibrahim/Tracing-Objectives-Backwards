@@ -14,7 +14,7 @@ class ParameterDefinition(BaseModel):
 
 
 class SolverSchema(BaseModel):
-    id: str
+    type: str
     name: str
     parameters: list[ParameterDefinition]
 
@@ -51,7 +51,7 @@ class TrainEngineResponse(BaseModel):
     n_train_samples: int
     n_test_samples: int
     split_ratio: float
-    training_history: list[EpochMetric] = Field(default_factory=list)
+    training_history: dict[str, Any] = Field(default_factory=dict)
     transform_summary: list[str] = Field(default_factory=list)
 
 

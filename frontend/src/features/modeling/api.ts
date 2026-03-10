@@ -27,14 +27,19 @@ export interface PreviewResponse {
   metrics: Record<string, any>;
 }
 
+export interface TransformerParameter {
+  name: string;
+  type: string;
+  required: boolean;
+  default: any;
+  description?: string;
+  options?: any[];
+}
+
 export interface TransformerMetadata {
   type: string;
   name: string;
-  params: Record<string, {
-    type: string;
-    default: any;
-    description?: string;
-  }>;
+  parameters: TransformerParameter[];
 }
 
 export interface TransformerRegistryResponse {

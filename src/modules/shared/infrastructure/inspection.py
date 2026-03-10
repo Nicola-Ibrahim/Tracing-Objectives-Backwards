@@ -1,6 +1,6 @@
 import inspect
 from enum import Enum
-from typing import Any, Dict, List, Optional, Type, get_args, get_origin
+from typing import Any, Literal, Optional, Type, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
@@ -36,12 +36,12 @@ def get_type_name(typ: Any) -> str:
     return getattr(typ, "__name__", str(typ))
 
 
-def inspect_parameter(
+def _inspect_single_param(
     name: str,
     annotation: Any,
     default: Any = inspect.Parameter.empty,
     description: str | None = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Inspects a single parameter and returns one or more parameter definitions.
     Flattens pydantic models.
@@ -49,10 +49,16 @@ def inspect_parameter(
     if is_pydantic_model(annotation):
         parameters = []
         for field_name, field in annotation.model_fields.items():
+            # Skip discriminator fields (usually named 'type' and typed as Literal)
+            # These are internal implementation details for Pydantic and shouldn't be
+            # exposed as user-tunable hyperparameters in the frontend.
+            if field_name == "type" and get_origin(field.annotation) is Literal:
+                continue
+
             # Recursive call could be done here if nested flattening is desired
             # For now, let's just do one level as requested ("the arg is just a namespace")
             parameters.extend(
-                inspect_parameter(
+                _inspect_single_param(
                     name=field_name,
                     annotation=field.annotation,
                     default=field.default
@@ -86,6 +92,77 @@ def inspect_parameter(
     ]
 
 
+def extract_constructor_schema(cls: type) -> list[dict[str, Any]]:
+    """
+    Inspects cls.__init__ and returns a flat list of parameter definitions
+    for frontend discovery. Flattens Pydantic model params into their fields.
+    Skips Literal-typed 'type' discriminator fields.
+    """
+    sig = inspect.signature(cls.__init__)
+    params = []
+    for name, param in sig.parameters.items():
+        if name == "self":
+            continue
+        params.extend(
+            _inspect_single_param(
+                name=name,
+                annotation=param.annotation,
+                default=param.default,
+            )
+        )
+    return params
+
+
+def build_constructor_kwargs(cls: type, config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Given a class and a flat config dict (from frontend/API), builds the
+    correct kwargs for cls.__init__. Handles:
+    - Pydantic model params: extracts matching fields, uses model_validate()
+    - Enum params: normalizes string -> Enum
+    - Simple params: passes through
+    - Defaults: uses defaults for missing optional params
+    Skips Literal-typed 'type' discriminator fields from config extraction.
+    """
+    sig = inspect.signature(cls.__init__)
+    kwargs = {}
+    for name, param in sig.parameters.items():
+        if name == "self":
+            continue
+
+        if is_pydantic_model(param.annotation):
+            # Check if already provided as a nested dict under the param name
+            if name in config and isinstance(config[name], dict):
+                kwargs[name] = param.annotation.model_validate(config[name])
+            else:
+                # Extract matching fields from flat config
+                model_fields = param.annotation.model_fields
+                filtered = {
+                    k: v
+                    for k, v in config.items()
+                    if k in model_fields
+                    and not (k == "type" and get_origin(model_fields[k].annotation) is Literal)
+                }
+                # If we found fields or if it's required, try to instantiate
+                if filtered or param.default is inspect.Parameter.empty:
+                    kwargs[name] = param.annotation.model_validate(filtered)
+        else:
+            if name in config:
+                kwargs[name] = normalize_value(config[name], param.annotation)
+            elif param.default is not inspect.Parameter.empty:
+                kwargs[name] = param.default
+    return kwargs
+
+
+def inspect_parameter(
+    name: str,
+    annotation: Any,
+    default: Any = inspect.Parameter.empty,
+    description: str | None = None,
+) -> list[dict[str, Any]]:
+    """Deprecated: Use extract_constructor_schema instead for whole classes."""
+    return _inspect_single_param(name, annotation, default, description)
+
+
 def normalize_value(value: Any, annotation: Any) -> Any:
     """
     Normalizes an incoming value (from JSON/API) to the expected Python type.
@@ -115,8 +192,8 @@ def normalize_value(value: Any, annotation: Any) -> Any:
 
 
 def validate_model_parameters(
-    model_class: Type[BaseModel], params: Dict[str, Any]
-) -> Optional[Dict[str, str]]:
+    model_class: Type[BaseModel], params: dict[str, Any]
+) -> Optional[dict[str, str]]:
     """
     Validates a dictionary of parameters against a Pydantic model.
     Returns a dictionary of field-level error messages if validation fails, else None.
@@ -133,7 +210,7 @@ def validate_model_parameters(
         return errors
 
 
-def get_missing_arguments(func, provided_args: Dict[str, Any]) -> List[str]:
+def get_missing_arguments(func, provided_args: dict[str, Any]) -> list[str]:
     """
     Inspects a function signature to find missing required arguments.
     """

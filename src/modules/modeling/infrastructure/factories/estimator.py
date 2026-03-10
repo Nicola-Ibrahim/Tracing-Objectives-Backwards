@@ -88,15 +88,15 @@ class EstimatorFactory:
     """
 
     # A class-level registry to map the enum type to the corresponding class
-    _registry: dict[EstimatorTypeEnum, BaseEstimator] = {
-        EstimatorTypeEnum.RBF.value: RBFEstimator,
-        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value: NearestNDEstimator,
-        EstimatorTypeEnum.NEURAL_NETWORK_ND.value: NNEstimator,
-        EstimatorTypeEnum.GAUSSIAN_PROCESS_ND.value: GaussianProcessEstimator,
-        EstimatorTypeEnum.CVAE.value: CVAEEstimator,
-        EstimatorTypeEnum.MDN.value: MDNEstimator,
-        EstimatorTypeEnum.COCO.value: COCOEstimator,
-        EstimatorTypeEnum.INN.value: INNEstimator,
+    _registry: dict[EstimatorTypeEnum, type[BaseEstimator]] = {
+        EstimatorTypeEnum.RBF: RBFEstimator,
+        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND: NearestNDEstimator,
+        EstimatorTypeEnum.NEURAL_NETWORK_ND: NNEstimator,
+        EstimatorTypeEnum.GAUSSIAN_PROCESS_ND: GaussianProcessEstimator,
+        EstimatorTypeEnum.CVAE: CVAEEstimator,
+        EstimatorTypeEnum.MDN: MDNEstimator,
+        EstimatorTypeEnum.COCO: COCOEstimator,
+        EstimatorTypeEnum.INN: INNEstimator,
     }
 
     # -------- Forward models --------
@@ -107,36 +107,52 @@ class EstimatorFactory:
     }
 
     def create(
-        self, type: EstimatorTypeEnum, params: EstimatorParamsBase
+        self, type: EstimatorTypeEnum | str, params: EstimatorParamsBase | dict
     ) -> BaseEstimator:
         """
-        Creates and returns an instance of an interpolator based on the specified type
-        by looking it up in the factory's registry.
-
-        Args:
-            type (EstimatorTypeEnum): The enum type indicating which estimator
-                                                  to create.
-            params (dict[str, Any]): A dictionary of parameters to pass to the
-                                     estimator's constructor.
-
-        Returns:
-            BaseEstimator: An initialized instance of the requested estimator.
-
-        Raises:
-            ValueError: If the provided type is not registered in the factory.
+        Creates and returns an instance of an interpolator based on the specified type.
+        Supports both direct Enum usage or string (case-insensitive value lookup).
+        Handles both Pydantic models and raw dicts as params.
         """
+        # 1. Normalize type to Enum
+        if isinstance(type, str):
+            try:
+                # Try case-insensitive matching against values (e.g., "mdn" or "MDN" -> MDN)
+                type_enum = EstimatorTypeEnum(type.lower())
+            except ValueError:
+                # Fallback: check if the string matches the member name (case-insensitive)
+                try:
+                    type_enum = EstimatorTypeEnum[type.upper()]
+                except KeyError:
+                    raise ValueError(f"Unknown estimator type: {type}")
+        else:
+            type_enum = type
 
-        params_model = ESTIMATOR_PARAM_REGISTRY.get(type)
+        # 2. Get the correct parameter model
+        params_model = ESTIMATOR_PARAM_REGISTRY.get(type_enum)
         if params_model is None:
-            raise ValueError(f"Unsupported estimator params type: {type!r}")
-        allowed = set(params_model.model_fields.keys())
-        filtered = {k: v for k, v in params.items() if k in allowed}
-        estimator_params = params_model.model_validate(filtered)
+            raise ValueError(f"Unsupported estimator params type: {type_enum!r}")
 
+        # 3. Handle parameter validation/coercion
+        if isinstance(params, EstimatorParamsBase):
+            # If already an instance of the target model, use it; otherwise coerce
+            if isinstance(params, params_model):
+                estimator_params = params
+            else:
+                estimator_params = params_model.model_validate(params.model_dump())
+        else:
+            # Dictionary input: filter to allowed fields and validate
+            allowed = set(params_model.model_fields.keys())
+            filtered = {k: v for k, v in params.items() if k in allowed}
+            estimator_params = params_model.model_validate(filtered)
+
+        # 4. Lookup constructor and instantiate
         try:
-            mapper_ctor = self._registry[type]
+            mapper_ctor = self._registry[type_enum]
         except KeyError as e:
-            raise ValueError(f"Unknown or unsupported estimator type: {type}") from e
+            raise ValueError(
+                f"Estimator type {type_enum} is not implemented in factory registry"
+            ) from e
 
         return mapper_ctor(params=estimator_params)
 

@@ -67,14 +67,14 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
 
     useEffect(() => {
         if (generators.length > 0) {
-            const defaultGen = generators.find(g => g.id === "coco_pymoo") || generators[0];
+            const defaultGen = generators.find(g => g.type === "coco_pymoo") || generators[0];
             setSelectedGenerator(defaultGen);
-            form.setValue("generator_type", defaultGen.id);
+            form.setValue("generator_type", defaultGen.type);
         }
     }, [generators, form]);
 
     const handleGeneratorChange = (genId: string) => {
-        const gen = generators.find(g => g.id === genId);
+        const gen = generators.find(g => g.type === genId);
         if (gen) {
             setSelectedGenerator(gen);
             form.setValue("generator_type", genId);
@@ -124,7 +124,7 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                                     <FormLabel className="text-xs font-bold uppercase text-slate-500">Engine Type</FormLabel>
                                     <Select
                                         onValueChange={handleGeneratorChange}
-                                        defaultValue={field.value}
+                                        value={field.value || ""}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="bg-white">
@@ -133,7 +133,7 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                                         </FormControl>
                                         <SelectContent>
                                             {generators.map((gen) => (
-                                                <SelectItem key={gen.id} value={gen.id}>
+                                                <SelectItem key={gen.type} value={gen.type}>
                                                     {gen.name}
                                                 </SelectItem>
                                             ))}

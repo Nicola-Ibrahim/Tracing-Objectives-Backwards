@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class OptimizerFunctionEnum(Enum):
+class OptimizerFunctionEnum(StrEnum):
     SGD = "sgd"
     ADAM = "adam"
     RMSPROP = "rmsprop"

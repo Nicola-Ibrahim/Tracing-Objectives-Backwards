@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class DistributionFamilyEnum(Enum):
+class DistributionFamilyEnum(StrEnum):
     NORMAL = "normal"
     LAPLACE = "laplace"
     LOGNORMAL = "lognormal"

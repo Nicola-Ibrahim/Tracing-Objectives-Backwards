@@ -33,17 +33,22 @@ export function DynamicConfigForm({
     useEffect(() => {
         const initialValues: Record<string, any> = {};
         parameters.forEach((param) => {
-            initialValues[param.name] = param.default !== null ? param.default : "";
-
+            // Use nullish coalescing to handle undefined/null defaults
+            const defaultValue = param.default ?? "";
+            
             // Special handling for booleans
             if (param.type === "bool" || param.type === "boolean") {
-                initialValues[param.name] = !!param.default;
+                initialValues[param.name] = param.default === true;
+            } else {
+                initialValues[param.name] = defaultValue;
             }
         });
         setValues(initialValues);
 
         // Initial validity check
-        const isValid = parameters.every(p => !p.required || (initialValues[p.name] !== "" && initialValues[p.name] !== null));
+        const isValid = parameters.every(p => 
+            !p.required || (initialValues[p.name] !== "" && initialValues[p.name] !== null && initialValues[p.name] !== undefined)
+        );
         onChange(initialValues, isValid);
     }, [parameters]);
 
@@ -70,7 +75,7 @@ export function DynamicConfigForm({
         if (options && options.length > 0) {
             return (
                 <Select
-                    value={String(value)}
+                    value={value !== undefined && value !== null ? String(value) : ""}
                     onValueChange={(val) => handleValueChange(name, val)}
                 >
                     <SelectTrigger className="w-full bg-white">

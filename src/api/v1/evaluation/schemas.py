@@ -27,7 +27,7 @@ class DiagnoseResponse(BaseModel):
 class PerformanceRequest(BaseModel):
     dataset_name: str
     engine: EngineCandidateSchema
-    n_samples: int = 5
+    n_samples: int = 10
 
 
 class PerformanceResponse(BaseModel):

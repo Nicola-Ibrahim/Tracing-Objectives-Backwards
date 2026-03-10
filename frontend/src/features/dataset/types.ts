@@ -26,7 +26,7 @@ export interface ParameterDefinition {
 }
 
 export interface GeneratorSchema {
-  id: string;
+  type: string;
   name: string;
   parameters: ParameterDefinition[];
 }

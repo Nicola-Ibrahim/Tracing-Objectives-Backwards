@@ -125,7 +125,7 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
             )
 
         if version is None:
-            summaries = self.list(dataset_name, solver_type)
+            summaries = self.list_all(dataset_name, solver_type)
             if not summaries:
                 raise FileNotFoundError(
                     f"No valid engines found for dataset '{dataset_name}' and solver '{solver_type}'"

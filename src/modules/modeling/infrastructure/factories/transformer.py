@@ -1,7 +1,9 @@
-import inspect
-from typing import Any, Dict, List, Type
+from typing import Any, Type
 
-from ....shared.infrastructure.inspection import inspect_parameter
+from ....shared.infrastructure.inspection import (
+    build_constructor_kwargs,
+    extract_constructor_schema,
+)
 from ...domain.enums.transform_type import TransformTypeEnum
 from ...domain.interfaces.base_transform import BaseTransformer
 from ...infrastructure.normalizers import (
@@ -18,7 +20,7 @@ class TransformerFactory:
     Concrete factory for creating BaseTransformer instances.
     """
 
-    _registry: Dict[TransformTypeEnum, Type[BaseTransformer]] = {
+    _registry: dict[TransformTypeEnum, Type[BaseTransformer]] = {
         TransformTypeEnum.MIN_MAX: MinMaxScalerNormalizer,
         TransformTypeEnum.STANDARD: StandardNormalizer,
         TransformTypeEnum.LOG: LogNormalizer,
@@ -45,7 +47,10 @@ class TransformerFactory:
             )
 
         params = config.get("params", {})
-        return step_cls(**params)
+        # Build constructor arguments using centralized logic
+        final_kwargs = build_constructor_kwargs(step_cls, params)
+
+        return step_cls(**final_kwargs)
 
     @classmethod
     def from_checkpoint(cls, config: dict, state: dict) -> BaseTransformer:
@@ -64,32 +69,17 @@ class TransformerFactory:
 
         return step_cls.from_checkpoint(config, state)
 
-    def get_transformer_schemas(self) -> List[Dict[str, Any]]:
+    def get_transformer_schemas(self) -> list[dict[str, Any]]:
         """
         Returns metadata for all registered transformers using inspection.
         """
         schemas = []
         for transform_type, transformer_class in self._registry.items():
-            sig = inspect.signature(transformer_class.__init__)
-            parameters = []
-
-            for name, param in sig.parameters.items():
-                if name == "self":
-                    continue
-
-                parameters.extend(
-                    inspect_parameter(
-                        name=name,
-                        annotation=param.annotation,
-                        default=param.default,
-                    )
-                )
-
             schemas.append(
                 {
                     "type": transform_type.value,
                     "name": transform_type.value.replace("_", " ").title(),
-                    "parameters": parameters,
+                    "parameters": extract_constructor_schema(transformer_class),
                 }
             )
 

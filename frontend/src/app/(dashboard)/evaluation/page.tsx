@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getDatasets } from "@/features/inverse/api";
-import { diagnoseEngines, diagnoseEnginesCached } from "@/features/evaluation/api";
+import { diagnoseEngines } from "@/features/evaluation/api";
 import { EngineComparisonPanel } from "@/features/evaluation/components/EngineComparisonPanel";
 import { PerformanceChart } from "@/features/evaluation/components/Charts";
 import { DiagnoseRequest, DiagnoseResponse } from "@/features/evaluation/types";
@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default function EvaluationPage() {
     const [result, setResult] = useState<DiagnoseResponse | null>(null);
-    const [isCheckingCache, setIsCheckingCache] = useState(false);
 
     const { data: datasets = [], isLoading: loadingDatasets } = useQuery({
         queryKey: ["datasets"],
@@ -31,16 +30,13 @@ export default function EvaluationPage() {
     });
 
     const handleDiagnose = async (params: DiagnoseRequest) => {
-        setIsCheckingCache(true);
         try {
             // First attempt to retrieve cached results
-            const cachedResult = await diagnoseEnginesCached(params);
+            const cachedResult = await diagnoseEngines(params);
             setResult(cachedResult);
         } catch (error) {
             // If cache miss (404), trigger new diagnosis
             await mutation.mutateAsync(params);
-        } finally {
-            setIsCheckingCache(false);
         }
     };
 
@@ -59,7 +55,7 @@ export default function EvaluationPage() {
                     <EngineComparisonPanel
                         datasets={datasets}
                         onDiagnose={handleDiagnose}
-                        isLoading={isCheckingCache || mutation.isPending}
+                        isLoading={mutation.isPending}
                     />
                 </div>
 

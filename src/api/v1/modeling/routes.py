@@ -36,7 +36,7 @@ async def list_transformers(
     )
 
 
-@router.post("/preview", response_model=TransformationPreviewResponse)
+@router.post("/transform", response_model=TransformationPreviewResponse)
 async def preview_transformation(
     request: TransformationPreviewRequest,
     service: TransformationService = Depends(get_transformation_service),
