@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { listAllEngines, deleteEngines } from "@/features/inverse/api";
 import { getDatasets } from "@/features/dataset/api";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState, useMemo } from "react";
@@ -24,7 +26,10 @@ import {
     Loader2,
     ChevronRight,
     CheckSquare,
-    Square
+    Square,
+    Zap,
+    Box,
+    RefreshCcw
 } from "lucide-react";
 import {
     Dialog,
@@ -52,9 +57,11 @@ export default function EnginesPage() {
     const queryClient = useQueryClient();
     const { showToast } = useToast();
 
-    const { data: engines = [], isLoading } = useQuery({
+    const { data: engines = [], isLoading, refetch, isFetching } = useQuery({
         queryKey: ["engines", datasetFilter],
         queryFn: () => listAllEngines(datasetFilter === "all" ? undefined : datasetFilter),
+        refetchOnWindowFocus: true,
+        staleTime: 0, // Ensure it's always considered stale so it refetches on mount
     });
 
     const { data: datasets = [] } = useQuery({
@@ -197,71 +204,91 @@ export default function EnginesPage() {
     };
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-10">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                        <Cpu className="h-7 w-7 text-emerald-600" />
-                        Inference Hub
-                    </h1>
-                    <p className="text-slate-500 font-medium">Manage and monitor your trained inverse mapping engines.</p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-3 h-10 shadow-sm transition-all hover:border-slate-300">
-                        <Checkbox
-                            id="select-all"
-                            checked={filteredEngines.length > 0 && selectedEngines.length === filteredEngines.length}
-                            onCheckedChange={handleSelectAll}
-                        />
-                        <label
-                            htmlFor="select-all"
-                            className="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none"
-                        >
-                            Select All
-                        </label>
-                    </div>
-
-                    {selectedEngines.length > 0 && (
-                        <Button
-                            variant="destructive"
-                            onClick={() => setIsBulkDeleting(true)}
-                            className="font-bold ripple-effect"
-                        >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete ({selectedEngines.length})
-                        </Button>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                        <div className="relative w-full md:w-48">
-                            <Select value={datasetFilter} onValueChange={setDatasetFilter}>
-                                <SelectTrigger className="bg-white border-slate-200">
-                                    <div className="flex items-center gap-2">
-                                        <Filter className="h-3.5 w-3.5 text-slate-400" />
-                                        <SelectValue placeholder="All Datasets" />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Datasets</SelectItem>
-                                    {datasets.map(d => (
-                                        <SelectItem key={d.name} value={d.name}>{d.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+        <div className="space-y-8 max-w-7xl mx-auto pb-16 px-4 md:px-0">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col gap-2 relative"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
+                            <Layers className="h-6 w-6 text-white" />
                         </div>
+                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-slate-900 via-indigo-900 to-indigo-800 font-sans">
+                            Engine Registry
+                        </h1>
+                    </div>
+                    <p className="text-slate-500 font-medium ml-12">Manage and monitor high-fidelity inverse estimators.</p>
+                    <div className="absolute -top-10 -right-20 opacity-5 pointer-events-none">
+                        <Cpu className="h-48 w-48 text-indigo-900 rotate-6" />
+                    </div>
+                </motion.div>
 
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col md:flex-row items-center gap-3 relative z-10"
+                >
+                    <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="relative w-full md:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
-                                placeholder="Search engines..."
-                                className="pl-9 bg-white border-slate-200"
+                                placeholder="Filter registry..."
+                                className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
+                        <Select value={datasetFilter} onValueChange={setDatasetFilter}>
+                            <SelectTrigger className="w-full md:w-[180px] bg-white border-slate-200 font-bold text-slate-700">
+                                <SelectValue placeholder="All Datasets" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Datasets</SelectItem>
+                                {datasets.map((d: any) => (
+                                    <SelectItem key={d.name} value={d.name}>{d.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                </div>
+
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        {selectedEngines.length > 0 && (
+                            <Button
+                                variant="destructive"
+                                onClick={() => setIsBulkDeleting(true)}
+                                className="font-bold shadow-lg shadow-rose-100 transition-all hover:scale-105 active:scale-95 px-6"
+                            >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Decommission ({selectedEngines.length})
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => refetch()}
+                            disabled={isFetching}
+                            className="bg-white border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 h-10 w-10 rounded-xl shadow-sm transition-all active:scale-95 group"
+                            title="Refresh Engines"
+                        >
+                            <RefreshCcw className={cn("h-4 w-4 transition-transform duration-500", isFetching ? "animate-spin" : "group-hover:rotate-180")} />
+                        </Button>
+                    </div>
+                </motion.div>
+            </div>
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-3 h-10 shadow-sm transition-all hover:border-slate-300 w-fit">
+                <Checkbox
+                    id="select-all"
+                    checked={filteredEngines.length > 0 && selectedEngines.length === filteredEngines.length}
+                    onCheckedChange={handleSelectAll}
+                />
+                <label
+                    htmlFor="select-all"
+                    className="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none"
+                >
+                    Select All
+                </label>
             </div>
 
             {/* Individual Delete Confirmation */}
@@ -321,153 +348,186 @@ export default function EnginesPage() {
             </Dialog>
 
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/10">
-                    <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
-                    <p className="text-slate-500 font-medium animate-pulse">Scanning context registry...</p>
+                <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/10">
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] animate-pulse">Scanning Engine Registry...</p>
                 </div>
-            ) : engines.length === 0 ? (
-                <Card className="border-slate-200 shadow-sm">
-                    <CardContent className="p-12 text-center">
-                        <div className="bg-slate-50 p-6 rounded-full inline-block mb-4 ring-8 ring-slate-50/50">
-                            <Cpu className="h-10 w-10 text-slate-300" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900">No engines found</h3>
-                        <p className="text-slate-500 max-w-sm mx-auto mt-2">
-                            Head over to the "Train" section to create your first inverse mapping engine.
-                        </p>
-                    </CardContent>
-                </Card>
+            ) : Object.keys(groupedEngines).length === 0 ? (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                >
+                    <Card className="border-slate-200 shadow-sm rounded-3xl overflow-hidden">
+                        <CardContent className="p-16 text-center bg-linear-to-b from-white to-slate-50/50">
+                            <div className="bg-white p-8 rounded-full inline-block mb-6 shadow-xl shadow-slate-200/50 ring-8 ring-slate-50">
+                                <Cpu className="h-12 w-12 text-slate-300" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">No engines available</h3>
+                            <p className="text-slate-500 max-w-sm mx-auto mt-3 font-medium leading-relaxed">
+                                You haven't trained any inverse engines yet. Head over to the Construction page to build your first model.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             ) : (
                 <div className="flex flex-col gap-10">
-                    {Object.entries(groupedEngines).map(([datasetName, solverGroups]) => (
-                        <div key={datasetName} className="space-y-6">
-                            <div className="flex items-center gap-2 group px-1">
-                                <div className="h-6 w-1 bg-emerald-500 rounded-full" />
-                                <h2 className="text-sm font-black uppercase text-slate-500 tracking-wider flex items-center gap-2">
-                                    <Database className="h-3.5 w-3.5" />
-                                    {datasetName}
-                                </h2>
-                                <div className="h-px flex-1 bg-slate-100 ml-2" />
-                            </div>
+                    <AnimatePresence>
+                        {Object.entries(groupedEngines).map(([datasetName, solverGroups], groupIndex) => (
+                            <motion.div
+                                key={datasetName}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0, transition: { delay: groupIndex * 0.1 } }}
+                                className="space-y-6"
+                            >
+                                <div className="flex items-center gap-4 group px-1">
+                                    <div className="h-6 w-1 bg-indigo-500 rounded-full" />
+                                    <h2 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                        {datasetName}
+                                    </h2>
+                                    <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black text-[10px]">
+                                        {Object.values(solverGroups).flat().length} Registered Assets
+                                    </Badge>
+                                    <div className="h-px flex-1 bg-slate-100 ml-2" />
+                                </div>
 
-                            <div className="grid grid-cols-1 gap-8">
-                                {Object.entries(solverGroups).map(([solverType, versions]) => {
-                                    const groupKey = `${datasetName}-${solverType}`;
-                                    const isExpanded = expandedGroups[groupKey] !== false; // Default to expanded
-                                    const enginesInGroup = versions;
-                                    const isAllInGroupSelected = enginesInGroup.every(e => isSelected(e));
-                                    const isSomeInGroupSelected = enginesInGroup.some(e => isSelected(e)) && !isAllInGroupSelected;
+                                <div className="grid grid-cols-1 gap-8">
+                                    {Object.entries(solverGroups as Record<string, any[]>).map(([solverType, versions]) => {
+                                        const groupKey = `${datasetName}-${solverType}`;
+                                        const isExpanded = expandedGroups[groupKey] !== false;
+                                        const enginesInGroup = versions;
+                                        const isAllInGroupSelected = enginesInGroup.every(e => selectedEngines.some(se => se.dataset_name === e.dataset_name && se.solver_type === e.solver_type && se.version === e.version));
+                                        const isSomeInGroupSelected = enginesInGroup.some(e => selectedEngines.some(se => se.dataset_name === e.dataset_name && se.solver_type === e.solver_type && se.version === e.version)) && !isAllInGroupSelected;
 
-                                    return (
-                                        <div key={solverType} className="space-y-4">
-                                            <div className="flex items-center gap-4 mb-1 px-4 group/header">
-                                                <div className="flex items-center gap-2 flex-1">
-                                                    <Checkbox
-                                                        checked={isAllInGroupSelected}
-                                                        onCheckedChange={() => handleSelectGroup(enginesInGroup, isAllInGroupSelected)}
-                                                        className={isSomeInGroupSelected ? "data-[state=unchecked]:bg-slate-100" : ""}
-                                                    />
-                                                    <div
-                                                        className="flex items-center gap-2 cursor-pointer select-none"
-                                                        onClick={() => toggleGroupExpand(groupKey)}
-                                                    >
-                                                        <Layers className="h-4 w-4 text-indigo-500" />
-                                                        <h3 className="text-sm font-bold text-slate-800">
-                                                            {solverType}
-                                                        </h3>
-                                                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none text-[9px] h-4">
-                                                            {versions.length} versions
-                                                        </Badge>
-                                                        {isExpanded ? (
-                                                            <ChevronUp className="h-3.5 w-3.5 text-slate-400 group-hover/header:text-slate-600 transition-colors" />
-                                                        ) : (
-                                                            <ChevronDown className="h-3.5 w-3.5 text-slate-400 group-hover/header:text-slate-600 transition-colors" />
-                                                        )}
+                                        return (
+                                            <div key={solverType} className="space-y-4">
+                                                <div className="flex items-center gap-4 mb-1 px-4 group/header">
+                                                    <div className="flex items-center gap-2 flex-1">
+                                                        <Checkbox
+                                                            checked={isAllInGroupSelected}
+                                                            onCheckedChange={() => handleSelectGroup(enginesInGroup, isAllInGroupSelected)}
+                                                            className={isSomeInGroupSelected ? "data-[state=unchecked]:bg-slate-100" : ""}
+                                                        />
+                                                        <div
+                                                            className="flex items-center gap-2 cursor-pointer select-none"
+                                                            onClick={() => toggleGroupExpand(groupKey)}
+                                                        >
+                                                            <div className="p-1.5 bg-slate-50 rounded-lg group-hover/header:bg-indigo-50 transition-colors">
+                                                                <Layers className="h-4 w-4 text-indigo-500" />
+                                                            </div>
+                                                            <h3 className="text-base font-black text-slate-800 tracking-tight">
+                                                                {solverType}
+                                                            </h3>
+                                                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none text-[9px] h-4 font-black">
+                                                                {versions.length} VERSIONS
+                                                            </Badge>
+                                                            {isExpanded ? (
+                                                                <ChevronUp className="h-4 w-4 text-slate-400 group-hover/header:text-slate-600 transition-colors" />
+                                                            ) : (
+                                                                <ChevronDown className="h-4 w-4 text-slate-400 group-hover/header:text-slate-600 transition-colors" />
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {isExpanded && (
-                                                <div className="flex flex-col gap-2 pl-4 md:pl-8 border-l border-slate-100 ml-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                    {versions.map((engine) => (
-                                                        <Card
-                                                            key={`${engine.dataset_name}-${engine.solver_type}-${engine.version}`}
-                                                            className={`border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden bg-white ${isSelected(engine) ? 'ring-1 ring-emerald-500 bg-emerald-50/5' : ''}`}
-                                                        >
-                                                            <div className="flex flex-row items-center p-3 gap-4">
-                                                                <div className="pl-1">
-                                                                    <Checkbox
-                                                                        checked={isSelected(engine)}
-                                                                        onCheckedChange={() => toggleSelection(engine)}
-                                                                    />
-                                                                </div>
-
-                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                    <div className="h-8 w-8 bg-slate-50 rounded flex items-center justify-center shrink-0 group-hover:bg-emerald-100 transition-colors">
-                                                                        <span className="text-[10px] font-black text-slate-400 group-hover:text-emerald-600 uppercase">
-                                                                            V{engine.version}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <h3 className="text-xs font-bold text-slate-700 truncate">
-                                                                                Version {engine.version}
-                                                                            </h3>
-                                                                            <Badge variant="secondary" className="bg-slate-100 text-slate-400 border-none px-1 h-3 text-[8px] font-semibold">
-                                                                                {new Date(engine.created_at).toLocaleDateString()}
-                                                                            </Badge>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="hidden md:flex items-center gap-6 px-6 border-x border-slate-50">
-                                                                    <div className="flex flex-col gap-0.5 min-w-[100px]">
-                                                                        <p className="text-[8px] uppercase font-bold text-slate-400 tracking-wider">Trained On</p>
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <Calendar className="h-2.5 w-2.5 text-indigo-400" />
-                                                                            <span className="text-[10px] font-semibold text-slate-600">
-                                                                                {new Date(engine.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-0.5 min-w-[70px]">
-                                                                        <p className="text-[8px] uppercase font-bold text-slate-400 tracking-wider">Status</p>
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                                                                            <span className="text-[10px] font-bold text-slate-600 tracking-tight">Active</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="flex items-center justify-end gap-1 pr-1">
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 ripple-effect"
-                                                                        onClick={() => setEngineToDelete(engine)}
+                                                {isExpanded && (
+                                                    <div className="flex flex-col gap-3 pl-4 md:pl-8 border-l-2 border-slate-100 ml-6">
+                                                        {versions.map((engine) => {
+                                                            const isEngineSelected = selectedEngines.some(
+                                                                (e) => e.dataset_name === engine.dataset_name &&
+                                                                    e.solver_type === engine.solver_type &&
+                                                                    e.version === engine.version
+                                                            );
+                                                            return (
+                                                                <motion.div 
+                                                                    key={`${engine.solver_type}-${engine.version}`}
+                                                                    whileHover={{ y: -2 }}
+                                                                >
+                                                                    <Card
+                                                                        className={`border-slate-200/60 shadow-lg shadow-slate-200/20 transition-all duration-300 group overflow-hidden bg-white rounded-2xl cursor-pointer border-l-4 ${
+                                                                            isEngineSelected 
+                                                                                ? 'border-l-indigo-500 ring-2 ring-indigo-500/10 bg-indigo-50/5' 
+                                                                                : 'border-l-slate-100/50 hover:border-l-indigo-400'
+                                                                        }`}
+                                                                        onClick={() => toggleSelection(engine)}
                                                                     >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                    <div className="h-8 w-8 text-slate-200 flex items-center justify-center">
-                                                                        <ChevronRight className="h-4 w-4" />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </Card>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
+                                                                        <div className="p-4 flex flex-col md:flex-row items-center gap-6">
+                                                                            <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-50 transition-colors shadow-inner shrink-0">
+                                                                                <Box className={`h-5 w-5 transition-all duration-300 ${isEngineSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}`} />
+                                                                            </div>
+                                                                            
+                                                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center w-full">
+                                                                                <div className="space-y-1">
+                                                                                    <h3 className="text-base font-black text-slate-800 tracking-tight group-hover:text-indigo-900 transition-colors">
+                                                                                        Version {engine.version}
+                                                                                    </h3>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <Badge className="bg-slate-900 text-white font-black text-[9px] px-2 h-4 rounded-full">
+                                                                                            V{engine.version}
+                                                                                        </Badge>
+                                                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                                                            Online
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div className="hidden md:block">
+                                                                                    <p className="text-[9px] uppercase font-black text-slate-300 tracking-tighter mb-1">Registered</p>
+                                                                                    <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5">
+                                                                                        <Calendar className="h-3 w-3 text-slate-300" />
+                                                                                        {new Date(engine.created_at).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+
+                                                                                <div className="hidden md:block">
+                                                                                    <p className="text-[9px] uppercase font-black text-slate-300 tracking-tighter mb-1">Status</p>
+                                                                                    <div className="flex items-center gap-1.5">
+                                                                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                                                                                        <span className="text-[10px] font-black text-emerald-600">Online</span>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div className="flex justify-end gap-3 items-center">
+                                                                                    <div className="flex gap-2">
+                                                                                        <Checkbox
+                                                                                            checked={isEngineSelected}
+                                                                                            onCheckedChange={() => toggleSelection(engine)}
+                                                                                            className="h-5 w-5 rounded-md border-slate-300"
+                                                                                        />
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-8 w-8 text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-lg"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                setEngineToDelete(engine);
+                                                                                            }}
+                                                                                        >
+                                                                                            <Trash2 className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </Card>
+                                                                </motion.div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
 
                     {filteredEngines.length === 0 && searchQuery && (
-                        <div className="py-20 text-center">
-                            <Cpu className="h-10 w-10 text-slate-200 mx-auto mb-4" />
-                            <p className="text-slate-500 italic">No engines match "{searchQuery}"</p>
+                        <div className="py-24 text-center">
+                            <div className="bg-slate-50 p-6 rounded-full inline-block mb-4">
+                                <Search className="h-8 w-8 text-slate-300" />
+                            </div>
+                            <p className="text-slate-500 font-bold tracking-tight">No registry assets match "<span className="text-indigo-600 uppercase tracking-widest">{searchQuery}</span>"</p>
                         </div>
                     )}
                 </div>

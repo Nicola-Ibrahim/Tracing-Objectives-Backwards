@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -16,6 +16,8 @@ import {
 import { Line, Bar } from "react-chartjs-2";
 import { MetricPlotData } from "../types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Download, FileDown, BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 ChartJS.register(
     CategoryScale,
@@ -155,14 +157,43 @@ export function PerformanceChart({
         },
     };
 
+    const chartRef = useRef<any>(null);
+
+    const handleDownload = () => {
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        const base64 = chart.toBase64Image();
+        const link = document.createElement("a");
+        link.href = base64;
+        link.download = `${title.replace(/\s+/g, "_").toLowerCase()}_plot.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
-        <Card className="border-slate-200 overflow-hidden">
-            <CardHeader className="bg-slate-50/50 py-3 border-b border-slate-100">
-                <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-                <CardDescription className="text-[10px] leading-tight">{description}</CardDescription>
+        <Card className="border-slate-200/60 overflow-hidden shadow-md shadow-slate-200/40 bg-white transition-all hover:shadow-lg hover:shadow-slate-200/50 group">
+            <CardHeader className="bg-slate-50/40 py-4 px-6 border-b border-slate-100 flex flex-row items-center justify-between space-y-0">
+                <div className="space-y-1">
+                    <CardTitle className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                        <FileDown className="h-4 w-4 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {title}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] leading-tight text-slate-500 font-medium">{description}</CardDescription>
+                </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    onClick={handleDownload}
+                    title="Download plot as PNG"
+                >
+                    <Download className="h-4 w-4" />
+                </Button>
             </CardHeader>
-            <CardContent className="h-[300px] pt-6">
-                <Line data={chartData} options={options} />
+            <CardContent className="h-[320px] p-6">
+                <Line ref={chartRef} data={chartData} options={options} />
             </CardContent>
         </Card>
     );
@@ -240,14 +271,43 @@ export function MetricBarChart({
         },
     };
 
+    const chartRef = useRef<any>(null);
+
+    const handleDownload = () => {
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        const base64 = chart.toBase64Image();
+        const link = document.createElement("a");
+        link.href = base64;
+        link.download = `${title.replace(/\s+/g, "_").toLowerCase()}_plot.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
-        <Card className="border-slate-200 overflow-hidden shadow-sm">
-            <CardHeader className="bg-slate-50/50 py-3 border-b border-slate-100">
-                <CardTitle className="text-sm font-semibold text-slate-800">{title}</CardTitle>
-                <CardDescription className="text-[10px] leading-tight text-slate-500">{description}</CardDescription>
+        <Card className="border-slate-200/60 overflow-hidden shadow-md shadow-slate-200/40 bg-white transition-all hover:shadow-lg hover:shadow-slate-200/50 group h-full">
+            <CardHeader className="bg-slate-50/40 py-4 px-6 border-b border-slate-100 flex flex-row items-center justify-between space-y-0">
+                <div className="space-y-1">
+                    <CardTitle className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {title}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] leading-tight text-slate-500 font-medium">{description}</CardDescription>
+                </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                    onClick={handleDownload}
+                    title="Download plot as PNG"
+                >
+                    <Download className="h-4 w-4" />
+                </Button>
             </CardHeader>
-            <CardContent className="h-[300px] pt-8">
-                <Bar data={chartData} options={options as any} />
+            <CardContent className="h-[320px] p-6">
+                <Bar ref={chartRef} data={chartData} options={options as any} />
             </CardContent>
         </Card>
     );

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { getDatasets, generateCandidates } from "@/features/inverse/api";
 import { getDatasetDetails } from "@/features/dataset/api";
 import { GenerateCandidatesForm } from "@/features/inverse/components/GenerateCandidatesForm";
@@ -10,7 +11,7 @@ import { DatasetDetails } from "@/features/dataset/types";
 import { CandidateGenerationRequest, CandidateGenerationResponse } from "@/features/inverse/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings2, BarChart3, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { Settings2, BarChart3, Loader2, Sparkles, AlertCircle, Target, Database, Blocks } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function GeneratePage() {
@@ -43,40 +44,60 @@ export default function GeneratePage() {
     };
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-10">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-sans leading-8 flex items-center gap-2">
-                    <Sparkles className="h-7 w-7 text-indigo-600" />
-                    Candidate Generation
-                </h1>
-                <p className="text-slate-500 font-medium">Generate decision vectors targeting specific objective profiles.</p>
-            </div>
+        <div className="space-y-8 max-w-7xl mx-auto pb-16 px-4 md:px-0">
+            <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-2 relative"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
+                        <Sparkles className="h-6 w-6 text-white" />
+                    </div>
+                    <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-slate-900 via-indigo-900 to-indigo-800 font-sans">
+                        Candidate Generation
+                    </h1>
+                </div>
+                <p className="text-slate-500 font-medium ml-12">Generate decision vectors targeting specific objective profiles.</p>
+                <div className="absolute -top-10 -right-10 opacity-5 pointer-events-none">
+                    <Target className="h-64 w-64 text-indigo-900 rotate-12" />
+                </div>
+            </motion.div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="bg-slate-100 p-1">
-                    <TabsTrigger value="generation" className="flex items-center gap-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+                <TabsList className="bg-slate-100/50 p-1 rounded-xl border border-slate-200/60 backdrop-blur-sm">
+                    <TabsTrigger value="generation" className="flex items-center gap-2 px-6 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 font-bold transition-all">
                         <Settings2 className="h-4 w-4" />
                         Parameters
                     </TabsTrigger>
-                    <TabsTrigger value="explorer" className="flex items-center gap-2" disabled={!selectedDataset}>
+                    <TabsTrigger value="explorer" className="flex items-center gap-2 px-6 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 font-bold transition-all" disabled={!selectedDataset}>
                         <BarChart3 className="h-4 w-4" />
                         Explorer
                     </TabsTrigger>
                 </TabsList>
 
-                <div className={activeTab === "generation" ? "block animate-in fade-in duration-300" : "hidden"}>
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <Card className="lg:col-span-1 border-slate-200 shadow-sm overflow-hidden h-fit">
-                                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                                    <CardTitle className="text-lg font-semibold text-slate-800">Generation Config</CardTitle>
-                                    <CardDescription className="text-slate-500 text-sm">Target constraints and cohort settings.</CardDescription>
+                <div className={activeTab === "generation" ? "block" : "hidden"}>
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-8"
+                    >
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <Card className="lg:col-span-1 border-slate-200/60 shadow-lg shadow-slate-200/40 overflow-hidden h-fit rounded-3xl bg-white/80 backdrop-blur-sm">
+                                <CardHeader className="bg-slate-50/40 border-b border-slate-100 py-6 px-8 flex flex-row items-center justify-between space-y-0">
+                                    <div className="space-y-1">
+                                        <CardTitle className="text-xl font-black text-slate-800 tracking-tight">Configuration</CardTitle>
+                                        <CardDescription className="text-slate-500 text-xs font-bold uppercase tracking-widest opacity-60">Engine Target Settings</CardDescription>
+                                    </div>
+                                    <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                                        <Blocks className="h-5 w-5 text-indigo-500" />
+                                    </div>
                                 </CardHeader>
-                                <CardContent className="p-6">
+                                <CardContent className="p-8">
                                     {loadingDatasets ? (
-                                        <div className="flex flex-col items-center justify-center py-10 gap-3">
-                                            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                                            <span className="text-slate-500 text-sm italic">Synchronizing datasets...</span>
+                                        <div className="flex flex-col items-center justify-center py-12 gap-4">
+                                            <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+                                            <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px] animate-pulse">Syncing Registry...</span>
                                         </div>
                                     ) : (
                                         <GenerateCandidatesForm
@@ -89,12 +110,12 @@ export default function GeneratePage() {
                                 </CardContent>
                             </Card>
 
-                            <div className="lg:col-span-2 space-y-6">
+                            <div className="lg:col-span-2 space-y-8">
                                 {mutation.isError && (
-                                    <Alert variant="destructive">
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertTitle>Generation Failed</AlertTitle>
-                                        <AlertDescription>
+                                    <Alert variant="destructive" className="rounded-2xl border-rose-200 bg-rose-50/50 border-l-4 border-l-rose-500 shadow-sm">
+                                        <AlertCircle className="h-4 w-4 text-rose-600" />
+                                        <AlertTitle className="font-bold">Generation Stopped</AlertTitle>
+                                        <AlertDescription className="font-medium text-rose-800">
                                             {(mutation.error as any)?.response?.data?.detail || "An unexpected error occurred while generating candidates."}
                                         </AlertDescription>
                                     </Alert>
@@ -126,7 +147,7 @@ export default function GeneratePage() {
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
 
                 <div className={activeTab === "explorer" ? "pt-2 block animate-in fade-in duration-300" : "hidden"}>
