@@ -220,16 +220,16 @@ export default function EnginesPage() {
                     className="flex flex-col gap-2 relative"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
+                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
                             <Layers className="h-6 w-6 text-white" />
                         </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-slate-900 via-indigo-900 to-indigo-800 font-sans">
+                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
                             Engine Registry
                         </h1>
                     </div>
-                    <p className="text-slate-500 font-medium ml-12">Manage and monitor high-fidelity inverse estimators.</p>
+                    <p className="text-muted-foreground font-medium ml-12 italic">Manage and monitor high-fidelity inverse estimators.</p>
                     <div className="absolute -top-10 -right-20 opacity-5 pointer-events-none">
-                        <Cpu className="h-48 w-48 text-indigo-900 rotate-6" />
+                        <Cpu className="h-48 w-48 text-indigo-500 rotate-6" />
                     </div>
                 </motion.div>
 
@@ -240,22 +240,22 @@ export default function EnginesPage() {
                 >
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="relative w-full md:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                             <Input
                                 placeholder="Filter registry..."
-                                className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
+                                className="pl-10 bg-background border-border shadow-sm focus:ring-2 focus:ring-indigo-500/10 transition-all font-medium rounded-xl h-11"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                         <Select value={datasetFilter} onValueChange={setDatasetFilter}>
-                            <SelectTrigger className="w-full md:w-[180px] bg-white border-slate-200 font-bold text-slate-700">
+                            <SelectTrigger className="w-full md:w-[180px] bg-background border-border font-black text-foreground h-11 rounded-xl">
                                 <SelectValue placeholder="All Datasets" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Datasets</SelectItem>
+                            <SelectContent className="bg-popover border-border text-popover-foreground rounded-xl shadow-2xl">
+                                <SelectItem value="all" className="font-bold">All Datasets</SelectItem>
                                 {datasets.map((d: any) => (
-                                    <SelectItem key={d.name} value={d.name}>{d.name}</SelectItem>
+                                    <SelectItem key={d.name} value={d.name} className="font-bold">{d.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -266,7 +266,7 @@ export default function EnginesPage() {
                             <Button
                                 variant="destructive"
                                 onClick={() => setIsBulkDeleting(true)}
-                                className="font-bold shadow-lg shadow-rose-100 transition-all hover:scale-105 active:scale-95 px-6"
+                                className="font-black uppercase tracking-widest shadow-2xl shadow-rose-500/20 transition-all hover:scale-105 active:scale-95 px-6 h-11 rounded-xl"
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Decommission ({selectedEngines.length})
@@ -277,51 +277,53 @@ export default function EnginesPage() {
                             size="icon"
                             onClick={() => refetch()}
                             disabled={isFetching}
-                            className="bg-white border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 h-10 w-10 rounded-xl shadow-sm transition-all active:scale-95 group"
+                            className="bg-background border-border text-muted-foreground hover:text-indigo-500 hover:border-indigo-500/20 h-11 w-11 rounded-xl shadow-sm transition-all active:scale-95 group"
                             title="Refresh Engines"
                         >
-                            <RefreshCcw className={cn("h-4 w-4 transition-transform duration-500", isFetching ? "animate-spin" : "group-hover:rotate-180")} />
+                            <RefreshCcw className={cn("h-4 w-4 transition-transform duration-700", isFetching ? "animate-spin" : "group-hover:rotate-180")} />
                         </Button>
                     </div>
                 </motion.div>
             </div>
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-3 h-10 shadow-sm transition-all hover:border-slate-300 w-fit">
+            
+            <div className="flex items-center gap-3 bg-muted/30 border border-border/50 rounded-xl px-4 h-11 shadow-inner transition-all hover:border-border w-fit">
                 <Checkbox
                     id="select-all"
                     checked={filteredEngines.length > 0 && selectedEngines.length === filteredEngines.length}
                     onCheckedChange={handleSelectAll}
+                    className="border-border/50 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
                 />
                 <label
                     htmlFor="select-all"
-                    className="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none"
+                    className="text-[10px] font-black text-muted-foreground uppercase cursor-pointer select-none tracking-[0.2em]"
                 >
-                    Select All
+                    Global Selection
                 </label>
             </div>
 
             {/* Individual Delete Confirmation */}
             <Dialog open={!!engineToDelete} onOpenChange={(open) => !open && setEngineToDelete(null)}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600">
-                            <AlertCircle className="h-5 w-5" />
-                            Confirm Engine Deletion
+                <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border shadow-2xl">
+                    <DialogHeader className="p-8 bg-destructive/5 border-b border-border space-y-3">
+                        <DialogTitle className="flex items-center gap-3 text-destructive font-black uppercase tracking-tight text-xl">
+                            <AlertCircle className="h-6 w-6" />
+                            Purge Engine
                         </DialogTitle>
-                        <DialogDescription className="py-2">
-                            Are you sure you want to delete <span className="font-bold text-slate-900">{engineToDelete?.solver_type} v{engineToDelete?.version}</span> for dataset <span className="font-bold text-slate-900">"{engineToDelete?.dataset_name}"</span>?
-                            This action cannot be undone.
+                        <DialogDescription className="text-muted-foreground font-medium italic">
+                            You are about to permanently delete <span className="font-black text-foreground uppercase tracking-tight">{engineToDelete?.solver_type} v{engineToDelete?.version}</span> from <span className="font-black text-foreground italic">"{engineToDelete?.dataset_name}"</span>.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button variant="outline" onClick={() => setEngineToDelete(null)}>
+                    <div className="p-8 bg-card flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setEngineToDelete(null)} className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-6">
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={() => engineToDelete && deleteMutation.mutate(engineToDelete)}
                             disabled={deleteMutation.isPending}
+                            className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-8 shadow-xl shadow-destructive/20"
                         >
-                            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Engine"}
+                            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Purge"}
                         </Button>
                     </div>
                 </DialogContent>
@@ -329,88 +331,91 @@ export default function EnginesPage() {
 
             {/* Bulk Delete Confirmation */}
             <Dialog open={isBulkDeleting} onOpenChange={setIsBulkDeleting}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600">
-                            <AlertCircle className="h-5 w-5" />
-                            Confirm Bulk Deletion
+                <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border shadow-2xl">
+                    <DialogHeader className="p-8 bg-destructive/5 border-b border-border space-y-3">
+                        <DialogTitle className="flex items-center gap-3 text-destructive font-black uppercase tracking-tight text-xl">
+                            <AlertCircle className="h-6 w-6" />
+                            Bulk Decommission
                         </DialogTitle>
-                        <DialogDescription className="py-2">
-                            You are about to delete <span className="font-bold text-slate-900">{selectedEngines.length}</span> trained engines.
-                            This action cannot be undone.
+                        <DialogDescription className="text-muted-foreground font-medium italic">
+                            You are about to decommission <span className="font-black text-foreground uppercase tracking-tight">{selectedEngines.length}</span> trained engines across the registry. This operation is irreversible.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button variant="outline" onClick={() => setIsBulkDeleting(false)}>
+                    <div className="p-8 bg-card flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setIsBulkDeleting(false)} className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-6">
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={() => bulkDeleteMutation.mutate(selectedEngines)}
                             disabled={bulkDeleteMutation.isPending}
+                            className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-8 shadow-xl shadow-destructive/20"
                         >
-                            {bulkDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Delete ${selectedEngines.length} Engines`}
+                            {bulkDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Purge ${selectedEngines.length} Engines`}
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/10">
-                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
-                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] animate-pulse">Scanning Engine Registry...</p>
+                <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-[3rem] bg-muted/5 backdrop-blur-sm transition-all">
+                    <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-6" />
+                    <p className="text-muted-foreground/60 font-black uppercase tracking-[0.25em] text-[10px] animate-pulse">Scanning Engine Registry...</p>
                 </div>
             ) : Object.keys(groupedEngines).length === 0 ? (
                 <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                 >
-                    <Card className="border-slate-200 shadow-sm rounded-3xl overflow-hidden">
-                        <CardContent className="p-16 text-center bg-linear-to-b from-white to-slate-50/50">
-                            <div className="bg-white p-8 rounded-full inline-block mb-6 shadow-xl shadow-slate-200/50 ring-8 ring-slate-50">
-                                <Cpu className="h-12 w-12 text-slate-300" />
+                    <Card className="border-border shadow-2xl rounded-[3rem] overflow-hidden bg-card">
+                        <CardContent className="p-20 text-center bg-linear-to-b from-card to-muted/10">
+                            <div className="bg-background border border-border p-10 rounded-full inline-block mb-8 shadow-2xl ring-8 ring-muted/5 transition-transform hover:scale-110 duration-500">
+                                <Cpu className="h-14 w-14 text-muted-foreground/20" />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">No engines available</h3>
-                            <p className="text-slate-500 max-w-sm mx-auto mt-3 font-medium leading-relaxed">
-                                You haven't trained any inverse engines yet. Head over to the Construction page to build your first model.
+                            <h3 className="text-3xl font-black text-foreground tracking-tight uppercase mb-4">Registry Empty</h3>
+                            <p className="text-muted-foreground/70 max-w-sm mx-auto font-medium italic leading-relaxed">
+                                You haven't registered any inverse engines yet. Initialize your first model in the construction pipeline.
                             </p>
                         </CardContent>
                     </Card>
                 </motion.div>
             ) : (
-                <div className="flex flex-col gap-10">
+                <div className="flex flex-col gap-12">
                     <AnimatePresence>
                         {Object.entries(groupedEngines).map(([datasetName, solverGroups], groupIndex) => (
                             <motion.div
                                 key={datasetName}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0, transition: { delay: groupIndex * 0.1 } }}
-                                className="space-y-6"
+                                className="space-y-8"
                             >
-                                <div className="flex items-center gap-4 group px-1">
+                                <div className="flex items-center gap-6 group px-2">
                                     <div 
-                                        className="flex items-center gap-4 cursor-pointer select-none flex-1"
+                                        className="flex items-center gap-5 cursor-pointer select-none flex-1 group/dataset"
                                         onClick={() => toggleDatasetExpand(datasetName)}
                                     >
                                         <div className={cn(
-                                            "h-6 w-1 rounded-full transition-colors",
-                                            expandedDatasets[datasetName] === false ? "bg-slate-300" : "bg-indigo-500"
+                                            "h-7 w-1.5 rounded-full transition-all duration-500",
+                                            expandedDatasets[datasetName] === false ? "bg-muted shadow-none" : "bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.5)]"
                                         )} />
-                                        <h2 className="text-sm font-black uppercase text-slate-800 tracking-widest flex items-center gap-2">
-                                            {datasetName}
-                                            {expandedDatasets[datasetName] === false ? (
-                                                <ChevronRight className="h-4 w-4 text-slate-400" />
-                                            ) : (
-                                                <ChevronDown className="h-4 w-4 text-slate-400" />
-                                            )}
-                                        </h2>
-                                        <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black text-[10px]">
-                                            {Object.values(solverGroups).flat().length} Registered Assets
+                                        <div className="flex flex-col">
+                                            <h2 className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-[0.3em] flex items-center gap-3 group-hover/dataset:text-indigo-500 transition-colors">
+                                                Registry Partition
+                                                {expandedDatasets[datasetName] === false ? (
+                                                    <ChevronRight className="h-4 w-4 animate-pulse" />
+                                                ) : (
+                                                    <ChevronDown className="h-4 w-4" />
+                                                )}
+                                            </h2>
+                                            <span className="text-2xl font-black text-foreground tracking-tight uppercase group-hover/dataset:translate-x-1 transition-transform">{datasetName}</span>
+                                        </div>
+                                        <Badge variant="outline" className="bg-indigo-500/5 text-indigo-500 border-indigo-500/20 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full ml-4 shadow-lg shadow-indigo-500/5">
+                                            {Object.values(solverGroups).flat().length} Assets
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-4">
                                         <div 
-                                            className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm hover:border-indigo-300 transition-all cursor-pointer select-none group/select"
+                                            className="flex items-center gap-3 px-5 py-2.5 bg-background border border-border/50 rounded-2xl shadow-sm hover:border-indigo-500/40 transition-all cursor-pointer select-none group/select hover:shadow-lg hover:shadow-indigo-500/5"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 const datasetEngines = Object.values(solverGroups).flat();
@@ -421,13 +426,13 @@ export default function EnginesPage() {
                                         >
                                             <Checkbox
                                                 checked={Object.values(solverGroups).flat().every(en => selectedEngines.some(se => se.dataset_name === en.dataset_name && se.solver_type === en.solver_type && se.version === en.version))}
-                                                className="h-3.5 w-3.5 border-slate-300 pointer-events-none"
+                                                className="h-4 w-4 border-border/60 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 pointer-events-none rounded-md"
                                             />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover/select:text-indigo-600 transition-colors">
-                                                Select Dataset
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 group-hover/select:text-indigo-500 transition-colors">
+                                                Select Partition
                                             </span>
                                         </div>
-                                        <div className="h-px w-20 bg-slate-100" />
+                                        <div className="h-px w-24 bg-border/40" />
                                     </div>
                                 </div>
 
@@ -436,7 +441,7 @@ export default function EnginesPage() {
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: "auto" }}
                                         exit={{ opacity: 0, height: 0 }}
-                                        className="grid grid-cols-1 gap-8"
+                                        className="grid grid-cols-1 gap-10"
                                     >
                                     {Object.entries(solverGroups as Record<string, any[]>).map(([solverType, versions]) => {
                                         const groupKey = `${datasetName}-${solverType}`;
@@ -446,38 +451,38 @@ export default function EnginesPage() {
                                         const isSomeInGroupSelected = enginesInGroup.some(e => selectedEngines.some(se => se.dataset_name === e.dataset_name && se.solver_type === e.solver_type && se.version === e.version)) && !isAllInGroupSelected;
 
                                         return (
-                                            <div key={solverType} className="space-y-4">
-                                                <div className="flex items-center gap-4 mb-1 px-4 group/header">
-                                                    <div className="flex items-center gap-2 flex-1">
+                                            <div key={solverType} className="space-y-6">
+                                                <div className="flex items-center gap-5 mb-2 px-6 group/header">
+                                                    <div className="flex items-center gap-4 flex-1">
                                                         <Checkbox
                                                             checked={isAllInGroupSelected}
                                                             onCheckedChange={() => handleSelectGroup(enginesInGroup, isAllInGroupSelected)}
-                                                            className={isSomeInGroupSelected ? "data-[state=unchecked]:bg-slate-100" : ""}
+                                                            className={isSomeInGroupSelected ? "data-[state=unchecked]:bg-indigo-500/10 data-[state=unchecked]:border-indigo-500/40" : "border-border/60 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 rounded-md"}
                                                         />
                                                         <div
-                                                            className="flex items-center gap-2 cursor-pointer select-none"
+                                                            className="flex items-center gap-3 cursor-pointer select-none group/title"
                                                             onClick={() => toggleGroupExpand(groupKey)}
                                                         >
-                                                            <div className="p-1.5 bg-slate-50 rounded-lg group-hover/header:bg-indigo-50 transition-colors">
-                                                                <Layers className="h-4 w-4 text-indigo-500" />
+                                                            <div className="p-2.5 bg-muted/30 rounded-[1rem] border border-border group-hover/title:bg-indigo-500/10 group-hover/title:border-indigo-500/30 transition-all shadow-sm">
+                                                                <Layers className="h-5 w-5 text-indigo-500" />
                                                             </div>
-                                                            <h3 className="text-base font-black text-slate-800 tracking-tight">
+                                                            <h3 className="text-lg font-black text-foreground tracking-tight uppercase group-hover/title:text-indigo-500 transition-colors">
                                                                 {solverType}
                                                             </h3>
-                                                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none text-[9px] h-4 font-black">
-                                                                {versions.length} VERSIONS
+                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground/60 border-border/50 text-[9px] h-5 font-black uppercase tracking-widest px-3 rounded-full">
+                                                                {versions.length} VARIATIONS
                                                             </Badge>
                                                             {isExpanded ? (
-                                                                <ChevronUp className="h-4 w-4 text-slate-400 group-hover/header:text-slate-600 transition-colors" />
+                                                                <ChevronUp className="h-5 w-5 text-muted-foreground/40 group-hover/title:text-indigo-500 transition-all transform group-hover/title:-translate-y-0.5" />
                                                             ) : (
-                                                                <ChevronDown className="h-4 w-4 text-slate-400 group-hover/header:text-slate-600 transition-colors" />
+                                                                <ChevronDown className="h-5 w-5 text-muted-foreground/40 group-hover/title:text-indigo-500 transition-all transform group-hover/title:translate-y-0.5" />
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 {isExpanded && (
-                                                    <div className="flex flex-col gap-3 pl-4 md:pl-8 border-l-2 border-slate-100 ml-6">
+                                                    <div className="flex flex-col gap-4 pl-6 md:pl-10 border-l-2 border-border/40 ml-10">
                                                         {versions.map((engine) => {
                                                             const isEngineSelected = selectedEngines.some(
                                                                 (e) => e.dataset_name === engine.dataset_name &&
@@ -487,69 +492,70 @@ export default function EnginesPage() {
                                                             return (
                                                                 <motion.div 
                                                                     key={`${engine.solver_type}-${engine.version}`}
-                                                                    whileHover={{ y: -2 }}
+                                                                    whileHover={{ y: -3, x: 2 }}
+                                                                    className="transition-all duration-300"
                                                                 >
                                                                     <Card
-                                                                        className={`border-slate-200/60 shadow-lg shadow-slate-200/20 transition-all duration-300 group overflow-hidden bg-white rounded-2xl cursor-pointer border-l-4 ${
+                                                                        className={`border-border shadow-2xl transition-all duration-500 group overflow-hidden bg-card/60 backdrop-blur-sm rounded-[1.75rem] cursor-pointer border-l-[6px] ${
                                                                             isEngineSelected 
-                                                                                ? 'border-l-indigo-500 ring-2 ring-indigo-500/10 bg-indigo-50/5' 
-                                                                                : 'border-l-slate-100/50 hover:border-l-indigo-400'
+                                                                                ? 'border-l-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-500/5 shadow-indigo-500/10' 
+                                                                                : 'border-l-muted/20 hover:border-l-indigo-400/60'
                                                                         }`}
                                                                         onClick={() => toggleSelection(engine)}
                                                                     >
-                                                                        <div className="p-4 flex flex-col md:flex-row items-center gap-6">
-                                                                            <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-50 transition-colors shadow-inner shrink-0">
-                                                                                <Box className={`h-5 w-5 transition-all duration-300 ${isEngineSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}`} />
+                                                                        <div className="p-6 flex flex-col md:flex-row items-center gap-8">
+                                                                            <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 border border-transparent transition-all shadow-inner shrink-0 transform group-hover:rotate-12">
+                                                                                <Box className={`h-6 w-6 transition-all duration-500 ${isEngineSelected ? 'text-indigo-500 scale-110' : 'text-muted-foreground/30 group-hover:text-indigo-500'}`} />
                                                                             </div>
                                                                             
-                                                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center w-full">
-                                                                                <div className="space-y-1">
-                                                                                    <h3 className="text-base font-black text-slate-800 tracking-tight group-hover:text-indigo-900 transition-colors">
-                                                                                        Version {engine.version}
+                                                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-6 items-center w-full">
+                                                                                <div className="space-y-1.5">
+                                                                                    <h3 className="text-lg font-black text-foreground tracking-tight group-hover:text-indigo-500 transition-colors uppercase">
+                                                                                        Variation v{engine.version}
                                                                                     </h3>
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <Badge className="bg-slate-900 text-white font-black text-[9px] px-2 h-4 rounded-full">
-                                                                                            V{engine.version}
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <Badge className="bg-indigo-500 text-white font-black text-[9px] px-3 h-4.5 rounded-full uppercase tracking-tighter">
+                                                                                            REV-{engine.version}
                                                                                         </Badge>
-                                                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                                                                            Online
+                                                                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] italic opacity-60">
+                                                                                            Active Assets
                                                                                         </span>
                                                                                     </div>
                                                                                 </div>
 
                                                                                 <div className="hidden md:block">
-                                                                                    <p className="text-[9px] uppercase font-black text-slate-300 tracking-tighter mb-1">Registered</p>
-                                                                                    <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5">
-                                                                                        <Calendar className="h-3 w-3 text-slate-300" />
+                                                                                    <p className="text-[9px] uppercase font-black text-muted-foreground/20 tracking-[0.2em] mb-2">Registered At</p>
+                                                                                    <p className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-2 uppercase tracking-tight">
+                                                                                        <Calendar className="h-3.5 w-3.5 text-indigo-500/40" />
                                                                                         {new Date(engine.created_at).toLocaleDateString()}
                                                                                     </p>
                                                                                 </div>
 
                                                                                 <div className="hidden md:block">
-                                                                                    <p className="text-[9px] uppercase font-black text-slate-300 tracking-tighter mb-1">Status</p>
-                                                                                    <div className="flex items-center gap-1.5">
-                                                                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                                                                                        <span className="text-[10px] font-black text-emerald-600">Online</span>
+                                                                                    <p className="text-[9px] uppercase font-black text-muted-foreground/20 tracking-[0.2em] mb-2">Telemetry Status</p>
+                                                                                    <div className="flex items-center gap-2.5">
+                                                                                        <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse" />
+                                                                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Stable</span>
                                                                                     </div>
                                                                                 </div>
 
                                                                                 <div className="flex justify-end gap-3 items-center">
-                                                                                    <div className="flex gap-2">
+                                                                                    <div className="flex items-center gap-4">
                                                                                         <Checkbox
                                                                                             checked={isEngineSelected}
                                                                                             onCheckedChange={() => toggleSelection(engine)}
-                                                                                            className="h-5 w-5 rounded-md border-slate-300"
+                                                                                            className="h-6 w-6 rounded-lg border-border/60 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 shadow-md transition-all active:scale-90"
                                                                                         />
                                                                                         <Button
                                                                                             variant="ghost"
                                                                                             size="icon"
-                                                                                            className="h-8 w-8 text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-lg"
+                                                                                            className="h-10 w-10 text-muted-foreground/20 hover:text-rose-500 hover:bg-rose-500/10 transition-all rounded-xl border border-transparent hover:border-rose-500/20"
                                                                                             onClick={(e) => {
                                                                                                 e.stopPropagation();
                                                                                                 setEngineToDelete(engine);
                                                                                             }}
                                                                                         >
-                                                                                            <Trash2 className="h-4 w-4" />
+                                                                                            <Trash2 className="h-5 w-5" />
                                                                                         </Button>
                                                                                     </div>
                                                                                 </div>
@@ -571,11 +577,11 @@ export default function EnginesPage() {
                     </AnimatePresence>
 
                     {filteredEngines.length === 0 && searchQuery && (
-                        <div className="py-24 text-center">
-                            <div className="bg-slate-50 p-6 rounded-full inline-block mb-4">
-                                <Search className="h-8 w-8 text-slate-300" />
+                        <div className="py-32 text-center animate-in fade-in zoom-in-95 duration-700">
+                            <div className="bg-muted p-10 rounded-[3rem] inline-block mb-8 border border-border/50 shadow-inner">
+                                <Search className="h-12 w-12 text-muted-foreground/20" />
                             </div>
-                            <p className="text-slate-500 font-bold tracking-tight">No registry assets match "<span className="text-indigo-600 uppercase tracking-widest">{searchQuery}</span>"</p>
+                            <p className="text-muted-foreground font-black uppercase tracking-[0.2em] text-sm">No registry assets match "<span className="text-indigo-500">{searchQuery}</span>"</p>
                         </div>
                     )}
                 </div>

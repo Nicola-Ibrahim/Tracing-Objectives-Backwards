@@ -51,26 +51,26 @@ export default function GeneratePage() {
                 className="flex flex-col gap-2 relative"
             >
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
+                    <div className="p-2 bg-indigo-500 rounded-lg shadow-lg shadow-indigo-500/20">
                         <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-slate-900 via-indigo-900 to-indigo-800 font-sans">
+                    <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
                         Candidate Generation
                     </h1>
                 </div>
-                <p className="text-slate-500 font-medium ml-12">Generate decision vectors targeting specific objective profiles.</p>
+                <p className="text-muted-foreground font-medium ml-12 italic">Generate decision vectors targeting specific objective profiles.</p>
                 <div className="absolute -top-10 -right-10 opacity-5 pointer-events-none">
-                    <Target className="h-64 w-64 text-indigo-900 rotate-12" />
+                    <Target className="h-64 w-64 text-indigo-500 rotate-12" />
                 </div>
             </motion.div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                <TabsList className="bg-slate-100/50 p-1 rounded-xl border border-slate-200/60 backdrop-blur-sm">
-                    <TabsTrigger value="generation" className="flex items-center gap-2 px-6 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 font-bold transition-all">
+                <TabsList className="bg-muted p-1 rounded-xl border border-border/50 backdrop-blur-sm">
+                    <TabsTrigger value="generation" className="flex items-center gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-indigo-500 font-bold transition-all">
                         <Settings2 className="h-4 w-4" />
                         Parameters
                     </TabsTrigger>
-                    <TabsTrigger value="explorer" className="flex items-center gap-2 px-6 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 font-bold transition-all" disabled={!selectedDataset}>
+                    <TabsTrigger value="explorer" className="flex items-center gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-indigo-500 font-bold transition-all" disabled={!selectedDataset}>
                         <BarChart3 className="h-4 w-4" />
                         Explorer
                     </TabsTrigger>
@@ -83,13 +83,13 @@ export default function GeneratePage() {
                         className="space-y-8"
                     >
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <Card className="lg:col-span-1 border-slate-200/60 shadow-lg shadow-slate-200/40 overflow-hidden h-fit rounded-3xl bg-white/80 backdrop-blur-sm">
-                                <CardHeader className="bg-slate-50/40 border-b border-slate-100 py-6 px-8 flex flex-row items-center justify-between space-y-0">
+                            <Card className="lg:col-span-1 border-border shadow-2xl rounded-3xl bg-card transition-all">
+                                <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                                     <div className="space-y-1">
-                                        <CardTitle className="text-xl font-black text-slate-800 tracking-tight">Configuration</CardTitle>
-                                        <CardDescription className="text-slate-500 text-xs font-bold uppercase tracking-widest opacity-60">Engine Target Settings</CardDescription>
+                                        <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">Configuration</CardTitle>
+                                        <CardDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Engine Target Settings</CardDescription>
                                     </div>
-                                    <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                                    <div className="bg-background p-2 rounded-xl shadow-sm border border-border">
                                         <Blocks className="h-5 w-5 text-indigo-500" />
                                     </div>
                                 </CardHeader>
@@ -97,7 +97,7 @@ export default function GeneratePage() {
                                     {loadingDatasets ? (
                                         <div className="flex flex-col items-center justify-center py-12 gap-4">
                                             <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
-                                            <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px] animate-pulse">Syncing Registry...</span>
+                                            <span className="text-muted-foreground font-black uppercase tracking-widest text-[10px] animate-pulse">Syncing Registry...</span>
                                         </div>
                                     ) : (
                                         <GenerateCandidatesForm
@@ -112,21 +112,25 @@ export default function GeneratePage() {
 
                             <div className="lg:col-span-2 space-y-8">
                                 {mutation.isError && (
-                                    <Alert variant="destructive" className="rounded-2xl border-rose-200 bg-rose-50/50 border-l-4 border-l-rose-500 shadow-sm">
-                                        <AlertCircle className="h-4 w-4 text-rose-600" />
-                                        <AlertTitle className="font-bold">Generation Stopped</AlertTitle>
-                                        <AlertDescription className="font-medium text-rose-800">
+                                    <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/10 border-l-4 border-l-destructive shadow-sm">
+                                        <AlertCircle className="h-4 w-4 text-destructive" />
+                                        <AlertTitle className="font-bold text-destructive">Generation Stopped</AlertTitle>
+                                        <AlertDescription className="font-medium text-destructive/80">
                                             {(mutation.error as any)?.response?.data?.detail || "An unexpected error occurred while generating candidates."}
                                         </AlertDescription>
                                     </Alert>
                                 )}
 
                                 {(result || datasetDetails) ? (
-                                    <Card className="border-indigo-100 shadow-md overflow-hidden w-full min-w-0">
-                                        <CardHeader className="bg-indigo-50/30 border-b border-indigo-100 py-4">
-                                            <CardTitle className="text-sm font-bold text-indigo-900 uppercase tracking-wider">
+                                    <Card className="border-border shadow-2xl rounded-[2rem] overflow-hidden bg-card/50 backdrop-blur-sm">
+                                        <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex justify-between items-center flex-row">
+                                            <CardTitle className="text-[10px] font-black text-foreground uppercase tracking-[0.2em] opacity-70">
                                                 {result ? "Generation Results" : "Dataset Preview"}
                                             </CardTitle>
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                                <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Live Manifold</span>
+                                            </div>
                                         </CardHeader>
                                         <CardContent className="p-6">
                                             <CandidateManifoldChart
@@ -137,12 +141,12 @@ export default function GeneratePage() {
                                         </CardContent>
                                     </Card>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/10 p-10 text-center">
-                                        <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-                                            <Sparkles className="h-8 w-8 text-slate-300" />
+                                    <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-[2.5rem] bg-muted/10 p-10 text-center group transition-all hover:bg-muted/20">
+                                        <div className="bg-background p-6 rounded-full shadow-lg border border-border mb-6 group-hover:scale-110 transition-transform ring-8 ring-muted/50">
+                                            <Sparkles className="h-10 w-10 text-muted-foreground/30" />
                                         </div>
-                                        <h3 className="text-lg font-semibold text-slate-900 mb-2">Ready for Inference</h3>
-                                        <p className="text-slate-500 max-w-sm mb-6">Select a dataset and a trained engine to start generating inverse candidates.</p>
+                                        <h3 className="text-xl font-black text-foreground uppercase tracking-tight mb-2">Ready for Inference</h3>
+                                        <p className="text-muted-foreground max-w-sm mb-6 font-medium italic">Select a dataset and a trained engine to start generating inverse candidates.</p>
                                     </div>
                                 )}
                             </div>

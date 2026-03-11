@@ -104,19 +104,19 @@ export function GenerateCandidatesForm({
                         name="dataset_name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Reference Dataset</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Reference Dataset</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="bg-white">
+                                        <SelectTrigger className="bg-background border-border text-foreground">
                                             <SelectValue placeholder="Select dataset" />
                                         </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                         {datasets.map((d) => (
-                                            <SelectItem key={d} value={d}>
+                                            <SelectItem key={d} value={d} className="hover:bg-muted focus:bg-muted cursor-pointer">
                                                 {d}
                                             </SelectItem>
                                         ))}
@@ -132,25 +132,25 @@ export function GenerateCandidatesForm({
                         name="engine_id"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Inference Engine</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Inference Engine</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value}
                                     disabled={!datasetName || fetchingEngines}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="bg-white">
+                                        <SelectTrigger className="bg-background border-border text-foreground">
                                             <SelectValue
                                                 placeholder={fetchingEngines ? "Loading..." : "Select engine"}
                                             />
                                         </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                         {engines.map((e) => (
-                                            <SelectItem key={`${e.solver_type}_v${e.version}`} value={`${e.solver_type}_v${e.version}`}>
+                                            <SelectItem key={`${e.solver_type}_v${e.version}`} value={`${e.solver_type}_v${e.version}`} className="hover:bg-muted focus:bg-muted cursor-pointer">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium">{e.solver_type}</span>
-                                                    <Badge variant="outline" className="text-[10px] px-1 h-4">v{e.version}</Badge>
+                                                    <Badge variant="indigo" className="text-[10px] px-1 h-4">v{e.version}</Badge>
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -168,9 +168,9 @@ export function GenerateCandidatesForm({
                         name="objective1"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Objective 1 (f1)</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Objective 1 (f1)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} className="bg-white" />
+                                    <Input type="number" step="0.01" {...field} className="bg-background border-border text-foreground focus:ring-indigo-500/10 focus:border-indigo-500" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -181,9 +181,9 @@ export function GenerateCandidatesForm({
                         name="objective2"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Objective 2 (f2)</FormLabel>
+                                <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Objective 2 (f2)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} className="bg-white" />
+                                    <Input type="number" step="0.01" {...field} className="bg-background border-border text-foreground focus:ring-indigo-500/10 focus:border-indigo-500" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -191,15 +191,15 @@ export function GenerateCandidatesForm({
                     />
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="pt-4 border-t border-border flex items-center justify-between">
                     <FormField
                         control={form.control as any}
                         name="n_samples"
                         render={({ field }) => (
                             <FormItem className="max-w-[200px]">
-                                <FormLabel className="text-[10px] font-bold uppercase text-slate-500">Number of Candidates</FormLabel>
+                                <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Number of Candidates</FormLabel>
                                 <FormControl>
-                                    <Input type="number" {...field} className="bg-white" />
+                                    <Input type="number" {...field} className="bg-background border-border text-foreground focus:ring-indigo-500/10 focus:border-indigo-500" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -210,12 +210,12 @@ export function GenerateCandidatesForm({
                 <Button
                     type="submit"
                     disabled={isLoading || !form.watch("engine_id")}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
+                    className="w-full bg-foreground text-background hover:opacity-90 font-bold h-12 shadow-lg shadow-indigo-500/5 transition-all active:scale-[0.98] group"
                 >
                     {isLoading ? (
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        <Loader2 className="h-5 w-5 animate-spin mr-2 text-indigo-500" />
                     ) : (
-                        <Play className="h-5 w-5 mr-2" fill="currentColor" />
+                        <Play className="h-5 w-5 mr-2 text-indigo-500 group-hover:scale-110 transition-transform" fill="currentColor" />
                     )}
                     Generate Inverse Candidates
                 </Button>

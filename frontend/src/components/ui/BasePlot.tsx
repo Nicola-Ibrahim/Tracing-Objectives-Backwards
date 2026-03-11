@@ -58,8 +58,8 @@ export function BasePlot({
             xanchor: 'center',
             x: 0.5,
             font: { size: 12, color: '#64748b' },
-            bgcolor: 'rgba(255, 255, 255, 0.5)',
-            bordercolor: 'rgba(241, 245, 249, 1)',
+            bgcolor: 'rgba(255, 255, 255, 0.8)',
+            bordercolor: '#f1f5f9',
             borderwidth: 1
         },
         xaxis: {
@@ -89,7 +89,7 @@ export function BasePlot({
             filename: title?.toLowerCase().replace(/\s+/g, '_') || 'plot_export',
             height: 1080,
             width: 1920,
-            scale: 4 // High resolution 4x scale
+            scale: 4 // High resolution 4x scale,
         }
     };
 
@@ -125,22 +125,22 @@ export function BasePlot({
     );
 
     if (!title) {
-        return <div className={cn("w-full h-full", contentClassName)} style={{ minHeight: minPlotHeight }}>{content}</div>;
+        return <div className={cn("w-full h-full bg-white rounded-lg", contentClassName)} style={{ minHeight: minPlotHeight }}>{content}</div>;
     }
 
     return (
-        <Card className={cn("border-slate-200 shadow-sm flex flex-col", className)} style={{ minHeight: minPlotHeight }}>
-            <CardHeader className="bg-slate-50/40 py-3 border-b border-slate-100 px-6">
-                <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+        <Card className={cn("border-border shadow-sm flex flex-col transition-colors duration-300", className)} style={{ minHeight: minPlotHeight }}>
+            <CardHeader className="bg-muted/30 py-3 border-b border-border px-6">
+                <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {headerIcon}
                         {title}
                     </div>
                     {headerExtra}
                 </CardTitle>
-                {description && <CardDescription className="text-[10px] mt-1">{description}</CardDescription>}
+                {description && <CardDescription className="text-[10px] mt-1 text-muted-foreground/80">{description}</CardDescription>}
             </CardHeader>
-            <CardContent className={cn("p-2 grow", contentClassName)}>
+            <CardContent className={cn("p-2 grow bg-white relative rounded-b-[inherit]", contentClassName)}>
                 {content}
             </CardContent>
         </Card>

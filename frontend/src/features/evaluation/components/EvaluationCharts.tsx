@@ -83,12 +83,15 @@ export function PerformanceChart({
     const layout = {
         xaxis: {
             title: { text: xAxisLabel },
-            gridcolor: '#f8fafc',
-            zeroline: false
+            gridcolor: '#f1f5f9', // Muted slate grid
+            zeroline: false,
+            tickfont: { family: 'Inter, sans-serif', color: '#64748b' }
         },
         yaxis: {
             title: { text: yAxisLabel },
-            range: [0, 1.05]
+            range: [0, 1.05],
+            gridcolor: '#f1f5f9',
+            tickfont: { family: 'Inter, sans-serif', color: '#64748b' }
         },
     };
 
@@ -144,13 +147,14 @@ export function MetricBarChart({
         xaxis: {
             gridcolor: 'transparent',
             tickfont: { size: 12, weight: 700, color: '#64748b' },
-            linecolor: '#f1f5f9',
+            linecolor: '#e2e8f0',
             automargin: true
         },
         yaxis: {
             title: { text: yAxisLabel },
-            gridcolor: '#f8fafc',
-            zeroline: false
+            gridcolor: '#f1f5f9',
+            zeroline: false,
+            tickfont: { family: 'Inter, sans-serif', color: '#64748b' }
         },
         margin: { b: 150, t: 40, l: 60, r: 20 },
     };

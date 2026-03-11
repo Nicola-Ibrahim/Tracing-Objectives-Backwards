@@ -21,23 +21,33 @@ export const metadata = {
   description: "Advanced Inverse Mapping & Optimization Workbench",
 };
 
+import { ThemeProvider } from "@/providers/theme-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >
-        <QueryProvider>
-          <TooltipProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </TooltipProvider>
-        </QueryProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          forcedTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <TooltipProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </TooltipProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -91,8 +91,8 @@ export function TrainEngineForm({
     if (isLoadingDiscovery) {
         return (
             <div className="flex flex-col items-center justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
-                <p className="text-sm text-slate-500 font-medium tracking-wide">Reflecting backend solvers...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-2" />
+                <p className="text-sm text-muted-foreground font-medium tracking-wide">Reflecting backend solvers...</p>
             </div>
         );
     }
@@ -109,19 +109,19 @@ export function TrainEngineForm({
                         name="dataset_name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Source Dataset</FormLabel>
+                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Source Dataset</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="bg-white">
+                                        <SelectTrigger className="bg-background border-border text-foreground">
                                             <SelectValue placeholder="Select a dataset" />
                                         </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                         {datasets.map((d) => (
-                                            <SelectItem key={d} value={d}>
+                                            <SelectItem key={d} value={d} className="hover:bg-muted focus:bg-muted cursor-pointer">
                                                 {d}
                                             </SelectItem>
                                         ))}
@@ -137,19 +137,19 @@ export function TrainEngineForm({
                         name="solver_type"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-bold uppercase text-slate-500">Architecture Strategy</FormLabel>
+                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Architecture Strategy</FormLabel>
                                 <Select
                                     onValueChange={handleSolverChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="bg-white">
+                                        <SelectTrigger className="bg-background border-border text-foreground">
                                             <SelectValue placeholder="Select a solver" />
                                         </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                         {solvers.map((s) => (
-                                            <SelectItem key={s.type} value={s.type}>
+                                            <SelectItem key={s.type} value={s.type} className="hover:bg-muted focus:bg-muted cursor-pointer">
                                                 {s.name}
                                             </SelectItem>
                                         ))}
@@ -162,10 +162,10 @@ export function TrainEngineForm({
                 </div>
 
                 {selectedSolver && (
-                    <div className="pt-4 border-t border-slate-100">
-                        <div className="flex items-center gap-2 mb-4">
+                    <div className="pt-6 border-t border-border">
+                        <div className="flex items-center gap-2 mb-6">
                             <Sparkles className="h-4 w-4 text-amber-500" />
-                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">
+                            <h3 className="text-xs font-black text-foreground uppercase tracking-[0.2em]">
                                 Hyperparameters for {selectedSolver.name}
                             </h3>
                         </div>
@@ -183,7 +183,7 @@ export function TrainEngineForm({
                 <Button
                     type="submit"
                     disabled={isLoading || !isDynamicValid}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98] mt-4"
                 >
                     {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />

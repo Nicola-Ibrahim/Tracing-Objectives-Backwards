@@ -33,10 +33,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     <div
                         key={toast.id}
                         className={`px-4 py-3 rounded-xl shadow-lg border animate-in slide-in-from-right-4 duration-300 flex items-center gap-3 min-w-[300px] ${toast.type === "success"
-                                ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+                                ? "bg-emerald-950/30 border-emerald-500/20 text-emerald-400"
                                 : toast.type === "error"
-                                    ? "bg-red-50 border-red-100 text-red-800"
-                                    : "bg-blue-50 border-blue-100 text-blue-800"
+                                    ? "bg-red-950/30 border-red-500/20 text-red-400"
+                                    : "bg-indigo-950/30 border-indigo-500/20 text-indigo-400"
                             }`}
                     >
                         <div
@@ -44,13 +44,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                                     ? "bg-emerald-500"
                                     : toast.type === "error"
                                         ? "bg-red-500"
-                                        : "bg-blue-500"
+                                        : "bg-indigo-500"
                                 }`}
                         />
                         <span className="text-sm font-medium">{toast.message}</span>
                         <button
                             onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-                            className="ml-auto text-slate-400 hover:text-slate-600 transition-colors"
+                            className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

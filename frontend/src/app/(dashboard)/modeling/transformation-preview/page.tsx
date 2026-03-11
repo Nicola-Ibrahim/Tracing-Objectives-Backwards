@@ -65,33 +65,33 @@ export default function TransformationPreviewerPage() {
                     className="flex flex-col gap-2 relative"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
+                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-600/20">
                             <Binary className="h-6 w-6 text-white" />
                         </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-slate-900 via-indigo-900 to-indigo-800 font-sans">
+                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
                             Topology Preview
                         </h1>
                     </div>
-                    <p className="text-slate-500 font-medium ml-12">Verify data topology changes across transformation chains.</p>
-                    <div className="absolute -top-10 -right-20 opacity-5 pointer-events-none">
-                        <Layers className="h-48 w-48 text-indigo-900 rotate-12" />
+                    <p className="text-muted-foreground font-medium ml-12">Verify data topology changes across transformation chains.</p>
+                    <div className="absolute -top-10 -right-20 opacity-[0.03] dark:opacity-[0.05] pointer-events-none">
+                        <Layers className="h-48 w-48 text-indigo-500 rotate-12" />
                     </div>
                 </motion.div>
 
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-4 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/60 backdrop-blur-sm shadow-sm"
+                    className="flex items-center gap-4 bg-muted/30 p-1 rounded-2xl border border-border/50 backdrop-blur-sm shadow-sm"
                 >
                     <div className="flex items-center gap-1 px-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-2">Layout</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mr-2">Layout</span>
                         <Button
                             variant={compareMode ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setCompareMode(true)}
                             className={cn(
                                 "h-8 rounded-xl font-bold text-[10px] px-4 transition-all",
-                                compareMode ? "bg-white text-indigo-600 shadow-sm border border-slate-200 hover:bg-slate-50" : "text-slate-500 hover:text-slate-800"
+                                compareMode ? "bg-background text-indigo-500 shadow-sm border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
                             Difference
@@ -102,7 +102,7 @@ export default function TransformationPreviewerPage() {
                             onClick={() => setCompareMode(false)}
                             className={cn(
                                 "h-8 rounded-xl font-bold text-[10px] px-4 transition-all",
-                                !compareMode ? "bg-white text-indigo-600 shadow-sm border border-slate-200 hover:bg-slate-50" : "text-slate-500 hover:text-slate-800"
+                                !compareMode ? "bg-background text-indigo-500 shadow-sm border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
                             Final State
@@ -118,24 +118,24 @@ export default function TransformationPreviewerPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                     >
-                        <Card className="border-slate-200/60 shadow-lg shadow-slate-200/40 overflow-hidden bg-white/80 backdrop-blur-sm rounded-3xl">
-                            <CardHeader className="bg-slate-50/40 border-b border-slate-100 py-4 px-6 flex flex-row items-center justify-between space-y-0">
-                                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                        <Card className="border-border shadow-2xl rounded-3xl bg-card transition-all">
+                            <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
+                                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
                                     <Database className="h-4 w-4" />
                                     Source
                                 </CardTitle>
-                                <div className="bg-indigo-50 p-1.5 rounded-lg">
+                                <div className="bg-indigo-500/10 p-1.5 rounded-lg">
                                     <Database className="h-3.5 w-3.5 text-indigo-500" />
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
                                 <Select value={selectedDataset} onValueChange={setSelectedDataset}>
-                                    <SelectTrigger className="w-full bg-white border-slate-200 font-bold text-slate-700 shadow-xs h-10">
+                                    <SelectTrigger className="w-full bg-background border-border font-bold text-foreground shadow-sm h-10">
                                         <SelectValue placeholder="Select dataset..." />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                         {datasets.map((d) => (
-                                            <SelectItem key={d.name} value={d.name} className="font-medium">
+                                            <SelectItem key={d.name} value={d.name} className="font-medium hover:bg-muted focus:bg-muted cursor-pointer transition-colors">
                                                 {d.name}
                                             </SelectItem>
                                         ))}
@@ -143,37 +143,37 @@ export default function TransformationPreviewerPage() {
                                 </Select>
 
                                 {(previewMutation.data || datasetDetails.data) && (
-                                    <div className="space-y-3 pt-4 border-t border-slate-100/60">
-                                        <Label className="text-[10px] uppercase font-black text-slate-300 tracking-widest pl-1">Space Projections</Label>
+                                    <div className="space-y-3 pt-4 border-t border-border">
+                                        <Label className="text-[10px] uppercase font-black text-muted-foreground/40 tracking-widest pl-1">Space Projections</Label>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-bold text-slate-400 ml-1">Axis Ω₁</Label>
+                                                <Label className="text-[9px] font-bold text-muted-foreground/60 ml-1">Axis Ω₁</Label>
                                                 <Select
                                                     value={selectedDims[0].toString()}
                                                     onValueChange={(v) => setSelectedDims([parseInt(v), selectedDims[1]])}
                                                 >
-                                                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs font-black shadow-xs">
+                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black shadow-sm">
                                                         <SelectValue />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                                         {Array.from({ length: (previewMutation.data?.transformed.X[0]?.length || datasetDetails.data?.X[0]?.length || 0) }).map((_, i) => (
-                                                            <SelectItem key={i} value={i.toString()}>X_{i}</SelectItem>
+                                                            <SelectItem key={i} value={i.toString()} className="hover:bg-muted focus:bg-muted cursor-pointer transition-colors">X_{i}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-bold text-slate-400 ml-1">Axis Ω₂</Label>
+                                                <Label className="text-[9px] font-bold text-muted-foreground/60 ml-1">Axis Ω₂</Label>
                                                 <Select
                                                     value={selectedDims[1].toString()}
                                                     onValueChange={(v) => setSelectedDims([selectedDims[0], parseInt(v)])}
                                                 >
-                                                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs font-black shadow-xs">
+                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black shadow-sm">
                                                         <SelectValue />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent className="bg-popover border-border text-popover-foreground">
                                                         {Array.from({ length: (previewMutation.data?.transformed.X[0]?.length || datasetDetails.data?.X[0]?.length || 0) }).map((_, i) => (
-                                                            <SelectItem key={i} value={i.toString()}>X_{i}</SelectItem>
+                                                            <SelectItem key={i} value={i.toString()} className="hover:bg-muted focus:bg-muted cursor-pointer transition-colors">X_{i}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -189,13 +189,13 @@ export default function TransformationPreviewerPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0, transition: { delay: 0.1 } }}
                     >
-                        <Card className="border-slate-200/60 shadow-lg shadow-slate-200/40 overflow-hidden bg-white/80 backdrop-blur-sm rounded-3xl">
-                            <CardHeader className="bg-slate-50/40 border-b border-slate-100 py-4 px-6 flex flex-row items-center justify-between space-y-0">
-                                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                        <Card className="border-border shadow-2xl rounded-3xl bg-card transition-all">
+                            <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
+                                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
                                     <Wand2 className="h-4 w-4" />
                                     Estimators
                                 </CardTitle>
-                                <div className="bg-indigo-50 p-1.5 rounded-lg">
+                                <div className="bg-indigo-500/10 p-1.5 rounded-lg">
                                     <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
                                 </div>
                             </CardHeader>
@@ -207,7 +207,7 @@ export default function TransformationPreviewerPage() {
                                     onChange={setXChain}
                                 />
 
-                                <div className="border-t border-slate-100/60 pt-6">
+                                <div className="border-t border-border pt-6">
                                     <ChainBuilder
                                         title="Objective Mapping (y)"
                                         chain={yChain}
@@ -217,14 +217,14 @@ export default function TransformationPreviewerPage() {
                                 </div>
 
                                 <Button
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 font-black h-11 shadow-lg shadow-indigo-100 transition-all hover:scale-[1.02] active:scale-95 text-xs tracking-widest uppercase"
+                                    className="w-full bg-foreground text-background hover:opacity-90 font-black h-11 shadow-lg shadow-indigo-500/5 transition-all hover:scale-[1.02] active:scale-95 text-xs tracking-widest uppercase group"
                                     onClick={handlePreview}
                                     disabled={!selectedDataset || previewMutation.isPending}
                                 >
                                     {previewMutation.isPending ? (
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2 text-indigo-500" />
                                     ) : (
-                                        <ChevronRight className="h-4 w-4 mr-2" />
+                                        <ChevronRight className="h-4 w-4 mr-2 text-indigo-500 group-hover:translate-x-1 transition-transform" />
                                     )}
                                     Update Projections
                                 </Button>
@@ -235,13 +235,13 @@ export default function TransformationPreviewerPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1, transition: { delay: 0.2 } }}
-                        className="bg-indigo-50/50 border border-indigo-100 p-5 rounded-[2rem] flex gap-4 shadow-sm shadow-indigo-50"
+                        className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-[2rem] flex gap-4 shadow-sm"
                     >
-                        <div className="bg-white p-2 rounded-xl h-fit border border-indigo-100 shadow-xs">
+                        <div className="bg-background p-2 rounded-xl h-fit border border-indigo-500/20 shadow-sm">
                             <Info className="h-4 w-4 text-indigo-500 shrink-0" />
                         </div>
-                        <p className="text-[11px] text-indigo-700/80 leading-relaxed font-bold">
-                            High-density sampling is capped at <span className="text-indigo-900 font-extrabold underline decoration-indigo-200">2,000 observations</span> to maintain interactive frame rates.
+                        <p className="text-[11px] text-muted-foreground leading-relaxed font-bold">
+                            High-density sampling is capped at <span className="text-foreground font-extrabold underline decoration-indigo-500/30">2,000 observations</span> to maintain interactive frame rates.
                         </p>
                     </motion.div>
                 </div>
@@ -269,19 +269,19 @@ export default function TransformationPreviewerPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="h-full flex flex-col items-center justify-center p-12 text-center group bg-slate-50/10 border-2 border-dashed border-slate-200/60 rounded-[3rem]"
+                                className="h-full flex flex-col items-center justify-center p-12 text-center group bg-muted/10 border-2 border-dashed border-border/60 rounded-[3rem]"
                             >
                                 <div className="relative mb-10">
                                     <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                                    <div className="relative w-24 h-24 bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-slate-100">
-                                        <Layers className="h-12 w-12 text-indigo-300" />
+                                    <div className="relative w-24 h-24 bg-card rounded-[2.5rem] shadow-2xl shadow-indigo-500/10 flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-border">
+                                        <Layers className="h-12 w-12 text-indigo-400 opacity-60" />
                                     </div>
                                     <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 rounded-2xl shadow-lg flex items-center justify-center">
                                         <Share2 className="h-5 w-5 text-white" />
                                     </div>
                                 </div>
-                                <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-3">Initialize Mapping Preview</h3>
-                                <p className="text-slate-500 max-w-sm font-medium leading-relaxed mb-8">
+                                <h3 className="text-2xl font-black text-foreground tracking-tight mb-3">Initialize Mapping Preview</h3>
+                                <p className="text-muted-foreground max-w-sm font-medium leading-relaxed mb-8">
                                     Select a reference dataset and construct a transformation manifold to visualize spatial coherence and topology drift.
                                 </p>
                                 <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest animate-bounce">

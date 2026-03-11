@@ -14,9 +14,9 @@ interface TrainingHistoryChartProps {
     title?: string;
 }
 
-export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({ 
-    history, 
-    title = "Convergence Profile" 
+export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
+    history,
+    title = "Convergence Profile"
 }) => {
     if (!history || !history.epochs || history.epochs.length === 0) {
         return null;
@@ -31,8 +31,8 @@ export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
             name: 'Training Loss',
             type: 'scatter',
             mode: 'lines',
-            line: { 
-                color: 'rgb(79, 70, 229)', 
+            line: {
+                color: 'rgb(79, 70, 229)',
                 width: 2.5,
             },
         },
@@ -42,8 +42,8 @@ export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
             name: 'Validation Loss',
             type: 'scatter',
             mode: 'lines',
-            line: { 
-                color: 'rgb(13, 148, 136)', 
+            line: {
+                color: 'rgb(13, 148, 136)',
                 width: 2.5,
                 dash: 'dot',
             },

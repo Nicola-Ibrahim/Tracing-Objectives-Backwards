@@ -91,8 +91,8 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
     if (isLoadingDiscovery) {
         return (
             <div className="flex flex-col items-center justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
-                <p className="text-sm text-slate-500 font-medium tracking-wide">Initializing generators...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-2" />
+                <p className="text-sm text-muted-foreground font-black uppercase tracking-widest">Initializing generators...</p>
             </div>
         );
     }
@@ -107,9 +107,9 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                             name="dataset_name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Dataset Identification</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Dataset Identification</FormLabel>
                                     <FormControl>
-                                        <Input {...field} placeholder="e.g. baseline_exp_01" className="bg-white" />
+                                        <Input {...field} placeholder="e.g. baseline_exp_01" className="bg-background border-border text-foreground h-11" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -121,19 +121,19 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                             name="generator_type"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Engine Type</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Engine Type</FormLabel>
                                     <Select
                                         onValueChange={handleGeneratorChange}
                                         value={field.value || ""}
                                     >
                                         <FormControl>
-                                            <SelectTrigger className="bg-white">
+                                            <SelectTrigger className="bg-background border-border text-foreground h-11">
                                                 <SelectValue placeholder="Select generator" />
                                             </SelectTrigger>
                                         </FormControl>
-                                        <SelectContent>
+                                        <SelectContent className="bg-popover border-border text-popover-foreground">
                                             {generators.map((gen) => (
-                                                <SelectItem key={gen.type} value={gen.type}>
+                                                <SelectItem key={gen.type} value={gen.type} className="hover:bg-muted focus:bg-muted cursor-pointer font-medium">
                                                     {gen.name}
                                                 </SelectItem>
                                             ))}
@@ -146,10 +146,10 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                     </div>
 
                     {selectedGenerator && (
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="space-y-6 pt-6 border-t border-border">
                             <div className="flex items-center gap-2 mb-2">
                                 <Wand2 className="h-4 w-4 text-indigo-500" />
-                                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">
+                                <h4 className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">
                                     {selectedGenerator.name} Configuration
                                 </h4>
                             </div>
@@ -163,17 +163,17 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-border">
                         <FormField
                             control={form.control}
                             name="split_ratio"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Test Split Ratio (0.0 - 0.5)</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Test Split Ratio (0.0 - 0.5)</FormLabel>
                                     <FormControl>
-                                        <Input {...field} type="number" step="0.05" className="bg-white" />
+                                        <Input {...field} type="number" step="0.05" className="bg-background border-border text-foreground h-11" />
                                     </FormControl>
-                                    <FormDescription className="text-[10px] italic">Ratio of data reserved for testing.</FormDescription>
+                                    <FormDescription className="text-[10px] font-medium italic opacity-60">Ratio of data reserved for testing.</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -183,9 +183,9 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                             name="random_state"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs font-bold uppercase text-slate-500">Random Seed</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Random Seed</FormLabel>
                                     <FormControl>
-                                        <Input {...field} type="number" className="bg-white" />
+                                        <Input {...field} type="number" className="bg-background border-border text-foreground h-11" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -195,12 +195,12 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
 
                     <Button
                         type="submit"
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-black h-14 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98] mt-4"
                         disabled={isLoading || !isDynamicValid}
                     >
                         {isLoading ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                                 Synthesizing...
                             </>
                         ) : (

@@ -78,12 +78,12 @@ export function DynamicConfigForm({
                     value={value !== undefined && value !== null ? String(value) : ""}
                     onValueChange={(val) => handleValueChange(name, val)}
                 >
-                    <SelectTrigger className="w-full bg-white">
+                    <SelectTrigger className="w-full bg-background border-border text-foreground font-medium rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/10 transition-all">
                         <SelectValue placeholder={`Select ${name}`} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-popover border-border text-popover-foreground rounded-xl shadow-2xl">
                         {options.map((opt) => (
-                            <SelectItem key={String(opt)} value={String(opt)}>
+                            <SelectItem key={String(opt)} value={String(opt)} className="hover:bg-muted focus:bg-muted cursor-pointer transition-colors">
                                 {String(opt)}
                             </SelectItem>
                         ))}
@@ -95,13 +95,14 @@ export function DynamicConfigForm({
         // 2. Boolean (Checkbox)
         if (type === "bool" || type === "boolean") {
             return (
-                <div className="flex items-center space-x-2 py-2">
+                <div className="flex items-center space-x-3 py-2 bg-muted/10 px-3 rounded-xl border border-border/50 hover:bg-muted/20 transition-all group">
                     <Checkbox
                         id={`field-${name}`}
                         checked={!!value}
                         onCheckedChange={(checked) => handleValueChange(name, !!checked)}
+                        className="border-border data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 transition-all"
                     />
-                    <Label htmlFor={`field-${name}`} className="text-xs font-bold uppercase text-slate-500 cursor-pointer">
+                    <Label htmlFor={`field-${name}`} className="text-[10px] font-black uppercase text-muted-foreground tracking-widest cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity">
                         {required ? `${name}*` : name}
                     </Label>
                 </div>
@@ -116,7 +117,7 @@ export function DynamicConfigForm({
                     step={type.toLowerCase() === "float" ? "any" : "1"}
                     placeholder={`Enter ${name}`}
                     value={value}
-                    className="bg-white"
+                    className="bg-background border-border text-foreground transition-all focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500/50 rounded-xl"
                     onChange={(e) => {
                         const val = type.toLowerCase() === "float" ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
                         handleValueChange(name, isNaN(val) ? "" : val);
@@ -129,18 +130,17 @@ export function DynamicConfigForm({
         // 4. Complex (Dict/List) Fallback to Textarea
         if (["dict", "list", "object", "array"].includes(type.toLowerCase())) {
             return (
-                <div className="relative">
+                <div className="relative group">
                     <Textarea
                         placeholder={`Enter JSON for ${name}`}
                         value={typeof value === 'object' ? JSON.stringify(value) : (value || "")}
-                        className="font-mono text-xs bg-slate-50/50 min-h-[80px]"
+                        className="font-mono text-xs bg-muted/20 border-border text-foreground min-h-[100px] focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 rounded-2xl transition-all shadow-inner"
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                             const raw = e.target.value;
                             try {
                                 if (raw.trim() === "") {
                                     handleValueChange(name, null);
                                 } else {
-                                    // We try to parse it as JSON, if it fails we keep it as string
                                     const parsed = JSON.parse(raw);
                                     handleValueChange(name, parsed);
                                 }
@@ -150,7 +150,7 @@ export function DynamicConfigForm({
                         }}
                         required={required}
                     />
-                    <Brackets className="absolute right-2 bottom-2 size-3 text-slate-300 pointer-events-none" />
+                    <Brackets className="absolute right-3 bottom-3 size-4 text-muted-foreground/30 pointer-events-none group-hover:text-indigo-500/30 transition-colors" />
                 </div>
             );
         }
@@ -161,7 +161,7 @@ export function DynamicConfigForm({
                 type="text"
                 placeholder={`Enter ${name}`}
                 value={value || ""}
-                className="bg-white"
+                className="bg-background border-border text-foreground transition-all focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500/50 rounded-xl"
                 onChange={(e) => handleValueChange(name, e.target.value)}
                 required={required}
             />
@@ -171,19 +171,21 @@ export function DynamicConfigForm({
     return (
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${className}`}>
             {parameters.map((param) => (
-                <div key={param.name} className={`space-y-1.5 ${["dict", "list", "object", "array"].includes(param.type.toLowerCase()) ? "md:col-span-2" : ""}`}>
+                <div key={param.name} className={`space-y-2 ${["dict", "list", "object", "array"].includes(param.type.toLowerCase()) ? "md:col-span-2" : ""}`}>
                     {param.type !== "bool" && param.type !== "boolean" && (
                         <div className="flex items-center gap-1.5 ml-0.5">
-                            <Label htmlFor={`field-${param.name}`} className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">
+                            <Label htmlFor={`field-${param.name}`} className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest">
                                 {param.name} {param.required && <span className="text-destructive">*</span>}
                             </Label>
                             {param.description && (
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <InfoIcon className="size-3 text-slate-300 hover:text-indigo-400 cursor-help transition-colors" />
+                                            <div className="hover:bg-muted p-0.5 rounded-full transition-colors cursor-help">
+                                                <InfoIcon className="size-3 text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
+                                            </div>
                                         </TooltipTrigger>
-                                        <TooltipContent className="max-w-[200px] text-[10px] bg-slate-900 text-white border-0">
+                                        <TooltipContent className="max-w-[200px] text-[10px] bg-popover text-popover-foreground border border-border shadow-xl rounded-lg font-medium p-3">
                                             <p>{param.description}</p>
                                         </TooltipContent>
                                     </Tooltip>

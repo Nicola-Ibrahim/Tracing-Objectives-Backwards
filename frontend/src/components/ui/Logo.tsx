@@ -18,7 +18,7 @@ export const Logo: React.FC<LogoProps> = ({ className, simple = false }) => {
                 className="drop-shadow-sm"
             >
                 {/* Background Circle / Shield */}
-                <rect width="100" height="100" rx="24" fill="currentColor" className="text-slate-950" />
+                <rect width="100" height="100" rx="24" fill="currentColor" className="text-muted/30" />
 
                 {/* The Backward Arrow morphing into data nodes */}
                 <path
@@ -52,10 +52,10 @@ export const Logo: React.FC<LogoProps> = ({ className, simple = false }) => {
             </svg>
             {!simple && (
                 <div className="flex flex-col leading-none">
-                    <span className="text-lg font-black tracking-tighter text-slate-900 uppercase italic">
+                    <span className="text-lg font-black tracking-tighter text-foreground uppercase italic">
                         Trace<span className="text-indigo-600">.</span>
                     </span>
-                    <span className="text-[8px] font-bold text-slate-400 tracking-[0.2em] uppercase">
+                    <span className="text-[8px] font-bold text-muted-foreground tracking-[0.2em] uppercase">
                         Inversion Engine
                     </span>
                 </div>

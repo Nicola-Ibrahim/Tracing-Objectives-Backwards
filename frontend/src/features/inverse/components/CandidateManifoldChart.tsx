@@ -175,17 +175,17 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
             <div className="flex flex-wrap items-center justify-between gap-4">
                 {data ? (
                     <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-indigo-100 py-1.5 px-3">
+                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20 py-1.5 px-3 font-bold">
                             <Target className="h-3.5 w-3.5 mr-1.5" />
                             Target: {data.target_objective.map(v => v.toFixed(3)).join(", ")}
                         </Badge>
-                        <Badge variant="outline" className="py-1.5 px-3 text-slate-500 font-medium bg-white">
+                        <Badge variant="outline" className="py-1.5 px-3 text-muted-foreground font-black uppercase tracking-widest text-[10px] bg-background border-border">
                             {data.candidate_decisions.length} Candidates Identified
                         </Badge>
                     </div>
                 ) : (
                     <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="bg-slate-50 text-slate-400 border-slate-200 py-1.5 px-3 uppercase text-[10px] font-black tracking-widest">
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border py-1.5 px-3 uppercase text-[10px] font-black tracking-widest">
                             <Info className="h-3.5 w-3.5 mr-1.5" />
                             Selection Mode: Define targets on manifold
                         </Badge>
@@ -199,7 +199,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                     description="Y-Space mapping of reference data and candidates"
                     data={objectiveTraces}
                     layout={layoutX}
-                    headerExtra={<Badge variant="outline" className="text-[8px] border-slate-200 text-slate-400 px-1.5 py-0 leading-tight">Y-Space</Badge>}
+                    headerExtra={<Badge variant="outline" className="text-[10px] border-border text-muted-foreground px-2 py-0.5 leading-tight font-black uppercase tracking-widest">Y-Space</Badge>}
                 />
 
                 <BasePlot
@@ -207,83 +207,87 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                     description="X-Space mapping of latent features"
                     data={decisionTraces}
                     layout={layoutY}
-                    headerExtra={<Badge variant="outline" className="text-[8px] border-slate-200 text-slate-400 px-1.5 py-0 leading-tight">X-Space</Badge>}
+                    headerExtra={<Badge variant="outline" className="text-[10px] border-border text-muted-foreground px-2 py-0.5 leading-tight font-black uppercase tracking-widest">X-Space</Badge>}
                 />
             </div>
 
             {data && (
-                /* ... (keeping the rest of the winner card and metadata insights as is) ... */
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-indigo-100 bg-white shadow-xl shadow-indigo-500/5 overflow-hidden relative group/winner rounded-[2.5rem]">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
-                        <CardContent className="py-6 pl-8 pr-8">
-                            <div className="flex items-start gap-3">
-                                <div className="bg-indigo-500 p-2 rounded-xl text-white shadow-lg shadow-indigo-200">
-                                    <CheckCircle2 className="h-5 w-5" />
+                    <Card className="border-border bg-card shadow-2xl overflow-hidden relative group/winner rounded-[2.5rem] transition-all">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
+                        <CardContent className="py-8 pl-10 pr-10">
+                            <div className="flex items-start gap-4">
+                                <div className="bg-indigo-500 p-3 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+                                    <CheckCircle2 className="h-6 w-6" />
                                 </div>
                                 <div className="grow">
-                                    <h4 className="font-bold text-slate-800 text-lg tracking-tight">Optimal Solution Vector</h4>
-                                    <p className="text-xs font-medium text-slate-400 mb-6">Best candidate approximation identified at index #{data.best_index}.</p>
-                                    <div className="flex flex-col gap-4 mt-6">
-                                        <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100 flex flex-col gap-4 group/row hover:bg-white hover:shadow-xl transition-all duration-500">
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-white p-2.5 rounded-xl shadow-sm group-hover/row:bg-indigo-50 transition-colors">
-                                                    <Target className="h-4 w-4 text-indigo-500" />
+                                    <h4 className="font-black text-foreground text-xl tracking-tight uppercase">Optimal Solution Vector</h4>
+                                    <p className="text-[10px] font-black text-muted-foreground mb-8 uppercase tracking-widest opacity-60">Best candidate approximation identified at index #{data.best_index}.</p>
+
+                                    <div className="flex flex-col gap-5 mt-6">
+                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background hover:shadow-xl transition-all duration-500">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-background p-3 rounded-xl shadow-sm group-hover/row:bg-indigo-500/10 border border-border transition-colors">
+                                                    <Target className="h-5 w-5 text-indigo-500" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-black text-indigo-400 block tracking-widest">Objective Alignment</span>
-                                                    <span className="text-[10px] text-slate-400 block font-medium">Distance to Manifold target profile</span>
+                                                    <span className="text-[10px] uppercase font-black text-indigo-500 block tracking-widest">Objective Alignment</span>
+                                                    <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">Distance to Manifold target profile</span>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <span className="text-[9px] text-indigo-300 font-black uppercase tracking-[0.15em] mb-1 group-hover/metric:text-indigo-400 transition-colors">f1 Objective</span>
-                                                <span className="font-mono text-sm font-bold text-indigo-900 break-all leading-tight">
-                                                    {data.best_candidate_objective[0].toFixed(6)}
-                                                </span>
-                                                <span className="text-[9px] text-indigo-300 font-black uppercase tracking-[0.15em] mb-1 group-hover/metric:text-indigo-400 transition-colors">f2 Objective</span>
-                                                <span className="font-mono text-sm font-bold text-indigo-900 break-all leading-tight">
-                                                    {data.best_candidate_objective[1].toFixed(6)}
-                                                </span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[9px] text-indigo-500/70 font-black uppercase tracking-[0.15em]">f1 Objective</span>
+                                                    <span className="font-mono text-sm font-bold text-foreground break-all leading-tight">
+                                                        {data.best_candidate_objective[0].toFixed(6)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[9px] text-indigo-500/70 font-black uppercase tracking-[0.15em]">f2 Objective</span>
+                                                    <span className="font-mono text-sm font-bold text-foreground break-all leading-tight">
+                                                        {data.best_candidate_objective[1].toFixed(6)}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100 flex flex-col gap-4 group/row hover:bg-white hover:shadow-xl transition-all duration-500">
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-white p-2.5 rounded-xl shadow-sm group-hover/row:bg-indigo-50 transition-colors">
-                                                    <Activity className="h-4 w-4 text-slate-400 group-hover/row:text-teal-400" />
+                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background hover:shadow-xl transition-all duration-500">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-background p-3 rounded-xl shadow-sm border border-border transition-colors group-hover/row:bg-rose-500/10">
+                                                    <Activity className="h-5 w-5 text-muted-foreground group-hover/row:text-rose-500" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-black text-slate-400 group-hover/row:text-teal-400 block tracking-widest">Residual Tolerance</span>
-                                                    <span className="text-[10px] text-slate-400 block font-medium">L2 Approximation Error</span>
+                                                    <span className="text-[10px] uppercase font-black text-muted-foreground group-hover/row:text-rose-500 block tracking-widest transition-colors">Residual Tolerance</span>
+                                                    <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">L2 Approximation Error</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-transparent px-6 py-3 rounded-2xl border border-slate-100 font-mono text-sm font-bold text-slate-800 shadow-sm text-center">
+                                            <div className="bg-background/50 px-6 py-4 rounded-2xl border border-border font-mono text-sm font-bold text-foreground shadow-inner text-center">
                                                 {data.best_candidate_residual.toExponential(4)}
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100 flex flex-col gap-4 group/row hover:bg-white hover:shadow-xl transition-all duration-500">
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-white p-2.5 rounded-xl shadow-sm group-hover/row:bg-indigo-50 transition-colors">
-                                                    <Network className="h-4 w-4 text-slate-400 group-hover/row:text-indigo-400" />
+                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background hover:shadow-xl transition-all duration-500">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-background p-3 rounded-xl shadow-sm border border-border transition-colors group-hover/row:bg-indigo-500/10">
+                                                    <Network className="h-5 w-5 text-muted-foreground group-hover/row:text-indigo-500" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-black text-slate-400 group-hover/row:text-indigo-400 block tracking-widest">Feature Vectors</span>
-                                                    <span className="text-[10px] text-slate-400 block font-medium">High-dim parameter sample</span>
+                                                    <span className="text-[10px] uppercase font-black text-muted-foreground group-hover/row:text-indigo-500 block tracking-widest transition-colors">Feature Vectors</span>
+                                                    <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">High-dim parameter sample</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                                <div className="font-mono text-[10px] text-slate-500 break-all leading-relaxed bg-slate-50 p-2 rounded-lg mb-4">
+                                            <div className="bg-background p-4 rounded-2xl border border-border shadow-sm">
+                                                <div className="font-mono text-[10px] text-muted-foreground break-all leading-relaxed bg-muted/50 p-2 rounded-lg mb-4 border border-border/50">
                                                     {`[ ${data.best_candidate_decision.slice(0, 5).map(v => v.toFixed(3)).join(", ")} ... ]`}
                                                 </div>
                                                 <div className="flex items-center gap-4">
-                                                    <div className="grow h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className="grow h-2 bg-muted rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full bg-indigo-500 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.6)]"
                                                             style={{ width: `${Math.min(100, Math.max(10, (1 - data.best_candidate_residual) * 100))}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-[10px] font-black text-indigo-500 tracking-widest uppercase">Stability</span>
+                                                    <span className="text-[9px] font-black text-indigo-500 tracking-widest uppercase">Stability</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -295,24 +299,24 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
 
                     <div className="flex flex-col gap-6">
                         {data.solver_type === "GBPI" ? (
-                            <Card className="border-slate-200/60 bg-white shadow-lg rounded-[2.5rem]">
-                                <CardContent className="py-8 px-8">
+                            <Card className="border-border bg-card shadow-2xl rounded-[2.5rem] transition-all">
+                                <CardContent className="py-8 px-10">
                                     <div className="flex items-start gap-4">
-                                        <div className="bg-slate-100 p-2 rounded-xl text-slate-500">
+                                        <div className="bg-muted p-2.5 rounded-xl text-muted-foreground">
                                             <Network className="h-5 w-5" />
                                         </div>
                                         <div className="grow">
-                                            <h4 className="font-bold text-slate-800 text-sm uppercase tracking-widest mb-4">Geometric Analysis</h4>
+                                            <h4 className="font-black text-foreground text-xs uppercase tracking-[0.2em] mb-4">Geometric Analysis</h4>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Propagation</span>
-                                                    <Badge variant="outline" className={`text-[10px] font-bold border-0 shadow-none p-0 ${data.metadata?.pathway === 'coherent' ? 'text-teal-600' : 'text-amber-600'}`}>
+                                                <div className="space-y-1 bg-muted/30 p-4 rounded-2xl border border-border hover:bg-background transition-colors">
+                                                    <span className="text-[9px] font-black uppercase text-muted-foreground block tracking-widest">Propagation</span>
+                                                    <Badge variant="outline" className={`text-[10px] font-black uppercase border-0 shadow-none p-0 ${data.metadata?.pathway === 'coherent' ? 'text-emerald-500' : 'text-amber-500'}`}>
                                                         {data.metadata?.pathway || "Asynchronous"}
                                                     </Badge>
                                                 </div>
-                                                <div className="space-y-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Topology</span>
-                                                    <span className="text-[10px] font-bold text-slate-700">
+                                                <div className="space-y-1 bg-muted/30 p-4 rounded-2xl border border-border hover:bg-background transition-colors">
+                                                    <span className="text-[9px] font-black uppercase text-muted-foreground block tracking-widest">Topology</span>
+                                                    <span className="text-[10px] font-black text-foreground uppercase">
                                                         {data.metadata?.is_simplex_found ? "Simplex Anchor" : "KNN Interpolation"}
                                                     </span>
                                                 </div>
@@ -322,24 +326,24 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                 </CardContent>
                             </Card>
                         ) : (data.metadata?.log_likelihood ? (
-                            <Card className="border-slate-200/60 bg-white shadow-lg rounded-[2.5rem]">
-                                <CardContent className="py-8 px-8">
+                            <Card className="border-border bg-card shadow-2xl rounded-[2.5rem] transition-all">
+                                <CardContent className="py-8 px-10">
                                     <div className="flex items-start gap-4">
-                                        <div className="bg-indigo-500 p-2 rounded-xl text-white">
+                                        <div className="bg-indigo-500 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/20">
                                             <Activity className="h-5 w-5" />
                                         </div>
                                         <div className="grow">
-                                            <h4 className="font-bold text-slate-800 text-sm uppercase tracking-widest mb-4">Generative Density</h4>
+                                            <h4 className="font-black text-foreground text-xs uppercase tracking-[0.2em] mb-4">Generative Density</h4>
                                             <div className="space-y-4">
-                                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase">
+                                                <div className="flex items-center justify-between text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                                                     <span>Log-Likelihood Manifold</span>
                                                     <div className="flex gap-4">
                                                         <span>Min: {Math.min(...data.metadata.log_likelihood).toFixed(2)}</span>
                                                         <span>Max: {Math.max(...data.metadata.log_likelihood).toFixed(2)}</span>
                                                     </div>
                                                 </div>
-                                                <div className="bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
-                                                    <div className="flex items-end gap-1 h-12">
+                                                <div className="bg-muted/30 p-6 rounded-[2rem] border border-border group transition-all hover:bg-background">
+                                                    <div className="flex items-end gap-1.5 h-16">
                                                         {(() => {
                                                             const values = data.metadata.log_likelihood;
                                                             const min = Math.min(...values);
@@ -351,7 +355,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                             });
                                                             const maxBin = Math.max(...bins);
                                                             return bins.map((b, i) => (
-                                                                <div key={i} className="bg-indigo-500/30 rounded-full w-full hover:bg-indigo-500 transition-colors" style={{ height: `${(b / (maxBin || 1)) * 100}%` }} />
+                                                                <div key={i} className="bg-indigo-500/20 rounded-full w-full hover:bg-indigo-500 transition-all duration-300" style={{ height: `${(b / (maxBin || 1)) * 100}%` }} />
                                                             ));
                                                         })()}
                                                     </div>
