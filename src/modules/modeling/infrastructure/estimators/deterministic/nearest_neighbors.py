@@ -1,13 +1,26 @@
+from typing import Literal
+
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import Field
 from scipy.interpolate import NearestNDInterpolator
 
+from ....domain.enums.estimator_type import EstimatorTypeEnum
 from ....domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from ....domain.value_objects.estimator_params import (
-    NearestNeighborsEstimatorParams,
-)
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class NearestNeighborsEstimatorParams(EstimatorParamsBase):
+    type: Literal["nearest_neighbors_nd"] = Field(
+        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,
+        description="Type of the nearest-neighbors interpolation method.",
+    )
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
 
 
 class NearestNDEstimator(DeterministicEstimator):

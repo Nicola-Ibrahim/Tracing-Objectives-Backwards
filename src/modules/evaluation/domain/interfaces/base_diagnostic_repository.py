@@ -66,7 +66,7 @@ class BaseDiagnosticRepository(ABC):
     @abstractmethod
     def get_batch(
         self,
-        requests: list[Any],
+        estimators: list[Any],
         dataset_name: str,
         mapping_direction: str = "inverse",
     ) -> dict[str, DiagnosticResult]:

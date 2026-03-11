@@ -1,70 +1,54 @@
 from pathlib import Path
 from typing import Any
 
+from ....shared.config import ROOT_PATH
 from ....shared.infrastructure.processing.files.json import JsonFileHandler
 from ....shared.infrastructure.processing.files.pickle import PickleFileHandler
 from ...domain.entities.dataset import Dataset
-from ...domain.entities.processed_data import ProcessedData
 from ...domain.interfaces.base_repository import BaseDatasetRepository
 from ...domain.value_objects.pareto import Pareto
 
 
 class FileSystemDatasetRepository(BaseDatasetRepository):
     """
-    Unified repository that persists the Dataset aggregate.
-    It saves data under `data/<dataset_name>/{raw,processed}` with legacy fallbacks.
+    Unified repository that persists the Dataset aggregate to the filesystem.
+    It saves data under `data/<dataset_name>/raw`.
     """
 
     def __init__(self, file_path: str | Path = "data") -> None:
-        super().__init__(file_path=file_path)
-        self._legacy_raw_dir = self.base_path / "raw"
-        self._legacy_processed_dir = self.base_path / "processed"
-
+        self.base_path = ROOT_PATH / file_path
         self._pkl = PickleFileHandler()
         self._json = JsonFileHandler()
 
     def save(self, dataset: Dataset) -> Path:
         """Persist the Dataset aggregate."""
-        # Save raw part
         self._save_raw(dataset)
-
-        # Save processed part if it exists
-        if dataset.processed:
-            self._save_processed(dataset)
-
         return self.base_path / dataset.name
 
+    def delete(self, name: str) -> None:
+        """Deletes a dataset and all its files from the filesystem."""
+        dataset_dir = self.base_path / name
+        if dataset_dir.exists():
+            import shutil
+
+            shutil.rmtree(dataset_dir)
+
     def load(self, name: str) -> Dataset:
-        """
-        Load the Dataset aggregate.
-        Always loads the raw data.
-        If processed data exists for this name, it loads that as well and attaches it.
-        """
-        # Load raw data
+        """Load the Dataset aggregate."""
         raw_payload = self._load_raw_payload(name)
-        dataset = self._rebuild_dataset(raw_payload, name)
-
-        # Try to load processed data
-        try:
-            processed = self._load_processed_part(name)
-            dataset.processed = processed
-        except FileNotFoundError:
-            # It's fine if processed data doesn't exist yet
-            pass
-
-        return dataset
-
-    # ------------------------------------------------------------------
-    # Raw dataset helpers
-    # ------------------------------------------------------------------
+        return self._rebuild_dataset(raw_payload, name)
 
     def _save_raw(self, dataset: Dataset) -> None:
-        # Dump only the raw fields
+        """Saves essential fields to the raw directory."""
         payload = {
             "name": dataset.name,
-            "decisions": dataset.decisions,
-            "objectives": dataset.objectives,
+            "X": dataset.X,
+            "y": dataset.y,
             "pareto": dataset.pareto,
+            "train_indices": dataset.train_indices,
+            "test_indices": dataset.test_indices,
+            "split_ratio": dataset.split_ratio,
+            "random_state": dataset.random_state,
             "created_at": dataset.created_at,
         }
         raw_dir = self._raw_dir(dataset.name)
@@ -73,103 +57,57 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         self._pkl.save(payload, target)
 
     def _load_raw_payload(self, name: str) -> dict[str, Any]:
+        """Loads the raw payload from the filesystem."""
         raw_dir = self._raw_dir(name)
-        candidates = [
-            raw_dir / "dataset",
-            raw_dir / name,
-        ]
+        candidate = raw_dir / "dataset"
 
-        for candidate in candidates:
-            if candidate.exists() or candidate.with_suffix(".pkl").exists():
-                return self._pkl.load(candidate)
+        if candidate.exists() or candidate.with_suffix(".pkl").exists():
+            return self._pkl.load(candidate)
 
-        raise FileNotFoundError(f"Raw dataset '{name}' not found.")
+        raise FileNotFoundError(f"Dataset '{name}' not found at {candidate}")
 
     def _rebuild_dataset(self, payload: dict[str, Any], name: str) -> Dataset:
-        pareto_payload = payload.get("pareto", {})
-        pareto = (
-            pareto_payload
-            if isinstance(pareto_payload, Pareto)
-            else Pareto(
-                set=pareto_payload.get("set"),
-                front=pareto_payload.get("front"),
-            )
-        )
+        """Reconstructs the Dataset aggregate from payload."""
+        pareto_payload = payload.get("pareto")
+        pareto = None
+        if pareto_payload:
+            if isinstance(pareto_payload, Pareto):
+                pareto = pareto_payload
+            else:
+                pareto = Pareto(
+                    set=pareto_payload.get("set"),
+                    front=pareto_payload.get("front"),
+                )
+
+        # Core data (X, y)
+        X = payload.get("X")
+        y = payload.get("y")
+
+        if X is None or y is None:
+            raise ValueError(f"Dataset '{name}' is missing core data (X or y).")
 
         return Dataset.create(
             name=payload.get("name", name),
-            decisions=payload.get("decisions"),
-            objectives=payload.get("objectives"),
+            X=X,
+            y=y,
             pareto=pareto,
+            train_indices=payload.get("train_indices", []),
+            test_indices=payload.get("test_indices", []),
+            split_ratio=payload.get("split_ratio", 0.0),
+            random_state=payload.get("random_state", 42),
         )
 
-    # ------------------------------------------------------------------
-    # Processed part helpers
-    # ------------------------------------------------------------------
+    def list_all(self) -> list[str]:
+        """List all available dataset names by checking for raw subdirectories."""
+        datasets = []
+        if not self.base_path.exists():
+            return []
 
-    def _save_processed(self, dataset: Dataset) -> None:
-        processed = dataset.processed
-        target_dir = self._processed_dir(dataset.name)
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        dataset_pkl = target_dir / "dataset"
-        x_norm_pkl = target_dir / "decisions_normalizer"
-        y_norm_pkl = target_dir / "objectives_normalizer"
-        meta_json = target_dir / "metadata.json"
-
-        # Dump processed fields
-        payload = {
-            "decisions_train": processed.decisions_train,
-            "objectives_train": processed.objectives_train,
-            "decisions_test": processed.decisions_test,
-            "objectives_test": processed.objectives_test,
-            "metadata": processed.metadata,
-        }
-
-        self._pkl.save(payload, dataset_pkl)
-        self._pkl.save(processed.decisions_normalizer, x_norm_pkl)
-        self._pkl.save(processed.objectives_normalizer, y_norm_pkl)
-
-        metadata_summary: dict[str, Any] = {
-            "shapes": {
-                "decisions_train": list(processed.decisions_train.shape),
-                "objectives_train": list(processed.objectives_train.shape),
-                "decisions_test": list(processed.decisions_test.shape),
-                "objectives_test": list(processed.objectives_test.shape),
-            },
-            "metadata": processed.metadata,
-        }
-        self._json.save(metadata_summary, meta_json)
-
-    def _load_processed_part(self, name: str) -> ProcessedData:
-        directory = self._processed_dir(name)
-        if not directory.exists():
-            raise FileNotFoundError(f"Processed data directory for '{name}' not found.")
-
-        dataset_pkl = directory / "dataset"
-        decisions_norm_pkl = directory / "decisions_normalizer"
-        objectives_norm_pkl = directory / "objectives_normalizer"
-
-        if not dataset_pkl.with_suffix(".pkl").exists():
-            # Fallback logic for legacy structures if needed, or fail
-            raise FileNotFoundError(f"Missing processed dataset payload for '{name}'")
-
-        payload = self._pkl.load(dataset_pkl)
-        decisions_normalizer = self._pkl.load(decisions_norm_pkl)
-        objectives_normalizer = self._pkl.load(objectives_norm_pkl)
-
-        return ProcessedData.create(
-            decisions_train=payload.get("decisions_train"),
-            objectives_train=payload.get("objectives_train"),
-            decisions_test=payload.get("decisions_test"),
-            objectives_test=payload.get("objectives_test"),
-            decisions_normalizer=decisions_normalizer,
-            objectives_normalizer=objectives_normalizer,
-            metadata=payload.get("metadata"),
-        )
+        for p in self.base_path.iterdir():
+            if p.is_dir() and self._raw_dir(p.name).exists():
+                datasets.append(p.name)
+        return sorted(datasets)
 
     def _raw_dir(self, name: str) -> Path:
+        """Returns the raw directory for the given dataset."""
         return self.base_path / name / "raw"
-
-    def _processed_dir(self, name: str) -> Path:
-        return self.base_path / name / "processed"

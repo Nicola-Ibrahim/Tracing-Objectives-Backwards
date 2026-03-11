@@ -154,3 +154,30 @@ def add_objective_connection_trace(
         row=row,
         col=col,
     )
+
+
+def add_best_objective_trace(
+    fig: go.Figure, run: dict, row: int, col: int, color: str
+) -> None:
+    """Highlight the best generated objective in the objective space."""
+    best_obj = run.get("best_objective")
+    if best_obj is None:
+        return
+
+    fig.add_trace(
+        go.Scatter(
+            x=[best_obj[0]],
+            y=[best_obj[1]],
+            mode="markers",
+            name="Best Objective",
+            marker=dict(
+                color="red",
+                symbol="x",
+                size=10,
+                line=dict(width=2, color="white"),
+            ),
+            showlegend=False,
+        ),
+        row=row,
+        col=col,
+    )

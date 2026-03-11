@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.spatial import ConvexHull
 
-from modules.evaluation.domain.feasibility.interfaces.scoring import (
+from ....domain.feasibility.interfaces.scoring import (
     BaseFeasibilityScoringStrategy,
 )
 

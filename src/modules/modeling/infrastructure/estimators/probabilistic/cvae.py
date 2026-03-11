@@ -28,18 +28,82 @@ Reference:
 """
 
 import warnings
+from typing import Literal
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from numpy.typing import NDArray
+from pydantic import Field
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
-from ....domain.interfaces.base_estimator import ProbabilisticEstimator
-from ....domain.value_objects.estimator_params import CVAEEstimatorParams
+from ....domain.interfaces.base_estimator import ProbabilisticEstimator, TrainingHistory
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class CVAEEstimatorParams(EstimatorParamsBase):
+    """
+    Pydantic model to define and validate parameters for a
+    CVAEEstimator.
+    """
+
+    type: Literal["cvae"] = Field(
+        EstimatorTypeEnum.CVAE.value,
+        description="Type of the Conditional Variational Autoencoder interpolation method.",
+    )
+    latent_dim: int = Field(
+        2, gt=0, description="Dimensionality of the latent space in the CVAE."
+    )
+    learning_rate: float = Field(
+        0.001, gt=0, description="Learning rate for the Adam optimizer."
+    )
+
+    # 0.5 widens the predictions
+    # 0.1 narrows the predictions
+    beta: float = Field(0.5, ge=0.0, description="Final KL divergence weight.")
+    kl_warmup: int = Field(
+        100,
+        ge=0,
+        description="Number of epochs used to warm-up the KL weight from 0 to beta.",
+    )
+    free_nats: float = Field(
+        0.0,
+        ge=0.0,
+        description="Free nats threshold applied to KL divergence per dimension.",
+    )
+    hidden: int = Field(128, gt=0, description="Hidden layer width for CVAE nets.")
+
+    # -0.3 increases the uncertainty
+    # -10.0 decreases the uncertainty
+    decoder_min_logvar: float = Field(
+        -2.0, description="Lower clamp for decoder log-variance."
+    )
+    decoder_max_logvar: float = Field(
+        4.0, description="Upper clamp for decoder log-variance."
+    )
+    prior_min_logvar: float = Field(
+        -4.0, description="Lower clamp for prior log-variance."
+    )
+    prior_max_logvar: float = Field(
+        2.0, description="Upper clamp for prior log-variance."
+    )
+    epochs: int = Field(100, gt=0, description="Number of training epochs.")
+    batch_size: int = Field(128, gt=0, description="Mini-batch size used in training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation split fraction used during training.",
+    )
+    random_state: int = Field(42, description="Random seed for data splitting.")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
 
 LOG2PI = float(np.log(2.0 * np.pi))
 
@@ -135,9 +199,10 @@ class CVAEDecoderGaussian(nn.Module):
         self, z: torch.Tensor, cond: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         h = self.backbone(torch.cat([z, cond], dim=1))
-        mu = self.mu_head(h)  # (B, Dy)
-        logvar = self.logvar_head(h)  # (B, Dy)
-        logvar = torch.clamp(logvar, min=self.min_logvar, max=self.max_logvar)
+        mu = self.mu_head(h)
+        logvar = torch.clamp(
+            self.logvar_head(h), min=self.min_logvar, max=self.max_logvar
+        )
         return mu, logvar
 
     @staticmethod
@@ -199,6 +264,7 @@ class CVAEEstimator(ProbabilisticEstimator):
 
     def __init__(self, params: CVAEEstimatorParams):
         super().__init__()
+        self._params = params
         self._latent_dim = params.latent_dim
         self._learning_rate = params.learning_rate
         self.beta = params.beta
@@ -228,7 +294,20 @@ class CVAEEstimator(ProbabilisticEstimator):
     @property
     def type(self) -> str:
         """Short tag for UI/metadata."""
-        return getattr(EstimatorTypeEnum, "CVAE", EstimatorTypeEnum.CVAE).value
+        return EstimatorTypeEnum.CVAE.value
+
+    @staticmethod
+    def kl_gaussians(mu_q, logvar_q, mu_p, logvar_p, free_nats=0.0):
+        """Closed-form KL for diagonal Gaussians (elementwise → sum)."""
+        latent_dim = mu_q.shape[1]
+        kl_per_dim = 0.5 * (
+            (logvar_p - logvar_q)
+            + (torch.exp(logvar_q) + (mu_q - mu_p) ** 2) / torch.exp(logvar_p)
+            - 1.0
+        )
+        if free_nats > 0.0:
+            kl_per_dim = torch.clamp(kl_per_dim, min=free_nats / latent_dim)
+        return torch.mean(torch.sum(kl_per_dim, dim=1))
 
     # -------------------- data -------------------- #
     def _prepare_dataloaders(
@@ -240,7 +319,10 @@ class CVAEEstimator(ProbabilisticEstimator):
         cond_tr, cond_val, y_tr, y_val = train_test_split(
             cond, y, test_size=self.val_size, random_state=self.random_state
         )
-        to_t = lambda a: torch.tensor(a, dtype=torch.float32)
+
+        def to_t(a: NDArray[np.float64]) -> torch.Tensor:
+            return torch.tensor(a, dtype=torch.float32)
+
         train_loader = DataLoader(
             TensorDataset(to_t(cond_tr), to_t(y_tr)),
             batch_size=self.batch_size,
@@ -256,9 +338,8 @@ class CVAEEstimator(ProbabilisticEstimator):
     # -------------------- training -------------------- #
     def fit(
         self,
-        cond: NDArray[np.float64] = None,
-        y: NDArray[np.float64] = None,
-        **kwargs,
+        cond: NDArray[np.float64],
+        y: NDArray[np.float64],
     ) -> None:
         """
         Train the CVAE.
@@ -269,19 +350,7 @@ class CVAEEstimator(ProbabilisticEstimator):
             Conditioning inputs (e.g. objectives).
         y : array, shape (n_samples, y_dim)
             Targets (e.g. decisions).
-        **kwargs :
-            For backward compatibility. If `X` is provided, it is treated as `cond`.
         """
-        # Back-compat shim
-        if cond is None and "X" in kwargs:
-            warnings.warn(
-                "CVAEEstimator.fit: argument 'X' is deprecated; use 'cond' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            cond = kwargs.pop("X")
-        if cond is None or y is None:
-            raise TypeError("fit() requires arguments: cond, y")
 
         # Base validation (sets _X_dim/_y_dim in BaseEstimator)
         super().fit(cond, y)
@@ -323,19 +392,6 @@ class CVAEEstimator(ProbabilisticEstimator):
         )
         opt = torch.optim.Adam(params, lr=self._learning_rate)
 
-        def kl_gaussians(mu_q, logvar_q, mu_p, logvar_p):
-            """Closed-form KL for diagonal Gaussians (elementwise → sum)."""
-            kl_per_dim = 0.5 * (
-                (logvar_p - logvar_q)
-                + (torch.exp(logvar_q) + (mu_q - mu_p) ** 2) / torch.exp(logvar_p)
-                - 1.0
-            )
-            if self.free_nats > 0.0:
-                kl_per_dim = torch.clamp(
-                    kl_per_dim, min=self.free_nats / self._latent_dim
-                )
-            return torch.mean(torch.sum(kl_per_dim, dim=1))
-
         for epoch in range(1, self.epochs + 1):
             # β-warmup
             beta = self.beta_final * (
@@ -365,11 +421,9 @@ class CVAEEstimator(ProbabilisticEstimator):
                 # p(y|z,cond): Gaussian NLL recon
                 mu_y, logvar_y = self._decoder(z, cond_b)
                 recon_nll = CVAEDecoderGaussian.gaussian_nll(y_b, mu_y, logvar_y)
-                kl = kl_gaussians(mu_q, logvar_q, mu_p, logvar_p)
+                kl = self.kl_gaussians(mu_q, logvar_q, mu_p, logvar_p, self.free_nats)
 
-                base_loss = recon_nll + beta * kl
-
-                loss = base_loss
+                loss = recon_nll + beta * kl
                 loss.backward()
                 opt.step()
 
@@ -402,11 +456,9 @@ class CVAEEstimator(ProbabilisticEstimator):
                     recon_nll_v = CVAEDecoderGaussian.gaussian_nll(
                         y_v, mu_y_v, logvar_y_v
                     )
-                    kl_v = kl_gaussians(mu_q_v, logvar_q_v, mu_p_v, logvar_p_v)
-
-                    base_val = recon_nll_v + beta * kl_v
-
-                    total_val = base_val
+                    kl_v = self.kl_gaussians(
+                        mu_q_v, logvar_q_v, mu_p_v, logvar_p_v, self.free_nats
+                    )
 
                     val_nll_sum += float(recon_nll_v.item())
                     val_kl_sum += float(kl_v.item())
@@ -538,8 +590,12 @@ class CVAEEstimator(ProbabilisticEstimator):
         Returns:
             dict: Checkpoint containing all network weights and training state
         """
-        if self._decoder is None or self._encoder is None or self._prior_net is None:
-            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+        self._ensure_fitted()
+        checkpoint = (
+            self._params.model_dump()
+            if hasattr(self._params, "model_dump")
+            else self._params.dict()
+        )
 
         # Keep tensors for safetensors serialization (namespaced keys)
         model_state = {}
@@ -562,13 +618,14 @@ class CVAEEstimator(ProbabilisticEstimator):
             }
         )
 
-        checkpoint = {
-            "model_state": model_state,
-            "cond_dim": int(self._cond_dim) if self._cond_dim is not None else None,
-            "y_dim": int(self._y_dim) if self._y_dim is not None else None,
-            "training_history": self._training_history.as_dict(),
-        }
-
+        checkpoint.update(
+            {
+                "model_state": model_state,
+                "training_history": self._training_history.as_dict(),
+                "cond_dim": int(self._cond_dim) if self._cond_dim is not None else None,
+                "y_dim": int(self._y_dim) if self._y_dim is not None else None,
+            }
+        )
         return checkpoint
 
     @classmethod
@@ -667,12 +724,8 @@ class CVAEEstimator(ProbabilisticEstimator):
 
         # Restore training history
         if "training_history" in parameters:
-            hist = parameters["training_history"]
-            estimator._training_history.epochs = hist.get("epochs", [])
-            estimator._training_history.train_loss = hist.get("train_loss", [])
-            estimator._training_history.val_loss = hist.get("val_loss", [])
-            for key, value in hist.items():
-                if key not in ["epochs", "train_loss", "val_loss"]:
-                    estimator._training_history.extras[key] = value
+            estimator._training_history = TrainingHistory.from_dict(
+                parameters["training_history"]
+            )
 
         return estimator

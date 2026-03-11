@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from .....shared.config import ROOT_PATH
-from modules.evaluation.domain.decision_validation.entities.decision_validation_calibration import (
+from ....domain.decision_validation.entities.decision_validation_calibration import (
     DecisionValidationCalibration,
 )
-from modules.evaluation.domain.decision_validation.interfaces import (
+from ....domain.decision_validation.interfaces import (
     BaseDecisionValidationCalibrationRepository,
 )
 from ...processing.files.json import JsonFileHandler

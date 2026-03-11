@@ -1,19 +1,47 @@
-from typing import Self
+from typing import Any, Self
 
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.preprocessing import MinMaxScaler
 
-from ..domain.interfaces.base_normalizer import BaseNormalizer
+from ..domain.enums.transform_type import TransformTypeEnum
+from ..domain.interfaces.base_transform import BaseTransformer
 
 
-class MinMaxScalerNormalizer(BaseNormalizer):
+class MinMaxScalerNormalizer(BaseTransformer):
     """
-    Concrete implementation of BaseNormalizer using scikit-learn's MinMaxScaler.
+    Concrete implementation using scikit-learn's MinMaxScaler.
     """
 
     def __init__(self, feature_range: tuple[float, float] = (0, 1)):
+        self.feature_range = feature_range
         self.scaler = MinMaxScaler(feature_range=feature_range)
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return {
+            "type": TransformTypeEnum.MIN_MAX.value,
+            "params": {"feature_range": self.feature_range},
+        }
+
+    def get_fitted_state(self) -> dict[str, Any]:
+        return {
+            "scale_": self.scaler.scale_,
+            "min_": self.scaler.min_,
+            "data_min_": self.scaler.data_min_,
+            "data_max_": self.scaler.data_max_,
+            "data_range_": self.scaler.data_range_,
+        }
+
+    @classmethod
+    def from_checkpoint(
+        cls, config: dict[str, Any], state: dict[str, Any]
+    ) -> "MinMaxScalerNormalizer":
+        params = config.get("params", {})
+        instance = cls(**params)
+        for k, v in state.items():
+            setattr(instance.scaler, k, v)
+        return instance
 
     def fit(self, X: NDArray[np.floating], y: NDArray | None = None) -> Self:
         """
@@ -43,7 +71,7 @@ class MinMaxScalerNormalizer(BaseNormalizer):
         return self.scaler.inverse_transform(X_norm)
 
 
-class HypercubeNormalizer(BaseNormalizer):
+class HypercubeNormalizer(BaseTransformer):
     """
     Normalizes data to a specified range (default [0, 1]) feature-wise.
     Useful for scaling features to a common range without distorting differences.
@@ -61,6 +89,31 @@ class HypercubeNormalizer(BaseNormalizer):
         self.max_vals = None
         # Will store the range (max-min) for each feature
         self.ranges = None
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return {
+            "type": TransformTypeEnum.HYPERCUBE.value,
+            "params": {"feature_range": self.feature_range, "clip": self.clip},
+        }
+
+    def get_fitted_state(self) -> dict[str, Any]:
+        return {
+            "min_vals": self.min_vals,
+            "max_vals": self.max_vals,
+            "ranges": self.ranges,
+        }
+
+    @classmethod
+    def from_checkpoint(
+        cls, config: dict[str, Any], state: dict[str, Any]
+    ) -> "HypercubeNormalizer":
+        params = config.get("params", {})
+        instance = cls(**params)
+        instance.min_vals = state.get("min_vals")
+        instance.max_vals = state.get("max_vals")
+        instance.ranges = state.get("ranges")
+        return instance
 
     def fit(self, X: NDArray[np.float64], y: NDArray | None = None) -> Self:
         """
@@ -109,7 +162,7 @@ class HypercubeNormalizer(BaseNormalizer):
         return X_scaled * self.ranges + self.min_vals
 
 
-class StandardNormalizer(BaseNormalizer):
+class StandardNormalizer(BaseTransformer):
     """
     Standard normalization (z-score) that transforms features to have zero mean and unit variance.
     This is particularly useful for algorithms that assume features are centered and scaled.
@@ -124,6 +177,29 @@ class StandardNormalizer(BaseNormalizer):
         self.with_std = with_std
         self.mean = None  # Will store feature means
         self.std = None  # Will store feature standard deviations
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return {
+            "type": TransformTypeEnum.STANDARD.value,
+            "params": {"with_mean": self.with_mean, "with_std": self.with_std},
+        }
+
+    def get_fitted_state(self) -> dict[str, Any]:
+        return {
+            "mean": self.mean,
+            "std": self.std,
+        }
+
+    @classmethod
+    def from_checkpoint(
+        cls, config: dict[str, Any], state: dict[str, Any]
+    ) -> "StandardNormalizer":
+        params = config.get("params", {})
+        instance = cls(**params)
+        instance.mean = state.get("mean")
+        instance.std = state.get("std")
+        return instance
 
     def fit(self, X: NDArray[np.float64], y: NDArray | None = None) -> Self:
         """Compute mean and standard deviation for each feature"""
@@ -156,7 +232,7 @@ class StandardNormalizer(BaseNormalizer):
         return X_norm * self.std + self.mean
 
 
-class UnitVectorNormalizer(BaseNormalizer):
+class UnitVectorNormalizer(BaseTransformer):
     """
     Normalizes vectors to unit length using L2 normalization.
     This is useful when the direction of the vector matters more than its magnitude.
@@ -168,6 +244,27 @@ class UnitVectorNormalizer(BaseNormalizer):
     def __init__(self, axis: int = 1):
         self.axis = axis
         self.norm_values = None  # Will store L2 norms
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return {
+            "type": TransformTypeEnum.UNIT_VECTOR.value,
+            "params": {"axis": self.axis},
+        }
+
+    def get_fitted_state(self) -> dict[str, Any]:
+        return {
+            "norm_values": self.norm_values,
+        }
+
+    @classmethod
+    def from_checkpoint(
+        cls, config: dict[str, Any], state: dict[str, Any]
+    ) -> "UnitVectorNormalizer":
+        params = config.get("params", {})
+        instance = cls(**params)
+        instance.norm_values = state.get("norm_values")
+        return instance
 
     def fit(self, X: NDArray[np.float64], y: NDArray | None = None) -> Self:
         """
@@ -207,7 +304,7 @@ class UnitVectorNormalizer(BaseNormalizer):
             raise ValueError(f"Unsupported axis: {self.axis}")
 
 
-class LogNormalizer(BaseNormalizer):
+class LogNormalizer(BaseTransformer):
     """
     Applies logarithmic transformation to data.
     Useful for data with exponential distributions or large ranges.
@@ -220,6 +317,23 @@ class LogNormalizer(BaseNormalizer):
     def __init__(self, offset: float = 1.0, base: float = np.e):
         self.offset = offset
         self.base = base
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return {
+            "type": TransformTypeEnum.LOG.value,
+            "params": {"offset": self.offset, "base": self.base},
+        }
+
+    def get_fitted_state(self) -> dict[str, Any]:
+        return {}
+
+    @classmethod
+    def from_checkpoint(
+        cls, config: dict[str, Any], state: dict[str, Any]
+    ) -> "LogNormalizer":
+        params = config.get("params", {})
+        return cls(**params)
 
     def fit(self, X: NDArray[np.float64], y: NDArray | None = None) -> Self:
         """No Args to learn for log transformation"""

@@ -3,33 +3,32 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.check_model_performance import (
-    CheckModelPerformanceCommand,
-    CheckModelPerformanceCommandHandler,
-    InverseEstimatorCandidate,
+from ...modules.evaluation.application.check_engine_performance import (
+    CheckModelPerformanceParams,
+    CheckModelPerformanceService,
 )
+from ...modules.evaluation.application.diagnose_engines import EngineCandidate
 from ...modules.evaluation.infrastructure.visualization.model_performance_2d.visualizer import (
     ModelPerformance2DVisualizer,
 )
-from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
+    FileSystemInverseMappingEngineRepository,
 )
 
 
-@click.command(help="Visualize a trained model's performance diagnostics")
+@click.command(help="Visualize a trained engine's performance diagnostics")
 def main() -> None:
-    handler = CheckModelPerformanceCommandHandler(
-        model_artificat_repo=FileSystemModelArtifactRepository(),
-        processed_dataset_repo=FileSystemDatasetRepository(),
+    service = CheckModelPerformanceService(
+        engine_repository=FileSystemInverseMappingEngineRepository(),
+        data_repository=FileSystemDatasetRepository(),
         visualizer=ModelPerformance2DVisualizer(),
     )
-    command = CheckModelPerformanceCommand(
+    params = CheckModelPerformanceParams(
         dataset_name="cocoex_f5",
-        estimator=InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=11),
+        engine=EngineCandidate(solver_type="GBPI", version=1),
         n_samples=50,
     )
-    handler.execute(command)
+    service.execute(params)
 
 
 if __name__ == "__main__":

@@ -1,23 +1,42 @@
-from typing import Tuple
+from typing import Literal, Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
 from numpy.typing import NDArray
+from pydantic import Field
 
-<<<<<<<< HEAD:src/modules/optimization_engine/infrastructure/modeling/estimators/deterministic/nn.py
-from .....domain.modeling.interfaces.base_estimator import (
-    DeterministicEstimator,
-)
-from .....domain.modeling.value_objects.estimator_params import (
-========
+from .....modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from .....modeling.domain.interfaces.base_estimator import (
     DeterministicEstimator,
 )
-from .....modeling.domain.value_objects.estimator_params import (
->>>>>>>> dev:src/modules/modeling/infrastructure/estimators/deterministic/nn.py
-    NeuralNetworkEstimatorParams,
-)
+from .....modeling.domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class NeuralNetworkEstimatorParams(EstimatorParamsBase):
+    type: Literal["neural_network_nd"] = Field(
+        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,  # MIGHT BE BUG IN ORIGINAL CODE (was using NEAREST_NEIGHBORS_ND)? Reverting to original.
+        description="Type of the neural network interpolation method.",
+    )
+    # The original file actually used EstimatorTypeEnum.NEURAL_NETWORK_ND.value
+    type: Literal["neural_network_nd"] = Field(
+        EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
+        description="Type of the neural network interpolation method.",
+    )
+    objective_dim: int = Field(2, description="The dimension of objective space")
+
+    decision_dim: int = Field(2, description="The dimension of decision space")
+
+    epochs: int = Field(
+        1000, gt=0, description="Number of epochs for training the neural network."
+    )
+    learning_rate: float = Field(
+        1e-3, gt=0, description="Learning rate for the neural network optimizer."
+    )
+
+    class Config:
+        extra = "forbid"  # Forbid extra fields not defined
+        use_enum_values = True
 
 
 class Decoder(nn.Module):

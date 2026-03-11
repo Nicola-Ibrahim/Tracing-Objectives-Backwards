@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from modules.evaluation.domain.feasibility.interfaces.diversity import BaseDiversityStrategy
+from ....domain.feasibility.interfaces.diversity import BaseDiversityStrategy
 
 
 class MaxMinDistanceDiversityStrategy(BaseDiversityStrategy):

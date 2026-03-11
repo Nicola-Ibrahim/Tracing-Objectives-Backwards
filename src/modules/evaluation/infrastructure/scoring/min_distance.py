@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from modules.evaluation.domain.feasibility.interfaces.scoring import (
+from ....domain.feasibility.interfaces.scoring import (
     BaseFeasibilityScoringStrategy,
 )
 

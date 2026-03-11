@@ -15,19 +15,67 @@ Reference:
     Dinh et al. "Density estimation using Real NVP" (2017)
 """
 
+from typing import Literal
+
 import numpy as np
 import numpy.typing as npt
 import torch
 import torch.nn as nn
+from pydantic import Field
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from ....domain.enums.estimator_type import EstimatorTypeEnum
-from ....domain.interfaces.base_estimator import ProbabilisticEstimator
-from ....domain.value_objects.estimator_params import (
-    INNEstimatorParams,
-    INNOptimizerEnum,
-)
+from ....domain.enums.inn_optimizer import INNOptimizerEnum
+from ....domain.interfaces.base_estimator import ProbabilisticEstimator, TrainingHistory
+from ....domain.value_objects.estimator_params import EstimatorParamsBase
+
+
+class INNEstimatorParams(EstimatorParamsBase):
+    type: Literal["inn"] = Field(
+        EstimatorTypeEnum.INN.value,
+        description="Type of the invertible neural network estimator.",
+    )
+    num_coupling_layers: int = Field(
+        20, ge=1, description="Number of coupling transformations."
+    )
+    hidden_dim: int = Field(
+        128, gt=0, description="Hidden layer size in coupling networks."
+    )
+    use_batch_norm: bool = Field(
+        True, description="Use batch normalization between layers."
+    )
+    learning_rate: float = Field(1e-2, gt=0, description="Initial learning rate.")
+    optimizer_name: INNOptimizerEnum = Field(
+        INNOptimizerEnum.ADAM, description="Optimizer choice."
+    )
+    weight_decay: float = Field(1e-3, ge=0, description="L2 regularization strength.")
+    epochs: int = Field(100, gt=0, description="Maximum training epochs.")
+    batch_size: int = Field(128, gt=0, description="Batch size for training.")
+    val_size: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Validation set fraction.",
+    )
+    clip_grad_norm: float | None = Field(
+        5.0, ge=0.0, description="Gradient clipping threshold."
+    )
+    lr_scheduler: bool = Field(True, description="Use learning rate scheduler.")
+    lr_decay_factor: float = Field(
+        0.5, gt=0.0, description="LR reduction factor for scheduler."
+    )
+    lr_patience: int = Field(10, ge=1, description="Patience for LR scheduler.")
+    early_stopping_patience: int = Field(
+        20, ge=1, description="Patience for early stopping."
+    )
+    verbose: bool = Field(True, description="Print training progress.")
+    seed: int = Field(42, description="Random seed for reproducibility.")
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
 
 # ======================================================================
 # Coupling Layer Components
@@ -65,11 +113,13 @@ class AffineCouplingLayer(nn.Module):
         self.mask_type = mask_type
 
         # Create mask: 1 for unchanged part, 0 for transformed part
-        self.register_buffer("mask", self._create_mask(input_dim, mask_type))
+        mask = self._create_mask(input_dim, mask_type)
+        self.register_buffer("mask", mask)
 
-        # Number of dimensions to transform
-        split_dim = input_dim // 2
-        unchanged_dim = input_dim - split_dim
+        # Number of dimensions to transform vs. keep unchanged
+        # Derive directly from mask to handle odd input dimensions correctly
+        unchanged_dim = int(mask.sum().item())
+        split_dim = input_dim - unchanged_dim
 
         # Networks for scale (s) and translation (t)
         # Input: unchanged part + conditioning
@@ -315,7 +365,7 @@ class INNEstimator(ProbabilisticEstimator):
 
     def __init__(self, params: INNEstimatorParams):
         super().__init__()
-        self.params = params
+        self._params = params
 
         # Architecture
         self._num_coupling_layers = params.num_coupling_layers
@@ -349,7 +399,7 @@ class INNEstimator(ProbabilisticEstimator):
 
     @property
     def type(self) -> str:
-        return getattr(EstimatorTypeEnum, "INN", EstimatorTypeEnum.INN).value
+        return EstimatorTypeEnum.INN.value
 
     def fit(
         self,
@@ -588,27 +638,24 @@ class INNEstimator(ProbabilisticEstimator):
 
     def _get_optimizer(self) -> torch.optim.Optimizer:
         """Create optimizer based on configuration."""
-        if self._optimizer_name == INNOptimizerEnum.ADAM:
-            return torch.optim.Adam(
-                self._flow.parameters(),
-                lr=self._learning_rate,
-                weight_decay=self._weight_decay,
-            )
-        elif self._optimizer_name == INNOptimizerEnum.ADAMW:
-            return torch.optim.AdamW(
-                self._flow.parameters(),
-                lr=self._learning_rate,
-                weight_decay=self._weight_decay,
-            )
-        elif self._optimizer_name == INNOptimizerEnum.SGD:
-            return torch.optim.SGD(
-                self._flow.parameters(),
-                lr=self._learning_rate,
-                weight_decay=self._weight_decay,
-                momentum=0.9,
-            )
-        else:
+        optimizers = {
+            INNOptimizerEnum.ADAM: torch.optim.Adam,
+            INNOptimizerEnum.ADAMW: torch.optim.AdamW,
+            INNOptimizerEnum.SGD: torch.optim.SGD,
+        }
+
+        opt_class = optimizers.get(self._optimizer_name)
+        if opt_class is None:
             raise ValueError(f"Unknown optimizer: {self._optimizer_name}")
+
+        kwargs = {
+            "lr": self._learning_rate,
+            "weight_decay": self._weight_decay,
+        }
+        if self._optimizer_name == INNOptimizerEnum.SGD:
+            kwargs["momentum"] = 0.9
+
+        return opt_class(self._flow.parameters(), **kwargs)
 
     # -------------------- Checkpoint Serialization --------------------
 
@@ -619,20 +666,26 @@ class INNEstimator(ProbabilisticEstimator):
         Returns:
             dict: Checkpoint containing flow weights and training state
         """
-        if self._flow is None:
-            raise RuntimeError("Cannot checkpoint unfitted model. Call fit() first.")
+        self._ensure_fitted()
+        checkpoint = (
+            self._params.model_dump()
+            if hasattr(self._params, "model_dump")
+            else self._params.dict()
+        )
 
         # Keep tensors for safetensors serialization (namespaced keys)
         flow_state = {
             f"flow.{k}": v.detach().cpu() for k, v in self._flow.state_dict().items()
         }
 
-        checkpoint = {
-            "model_state": flow_state,
-            "input_dim": int(self._flow.input_dim),
-            "cond_dim": int(self._flow.cond_dim),
-            "training_history": self._training_history.as_dict(),
-        }
+        checkpoint.update(
+            {
+                "model_state": flow_state,
+                "input_dim": int(self._flow.input_dim),
+                "cond_dim": int(self._flow.cond_dim),
+                "training_history": self._training_history.as_dict(),
+            }
+        )
 
         return checkpoint
 
@@ -694,12 +747,8 @@ class INNEstimator(ProbabilisticEstimator):
 
         # Restore training history
         if "training_history" in parameters:
-            hist = parameters["training_history"]
-            estimator._training_history.epochs = hist.get("epochs", [])
-            estimator._training_history.train_loss = hist.get("train_loss", [])
-            estimator._training_history.val_loss = hist.get("val_loss", [])
-            for key, value in hist.items():
-                if key not in ["epochs", "train_loss", "val_loss"]:
-                    estimator._training_history.extras[key] = value
+            estimator._training_history = TrainingHistory.from_dict(
+                parameters["training_history"]
+            )
 
         return estimator

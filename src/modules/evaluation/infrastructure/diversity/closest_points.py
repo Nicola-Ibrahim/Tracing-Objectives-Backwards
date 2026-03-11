@@ -2,9 +2,7 @@
 
 import numpy as np
 
-from modules.evaluation.domain.feasibility.interfaces.diversity import (
-    BaseDiversityStrategy,
-)
+from ....domain.feasibility.interfaces.diversity import BaseDiversityStrategy
 
 
 class ClosestPointsDiversityStrategy(BaseDiversityStrategy):

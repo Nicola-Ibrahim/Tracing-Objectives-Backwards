@@ -3,47 +3,43 @@ import click
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from ...modules.evaluation.application.use_cases.diagnose_inverse_models import (
-    DiagnoseInverseModelsCommand,
-    DiagnoseInverseModelsHandler,
-    InverseEstimatorCandidate,
+from ...modules.evaluation.application.diagnose_engines import (
+    EngineCandidate,
+    RunDiagnosticsCommand,
+    RunDiagnosticsService,
 )
 from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
     FileSystemDiagnosticRepository,
 )
-from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
-from ...modules.modeling.infrastructure.repositories.model_artifact_repo import (
-    FileSystemModelArtifactRepository,
+from ...modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
+    FileSystemInverseMappingEngineRepository,
 )
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
 @click.command(help="Run diagnostic computation and persist results to the auditor")
 def cli():
+    # Example using the new engine repository
     candidates = [
-        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=7),
-        InverseEstimatorCandidate(type=EstimatorTypeEnum.MDN, version=11),
-        InverseEstimatorCandidate(type=EstimatorTypeEnum.INN, version=1),
-        InverseEstimatorCandidate(type=EstimatorTypeEnum.CVAE, version=1),
+        EngineCandidate(solver_type="GBPI", version=1),
     ]
 
-    command = DiagnoseInverseModelsCommand(
+    command = RunDiagnosticsCommand(
         dataset_name="cocoex_f5",
-        inverse_estimator_candidates=candidates,
-        forward_estimator_type=EstimatorTypeEnum.COCO,
-        num_samples=500,
+        inverse_engine_candidates=candidates,
+        num_samples=200,
         random_state=42,
-        scale_method="iqr",
+        scale_method="sd",
     )
 
-    handler = DiagnoseInverseModelsHandler(
+    service = RunDiagnosticsService(
         data_repository=FileSystemDatasetRepository(),
-        model_artifact_repository=FileSystemModelArtifactRepository(),
+        engine_repository=FileSystemInverseMappingEngineRepository(),
         diagnostic_repository=FileSystemDiagnosticRepository(),
         logger=CMDLogger(name="DiagnoseInverseModelsLogger"),
     )
 
-    handler.execute(command)
+    service.execute(command)
 
 
 def main() -> None:

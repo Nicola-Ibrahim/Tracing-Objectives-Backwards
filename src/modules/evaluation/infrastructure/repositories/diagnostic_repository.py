@@ -171,7 +171,7 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
 
     def get_batch(
         self,
-        requests: list[Any],
+        estimators: list[Any],
         dataset_name: str,
         mapping_direction: str = "inverse",
     ) -> dict[str, DiagnosticResult]:
@@ -179,17 +179,20 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
         Fetches multiple runs. Expects objects with .type, .version, and .run_number.
         """
         results_map = {}
-        for req in requests:
-            display_name = f"{req.type.value} (v{req.version})"
-            if req.run_number is None:
+        for estimator in estimators:
+            display_name = f"{estimator.type.value} (v{estimator.version})"
+            if estimator.run_number is None:
                 results_map[display_name] = self.get_latest_run(
-                    req.type.value, req.version, dataset_name, mapping_direction
+                    estimator.type.value,
+                    estimator.version,
+                    dataset_name,
+                    mapping_direction,
                 )
             else:
                 results_map[display_name] = self.load(
-                    req.type.value,
-                    req.version,
-                    req.run_number,
+                    estimator.type.value,
+                    estimator.version,
+                    estimator.run_number,
                     dataset_name,
                     mapping_direction,
                 )

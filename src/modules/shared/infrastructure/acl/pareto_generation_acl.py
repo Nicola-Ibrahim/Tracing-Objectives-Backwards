@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from modules.dataset.domain.entities.dataset import Dataset
-from modules.dataset.domain.interfaces.base_repository import BaseDatasetRepository
+from ....dataset.domain.entities.dataset import Dataset
+from ....dataset.domain.interfaces.base_repository import BaseDatasetRepository
 
 
 @dataclass
@@ -61,12 +61,9 @@ class GenerationDataACL:
         # Call the repository from the optimization bounded context
         dataset: Dataset = self._dataset_repo.load(name=str(data_identifier))
 
-        # --- Anti-Corruption / Translation Logic ---
         # Map Dataset aggregate to AnalysisResultDTO.
 
-        metadata = {}
-        if dataset.processed and dataset.processed.metadata:
-            metadata = dataset.processed.metadata
+        metadata = {"name": dataset.name}
 
         transformed_data = AnalysisResultDTO(
             id=data_identifier,

@@ -1,24 +1,29 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ....shared.config import ROOT_PATH
 from ..entities.dataset import Dataset
 
 
 class BaseDatasetRepository(ABC):
-    def __init__(self, file_path: str | Path = "data"):
-        """
-        Initialize repository with a base directory anchored at the project root.
+    """
+    Abstract repository for persisting and loading Dataset aggregates.
 
-        Args:
-            file_path: Relative directory where dataset bundles are stored.
-        """
-        self.base_path = ROOT_PATH / file_path
+    Concrete implementations are responsible for providing storage location
+    and handling serialization details.
+    """
 
     @abstractmethod
     def save(self, dataset: Dataset) -> Path:
-        """Persist the dataset aggregate."""
+        """Persist the dataset aggregate. Returns the path where it was saved."""
+
+    @abstractmethod
+    def delete(self, name: str) -> None:
+        """Deletes a dataset by name."""
 
     @abstractmethod
     def load(self, name: str) -> Dataset:
-        """Retrieve the dataset aggregate."""
+        """Retrieve the dataset aggregate by name."""
+
+    @abstractmethod
+    def list_all(self) -> list[str]:
+        """List all available dataset names."""
