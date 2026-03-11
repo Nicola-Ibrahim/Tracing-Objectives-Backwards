@@ -164,16 +164,16 @@ class DiagnoseInverseModelsService:
                         discrepancy_scores=spatial_audit.discrepancy_scores.tolist(),
                         best_shot_scores=spatial_audit.best_shot_scores.tolist(),
                         rank_indices=spatial_audit.rank_indices.tolist(),
-                        systematic_bias=float(spatial_audit.bias),
-                        cloud_dispersion=float(spatial_audit.dispersion),
+                        systematic_bias=spatial_audit.bias.tolist(),
+                        cloud_dispersion=spatial_audit.dispersion.tolist(),
                         summary=spatial_audit.summary,
                     ),
                     reliability=ReliabilityLens(
                         pit_values=generative_audit.pit_values.tolist(),
                         calibration_error=float(generative_audit.calibration_error),
                         crps=float(generative_audit.crps),
-                        diversity=float(generative_audit.diversity),
-                        interval_width=float(generative_audit.interval_width),
+                        diversity=generative_audit.diversity.tolist(),
+                        interval_width=generative_audit.interval_width.tolist(),
                         summary=generative_audit.summary,
                         calibration_curve=generative_audit.calibration_curve,
                     ),
@@ -287,9 +287,13 @@ class DiagnoseInverseModelsService:
                 code="INTERNAL_ERROR",
             )
 
-    def _calculate_ecdf(self, data: np.ndarray) -> dict:
-        """Helper to calculate Empirical Cumulative Distribution Function points."""
-        x = np.sort(data)
+    def _calculate_ecdf(self, data: np.ndarray | list) -> dict[str, list[float]]:
+        """Utility: Computes Empirical Cumulative Distribution Function points."""
+        arr = np.asarray(data).flatten()
+        if arr.size == 0:
+            return {"x": [], "y": []}
+        
+        x = np.sort(arr)
         y = np.arange(1, len(x) + 1) / len(x)
         # Resample to 100 points if too large for bandwidth
         if len(x) > 100:

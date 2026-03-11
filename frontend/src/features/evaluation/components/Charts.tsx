@@ -7,12 +7,13 @@ import {
     LinearScale,
     PointElement,
     LineElement,
+    BarElement,
     Title,
     Tooltip,
     Legend,
     Filler,
 } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import { MetricPlotData } from "../types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -21,6 +22,7 @@ ChartJS.register(
     LinearScale,
     PointElement,
     LineElement,
+    BarElement,
     Title,
     Tooltip,
     Legend,
@@ -161,6 +163,91 @@ export function PerformanceChart({
             </CardHeader>
             <CardContent className="h-[300px] pt-6">
                 <Line data={chartData} options={options} />
+            </CardContent>
+        </Card>
+    );
+}
+
+interface MetricBarChartProps {
+    title: string;
+    description: string;
+    data: Record<string, number>;
+    yAxisLabel: string;
+}
+
+export function MetricBarChart({
+    title,
+    description,
+    data,
+    yAxisLabel
+}: MetricBarChartProps) {
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+
+    const colors = [
+        "rgba(99, 102, 241, 0.8)",  // Indigo
+        "rgba(20, 184, 166, 0.8)",  // Teal
+        "rgba(244, 63, 94, 0.8)",   // Rose
+        "rgba(245, 158, 11, 0.8)",  // Amber
+        "rgba(139, 92, 246, 0.8)",  // Violet
+    ];
+
+    const chartData = {
+        labels,
+        datasets: [
+            {
+                label: yAxisLabel,
+                data: values,
+                backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                borderRadius: 6,
+                barThickness: 40,
+            },
+        ],
+    };
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: "white",
+                titleColor: "#1e293b",
+                bodyColor: "#475569",
+                borderColor: "#e2e8f0",
+                borderWidth: 1,
+                padding: 12,
+                titleFont: { size: 12, weight: 700 },
+                bodyFont: { size: 12 },
+                displayColors: false,
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: yAxisLabel,
+                    font: { size: 11, weight: 600 },
+                    color: "#64748b",
+                },
+                grid: { color: "rgba(226, 232, 240, 0.4)", borderDash: [2, 2] },
+            },
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 10, weight: 500 }, color: "#64748b" },
+            },
+        },
+    };
+
+    return (
+        <Card className="border-slate-200 overflow-hidden shadow-sm">
+            <CardHeader className="bg-slate-50/50 py-3 border-b border-slate-100">
+                <CardTitle className="text-sm font-semibold text-slate-800">{title}</CardTitle>
+                <CardDescription className="text-[10px] leading-tight text-slate-500">{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] pt-8">
+                <Bar data={chartData} options={options as any} />
             </CardContent>
         </Card>
     );

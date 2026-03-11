@@ -40,16 +40,9 @@ async def diagnose_engines(
 
     result = service.execute(params)
 
-    return result.match(
-        on_success=lambda value: DiagnoseResponse(
-            dataset_name=value["dataset_name"],
-            engines=value["engines"],
-            ecdf=value["ecdf"],
-            pit=value["pit"],
-            mace=value["mace"],
-            warnings=value["warnings"],
-        ),
-        on_failure=lambda error: HTTPException(
+    if result.is_failure:
+        error = result.error
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND
             if error.code == "NOT_FOUND"
             else status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -58,7 +51,16 @@ async def diagnose_engines(
                 "error_code": error.code,
                 "details": error.details,
             },
-        ),
+        )
+
+    value = result.value
+    return DiagnoseResponse(
+        dataset_name=value["dataset_name"],
+        engines=value["engines"],
+        ecdf=value["ecdf"],
+        pit=value["pit"],
+        mace=value["mace"],
+        warnings=value["warnings"],
     )
 
 
@@ -116,14 +118,9 @@ async def check_performance(
 
     result = service.execute(params)
 
-    return result.match(
-        on_success=lambda value: PerformanceResponse(
-            dataset_name=value["dataset_name"],
-            solver_type=value["solver_type"],
-            version=value["version"],
-            insights=value["insights"],
-        ),
-        on_failure=lambda error: HTTPException(
+    if result.is_failure:
+        error = result.error
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND
             if error.code == "NOT_FOUND"
             else status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -132,5 +129,12 @@ async def check_performance(
                 "error_code": error.code,
                 "details": error.details,
             },
-        ),
+        )
+
+    value = result.value
+    return PerformanceResponse(
+        dataset_name=value["dataset_name"],
+        solver_type=value["solver_type"],
+        version=value["version"],
+        insights=value["insights"],
     )

@@ -13,6 +13,7 @@ from .gbpi.hybrid_solver import HybridGBPIInverseSolver
 from .gbpi.tda_gbpi_solver import TDAGBPIInverseSolver
 from .prob.mdn_solver import MDNProbabilisticInverseSolver
 from .prob.inn_solver import INNProbabilisticInverseSolver
+from .prob.cvae_solver import CVAEProbabilisticInverseSolver
 
 
 class SolversFactory:
@@ -21,6 +22,7 @@ class SolversFactory:
         InverseSolverRegistry.TDA_GBPI: TDAGBPIInverseSolver,
         InverseSolverRegistry.MDN: MDNProbabilisticInverseSolver,
         InverseSolverRegistry.INN: INNProbabilisticInverseSolver,
+        InverseSolverRegistry.CVAE: CVAEProbabilisticInverseSolver,
         InverseSolverRegistry.HYBRID_GBPI: HybridGBPIInverseSolver,
     }
 

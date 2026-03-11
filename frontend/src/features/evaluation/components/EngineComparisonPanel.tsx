@@ -128,16 +128,30 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                         </div>
 
                         <Button
-                            disabled={isLoading || selectedEngines.length === 0}
+                            disabled={isLoading}
                             onClick={handleDiagnose}
-                            className="w-full bg-slate-900 hover:bg-slate-800 py-6"
+                            className={`w-full py-6 transition-all duration-300 relative overflow-hidden ${
+                                isLoading 
+                                ? "bg-slate-700 cursor-not-allowed" 
+                                : "bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg active:scale-[0.98]"
+                            }`}
                         >
-                            {isLoading ? (
-                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                            ) : (
-                                <Activity className="h-5 w-5 mr-2" />
+                            {isLoading && (
+                                <div className="absolute inset-0 bg-white/5 animate-pulse" />
                             )}
-                            Run Comparative Diagnosis
+                            <div className="flex items-center justify-center gap-3 relative z-10">
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
+                                        <span className="font-medium tracking-wide">Analysing Engines...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Activity className="h-5 w-5 text-indigo-400" />
+                                        <span className="font-semibold">Run Comparative Diagnosis</span>
+                                    </>
+                                )}
+                            </div>
                         </Button>
                     </div>
                 )}

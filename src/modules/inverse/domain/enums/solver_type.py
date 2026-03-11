@@ -7,3 +7,4 @@ class InverseSolverRegistry(StrEnum):
     HYBRID_GBPI = "HYBRID-GBPI"
     MDN = "MDN"
     INN = "INN"
+    CVAE = "CVAE"
