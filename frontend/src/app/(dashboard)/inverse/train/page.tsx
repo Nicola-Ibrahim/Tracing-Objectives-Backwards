@@ -11,7 +11,8 @@ import {
     CardTitle,
     CardDescription,
 } from "@/components/ui/card";
-import { TrainEngineRequest } from "@/features/inverse/types";
+import { TrainEngineRequest, EngineListItem } from "@/features/inverse/types";
+import { TrainingHistoryChart } from "@/features/inverse/components/TrainingHistoryChart";
 import { useState } from "react";
 import { CheckCircle2, AlertCircle, Cpu, Zap, Activity, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -134,24 +135,11 @@ export default function TrainEnginePage() {
                                         </div>
                                     </div>
 
-                                    {lastResult.data.training_history && Object.keys(lastResult.data.training_history).length > 0 && (
+                                    {lastResult.data.training_history?.loss && (
                                         <div className="mt-8">
-                                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                <div className="h-1 w-4 bg-indigo-500 rounded-full" />
-                                                Artifact Timeline
-                                            </h3>
-                                            <div className="space-y-3">
-                                                {Object.entries(lastResult.data.training_history).map(([key, value]: [string, any]) => (
-                                                    <div key={key} className="flex justify-between items-center p-3 px-4 bg-white border border-slate-100 rounded-xl shadow-sm transition-hover hover:border-indigo-200">
-                                                        <span className="text-xs font-bold text-slate-500 capitalize">{key.replace("_", " ")}</span>
-                                                        <span className="font-mono font-black text-indigo-600 text-sm">
-                                                            {Array.isArray(value) 
-                                                                ? `${value.length} nodes` 
-                                                                : typeof value === "number" ? value.toFixed(4) : String(value)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <TrainingHistoryChart 
+                                                history={lastResult.data.training_history.loss} 
+                                            />
                                         </div>
                                     )}
                                 </div>

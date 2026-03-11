@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getDatasets, getDatasetDetails } from "@/features/dataset/api";
 import { getTransformers, getPreview, PreviewRequest, TransformationStep } from "@/features/modeling/api";
-import { PreviewCharts } from "@/features/modeling/components/PreviewCharts";
+import { TransformationPreviewChart } from "@/features/modeling/components/TransformationPreviewChart";
 import { Label } from "@/components/ui/label";
 
 import { ChainBuilder } from "@/features/modeling/components/ChainBuilder";
@@ -256,7 +256,7 @@ export default function TransformationPreviewerPage() {
                                 exit={{ opacity: 0, scale: 0.98 }}
                                 className="h-full"
                             >
-                                <PreviewCharts
+                                <TransformationPreviewChart
                                     original={previewMutation.data.original}
                                     transformed={previewMutation.data.transformed}
                                     dims={selectedDims}

@@ -53,6 +53,7 @@ export default function EnginesPage() {
     const [engineToDelete, setEngineToDelete] = useState<any | null>(null);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [expandedDatasets, setExpandedDatasets] = useState<Record<string, boolean>>({});
 
     const queryClient = useQueryClient();
     const { showToast } = useToast();
@@ -200,6 +201,13 @@ export default function EnginesPage() {
         setExpandedGroups(prev => ({
             ...prev,
             [groupKey]: !prev[groupKey]
+        }));
+    };
+
+    const toggleDatasetExpand = (datasetName: string) => {
+        setExpandedDatasets(prev => ({
+            ...prev,
+            [datasetName]: !prev[datasetName]
         }));
     };
 
@@ -380,17 +388,56 @@ export default function EnginesPage() {
                                 className="space-y-6"
                             >
                                 <div className="flex items-center gap-4 group px-1">
-                                    <div className="h-6 w-1 bg-indigo-500 rounded-full" />
-                                    <h2 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                                        {datasetName}
-                                    </h2>
-                                    <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black text-[10px]">
-                                        {Object.values(solverGroups).flat().length} Registered Assets
-                                    </Badge>
-                                    <div className="h-px flex-1 bg-slate-100 ml-2" />
+                                    <div 
+                                        className="flex items-center gap-4 cursor-pointer select-none flex-1"
+                                        onClick={() => toggleDatasetExpand(datasetName)}
+                                    >
+                                        <div className={cn(
+                                            "h-6 w-1 rounded-full transition-colors",
+                                            expandedDatasets[datasetName] === false ? "bg-slate-300" : "bg-indigo-500"
+                                        )} />
+                                        <h2 className="text-sm font-black uppercase text-slate-800 tracking-widest flex items-center gap-2">
+                                            {datasetName}
+                                            {expandedDatasets[datasetName] === false ? (
+                                                <ChevronRight className="h-4 w-4 text-slate-400" />
+                                            ) : (
+                                                <ChevronDown className="h-4 w-4 text-slate-400" />
+                                            )}
+                                        </h2>
+                                        <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black text-[10px]">
+                                            {Object.values(solverGroups).flat().length} Registered Assets
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div 
+                                            className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm hover:border-indigo-300 transition-all cursor-pointer select-none group/select"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const datasetEngines = Object.values(solverGroups).flat();
+                                                const allSelected = datasetEngines.every(en => selectedEngines.some(se => se.dataset_name === en.dataset_name && se.solver_type === en.solver_type && se.version === en.version));
+                                                
+                                                handleSelectGroup(datasetEngines, allSelected);
+                                            }}
+                                        >
+                                            <Checkbox
+                                                checked={Object.values(solverGroups).flat().every(en => selectedEngines.some(se => se.dataset_name === en.dataset_name && se.solver_type === en.solver_type && se.version === en.version))}
+                                                className="h-3.5 w-3.5 border-slate-300 pointer-events-none"
+                                            />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover/select:text-indigo-600 transition-colors">
+                                                Select Dataset
+                                            </span>
+                                        </div>
+                                        <div className="h-px w-20 bg-slate-100" />
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-8">
+                                {expandedDatasets[datasetName] !== false && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="grid grid-cols-1 gap-8"
+                                    >
                                     {Object.entries(solverGroups as Record<string, any[]>).map(([solverType, versions]) => {
                                         const groupKey = `${datasetName}-${solverType}`;
                                         const isExpanded = expandedGroups[groupKey] !== false;
@@ -517,7 +564,8 @@ export default function EnginesPage() {
                                             </div>
                                         );
                                     })}
-                                </div>
+                                    </motion.div>
+                                )}
                             </motion.div>
                         ))}
                     </AnimatePresence>

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getDatasets, generateCandidates } from "@/features/inverse/api";
 import { getDatasetDetails } from "@/features/dataset/api";
 import { GenerateCandidatesForm } from "@/features/inverse/components/GenerateCandidatesForm";
-import { CandidateExplorer } from "@/features/inverse/components/CandidateExplorer";
+import { CandidateManifoldChart } from "@/features/inverse/components/CandidateManifoldChart";
 import { DatasetDetails } from "@/features/dataset/types";
 import { CandidateGenerationRequest, CandidateGenerationResponse } from "@/features/inverse/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -129,7 +129,7 @@ export default function GeneratePage() {
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-6">
-                                            <CandidateExplorer
+                                            <CandidateManifoldChart
                                                 data={result || undefined}
                                                 backgroundX={datasetDetails?.X}
                                                 backgroundY={datasetDetails?.y}
@@ -152,7 +152,7 @@ export default function GeneratePage() {
 
                 <div className={activeTab === "explorer" ? "pt-2 block animate-in fade-in duration-300" : "hidden"}>
                     {(result || datasetDetails) && (
-                        <CandidateExplorer
+                        <CandidateManifoldChart
                             data={result || undefined}
                             backgroundX={datasetDetails?.X}
                             backgroundY={datasetDetails?.y}

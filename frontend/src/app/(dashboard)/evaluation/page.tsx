@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getDatasets } from "@/features/inverse/api";
 import { diagnoseEngines } from "@/features/evaluation/api";
 import { EngineComparisonPanel } from "@/features/evaluation/components/EngineComparisonPanel";
-import { PerformanceChart, MetricBarChart } from "@/features/evaluation/components/Charts";
+import { PerformanceChart, MetricBarChart } from "@/features/evaluation/components/EvaluationCharts";
 import { DiagnoseRequest, DiagnoseResponse } from "@/features/evaluation/types";
 import { LineChart, AlertCircle, TrendingUp, Info, Table as TableIcon, Loader2, Sparkles, Trophy } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -102,9 +102,9 @@ export default function EvaluationPage() {
                                 exit={{ opacity: 0 }}
                                 className="space-y-8"
                             >
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="h-[380px] bg-white/60 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm animate-pulse" />
-                                    <div className="h-[380px] bg-white/60 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm animate-pulse" />
+                                <div className="grid grid-cols-2 gap-8 mb-8 min-w-0">
+                                    <div className="h-[350px] bg-white/60 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm animate-pulse min-w-0" />
+                                    <div className="h-[350px] bg-white/60 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm animate-pulse min-w-0" />
                                 </div>
                                 <div className="flex flex-col items-center justify-center p-20 bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">
                                     <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-4" />
@@ -119,22 +119,26 @@ export default function EvaluationPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-8"
                             >
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <PerformanceChart
-                                        title="ECDF (Calibration)"
-                                        description="Empirical Cumulative Distribution Function of residuals. Focus on top-left area."
-                                        data={result.ecdf}
-                                        xAxisLabel="Normalized Residual"
-                                        yAxisLabel="Cumulative Prob."
-                                    />
-                                    <PerformanceChart
-                                        title="PIT (Probabilistic Calibration)"
-                                        description="Calibration of uncertainty. Perfectly calibrated models align with diagonal."
-                                        data={result.pit}
-                                        xAxisLabel="PIT Value"
-                                        yAxisLabel="Cumulative Frequency"
-                                        showIdeal
-                                    />
+                                <div className="grid grid-cols-2 gap-8 min-w-0">
+                                    <div className="min-w-0">
+                                        <PerformanceChart
+                                            title="ECDF (Calibration)"
+                                            description="Empirical Cumulative Distribution Function of residuals. Focus on top-left area."
+                                            data={result.ecdf}
+                                            xAxisLabel="Normalized Residual"
+                                            yAxisLabel="Cumulative Prob."
+                                        />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <PerformanceChart
+                                            title="PIT (Probabilistic Calibration)"
+                                            description="Calibration of uncertainty. Perfectly calibrated models align with diagonal."
+                                            data={result.pit}
+                                            xAxisLabel="PIT Value"
+                                            yAxisLabel="Cumulative Frequency"
+                                            showIdeal
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">

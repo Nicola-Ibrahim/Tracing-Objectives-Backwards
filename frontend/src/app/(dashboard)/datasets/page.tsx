@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { getDatasets, getDatasetDetails, generateDataset, deleteDatasets } from "@/features/dataset/api";
-import { DatasetPlot } from "@/features/dataset/components/DatasetPlot";
+import { DatasetChart } from "@/features/dataset/components/DatasetChart";
 import { GenerateDatasetForm } from "@/features/dataset/components/GenerateDatasetForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -253,7 +253,7 @@ export default function DatasetsPage() {
                                 ) : selectedDetails ? (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                         <div className="space-y-4">
-                                            <DatasetPlot
+                                            <DatasetChart
                                                 title="Decision Space (X)"
                                                 data={selectedDetails.X}
                                                 labelX="X[0] (Feature 1)"
@@ -261,7 +261,7 @@ export default function DatasetsPage() {
                                             />
                                         </div>
                                         <div className="space-y-4">
-                                            <DatasetPlot
+                                            <DatasetChart
                                                 title="Objective Space (y)"
                                                 data={selectedDetails.y}
                                                 labelX="y[0] (Objective 1)"
