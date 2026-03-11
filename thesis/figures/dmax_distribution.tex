@@ -1,0 +1,79 @@
+\begin{tikzpicture}[font=\sffamily]
+
+    % ==========================================
+    % 1. DEFINE THE DISTRIBUTION SHAPE & FILLS
+    % ==========================================
+    % Safe Zone (0 to 95%) - Green Fill
+    \fill[green!15] 
+        (0,0) .. controls (0.5,0.1) and (1.5,4.5) .. (2.5,4.5)
+              .. controls (3.5,4.5) and (5,2) .. (6.5,0.8) 
+              -- (6.5,0) -- (0,0) -- cycle;
+
+    % Danger Zone (95% to 100%) - Red Fill
+    \fill[red!15] 
+        (6.5,0.8) .. controls (7.5,0.3) and (9.5,0.1) .. (10.5,0.05) 
+                  -- (10.5,0) -- (6.5,0) -- cycle;
+
+    % ==========================================
+    % 2. DRAW THE MAIN DISTRIBUTION CURVE
+    % ==========================================
+    \draw[very thick, blue!60!black] 
+        (0,0) .. controls (0.5,0.1) and (1.5,4.5) .. (2.5,4.5)
+              .. controls (3.5,4.5) and (5,2) .. (6.5,0.8)
+              .. controls (7.5,0.3) and (9.5,0.1) .. (10.5,0.05);
+
+    % ==========================================
+    % 3. AXES & LABELS
+    % ==========================================
+    % X-Axis
+    \draw[->, thick] (0,0) -- (11.5,0) node[right, align=center] {Local KNN Distance\\$d(\mathbf{x}_i, \mathbf{x}_j)$};
+    % Y-Axis (Extended to 6 for better headroom)
+    \draw[->, thick] (0,0) -- (0,6) node[above] {Frequency / Density};
+
+    % ==========================================
+    % 4. D_MAX THRESHOLD LINE & MARKERS
+    % ==========================================
+    % D_max dashed line (Raised to y=5 to avoid curve overlap)
+    \draw[dashed, very thick, red!80!black] (6.5,0) -- (6.5,5) 
+        node[above, draw=red!80!black, fill=white, rounded corners, thick, inner sep=5pt] 
+        {\textbf{95th Percentile Threshold ($D_{max}$)}};
+
+    % Value ticks on X-axis
+    \draw[thick] (6.5,0.1) -- (6.5,-0.1) node[below left, text=red!80!black] {\textbf{$D_{max}$}};
+    \draw[thick] (0,0.1) -- (0,-0.1) node[below] {\textbf{0}};
+
+    % ==========================================
+    % 5. ANNOTATIONS & TEXT (Decluttered)
+    % ==========================================
+    % Safe Zone Text (Centered comfortably in the green bulk)
+    \node[align=center, text=green!40!black] at (3.5, 2.2) {
+        \textbf{SAFE ZONE (Lower 95\%)}\\
+        Intra-modal Variation\\
+        (Continuous Physics)
+    };
+
+    % Danger Zone Text (Moved up to avoid cramping the tail)
+    \node[align=center, text=red!60!black] (danger_node) at (9.5, 2.8) {
+        \textbf{DANGER ZONE (Top 5\%)}\\
+        Inter-modal Voids\\
+        (Discontinuous)
+    };
+    
+    % Curved pointer from Danger Zone text into the red tail
+    \draw[->, thick, red!60!black, bend left=20, -{Stealth[scale=1.0]}] 
+        (danger_node.south) to (8.5, 0.3);
+
+    % ==========================================
+    % 6. ALGORITHM ROUTING INDICATORS
+    % ==========================================
+    % Arrow indicating interpolation (Shifted down to avoid axis text)
+    \draw[->, thick, green!50!black, -{Stealth[scale=1.2]}] (3.5, -0.4) -- (3.5, -1.2) 
+        node[below, draw=green!40!black, fill=green!5, rounded corners, inner sep=6pt] 
+        {\textbf{Coherent}};
+
+    % Arrow indicating optimization (Shifted down to avoid axis text)
+    \draw[->, thick, red!50!black, -{Stealth[scale=1.2]}] (8.5, -0.4) -- (8.5, -1.2) 
+        node[below, draw=red!40!black, fill=red!5, rounded corners, inner sep=6pt] 
+        {\textbf{Incoherent}};
+
+\end{tikzpicture}

@@ -172,6 +172,7 @@ by \eqref{eq:candidate_scores_methodology}.
 The three instantiations below differ in how they parameterize $q_{\theta}(\vect{x}\mid\vect{y})$ and
 how the conditional log-density in \eqref{eq:cond_mle_methodology} is computed or approximated.
 
+
 %-------------------------------------------------------------------------------
 \subsection{Mixture density network}\label{subsec:mdn_training}
 %-------------------------------------------------------------------------------
@@ -243,6 +244,176 @@ without variational approximations. Sampling is performed by drawing $K$ latent 
 from the prior and applying the forward pass $T_{\theta}(\vect{z};\vect{y}^{\star})$. This 
 bijective structure ensures that every point in the latent reservoir corresponds to a unique 
 candidate, integrating naturally with the propose--check protocol.
+
+
+\section{Geometrically Bounded Probabilistic Inversion (GBPI)}
+\label{sec:gbpi_framework}
+
+While deep learning approaches such as Conditional Variational Autoencoders (CVAEs) and Invertible Neural Networks (INNs) offer robust solutions to the one-to-many inverse mapping problem, they inherently require large volumes of training data to accurately capture underlying probability distributions. To address scenarios where data is fundamentally limited, this research proposes a novel computational architecture: the \textbf{Geometrically Bounded Probabilistic Inversion (GBPI)} framework. 
+
+GBPI is specifically engineered to operate under highly constrained environments characterized by extremely sparse datasets ($N \le 100$), high-dimensional decision spaces featuring complex inputs with varying scales, and strict real-time execution constraints requiring millisecond-level latency. By hybridizing topological meshing, probabilistic sampling, and lightweight surrogate modeling, GBPI safely navigates the decision space without falling victim to common multi-modal mapping pitfalls such as the ``Centroid Trap'' or ``Pareto Sag''.
+
+% Workflow Diagram
+
+\begin{figure}[!htbp]
+  \centering
+  \begin{adjustbox}{width=0.85\linewidth}
+      \input{figures/gbpi_architecture}
+  \end{adjustbox}
+  \caption{The GBPI Framework routing architecture, illustrating the transition from offline pre-processing to real-time generative and optimization pathways.}
+ \label{fig:gbpi_workflow}
+
+\end{figure}
+
+% \subsection{Nomenclature and System Variables}
+% To formally define the computational pipeline, the system variables detailed in Table \ref{tab:gbpi_nomenclature} are established.
+
+% \begin{table}[htbp]
+% \centering
+% \caption{Nomenclature of system variables used within the GBPI framework.}
+% \label{tab:gbpi_nomenclature}
+% \renewcommand{\arraystretch}{1.3}
+% \begin{tabular}{@{}lp{12cm}@{}}
+% \toprule
+% \textbf{Variable} & \textbf{Definition} \\
+% \midrule
+% $X$ & The high-dimensional Decision Space representing physical input configurations. \\
+% $Y$ & The 2D Objective Space representing output performance metrics. \\
+% $N$ & The total number of available data points within the sparse dataset. \\
+% $D_{max}$ & The Dynamic Coherence Threshold; the maximum physically safe distance between configurations. \\
+% $y^*$ & The user-selected target performance coordinate in the Objective Space. \\
+% $x_A, x_B, x_C$ & The Decision Space configurations corresponding to the identified local anchor points. \\
+% $y_A, y_B, y_C$ & The Objective Space performance values of the local anchor points. \\
+% $(\bar{w}_A, \bar{w}_B, \bar{w}_C)$ & The deterministic Barycentric weights representing the target's relative position within a simplex. \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+\subsection{System Initialization (Offline Phase)}
+\label{subsec:gbpi_offline_phase}
+Before any real-time user interaction occurs, the system executes two critical offline computations to prepare the mapping environment:
+
+\begin{enumerate}
+
+    \item \textbf{Objective Space Meshing (Delaunay Triangulation):} To enable instantaneous real-time mapping from the continuous performance space back to discrete known designs, the 2D objective space ($Y$) must be topologically partitioned. The system applies Delaunay Triangulation \cite{barber1996quickhull} to the complete set of objective performance coordinates $\mathcal{Y} = \{\mathbf{y}_1, \mathbf{y}_2, \dots, \mathbf{y}_N\}$. 
+    
+    This geometric algorithm constructs a continuous, non-overlapping mesh of convex simplices (triangles) that connect the sparse dataset points, maximizing the minimum angle of the triangles to avoid narrow, distorted interpolations. This step essentially builds a mathematical map of the currently attainable performance region (the convex hull of the dataset). 
+    
+
+    Pre-computing this topological mesh entirely offline is a structural requirement for maintaining millisecond-level latency during real-time user interaction. By building the spatial data structures in advance, the system can execute $O(\log N)$ point-location queries to rapidly identify which specific triangle encloses a user's arbitrary performance target ($y^*$). The three vertices of that enclosing simplex then instantly serve as the foundational performance ``anchors'' for the online generative mapping.
+
+    
+    \item \textbf{Surrogate Model Training:} A highly lightweight micro-surrogate model—specifically a Radial Basis Function (RBF) network \cite{buhmann2003radial}—is trained to act as a forward predictor mapping the decision space to the objective space ($f_{RBF}: X \to Y$). Due to the extreme sparsity of the data ($N \le 100$), this training completes in milliseconds. Unlike deep neural networks, the RBF requires minimal data to construct a smooth interpolation surface, serving as an instant, real-time physical validator for the generative phases.
+    
+    \item \textbf{Coherence Threshold Calibration ($D_{max}$):} The most critical offline step is establishing a rigorous mathematical definition of a ``safe'' physical neighborhood. This prevents the generative algorithm from hallucinating impossible designs. In inverse problems, a phenomenon known as multi-modality frequently occurs: two designs might achieve nearly identical performance (extreme proximity in the $Y$-space) while utilizing entirely different underlying physical strategies (massive separation in the $X$-space). 
+    
+    To safely interpolate, the system must quantify ``coherence''—the assumption that small, continuous variations in performance correspond to safe, continuous variations in physical parameters. To measure this baseline spatial density, the system employs a K-Nearest Neighbors (KNN) distance metric \cite{cover1967nearest} on the normalized decision space $\mathcal{X} = \{\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_N\}$.
+    
+    For every configuration $\mathbf{x}_i$ in the dataset, the algorithm identifies the set of its $k$ closest neighbors, denoted as $\mathcal{N}_k(\mathbf{x}_i)$. The pairwise Euclidean distance between $\mathbf{x}_i$ and each of its neighbors $\mathbf{x}_j \in \mathcal{N}_k(\mathbf{x}_i)$ is calculated as:
+    \begin{equation}
+        d(\mathbf{x}_i, \mathbf{x}_j) = \|\mathbf{x}_i - \mathbf{x}_j\|_2 = \sqrt{\sum_{m=1}^{M} (x_{i,m} - x_{j,m})^2}
+    \end{equation}
+    where $M$ is the dimensionality of the decision space. A universal set of all local neighborhood distances across the entire dataset, $\mathcal{D}_{KNN}$, is then aggregated:
+    \begin{equation}
+        \mathcal{D}_{KNN} = \Big\{ d(\mathbf{x}_i, \mathbf{x}_j) \mid i \in \{1, \dots, N\}, \mathbf{x}_j \in \mathcal{N}_k(\mathbf{x}_i) \Big\}
+    \end{equation}
+    
+    
+    
+    To establish the absolute boundary of a single physical archetype, the system calculates the Dynamic Coherence Threshold ($D_{max}$) by extracting the \textbf{95th percentile} of the distribution $\mathcal{D}_{KNN}$:
+    \begin{equation}
+        D_{max} = P_{95}(\mathcal{D}_{KNN})
+    \end{equation}
+    
+    The statistical and physical justification for selecting the 95th percentile threshold is twofold:
+    \begin{itemize}
+        \item \textbf{Capturing Intra-modal Variation ($\le D_{max}$):} The vast majority (the lower 95\%) of local distances represent standard, continuous engineering adjustments within a single physical archetype (e.g., slightly altering the wingspan of a specific drone chassis without changing its fundamental topology). $D_{max}$ perfectly bounds this continuous, safe region.
+        \item \textbf{Isolating Inter-modal Voids ($> D_{max}$):} In highly sparse datasets, the top 5\% of nearest-neighbor distances represent statistical outliers. Physically, these outliers correspond to massive, discontinuous leaps across the decision space—bridging the empty topological voids between fundamentally distinct engineering archetypes (e.g., jumping from a quadcopter topology to a fixed-wing topology). 
+    \end{itemize}
+
+
+    By formally establishing $D_{max}$ at this percentile, the GBPI framework creates a definitive mathematical ``speed limit.'' It grants the algorithm maximum freedom to interpolate within known physical families while proactively hard-coding a boundary that prevents it from blindly averaging across unmanufacturable voids.
+\end{enumerate}
+
+\begin{figure}[!htbp]
+    \centering
+  \begin{adjustbox}{width=\linewidth}
+      \input{figures/dmax_distribution}
+  \end{adjustbox}
+
+    \caption{Distribution of local distances ($\mathcal{D}_{KNN}$) in the decision space. The 95th percentile establishes $D_{max}$, mathematically separating safe intra-modal continuous regions from dangerous inter-modal topological voids.}
+    \label{fig:dmax_distribution}
+\end{figure}
+
+
+\subsection{Real-Time Generation Pipeline (Online Phase)}
+\label{subsec:gbpi_online_phase}
+
+Once the offline mathematical environment is established, the GBPI framework transitions to the real-time generation phase. This phase is triggered instantly whenever a user interacts with the system to request a novel design. To ensure that the output is both physically safe and highly accurate without exceeding millisecond-level latency, the pipeline executes the following sequential steps:
+
+\begin{enumerate}
+
+    \item \textbf{Step 1: Target Localization:} 
+    The generation process begins by translating the user's continuous intent into a discrete mathematical coordinate system anchored by known physical designs. When the user dynamically selects an arbitrary target objective ($y^*$) in the 2D Objective Space ($Y$), the system queries the pre-computed Delaunay mesh to locate the specific triangle containing $y^*$. The three vertices of this enclosing triangle become the performance ``Anchors'' ($y_A, y_B, y_C$). The framework then calculates the exact deterministic Barycentric weights $(\bar{w}_A, \bar{w}_B, \bar{w}_C)$, which mathematically quantify the geometric proximity of $y^*$ relative to each respective anchor point.
+
+    \begin{figure}[htbp]
+        \centering
+        \begin{adjustbox}{width=\linewidth}
+          \input{figures/target_localization}
+      \end{adjustbox}
+
+
+        \caption{Visualization of Phase 1: Target Localization. The continuous 2D Objective Space ($Y$) is meshed via Delaunay Triangulation. The arbitrary user target ($y^*$) is located within a specific simplex, and its geometric proximity to the known anchor points ($y_A, y_B, y_C$) is quantified by the exact Barycentric weights ($\bar{w}_A, \bar{w}_B, \bar{w}_C$).}
+        \label{fig:target_localization}
+    \end{figure}
+
+    \item \textbf{Step 2: The Local Coherence Check (The Safeguard):} 
+    Before attempting to map the objective weights back into the high-dimensional decision space, GBPI enforces a strict physical safeguard. Its primary function is to prevent the ``Centroid Trap''—a critical failure where linearly averaging two fundamentally different parent designs yields a physically nonsensical configuration. 
+    
+    If a bounding simplex is found in Step 1, the system retrieves the decision configurations ($x_A, x_B, x_C$) corresponding to the anchors and calculates their pairwise Euclidean distances. The region is evaluated against the Coherence Gate:
+    \begin{itemize}
+        \item \textit{Coherent Region:} If all pairwise distances are $\le D_{max}$, the anchors share the same physical strategy. The region is deemed safe for geometric interpolation.
+        \item \textit{Incoherent Region:} If any distance is $> D_{max}$, the anchors represent fundamentally different engineering strategies. To avoid non-linear topological voids—which can be further mapped and rigorously detected using tools like Topological Data Analysis (TDA) and the Vietoris-Rips complex \cite{carlsson2009topology}—the system refuses interpolation to guarantee physical safety.
+    \end{itemize}
+
+    \item \textbf{Step 3: Algorithmic Routing:} 
+    Based on the localization and coherence evaluation, the system dynamically routes the user's query into one of two distinct mathematical pathways:
+    \begin{itemize}
+        \item \textbf{Pathway A: Probabilistic Generative Mapping.} Triggered exclusively when the bounding region is mathematically verified as coherent. Instead of yielding a single deterministic output, the Barycentric weights are utilized as the mean vector for a Dirichlet Distribution \cite{bishop2006pattern}. The system samples a cloud of $K$ new weight vectors distributed tightly around the exact user request. These sampled weights are linearly inverted back into the decision space via matrix multiplication ($X_{candidates} = W_{sampled} \times X_{anchors}$). As a result, the system invents $K$ novel, diverse configurations that are bounded strictly within the safe, locally coherent manifold. 
+
+        \begin{figure}[htbp]
+            \centering
+            \begin{adjustbox}{width=0.8\linewidth}
+              \input{figures/dirichlet_sampling}
+          \end{adjustbox}
+    
+    
+            \caption{Visualization of Pathway A: Probabilistic Generative Mapping. Once a simplex is verified as physically coherent, the exact deterministic target is utilized as the mean for a Dirichlet distribution. The algorithm samples $K$ probabilistic weight vectors, generating a dense, diverse cloud of novel configurations ($X_{candidates}$) bounded entirely within the safe, established physical manifold.}
+            \label{fig:dirichlet_sampling}
+        \end{figure}
+        
+        \item \textbf{Pathway B: Surrogate-Assisted Trust-Region Optimization.} Triggered when the targeted region crosses distinct physical modes (incoherent) or requires extrapolation beyond the known mesh (no simplex found). Proactively abandoning interpolation, the system designates the single closest known anchor to the user target as the \textit{Base Design}. To prevent the optimizer from wandering into invalid topological voids, a strict Trust Region Boundary (e.g., a $5\%$ maximum deviation limit) is enforced around the Base Design. Utilizing the pre-trained RBF surrogate from the offline phase, the system executes a rapid gradient descent to progressively optimize the base design toward $y^*$, subject to the strict constraint that it remains within the established bounds.
+        
+    \end{itemize}
+
+    \item \textbf{Step 4: Surrogate Filtering and Ranking:} 
+    Due to the non-linear nature of real-world physical laws, linear interpolation from Pathway A may occasionally suffer from ``Pareto Sag'' (where predictions slightly deviate from the true front). Therefore, a final quality assurance filter is necessary. 
+    
+    All generated candidate configurations ($X_{candidates}$), regardless of their originating pathway, are passed through the RBF micro-surrogate for instant validation. The surrogate-predicted performances ($\hat{y}$) are compared directly against the user's exact requested target ($y^*$), calculating the residual error. Candidates exhibiting high residual errors are immediately discarded, and the framework rigorously ranks the remaining physically coherent and mathematically accurate configurations for presentation to the end-user.
+
+    \begin{figure}[htbp]
+        \centering
+        \begin{adjustbox}{width=0.8\linewidth}
+          \input{figures/trust_region_opt}
+      \end{adjustbox}
+
+
+        \caption{Visualization of Pathway B: Surrogate-Assisted Trust-Region Optimization. When the user's target ($y^*$) requires extrapolation into an unknown topological void, the framework proactively abandons interpolation. The closest known anchor is designated as the Base Design ($x_{base}$). An L-BFGS-B gradient descent optimizes new configurations towards the target, but is mathematically blocked from hallucinating impossible physics by a strict Trust Region Boundary.}
+        \label{fig:trust_region_opt}
+    \end{figure}
+
+\end{enumerate}
+
 
 %-------------------------------------------------------------------------------
 \section{Evaluation plan}\label{sec:evaluation}
@@ -474,12 +645,9 @@ visualizes the target-centered residual space used for these scenarios.
   \begin{adjustbox}{width=0.85\linewidth}
       \input{figures/residuals_space}
   \end{adjustbox}
-  \caption[]{Target-centered residual space for candidate-cloud diagnostics.}
+  \caption[Diagnostic Framework for Candidate-Cloud Geometry]{A target-centered visualization used to decompose model error into bias (b) and variance (v).}
   \label{fig:residuals_space}
 \end{figure}
-
-
-
 
 
 %-------------------------------------------------------------------------------

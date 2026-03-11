@@ -1,0 +1,96 @@
+\begin{tikzpicture}[
+    >=stealth,
+    font=\sffamily,
+    % Styles
+    anchor_node/.style={circle, fill=blue!80!black, inner sep=2.5pt, draw=white, thick},
+    target_node/.style={circle, fill=red!80!black, inner sep=3pt, draw=white, thick},
+    sample_node/.style={circle, fill=purple!70, inner sep=1.2pt, opacity=0.8},
+    simplex_edge/.style={cyan!80!black, very thick}
+]
+
+    % ==========================================
+    % 1. DEFINE THE SIMPLEX COORDINATES
+    % ==========================================
+    \coordinate (A) at (1.0, 1.0);
+    \coordinate (B) at (9.0, 2.0);
+    \coordinate (C) at (4.5, 7.5);
+    \coordinate (Target) at (5.0, 3.5); % The exact barycentric mean
+
+    % ==========================================
+    % 2. DRAW THE SIMPLEX BACKGROUND
+    % ==========================================
+    \filldraw[fill=cyan!5, draw=cyan!80!black, very thick, rounded corners=2pt, line join=round] 
+        (A) -- (B) -- (C) -- cycle;
+
+    % ==========================================
+    % 3. DIRICHLET DENSITY CONTOURS
+    % ==========================================
+    % These ellipses visually represent the Dirichlet probability mass 
+    \begin{scope}[shift={(Target)}, rotate=-15]
+        \draw[purple!40, thick, fill=purple!5, opacity=0.5] (0,0) ellipse (2.2 and 1.4);
+        \draw[purple!60, thick, fill=purple!10, opacity=0.5] (0,0) ellipse (1.4 and 0.9);
+        \draw[purple!80, thick, fill=purple!20, opacity=0.5] (0,0) ellipse (0.7 and 0.45);
+    \end{scope}
+
+    % ==========================================
+    % 4. GENERATE THE DIRICHLET POINT CLOUD
+    % ==========================================
+    % We use a seed to ensure the document compiles exactly the same every time!
+    \pgfmathsetseed{42}
+    \foreach \i in {1,...,100} {
+        \pgfmathsetmacro{\xdist}{1.2*(rand + rand*0.5)}
+        \pgfmathsetmacro{\ydist}{0.8*(rand + rand*0.5)}
+        \pgfmathsetmacro{\xrot}{\xdist*cos(-15) - \ydist*sin(-15)}
+        \pgfmathsetmacro{\yrot}{\xdist*sin(-15) + \ydist*cos(-15)}
+        \node[sample_node] at (5.0 + \xrot, 3.5 + \yrot) {};
+    }
+
+    % ==========================================
+    % 5. DRAW ANCHORS & TARGET (On top of cloud)
+    % ==========================================
+    \node[anchor_node, label={[text=blue!80!black, font=\bfseries]below left:Anchor ($x_A$)}] at (A) {};
+    \node[anchor_node, label={[text=blue!80!black, font=\bfseries]below right:Anchor ($x_B$)}] at (B) {};
+    \node[anchor_node, label={[text=blue!80!black, font=\bfseries]above:Anchor ($x_C$)}] at (C) {};
+    
+    \node[target_node] (T) at (Target) {};
+
+    % ==========================================
+    % 6. ANNOTATIONS & POINTERS
+    % ==========================================
+    % Target Label
+    \draw[<-, thick, red!80!black] (T) -- ++(-1.8, 1.8) 
+        node[above, text=red!80!black, font=\bfseries, align=center] {Exact Target\\Mean ($\mu$)};
+
+    % Cloud Label
+    \node[text=purple!90!black, font=\bfseries\small, align=center] (cloud_label) at (7.5, 5.0) {
+        Sampled Candidates\\
+        ($X_{candidates}$)
+    };
+    \draw[->, thick, purple!80!black, bend right=15] (cloud_label.south) to (6.2, 3.8);
+
+    % ==========================================
+    % 7. MATH BOX
+    % ==========================================
+    % Anchored north east at x=2.5 so it spans to the left, away from C
+    \node[draw=gray!50, fill=white, rounded corners, text width=4.5cm, align=center, anchor=north east] 
+        at (1.5, 7.5) {
+        \textbf{Probabilistic Inversion}\\
+        \vspace{3pt}
+        $X_{cands} = W_{sampled} \times \begin{bmatrix} x_A \\ x_B \\ x_C \end{bmatrix}$
+    };
+
+    % ==========================================
+    % 8. LEGEND 
+    % ==========================================
+    % Anchored north west at x=9.5 so it spans to the right, away from C and B
+    \node[draw=gray!50, fill=white, rounded corners, text width=4.5cm, align=left, anchor=north west] 
+        at (9.5, 7.5) {
+        \textbf{Legend:}\\
+        \textcolor{cyan!80!black}{\rule{0.5cm}{2pt}} Coherent Simplex ($X$)\\
+        \textcolor{purple!60}{\rule{0.5cm}{2pt}} Dirichlet Density\\
+        \textcolor{blue!80!black}{$\bullet$} Physical Anchors\\
+        \textcolor{red!80!black}{$\bullet$} Target Interpolation\\
+        \textcolor{purple!70}{$\bullet$} Diverse Configurations
+    };
+
+\end{tikzpicture}

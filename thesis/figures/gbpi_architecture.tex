@@ -1,0 +1,108 @@
+\begin{tikzpicture}[
+    >=stealth,
+    every node/.style={font=\sffamily\small, align=center},
+    % Titles
+    phase_title/.style={font=\sffamily\Large\bfseries, text width=10cm, align=center},
+    % Node Styles
+    process/.style={rectangle, draw=black!80, rounded corners=1mm, text width=4.5cm, minimum height=1.2cm, fill=white, thick},
+    decision/.style={diamond, draw=black!80, aspect=2, text width=3cm, fill=orange!10, inner sep=0pt, thick},
+    data_in/.style={rectangle, draw=gray!80, dashed, rounded corners=2mm, fill=gray!5, text width=4cm, minimum height=1.2cm, thick},
+    user_in/.style={rectangle, draw=green!60!black, thick, rounded corners=2mm, fill=green!5, text width=4cm, minimum height=1.2cm},
+    data_out/.style={rectangle, draw=green!60!black, thick, rounded corners=2mm, fill=green!10, text width=5.5cm, minimum height=1.5cm},
+    artifact/.style={rectangle, draw=blue!60, fill=blue!5, text width=4cm, minimum height=1.2cm, thick},
+    % Line Styles
+    arrow/.style={thick, -{Stealth[scale=1.2]}, draw=black!80},
+    artifact_flow/.style={thick, dashed, color=blue!70, -{Stealth[scale=1.2]}}
+]
+
+    % =========================================================
+    % 1. BACKGROUND BOXES (Drawn first to stay behind nodes)
+    % =========================================================
+    % Phase 0 Background (Offline)
+    \draw[fill=gray!10, rounded corners=3mm, draw=gray!30, thick] (-9, 6.5) rectangle (9, -1.5);
+    
+    % Generation Background (Online)
+    \draw[fill=cyan!5, rounded corners=3mm, draw=cyan!30, thick] (-9, -1.8) rectangle (9, -23.5);
+
+
+    % =========================================================
+    % 2. PHASE 0: OFFLINE PRE-PROCESSING
+    % =========================================================
+    \node (p0_title) at (0, 5.5) [phase_title] {Phase 0: Offline Pre-Processing};
+
+    % Left Column: Geometric Threshold
+    \node (in_X) at (-6, 4) [data_in] {\textbf{Decision Space $X$}\\(Normalized Configs)};
+    \node (calc_tau) at (-6, 2) [process] {\textbf{KNN Density Analysis}\\Calculate threshold};
+    \node (tau_val) at (-6, 0) [artifact] {\textbf{Artifact:}\\Geometric Threshold ($\tau$)};
+
+    % Right Column: Surrogate Model
+    \node (in_XY) at (6, 4) [data_in] {\textbf{Dataset $X$ \& $Y$}\\(Full Mapping Data)};
+    \node (build_s) at (6, 2) [process] {\textbf{Train Forward Model}\\Build RBF \& Mesh};
+    \node (surf_mod) at (6, 0) [artifact] {\textbf{Artifact:}\\RBF Surrogate \& Mesh};
+
+    % Phase 0 Flow Arrows
+    \draw [arrow] (in_X) -- (calc_tau);
+    \draw [arrow] (calc_tau) -- (tau_val);
+    \draw [arrow] (in_XY) -- (build_s);
+    \draw [arrow] (build_s) -- (surf_mod);
+
+
+    % =========================================================
+    % 3. REAL-TIME GENERATION PIPELINE
+    % =========================================================
+    \node (gen_title) at (0, -2.5) [phase_title] {Phase 1-4: Real-Time Generation};
+
+    \node (user_y) at (0, -4) [user_in] {\textbf{User Input}\\Target Objective $y^*$};
+
+    \node (localization) at (0, -6.5) [process] {\textbf{1. Target Localization}\\Find Delaunay simplex\\or nearest neighbor};
+
+    % The New Out-of-Bounds Check
+    \node (mesh_check) at (0, -9.5) [decision] {\textbf{In Mesh?}\\(Simplex Found)};
+
+    \node (gate) at (0, -13) [decision] {\textbf{2. Coherence Gate}\\Are anchors $\le \tau$?};
+
+    \node (path3a) at (-4.5, -17) [process] {\textbf{3A. Diverse Pathway}\\Probabilistic Dirichlet Sampling};
+    \node (path3b) at (4.5, -17) [process] {\textbf{3B. Targeted Pathway}\\Trust-Region Gradient Descent};
+
+    \node (merge) at (0, -20.5) [process, text width=5.5cm] {\textbf{4. Surrogate Filtering}\\Validate constraints \& rank};
+
+    \node (out) at (0, -22.5) [data_out] {\textbf{Top Verified Options}\\(Mathematically Safe)};
+
+    % Main Generation Flow Arrows
+    \draw [arrow] (user_y) -- (localization);
+    \draw [arrow] (localization) -- (mesh_check);
+    
+    % Mesh Check Success -> Go to Coherence Gate
+    \draw [arrow] (mesh_check.south) -- node[left, font=\sffamily\small\bfseries] {Yes} (gate.north);
+
+    % The Two Rejection Paths (Out of Bounds AND Incoherent) mapping to 3B
+    \draw [thick, draw=black!80] (mesh_check.east) -- node[above, font=\sffamily\small\bfseries] {No (Out of Bounds)} (4.5, -9.5);
+    \draw [thick, draw=black!80] (gate.east) -- node[above, font=\sffamily\small\bfseries] {No (Incoherent)} (4.5, -13);
+    \draw [arrow] (4.5, -9.5) -- (path3b.north);
+
+    % The Success Path mapping to 3A
+    \draw [thick, draw=black!80] (gate.west) -- node[above, font=\sffamily\small\bfseries] {Yes (Coherent)} (-4.5, -13);
+    \draw [arrow] (-4.5, -13) -- (path3a.north);
+
+    % The Merging Fork (Filtering)
+    \draw [thick, draw=black!80] (path3a.south) |- (0, -19);
+    \draw [thick, draw=black!80] (path3b.south) |- (0, -19);
+    \draw [arrow] (0, -19) -- (merge.north);
+
+    \draw [arrow] (merge) -- (out);
+
+
+    % =========================================================
+    % 4. ARTIFACT DATA BUSES (Dashed Lines routed to avoid overlap)
+    % =========================================================
+    
+    % Left Data Bus (Tau Threshold)
+    \draw [artifact_flow] (tau_val.south) -- (-6, -1.2) -| (-7.5, -12) -- (gate.north west);
+    \draw [artifact_flow] (-7.5, -12) |- (path3a.west);
+
+    % Right Data Bus (Surrogate & Mesh Data)
+    \draw [artifact_flow] (surf_mod.south) -- (6, -1.2) -| (7.5, -6.5) -- (localization.east);
+    \draw [artifact_flow] (7.5, -6.5) |- (path3b.east);
+    \draw [artifact_flow] (7.5, -17) |- (merge.east);
+
+\end{tikzpicture}
