@@ -6,8 +6,8 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
 from ...modules.evaluation.application.compare_candidates import (
     CompareInverseModelCandidatesParams,
     CompareInverseModelCandidatesService,
-    InverseEngineCandidate,
 )
+from ...modules.evaluation.application.diagnose_engines import EngineCandidate
 from ...modules.evaluation.application.inverse_model_candidates_comparator import (
     InverseModelsCandidatesComparator,
 )
@@ -29,7 +29,7 @@ def main():
     params = CompareInverseModelCandidatesParams(
         dataset_name="cocoex_f5",
         inverse_engines=[
-            InverseEngineCandidate(solver_type="GBPI", version=1),
+            EngineCandidate(solver_type="GBPI", version=1),
         ],
         target_objective=[408, 1300],
         n_samples=20,

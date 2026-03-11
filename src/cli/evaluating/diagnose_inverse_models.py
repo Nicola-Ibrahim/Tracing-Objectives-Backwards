@@ -4,9 +4,9 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
 from ...modules.evaluation.application.diagnose_engines import (
-    DiagnoseInverseModelsParams,
-    DiagnoseInverseModelsService,
-    InverseEngineCandidate,
+    EngineCandidate,
+    RunDiagnosticsCommand,
+    RunDiagnosticsService,
 )
 from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
     FileSystemDiagnosticRepository,
@@ -21,10 +21,10 @@ from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 def cli():
     # Example using the new engine repository
     candidates = [
-        InverseEngineCandidate(solver_type="GBPI", version=1),
+        EngineCandidate(solver_type="GBPI", version=1),
     ]
 
-    params = DiagnoseInverseModelsParams(
+    command = RunDiagnosticsCommand(
         dataset_name="cocoex_f5",
         inverse_engine_candidates=candidates,
         num_samples=200,
@@ -32,14 +32,14 @@ def cli():
         scale_method="sd",
     )
 
-    service = DiagnoseInverseModelsService(
+    service = RunDiagnosticsService(
         data_repository=FileSystemDatasetRepository(),
         engine_repository=FileSystemInverseMappingEngineRepository(),
         diagnostic_repository=FileSystemDiagnosticRepository(),
         logger=CMDLogger(name="DiagnoseInverseModelsLogger"),
     )
 
-    service.execute(params)
+    service.execute(command)
 
 
 def main() -> None:

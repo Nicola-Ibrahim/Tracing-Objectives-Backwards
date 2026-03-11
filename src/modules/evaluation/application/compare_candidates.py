@@ -15,14 +15,7 @@ from ..domain.interfaces.base_visualizer import BaseVisualizer
 from .inverse_model_candidates_comparator import InverseModelsCandidatesComparator
 
 
-class InverseEngineCandidate(BaseModel):
-    """Represents a specific inverse engine candidate (solver_type and optional version)."""
-
-    solver_type: str = Field(..., examples=["GBPI"])
-    version: int | None = Field(
-        default=None,
-        description="Specific integer version number. If None, latest is used.",
-    )
+from .diagnose_engines import EngineCandidate
 
 
 class CompareInverseModelCandidatesParams(BaseModel):
@@ -31,7 +24,7 @@ class CompareInverseModelCandidatesParams(BaseModel):
         description="Dataset identifier to use for comparison.",
     )
 
-    inverse_engines: list[InverseEngineCandidate] = Field(
+    inverse_engines: list[EngineCandidate] = Field(
         ...,
         description="list of inverse engine candidates to use for generation",
     )
@@ -101,7 +94,7 @@ class CompareInverseModelCandidatesService:
         return results_map
 
     def _initialize_engines(
-        self, candidates: list[InverseEngineCandidate], dataset_name: str
+        self, candidates: list[EngineCandidate], dataset_name: str
     ) -> dict[str, InverseMappingEngine]:
         """
         Initializes inverse engines from the repository.

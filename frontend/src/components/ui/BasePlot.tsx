@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { cn } from "@/lib/utils";
 
 // Dynamically import Plot to avoid SSR issues with Plotly.js
-const Plot = dynamic(() => import("react-plotly.js"), { 
+const Plot = dynamic(() => import("react-plotly.js"), {
     ssr: false,
     loading: () => (
         <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl animate-pulse py-20">
@@ -41,15 +41,20 @@ export function BasePlot({
     headerExtra,
     style
 }: BasePlotProps) {
-    
+    // 1. Calculate dynamic legend requirements
+    const legendItems = data.filter(t => t.showlegend !== false && t.name).length;
+    const legendRows = Math.ceil(legendItems / 3);
+    const dynamicMarginB = 1 + (legendRows * 25);
+    const minPlotHeight = 350 + dynamicMarginB;
+
     const defaultLayout = {
         autosize: true,
-        margin: { l: 60, r: 20, t: 30, b: 130 },
+        margin: { l: 60, r: 20, t: 30, b: dynamicMarginB },
         showlegend: true,
         legend: {
             orientation: 'h',
             yanchor: 'top',
-            y: -0.4,
+            y: -0.22,
             xanchor: 'center',
             x: 0.5,
             font: { size: 12, color: '#64748b' },
@@ -69,8 +74,8 @@ export function BasePlot({
             tickfont: { size: 12, color: '#94a3b8' },
             title: { font: { size: 14, color: '#94a3b8', weight: 800 } }
         },
-        paper_bgcolor: 'transparent',
-        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'white',
+        plot_bgcolor: 'white',
         hovermode: 'closest',
         font: { family: 'Inter, sans-serif' }
     };
@@ -81,31 +86,50 @@ export function BasePlot({
         modeBarButtonsToRemove: ['select2d', 'lasso2d'],
         toImageButtonOptions: {
             format: 'png',
-            scale: 3 
+            filename: title?.toLowerCase().replace(/\s+/g, '_') || 'plot_export',
+            height: 1080,
+            width: 1920,
+            scale: 4 // High resolution 4x scale
         }
     };
 
-    // Deep merge or simple override for layout/config? 
-    // For now, let's just spread props but keep the core standards accessible.
-    const mergedLayout = { ...defaultLayout, ...layout };
-    const mergedConfig = { ...defaultConfig, ...config };
+    // Deep merge for config to preserve toImageButtonOptions
+    const mergedConfig = {
+        ...defaultConfig,
+        ...config,
+        toImageButtonOptions: {
+            ...defaultConfig.toImageButtonOptions,
+            ...(config?.toImageButtonOptions || {})
+        }
+    };
+
+    // Merge layout - preserving custom margins but ensuring b is at least dynamicMarginB
+    const mergedLayout = {
+        ...defaultLayout,
+        ...layout,
+        margin: {
+            ...defaultLayout.margin,
+            ...(layout?.margin || {}),
+            b: Math.max(dynamicMarginB, layout?.margin?.b || 0)
+        }
+    };
 
     const content = (
-        <Plot 
-            data={data} 
-            layout={mergedLayout} 
-            config={mergedConfig} 
-            style={style || { width: '100%', height: '100%' }}
+        <Plot
+            data={data}
+            layout={mergedLayout}
+            config={mergedConfig}
+            style={style || { width: '100%', minHeight: '100%' }}
             useResizeHandler
         />
     );
 
     if (!title) {
-        return <div className={cn("w-full h-full", contentClassName)}>{content}</div>;
+        return <div className={cn("w-full h-full", contentClassName)} style={{ minHeight: minPlotHeight }}>{content}</div>;
     }
 
     return (
-        <Card className={cn("border-slate-200 shadow-sm overflow-hidden flex flex-col", className)}>
+        <Card className={cn("border-slate-200 shadow-sm flex flex-col", className)} style={{ minHeight: minPlotHeight }}>
             <CardHeader className="bg-slate-50/40 py-3 border-b border-slate-100 px-6">
                 <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -122,3 +146,4 @@ export function BasePlot({
         </Card>
     );
 }
+

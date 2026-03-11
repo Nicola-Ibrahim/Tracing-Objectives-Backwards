@@ -199,7 +199,6 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                     description="Y-Space mapping of reference data and candidates"
                     data={objectiveTraces}
                     layout={layoutX}
-                    contentClassName="h-[500px]"
                     headerExtra={<Badge variant="outline" className="text-[8px] border-slate-200 text-slate-400 px-1.5 py-0 leading-tight">Y-Space</Badge>}
                 />
 
@@ -208,7 +207,6 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                     description="X-Space mapping of latent features"
                     data={decisionTraces}
                     layout={layoutY}
-                    contentClassName="h-[500px]"
                     headerExtra={<Badge variant="outline" className="text-[8px] border-slate-200 text-slate-400 px-1.5 py-0 leading-tight">X-Space</Badge>}
                 />
             </div>
@@ -217,9 +215,9 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 /* ... (keeping the rest of the winner card and metadata insights as is) ... */
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card className="border-indigo-100 bg-white shadow-xl shadow-indigo-500/5 overflow-hidden relative group/winner rounded-[2.5rem]">
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
-                        <CardContent className="py-6 px-8">
-                            <div className="flex items-start gap-4">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
+                        <CardContent className="py-6 pl-8 pr-8">
+                            <div className="flex items-start gap-3">
                                 <div className="bg-indigo-500 p-2 rounded-xl text-white shadow-lg shadow-indigo-200">
                                     <CheckCircle2 className="h-5 w-5" />
                                 </div>
@@ -237,19 +235,15 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <span className="text-[10px] text-slate-400 block font-medium">Distance to Manifold target profile</span>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-indigo-50 shadow-sm">
-                                                    <span className="text-[10px] text-indigo-300 font-black uppercase">f1</span>
-                                                    <span className="font-mono text-sm font-bold text-indigo-900">
-                                                        {data.best_candidate_objective[0].toFixed(6)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-indigo-50 shadow-sm">
-                                                    <span className="text-[10px] text-indigo-300 font-black uppercase">f2</span>
-                                                    <span className="font-mono text-sm font-bold text-indigo-900">
-                                                        {data.best_candidate_objective[1].toFixed(6)}
-                                                    </span>
-                                                </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <span className="text-[9px] text-indigo-300 font-black uppercase tracking-[0.15em] mb-1 group-hover/metric:text-indigo-400 transition-colors">f1 Objective</span>
+                                                <span className="font-mono text-sm font-bold text-indigo-900 break-all leading-tight">
+                                                    {data.best_candidate_objective[0].toFixed(6)}
+                                                </span>
+                                                <span className="text-[9px] text-indigo-300 font-black uppercase tracking-[0.15em] mb-1 group-hover/metric:text-indigo-400 transition-colors">f2 Objective</span>
+                                                <span className="font-mono text-sm font-bold text-indigo-900 break-all leading-tight">
+                                                    {data.best_candidate_objective[1].toFixed(6)}
+                                                </span>
                                             </div>
                                         </div>
 
@@ -263,7 +257,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <span className="text-[10px] text-slate-400 block font-medium">L2 Approximation Error</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-white px-6 py-3 rounded-2xl border border-slate-100 font-mono text-sm font-bold text-slate-800 shadow-sm text-center">
+                                            <div className="bg-transparent px-6 py-3 rounded-2xl border border-slate-100 font-mono text-sm font-bold text-slate-800 shadow-sm text-center">
                                                 {data.best_candidate_residual.toExponential(4)}
                                             </div>
                                         </div>

@@ -2,31 +2,29 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..value_objects.calibration_curve import CalibrationCurve
+from ..value_objects.empirical_distribution import EmpiricalDistribution
 from ..value_objects.reliability_summary import ReliabilitySummary
 
 
 @dataclass(frozen=True)
-class GenerativeAudit:
-    """The immutable value object representing the outcome of a generative distribution audit."""
+class ReliabilityAudit:
+    """The immutable value object representing the outcome of a reliability audit."""
 
-    pit_values: np.ndarray  # (N_test * x_dim,)
     calibration_error: float  # MACE
     crps: float
-    diversity: np.ndarray  # (N_test,)
-    interval_width: np.ndarray  # (N_test, x_dim)
     summary: ReliabilitySummary
-    calibration_curve: CalibrationCurve
+    calibration_curve: EmpiricalDistribution
+    pit_values: np.ndarray  # Keep internal for profile creation if needed, or remove if Auditor builds profile
 
 
-class GenerativeDistributionAuditor:
+class ReliabilityAuditor:
     """
-    Domain Service: Audits the fidelity and reliability of generated distributions.
+    Domain Service: Audits the reliability of predictions.
     Calculates calibration (PIT, MACE), sharpness (CRPS, Interval Width), and diversity.
     """
 
     @staticmethod
-    def audit(samples: np.ndarray, truth: np.ndarray) -> GenerativeAudit:
+    def audit(samples: np.ndarray, truth: np.ndarray) -> ReliabilityAudit:
         """
         Audits the generated solution cloud against the ground truth.
 
@@ -37,11 +35,11 @@ class GenerativeDistributionAuditor:
         n_test, k_samples, x_dim = samples.shape
 
         # 1. CALIBRATION (PIT and MACE)
-        pit_values = GenerativeDistributionAuditor._compute_pit_values(samples, truth)
-        mace = GenerativeDistributionAuditor._compute_calibration_error(pit_values)
+        pit_values = ReliabilityAuditor._compute_pit_values(samples, truth)
+        mace = ReliabilityAuditor._compute_calibration_error(pit_values)
 
         # 2. PERFORMANCE (CRPS)
-        crps = GenerativeDistributionAuditor._compute_crps(samples, truth)
+        crps = ReliabilityAuditor._compute_crps(samples, truth)
 
         # 3. DISTRIBUTION STATS (Diversity and Interval Width)
         diversity = np.std(samples, axis=1).mean(axis=1)
@@ -60,19 +58,14 @@ class GenerativeDistributionAuditor:
             mean_interval_width=float(np.mean(intervals)),
         )
 
-        calibration_curve = CalibrationCurve(
-            pit_values=np.sort(pit_values),
-            cdf_y=np.arange(1, len(pit_values) + 1) / len(pit_values),
-        )
+        calibration_curve = EmpiricalDistribution.from_samples(pit_values)
 
-        return GenerativeAudit(
-            pit_values=pit_values,
+        return ReliabilityAudit(
             calibration_error=mace,
             crps=crps,
-            diversity=diversity,
-            interval_width=intervals,
             summary=summary,
             calibration_curve=calibration_curve,
+            pit_values=pit_values,
         )
 
     @staticmethod

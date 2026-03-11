@@ -5,8 +5,8 @@ from ....modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceService,
 )
 from ....modules.evaluation.application.diagnose_engines import (
-    DiagnoseInverseModelsParams,
-    DiagnoseInverseModelsService,
+    RunDiagnosticsCommand,
+    RunDiagnosticsService,
 )
 from .dependencies import get_diagnose_service, get_performance_service
 from .schemas import (
@@ -22,27 +22,39 @@ router = APIRouter()
 @router.post("/diagnose", response_model=DiagnoseResponse)
 async def diagnose_engines(
     request: DiagnoseRequest,
-    service: DiagnoseInverseModelsService = Depends(get_diagnose_service),
+    service: RunDiagnosticsService = Depends(get_diagnose_service),
 ):
-    """
-    Run comparative diagnostics across multiple engines.
-    Checks cache first to prevent redundant compute.
-    """
-    candidates = [
-        {"solver_type": c.solver_type, "version": c.version} for c in request.candidates
-    ]
-    params = DiagnoseInverseModelsParams(
+    params = RunDiagnosticsCommand(
         dataset_name=request.dataset_name,
-        inverse_engine_candidates=candidates,
+        inverse_engine_candidates=[c.model_dump() for c in request.candidates],
         num_samples=request.num_samples,
         scale_method=request.scale_method,
     )
 
     result = service.execute(params)
 
-    if result.is_failure:
-        error = result.error
-        raise HTTPException(
+    return result.match(
+        on_success=lambda diagnostics: DiagnoseResponse(
+            dataset_name=request.dataset_name,
+            engines=[
+                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})"
+                for diag in diagnostics
+            ],
+            ecdf={
+                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})": diag.accuracy.discrepancy_profile.model_dump()
+                for diag in diagnostics
+            },
+            pit={
+                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})": diag.reliability.pit_profile.model_dump()
+                for diag in diagnostics
+            },
+            mace={
+                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})": diag.reliability.calibration_error
+                for diag in diagnostics
+            },
+            warnings=[],
+        ),
+        on_failure=lambda error: HTTPException(
             status_code=status.HTTP_404_NOT_FOUND
             if error.code == "NOT_FOUND"
             else status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -51,16 +63,7 @@ async def diagnose_engines(
                 "error_code": error.code,
                 "details": error.details,
             },
-        )
-
-    value = result.value
-    return DiagnoseResponse(
-        dataset_name=value["dataset_name"],
-        engines=value["engines"],
-        ecdf=value["ecdf"],
-        pit=value["pit"],
-        mace=value["mace"],
-        warnings=value["warnings"],
+        ),
     )
 
 
@@ -102,25 +105,25 @@ async def diagnose_engines(
 
 
 @router.post("/performance", response_model=PerformanceResponse)
-async def check_performance(
+async def check_engine_performance(
     request: PerformanceRequest,
     service: CheckModelPerformanceService = Depends(get_performance_service),
 ):
-    """
-    Check performance of a single engine.
-    """
-
     params = CheckModelPerformanceParams(
         dataset_name=request.dataset_name,
-        engine=request.engine,
+        engine=request.engine.model_dump(),
         n_samples=request.n_samples,
     )
-
     result = service.execute(params)
 
-    if result.is_failure:
-        error = result.error
-        raise HTTPException(
+    return result.match(
+        on_success=lambda value: PerformanceResponse(
+            dataset_name=value["dataset_name"],
+            solver_type=value["solver_type"],
+            version=value["version"],
+            insights=value["insights"],
+        ),
+        on_failure=lambda error: HTTPException(
             status_code=status.HTTP_404_NOT_FOUND
             if error.code == "NOT_FOUND"
             else status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -129,12 +132,5 @@ async def check_performance(
                 "error_code": error.code,
                 "details": error.details,
             },
-        )
-
-    value = result.value
-    return PerformanceResponse(
-        dataset_name=value["dataset_name"],
-        solver_type=value["solver_type"],
-        version=value["version"],
-        insights=value["insights"],
+        ),
     )

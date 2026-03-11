@@ -12,14 +12,7 @@ from ...shared.result import Result
 from ..domain.interfaces.base_visualizer import BaseVisualizer
 
 
-class InverseEngineCandidate(BaseModel):
-    """Represents a specific inverse engine candidate (solver_type and optional version)."""
-
-    solver_type: str = Field(..., examples=["GBPI"])
-    version: int | None = Field(
-        default=None,
-        description="Specific integer version number. If None, latest is used.",
-    )
+from .diagnose_engines import EngineCandidate
 
 
 class CheckModelPerformanceParams(BaseModel):
@@ -27,7 +20,7 @@ class CheckModelPerformanceParams(BaseModel):
         ...,
         description="Dataset identifier associated with the engine.",
     )
-    engine: InverseEngineCandidate = Field(
+    engine: EngineCandidate = Field(
         ...,
         description="Engine candidate to check.",
     )

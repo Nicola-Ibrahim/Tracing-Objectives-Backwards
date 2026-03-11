@@ -5,6 +5,21 @@ import { MetricPlotData } from "../types";
 import { FileDown, BarChart3 } from "lucide-react";
 import { BasePlot } from "@/components/ui/BasePlot";
 
+const EVALUATION_COLORS = [
+    "#6366f1", // Indigo
+    "#10b981", // Emerald
+    "#f43f5e", // Rose
+    "#f59e0b", // Amber
+    "#3b82f6", // Blue
+    "#8b5cf6", // Violet
+    "#f97316", // Orange
+    "#06b6d4", // Cyan
+    "#84cc16", // Lime
+    "#ec4899", // Pink
+    "#14b8a6", // Teal
+    "#ef4444", // Red
+];
+
 interface PerformanceChartProps {
     title: string;
     description: string;
@@ -22,14 +37,7 @@ export function PerformanceChart({
     yAxisLabel,
     showIdeal = false
 }: PerformanceChartProps) {
-    const colors = [
-        "#6366f1", // Indigo
-        "#3b82f6", // Blue
-        "#ec4899", // Pink
-        "#14b8a6", // Teal
-        "#f59e0b", // Amber
-        "#8b5cf6", // Violet
-    ];
+
 
     const traces = useMemo(() => {
         const plotTraces = Object.keys(data).map((label, index) => ({
@@ -39,17 +47,15 @@ export function PerformanceChart({
             type: 'scatter' as const,
             mode: 'lines' as const,
             line: {
-                color: colors[index % colors.length],
+                color: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
                 width: 3,
                 shape: 'spline' as const,
                 smoothing: 1.3
             },
-            fill: 'tozeroy' as const,
-            fillcolor: colors[index % colors.length] + '14', // ~8% opacity
             hovertemplate: `<b>${label}</b><br>${yAxisLabel}: %{y:.4f}<br>${xAxisLabel}: %{x:.4f}<extra></extra>`,
             hoverlabel: {
                 bgcolor: 'white',
-                bordercolor: colors[index % colors.length],
+                bordercolor: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
                 font: { family: 'Inter, sans-serif', size: 12, color: '#1e293b' }
             }
         }));
@@ -84,19 +90,16 @@ export function PerformanceChart({
             title: { text: yAxisLabel },
             range: [0, 1.05]
         },
-        paper_bgcolor: 'white',
-        plot_bgcolor: 'white',
     };
 
     return (
-        <BasePlot 
+        <BasePlot
             title={title}
             description={description}
             data={traces}
             layout={layout}
             headerIcon={<FileDown className="h-4 w-4 text-indigo-500" />}
             className="group"
-            contentClassName="h-[450px]"
             config={{
                 toImageButtonOptions: {
                     filename: `${title.toLowerCase().replace(/\s+/g, '_')}_benchmark`,
@@ -119,57 +122,47 @@ export function MetricBarChart({
     data,
     yAxisLabel
 }: MetricBarChartProps) {
-    const labels = Object.keys(data);
-    const values = Object.values(data);
-
-    const colors = [
-        "rgba(99, 102, 241, 0.85)",  // Indigo
-        "rgba(20, 184, 166, 0.85)",  // Teal
-        "rgba(244, 63, 94, 0.85)",   // Rose
-        "rgba(245, 158, 11, 0.85)",  // Amber
-        "rgba(139, 92, 246, 0.85)",  // Violet
-    ];
-
-    const traces = [{
-        x: labels,
-        y: values,
+    const traces = Object.entries(data).map(([label, value], index) => ({
+        x: [label],
+        y: [value],
+        name: label,
         type: 'bar' as const,
         marker: {
-            color: labels.map((_, i) => colors[i % colors.length]),
+            color: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
             line: { width: 0 }
         },
-        hovertemplate: `<b>%{x}</b><br>${yAxisLabel}: %{y:.4f}<extra></extra>`,
+        hovertemplate: `<b>${label}</b><br>${yAxisLabel}: %{y:.4f}<extra></extra>`,
         hoverlabel: {
             bgcolor: 'white',
-            bordercolor: '#6366f1',
+            bordercolor: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
             font: { family: 'Inter, sans-serif', size: 12, color: '#1e293b' }
         }
-    }];
+    }));
 
     const layout = {
+        showlegend: true,
         xaxis: {
             gridcolor: 'transparent',
             tickfont: { size: 12, weight: 700, color: '#64748b' },
-            linecolor: '#f1f5f9'
+            linecolor: '#f1f5f9',
+            automargin: true
         },
         yaxis: {
             title: { text: yAxisLabel },
             gridcolor: '#f8fafc',
             zeroline: false
         },
-        paper_bgcolor: 'white',
-        plot_bgcolor: 'white',
+        margin: { b: 150, t: 40, l: 60, r: 20 },
     };
 
     return (
-        <BasePlot 
+        <BasePlot
             title={title}
             description={description}
             data={traces}
             layout={layout}
             headerIcon={<BarChart3 className="h-4 w-4 text-teal-500" />}
             className="group h-full"
-            contentClassName="h-[450px]"
             config={{
                 toImageButtonOptions: {
                     filename: `${title.toLowerCase().replace(/\s+/g, '_')}_summary`,
@@ -178,3 +171,5 @@ export function MetricBarChart({
         />
     );
 }
+
+

@@ -5,7 +5,7 @@ from ....modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceService,
 )
 from ....modules.evaluation.application.diagnose_engines import (
-    DiagnoseInverseModelsService,
+    RunDiagnosticsService,
 )
 from ....modules.evaluation.infrastructure.repositories.diagnostic_repository import (
     FileSystemDiagnosticRepository,
@@ -19,9 +19,9 @@ from ....modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo
 from ....modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
-def get_diagnose_service() -> DiagnoseInverseModelsService:
+def get_diagnose_service() -> RunDiagnosticsService:
     logger = CMDLogger(name="EvaluationDiagnoseAPI")
-    return DiagnoseInverseModelsService(
+    return RunDiagnosticsService(
         engine_repository=FileSystemInverseMappingEngineRepository(),
         data_repository=FileSystemDatasetRepository(),
         diagnostic_repository=FileSystemDiagnosticRepository(),

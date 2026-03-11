@@ -6,8 +6,8 @@ from ...modules.dataset.infrastructure.repositories.dataset_repository import (
 from ...modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceParams,
     CheckModelPerformanceService,
-    InverseEngineCandidate,
 )
+from ...modules.evaluation.application.diagnose_engines import EngineCandidate
 from ...modules.evaluation.infrastructure.visualization.model_performance_2d.visualizer import (
     ModelPerformance2DVisualizer,
 )
@@ -25,7 +25,7 @@ def main() -> None:
     )
     params = CheckModelPerformanceParams(
         dataset_name="cocoex_f5",
-        engine=InverseEngineCandidate(solver_type="GBPI", version=1),
+        engine=EngineCandidate(solver_type="GBPI", version=1),
         n_samples=50,
     )
     service.execute(params)

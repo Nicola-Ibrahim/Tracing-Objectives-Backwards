@@ -100,7 +100,6 @@ export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
             data={traces}
             layout={layout}
             headerIcon={<Activity className="h-4 w-4 text-indigo-500" />}
-            contentClassName="h-[450px]"
         />
     );
 };

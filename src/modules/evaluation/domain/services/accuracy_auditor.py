@@ -9,8 +9,8 @@ DistanceType = Literal["euclidean", "mahalanobis"]
 
 
 @dataclass(frozen=True)
-class SpatialAudit:
-    """Immutable result of the objective-space audit (normalized objective space)."""
+class AccuracyAudit:
+    """Immutable result of the accuracy audit (normalized objective space)."""
 
     # N: number of targets
     # K: number of candidates
@@ -29,9 +29,9 @@ class SpatialAudit:
         return self.rank_indices[:, 0]
 
 
-class SpatialCandidateAuditor:
+class AccuracyAuditor:
     """
-    Domain Service: Discrepancy contract in *normalized* objective space.
+    Domain Service: Accuracy assessment in *normalized* objective space.
 
     Assumption:
       - candidates and reference live in the same normalized objective space
@@ -52,7 +52,7 @@ class SpatialCandidateAuditor:
         reference: np.ndarray,
         distance: DistanceType = "euclidean",
         ridge: float = 1e-6,
-    ) -> SpatialAudit:
+    ) -> AccuracyAudit:
         """
 
         Args:
@@ -144,7 +144,7 @@ class SpatialCandidateAuditor:
             mean_dispersion=float(np.mean(dispersion)),
         )
 
-        return SpatialAudit(
+        return AccuracyAudit(
             residuals=residuals,
             discrepancy_scores=discrepancy_scores,
             best_shot_scores=best_shot_scores,
