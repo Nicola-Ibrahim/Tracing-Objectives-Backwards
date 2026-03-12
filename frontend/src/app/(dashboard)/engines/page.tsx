@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { listAllEngines, deleteEngines } from "@/features/inverse/api";
+import { listAllEngines, deleteEngines, listEnginesForDataset } from "@/features/inverse/api";
 import { getDatasets } from "@/features/dataset/api";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,7 +60,7 @@ export default function EnginesPage() {
 
     const { data: engines = [], isLoading, refetch, isFetching } = useQuery({
         queryKey: ["engines", datasetFilter],
-        queryFn: () => listAllEngines(datasetFilter === "all" ? undefined : datasetFilter),
+        queryFn: () => datasetFilter === "all" ? listAllEngines() : listEnginesForDataset(datasetFilter),
         refetchOnWindowFocus: true,
         staleTime: 0, // Ensure it's always considered stale so it refetches on mount
     });

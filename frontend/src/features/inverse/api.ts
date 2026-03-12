@@ -31,10 +31,10 @@ export const trainEngine = async (params: TrainEngineRequest): Promise<TrainEngi
 };
 
 /**
- * List existing trained engines for a dataset.
+ * List existing trained engines for a dataset using the RESTful dataset-relative path.
  */
 export const listEnginesForDataset = async (datasetName: string): Promise<EngineListItem[]> => {
-  return apiClient.get(`/api/v1/inverse/engines/${datasetName}`);
+  return apiClient.get(`/api/v1/datasets/${datasetName}/engines`);
 };
 
 /**
@@ -45,15 +45,28 @@ export const generateCandidates = async (params: CandidateGenerationRequest): Pr
 };
 
 /**
- * List all trained engines across all datasets.
+ * List all trained engines across all datasets (Inference Hub).
  */
-export const listAllEngines = async (datasetName?: string): Promise<EngineListItem[]> => {
-  return apiClient.get("/api/v1/inverse/engines", { params: { dataset_name: datasetName } });
+export const listAllEngines = async (): Promise<EngineListItem[]> => {
+  return apiClient.get("/api/v1/inverse/engines");
 };
 
 /**
- * Delete one or multiple engines.
+ * Delete one or multiple engines, grouped by dataset for RESTful compliance.
  */
 export const deleteEngines = async (engines: { dataset_name: string; solver_type: string; version: number }[]): Promise<any> => {
-  return apiClient.post("/api/v1/inverse/engines/delete", { engines });
+  // Group engines by dataset_name to use the new RESTful delete endpoint
+  const grouped = engines.reduce((acc, engine) => {
+    if (!acc[engine.dataset_name]) acc[engine.dataset_name] = [];
+    acc[engine.dataset_name].push(engine);
+    return acc;
+  }, {} as Record<string, typeof engines>);
+
+  const results = await Promise.all(
+    Object.entries(grouped).map(([datasetName, datasetEngines]) =>
+      apiClient.delete(`/api/v1/datasets/${datasetName}/engines`, { data: { engines: datasetEngines } })
+    )
+  );
+  
+  return results.flat();
 };

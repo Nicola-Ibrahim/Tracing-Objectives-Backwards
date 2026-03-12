@@ -8,7 +8,6 @@ from ....modules.inverse.application.inverse_service import (
 )
 from .dependencies import get_inverse_service
 from .schemas import (
-    BulkDeleteEnginesRequest,
     EngineListItem,
     GenerateRequest,
     GenerateResponse,
@@ -125,13 +124,12 @@ async def generate_candidates(
 
 @router.get("/engines", response_model=list[EngineListItem])
 async def list_all_engines(
-    dataset_name: str | None = None,
     service: InverseService = Depends(get_inverse_service),
 ):
     """
-    List trained engines with optional dataset filter.
+    List all trained engines across all datasets (Inference Hub).
     """
-    result = service.list_engines(dataset_name)
+    result = service.list_engines(None)
     return result.match(
         on_success=lambda value: [
             EngineListItem(
@@ -153,54 +151,6 @@ async def list_all_engines(
     )
 
 
-@router.post("/engines/delete")
-async def delete_engines(
-    request: BulkDeleteEnginesRequest,
-    service: InverseService = Depends(get_inverse_service),
-):
-    """
-    Delete one or multiple trained engines.
-    """
-    result = service.delete_engines(request.engines)
-
-    return result.match(
-        on_success=lambda value: value["results"],
-        on_failure=lambda error: HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "message": error.message,
-                "error_code": error.code,
-                "details": error.details,
-            },
-        ),
-    )
 
 
-@router.get("/engines/{dataset_name}", response_model=list[EngineListItem])
-async def list_engines_for_dataset(
-    dataset_name: str,
-    service: InverseService = Depends(get_inverse_service),
-):
-    """
-    List all trained engines for a specific dataset.
-    """
-    result = service.list_engines(dataset_name)
-    return result.match(
-        on_success=lambda value: [
-            EngineListItem(
-                dataset_name=item.get("dataset_name"),
-                solver_type=item["solver_type"],
-                version=item["version"],
-                created_at=item["created_at"],
-            )
-            for item in value
-        ],
-        on_failure=lambda error: HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "message": error.message,
-                "error_code": error.code,
-                "details": error.details,
-            },
-        ),
-    )
+

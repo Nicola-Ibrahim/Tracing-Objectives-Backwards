@@ -12,6 +12,10 @@ class ReliabilityLens(BaseModel):
 
     calibration_error: float  # MACE
     crps: float
+
+    # ! TODO: we have repeated curve, keep the pit.
     pit_profile: EmpiricalDistribution
     calibration_curve: EmpiricalDistribution
+
+    
     summary: ReliabilitySummary

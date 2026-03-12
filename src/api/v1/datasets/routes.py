@@ -14,8 +14,69 @@ from .schemas import (
     DatasetSummary,
     GeneratorsDiscoveryResponse,
 )
+from ..inverse.dependencies import get_inverse_service
+from ....modules.inverse.application.inverse_service import InverseService
+from ..inverse.schemas import EngineListItem, BulkDeleteEnginesRequest
 
 router = APIRouter()
+
+
+@router.get("/{dataset_name}/engines", response_model=list[EngineListItem])
+async def list_engines_for_dataset(
+    dataset_name: str,
+    service: InverseService = Depends(get_inverse_service),
+):
+    """
+    List all trained engines for a specific dataset.
+    """
+    result = service.list_engines(dataset_name)
+    return result.match(
+        on_success=lambda value: [
+            EngineListItem(
+                dataset_name=item.get("dataset_name"),
+                solver_type=item["solver_type"],
+                version=item["version"],
+                created_at=item["created_at"],
+            )
+            for item in value
+        ],
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
+
+
+@router.delete("/{dataset_name}/engines")
+async def delete_engines_for_dataset(
+    dataset_name: str,
+    request: BulkDeleteEnginesRequest,
+    service: InverseService = Depends(get_inverse_service),
+):
+    """
+    Delete specific engines for a dataset.
+    """
+    # Ensure all engines in the request belong to the specified dataset
+    for engine in request.engines:
+        engine["dataset_name"] = dataset_name
+        
+    result = service.delete_engines(request.engines)
+
+    return result.match(
+        on_success=lambda value: value["results"],
+        on_failure=lambda error: HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": error.message,
+                "error_code": error.code,
+                "details": error.details,
+            },
+        ),
+    )
 
 
 @router.get("/generators", response_model=GeneratorsDiscoveryResponse)
@@ -107,13 +168,13 @@ async def get_dataset_details(
     )
 
 
-@router.post("/generate", response_model=DatasetGenerationResponse, status_code=201)
+@router.post("", response_model=DatasetGenerationResponse, status_code=201)
 async def generate_dataset(
     request: DatasetGenerationRequest,
     service: DatasetService = Depends(get_dataset_service),
 ):
     """
-    Generate a new COCOEX dataset.
+    Consolidated endpoint to generate a new dataset.
     """
     config = DatasetConfiguration(
         dataset_name=request.dataset_name,
@@ -142,13 +203,13 @@ async def generate_dataset(
     )
 
 
-@router.post("/delete", response_model=list[DatasetDeleteResponse])
+@router.delete("", response_model=list[DatasetDeleteResponse])
 async def delete_datasets(
     request: BulkDeleteDatasetsRequest,
     service: DatasetService = Depends(get_dataset_service),
 ):
     """
-    Delete one or multiple datasets and all associated trained engines.
+    Consolidated endpoint to delete one or multiple datasets and all associated trained engines.
     """
     result = service.delete_datasets(request.dataset_names)
     return result.match(
