@@ -55,7 +55,7 @@ export default function EvaluationPage() {
                 className="flex flex-col gap-2 relative"
             >
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
+                    <div className="p-2 bg-indigo-600 rounded-lg">
                         <LineChart className="h-6 w-6 text-white" />
                     </div>
                     <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
@@ -103,8 +103,8 @@ export default function EvaluationPage() {
                                 className="space-y-8"
                             >
                                 <div className="grid grid-cols-2 gap-8 mb-8 min-w-0">
-                                    <div className="h-[350px] bg-muted/30 backdrop-blur-sm rounded-2xl border border-border shadow-sm animate-pulse min-w-0" />
-                                    <div className="h-[350px] bg-muted/30 backdrop-blur-sm rounded-2xl border border-border shadow-sm animate-pulse min-w-0" />
+                                    <div className="h-[350px] bg-muted/30 backdrop-blur-sm rounded-2xl border border-border animate-pulse min-w-0" />
+                                    <div className="h-[350px] bg-muted/30 backdrop-blur-sm rounded-2xl border border-border animate-pulse min-w-0" />
                                 </div>
                                 <div className="flex flex-col items-center justify-center p-20 bg-muted/5 rounded-3xl border border-dashed border-border transition-all">
                                     <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-6" />
@@ -151,7 +151,7 @@ export default function EvaluationPage() {
                                         />
                                     </div>
                                     <div className="lg:col-span-2">
-                                        <Card className="border-border bg-card/80 backdrop-blur-md shadow-2xl h-full overflow-hidden flex flex-col rounded-3xl">
+                                        <Card className="border-border bg-card/80 backdrop-blur-md h-full overflow-hidden flex flex-col rounded-3xl">
                                             <CardHeader className="py-6 px-8 bg-muted/10 border-b border-border flex flex-row items-center justify-between space-y-0">
                                                 <CardTitle className="text-xs font-black flex items-center gap-3 text-foreground uppercase tracking-widest">
                                                     <Trophy className="h-4 w-4 text-amber-500" />
@@ -217,7 +217,7 @@ export default function EvaluationPage() {
                                 </div>
 
                                 {result.warnings.length > 0 && (
-                                    <Alert className="bg-indigo-500/5 border-indigo-500/10 text-foreground rounded-3xl shadow-2xl">
+                                    <Alert className="bg-indigo-500/5 border-indigo-500/10 text-foreground rounded-3xl">
                                         <div className="flex items-start gap-4">
                                             <div className="bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20">
                                                 <Sparkles className="h-5 w-5 text-indigo-500" />
@@ -247,14 +247,14 @@ export default function EvaluationPage() {
                                 className="flex flex-col items-center justify-center h-[600px] border-2 border-dashed border-border rounded-[2.5rem] bg-muted/5 backdrop-blur-[2px] p-10 text-center relative overflow-hidden group"
                             >
                                 <div className="absolute inset-0 bg-linear-to-br from-indigo-500/5 via-transparent to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                                <div className="bg-background border border-border p-8 rounded-[2rem] shadow-2xl shadow-indigo-500/5 mb-10 relative z-10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
+                                <div className="bg-background border border-border p-8 rounded-[2rem] mb-10 relative z-10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
                                     <TrendingUp className="h-12 w-12 text-indigo-500" />
                                 </div>
                                 <h3 className="text-3xl font-black text-foreground mb-4 relative z-10 tracking-tight uppercase">Performance Benchmarking</h3>
                                 <p className="text-muted-foreground/70 max-w-sm mb-12 relative z-10 font-medium italic leading-relaxed">
                                     Gain deep insights into your model's reliability. Select target datasets and engine candidates to begin the comparative audit.
                                 </p>
-                                <div className="flex items-center gap-3 text-indigo-500 font-black text-[10px] uppercase tracking-[0.25em] relative z-10 bg-indigo-500/5 px-6 py-3 rounded-2xl border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                                <div className="flex items-center gap-3 text-indigo-500 font-black text-[10px] uppercase tracking-[0.25em] relative z-10 bg-indigo-500/5 px-6 py-3 rounded-2xl border border-indigo-500/20">
                                     <Sparkles className="h-4 w-4 animate-pulse" />
                                     Awaiting Calibration Input
                                 </div>

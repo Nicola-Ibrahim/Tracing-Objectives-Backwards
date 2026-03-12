@@ -44,7 +44,7 @@ export function DatasetChart({ title, data, labelX = "Dim 1", labelY = "Dim 2" }
             title={title}
             data={traces}
             layout={layout}
-            className="border-border shadow-md"
+            className="border-border"
         />
     );
 }

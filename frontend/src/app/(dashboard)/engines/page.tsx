@@ -220,7 +220,7 @@ export default function EnginesPage() {
                     className="flex flex-col gap-2 relative"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
+                        <div className="p-2 bg-indigo-600 rounded-lg">
                             <Layers className="h-6 w-6 text-white" />
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
@@ -243,7 +243,7 @@ export default function EnginesPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                             <Input
                                 placeholder="Filter registry..."
-                                className="pl-10 bg-background border-border shadow-sm focus:ring-2 focus:ring-indigo-500/10 transition-all font-medium rounded-xl h-11"
+                                className="pl-10 bg-background border-border focus:ring-2 focus:ring-indigo-500/10 transition-all font-medium rounded-xl h-11"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -252,7 +252,7 @@ export default function EnginesPage() {
                             <SelectTrigger className="w-full md:w-[180px] bg-background border-border font-black text-foreground h-11 rounded-xl">
                                 <SelectValue placeholder="All Datasets" />
                             </SelectTrigger>
-                            <SelectContent className="bg-popover border-border text-popover-foreground rounded-xl shadow-2xl">
+                            <SelectContent className="bg-popover border-border text-popover-foreground rounded-xl">
                                 <SelectItem value="all" className="font-bold">All Datasets</SelectItem>
                                 {datasets.map((d: any) => (
                                     <SelectItem key={d.name} value={d.name} className="font-bold">{d.name}</SelectItem>
@@ -266,7 +266,7 @@ export default function EnginesPage() {
                             <Button
                                 variant="destructive"
                                 onClick={() => setIsBulkDeleting(true)}
-                                className="font-black uppercase tracking-widest shadow-2xl shadow-rose-500/20 transition-all hover:scale-105 active:scale-95 px-6 h-11 rounded-xl"
+                                className="font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 px-6 h-11 rounded-xl"
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Decommission ({selectedEngines.length})
@@ -277,7 +277,7 @@ export default function EnginesPage() {
                             size="icon"
                             onClick={() => refetch()}
                             disabled={isFetching}
-                            className="bg-background border-border text-muted-foreground hover:text-indigo-500 hover:border-indigo-500/20 h-11 w-11 rounded-xl shadow-sm transition-all active:scale-95 group"
+                            className="bg-background border-border text-muted-foreground hover:text-indigo-500 hover:border-indigo-500/20 h-11 w-11 rounded-xl transition-all active:scale-95 group"
                             title="Refresh Engines"
                         >
                             <RefreshCcw className={cn("h-4 w-4 transition-transform duration-700", isFetching ? "animate-spin" : "group-hover:rotate-180")} />
@@ -286,7 +286,7 @@ export default function EnginesPage() {
                 </motion.div>
             </div>
             
-            <div className="flex items-center gap-3 bg-muted/30 border border-border/50 rounded-xl px-4 h-11 shadow-inner transition-all hover:border-border w-fit">
+            <div className="flex items-center gap-3 bg-muted/30 border border-border/50 rounded-xl px-4 h-11 transition-all hover:border-border w-fit">
                 <Checkbox
                     id="select-all"
                     checked={filteredEngines.length > 0 && selectedEngines.length === filteredEngines.length}
@@ -303,7 +303,7 @@ export default function EnginesPage() {
 
             {/* Individual Delete Confirmation */}
             <Dialog open={!!engineToDelete} onOpenChange={(open) => !open && setEngineToDelete(null)}>
-                <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border shadow-2xl">
+                <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border">
                     <DialogHeader className="p-8 bg-destructive/5 border-b border-border space-y-3">
                         <DialogTitle className="flex items-center gap-3 text-destructive font-black uppercase tracking-tight text-xl">
                             <AlertCircle className="h-6 w-6" />
@@ -321,7 +321,7 @@ export default function EnginesPage() {
                             variant="destructive"
                             onClick={() => engineToDelete && deleteMutation.mutate(engineToDelete)}
                             disabled={deleteMutation.isPending}
-                            className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-8 shadow-xl shadow-destructive/20"
+                            className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-8"
                         >
                             {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Purge"}
                         </Button>
@@ -331,7 +331,7 @@ export default function EnginesPage() {
 
             {/* Bulk Delete Confirmation */}
             <Dialog open={isBulkDeleting} onOpenChange={setIsBulkDeleting}>
-                <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border shadow-2xl">
+                <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border">
                     <DialogHeader className="p-8 bg-destructive/5 border-b border-border space-y-3">
                         <DialogTitle className="flex items-center gap-3 text-destructive font-black uppercase tracking-tight text-xl">
                             <AlertCircle className="h-6 w-6" />
@@ -349,7 +349,7 @@ export default function EnginesPage() {
                             variant="destructive"
                             onClick={() => bulkDeleteMutation.mutate(selectedEngines)}
                             disabled={bulkDeleteMutation.isPending}
-                            className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-8 shadow-xl shadow-destructive/20"
+                            className="rounded-xl font-black uppercase tracking-widest text-[10px] h-11 px-8"
                         >
                             {bulkDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Purge ${selectedEngines.length} Engines`}
                         </Button>
@@ -367,9 +367,9 @@ export default function EnginesPage() {
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                 >
-                    <Card className="border-border shadow-2xl rounded-[3rem] overflow-hidden bg-card">
+                    <Card className="border-border rounded-[3rem] overflow-hidden bg-card">
                         <CardContent className="p-20 text-center bg-linear-to-b from-card to-muted/10">
-                            <div className="bg-background border border-border p-10 rounded-full inline-block mb-8 shadow-2xl ring-8 ring-muted/5 transition-transform hover:scale-110 duration-500">
+                            <div className="bg-background border border-border p-10 rounded-full inline-block mb-8 ring-8 ring-muted/5 transition-transform hover:scale-110 duration-500">
                                 <Cpu className="h-14 w-14 text-muted-foreground/20" />
                             </div>
                             <h3 className="text-3xl font-black text-foreground tracking-tight uppercase mb-4">Registry Empty</h3>
@@ -396,7 +396,7 @@ export default function EnginesPage() {
                                     >
                                         <div className={cn(
                                             "h-7 w-1.5 rounded-full transition-all duration-500",
-                                            expandedDatasets[datasetName] === false ? "bg-muted shadow-none" : "bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.5)]"
+                                            expandedDatasets[datasetName] === false ? "bg-muted" : "bg-indigo-500"
                                         )} />
                                         <div className="flex flex-col">
                                             <h2 className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-[0.3em] flex items-center gap-3 group-hover/dataset:text-indigo-500 transition-colors">
@@ -409,13 +409,13 @@ export default function EnginesPage() {
                                             </h2>
                                             <span className="text-2xl font-black text-foreground tracking-tight uppercase group-hover/dataset:translate-x-1 transition-transform">{datasetName}</span>
                                         </div>
-                                        <Badge variant="outline" className="bg-indigo-500/5 text-indigo-500 border-indigo-500/20 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full ml-4 shadow-lg shadow-indigo-500/5">
+                                        <Badge variant="outline" className="bg-indigo-500/5 text-indigo-500 border-indigo-500/20 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full ml-4">
                                             {Object.values(solverGroups).flat().length} Assets
                                         </Badge>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div 
-                                            className="flex items-center gap-3 px-5 py-2.5 bg-background border border-border/50 rounded-2xl shadow-sm hover:border-indigo-500/40 transition-all cursor-pointer select-none group/select hover:shadow-lg hover:shadow-indigo-500/5"
+                                            className="flex items-center gap-3 px-5 py-2.5 bg-background border border-border/50 rounded-2xl hover:border-indigo-500/40 transition-all cursor-pointer select-none group/select"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 const datasetEngines = Object.values(solverGroups).flat();
@@ -463,7 +463,7 @@ export default function EnginesPage() {
                                                             className="flex items-center gap-3 cursor-pointer select-none group/title"
                                                             onClick={() => toggleGroupExpand(groupKey)}
                                                         >
-                                                            <div className="p-2.5 bg-muted/30 rounded-[1rem] border border-border group-hover/title:bg-indigo-500/10 group-hover/title:border-indigo-500/30 transition-all shadow-sm">
+                                                            <div className="p-2.5 bg-muted/30 rounded-[1rem] border border-border group-hover/title:bg-indigo-500/10 group-hover/title:border-indigo-500/30 transition-all">
                                                                 <Layers className="h-5 w-5 text-indigo-500" />
                                                             </div>
                                                             <h3 className="text-lg font-black text-foreground tracking-tight uppercase group-hover/title:text-indigo-500 transition-colors">
@@ -496,15 +496,15 @@ export default function EnginesPage() {
                                                                     className="transition-all duration-300"
                                                                 >
                                                                     <Card
-                                                                        className={`border-border shadow-2xl transition-all duration-500 group overflow-hidden bg-card/60 backdrop-blur-sm rounded-[1.75rem] cursor-pointer border-l-[6px] ${
+                                                                        className={`border-border transition-all duration-500 group overflow-hidden bg-card/60 backdrop-blur-sm rounded-[1.75rem] cursor-pointer border-l-[6px] ${
                                                                             isEngineSelected 
-                                                                                ? 'border-l-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-500/5 shadow-indigo-500/10' 
+                                                                                ? 'border-l-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-500/5' 
                                                                                 : 'border-l-muted/20 hover:border-l-indigo-400/60'
                                                                         }`}
                                                                         onClick={() => toggleSelection(engine)}
                                                                     >
                                                                         <div className="p-6 flex flex-col md:flex-row items-center gap-8">
-                                                                            <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 border border-transparent transition-all shadow-inner shrink-0 transform group-hover:rotate-12">
+                                                                            <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 border border-transparent transition-all shrink-0 transform group-hover:rotate-12">
                                                                                 <Box className={`h-6 w-6 transition-all duration-500 ${isEngineSelected ? 'text-indigo-500 scale-110' : 'text-muted-foreground/30 group-hover:text-indigo-500'}`} />
                                                                             </div>
                                                                             
@@ -534,7 +534,7 @@ export default function EnginesPage() {
                                                                                 <div className="hidden md:block">
                                                                                     <p className="text-[9px] uppercase font-black text-muted-foreground/20 tracking-[0.2em] mb-2">Telemetry Status</p>
                                                                                     <div className="flex items-center gap-2.5">
-                                                                                        <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse" />
+                                                                                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                                                                         <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Stable</span>
                                                                                     </div>
                                                                                 </div>
@@ -544,7 +544,7 @@ export default function EnginesPage() {
                                                                                         <Checkbox
                                                                                             checked={isEngineSelected}
                                                                                             onCheckedChange={() => toggleSelection(engine)}
-                                                                                            className="h-6 w-6 rounded-lg border-border/60 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 shadow-md transition-all active:scale-90"
+                                                                                            className="h-6 w-6 rounded-lg border-border/60 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 transition-all active:scale-90"
                                                                                         />
                                                                                         <Button
                                                                                             variant="ghost"
@@ -578,7 +578,7 @@ export default function EnginesPage() {
 
                     {filteredEngines.length === 0 && searchQuery && (
                         <div className="py-32 text-center animate-in fade-in zoom-in-95 duration-700">
-                            <div className="bg-muted p-10 rounded-[3rem] inline-block mb-8 border border-border/50 shadow-inner">
+                            <div className="bg-muted p-10 rounded-[3rem] inline-block mb-8 border border-border/50">
                                 <Search className="h-12 w-12 text-muted-foreground/20" />
                             </div>
                             <p className="text-muted-foreground font-black uppercase tracking-[0.2em] text-sm">No registry assets match "<span className="text-indigo-500">{searchQuery}</span>"</p>

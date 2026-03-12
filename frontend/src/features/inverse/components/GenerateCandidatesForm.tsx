@@ -210,7 +210,7 @@ export function GenerateCandidatesForm({
                 <Button
                     type="submit"
                     disabled={isLoading || !form.watch("engine_id")}
-                    className="w-full bg-foreground text-background hover:opacity-90 font-bold h-12 shadow-lg shadow-indigo-500/5 transition-all active:scale-[0.98] group"
+                    className="w-full bg-foreground text-background hover:opacity-90 font-bold h-12 transition-all active:scale-[0.98] group"
                 >
                     {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mr-2 text-indigo-500" />

@@ -45,7 +45,7 @@ export default function TrainEnginePage() {
                 className="flex flex-col gap-2 relative"
             >
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-600/20">
+                    <div className="p-2 bg-indigo-600 rounded-lg">
                         <Cpu className="h-6 w-6 text-white" />
                     </div>
                     <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
@@ -63,7 +63,7 @@ export default function TrainEnginePage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0, transition: { delay: 0.1 } }}
                 >
-                    <Card className="border-border shadow-xl overflow-hidden md:col-span-1 rounded-3xl bg-card transition-all">
+                    <Card className="border-border overflow-hidden md:col-span-1 rounded-3xl bg-card transition-all">
                         <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                             <div className="space-y-1">
                                 <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">
@@ -73,7 +73,7 @@ export default function TrainEnginePage() {
                                     Solver & Pipeline Setup
                                 </CardDescription>
                             </div>
-                            <div className="bg-background p-2 rounded-xl shadow-sm border border-border">
+                            <div className="bg-background p-2 rounded-xl border border-border">
                                 <Activity className="h-5 w-5 text-indigo-500" />
                             </div>
                         </CardHeader>
@@ -92,7 +92,7 @@ export default function TrainEnginePage() {
                     animate={{ opacity: 1, x: 0, transition: { delay: 0.2 } }}
                     className="h-full"
                 >
-                    <Card className="border-border shadow-xl overflow-hidden md:col-span-1 rounded-3xl bg-card transition-all h-full">
+                    <Card className="border-border overflow-hidden md:col-span-1 rounded-3xl bg-card transition-all h-full">
                         <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                             <div className="space-y-1">
                                 <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">
@@ -102,14 +102,14 @@ export default function TrainEnginePage() {
                                     Results & Metrics
                                 </CardDescription>
                             </div>
-                            <div className="bg-background p-2 rounded-xl shadow-sm border border-border">
+                            <div className="bg-background p-2 rounded-xl border border-border">
                                 <Clock className="h-5 w-5 text-emerald-500" />
                             </div>
                         </CardHeader>
                         <CardContent className="p-8 h-full flex flex-col">
                             {!lastResult ? (
                                 <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-2xl bg-muted/10 group transition-all hover:bg-muted/20">
-                                    <div className="bg-background p-4 rounded-full shadow-md mb-4 group-hover:scale-110 transition-transform">
+                                    <div className="bg-background p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
                                         <Cpu className="h-8 w-8 text-muted-foreground/30" />
                                     </div>
                                     <span className="text-muted-foreground/50 font-black uppercase tracking-[0.2em] text-[10px]">
@@ -118,7 +118,7 @@ export default function TrainEnginePage() {
                                 </div>
                             ) : lastResult.success ? (
                                 <div className="space-y-6">
-                                    <Alert className="bg-emerald-500/10 border-emerald-500/20 text-emerald-500 rounded-2xl shadow-sm border-l-4 border-l-emerald-500">
+                                    <Alert className="bg-emerald-500/10 border-emerald-500/20 text-emerald-500 rounded-2xl border-l-4 border-l-emerald-500">
                                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                         <AlertTitle className="font-bold">Construction Complete</AlertTitle>
                                         <AlertDescription className="font-medium">
@@ -126,11 +126,11 @@ export default function TrainEnginePage() {
                                         </AlertDescription>
                                     </Alert>
                                     <div className="grid grid-cols-2 gap-4 text-sm mt-6">
-                                        <div className="p-4 bg-muted/30 rounded-2xl border border-border shadow-inner">
+                                        <div className="p-4 bg-muted/30 rounded-2xl border border-border">
                                             <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-2">Duration</p>
                                             <p className="text-xl font-black text-foreground">{lastResult.data.duration_seconds.toFixed(2)}<span className="text-xs text-muted-foreground ml-1">sec</span></p>
                                         </div>
-                                        <div className="p-4 bg-muted/30 rounded-2xl border border-border shadow-inner">
+                                        <div className="p-4 bg-muted/30 rounded-2xl border border-border">
                                             <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-2">Populated</p>
                                             <p className="text-xl font-black text-foreground">{lastResult.data.n_train_samples}<span className="text-xs text-muted-foreground ml-1">obs</span></p>
                                         </div>

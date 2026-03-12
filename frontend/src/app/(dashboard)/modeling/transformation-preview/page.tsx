@@ -65,7 +65,7 @@ export default function TransformationPreviewerPage() {
                     className="flex flex-col gap-2 relative"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-600/20">
+                        <div className="p-2 bg-indigo-600 rounded-lg">
                             <Binary className="h-6 w-6 text-white" />
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
@@ -81,7 +81,7 @@ export default function TransformationPreviewerPage() {
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-4 bg-muted/30 p-1 rounded-2xl border border-border/50 backdrop-blur-sm shadow-sm"
+                    className="flex items-center gap-4 bg-muted/30 p-1 rounded-2xl border border-border/50 backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-1 px-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mr-2">Layout</span>
@@ -91,7 +91,7 @@ export default function TransformationPreviewerPage() {
                             onClick={() => setCompareMode(true)}
                             className={cn(
                                 "h-8 rounded-xl font-bold text-[10px] px-4 transition-all",
-                                compareMode ? "bg-background text-indigo-500 shadow-sm border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
+                                compareMode ? "bg-background text-indigo-500 border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
                             Difference
@@ -102,7 +102,7 @@ export default function TransformationPreviewerPage() {
                             onClick={() => setCompareMode(false)}
                             className={cn(
                                 "h-8 rounded-xl font-bold text-[10px] px-4 transition-all",
-                                !compareMode ? "bg-background text-indigo-500 shadow-sm border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
+                                !compareMode ? "bg-background text-indigo-500 border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
                             Final State
@@ -118,7 +118,7 @@ export default function TransformationPreviewerPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                     >
-                        <Card className="border-border shadow-2xl rounded-3xl bg-card transition-all">
+                        <Card className="border-border rounded-3xl bg-card transition-all">
                             <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
                                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
                                     <Database className="h-4 w-4" />
@@ -130,7 +130,7 @@ export default function TransformationPreviewerPage() {
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
                                 <Select value={selectedDataset} onValueChange={setSelectedDataset}>
-                                    <SelectTrigger className="w-full bg-background border-border font-bold text-foreground shadow-sm h-10">
+                                    <SelectTrigger className="w-full bg-background border-border font-bold text-foreground h-10">
                                         <SelectValue placeholder="Select dataset..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover border-border text-popover-foreground">
@@ -152,7 +152,7 @@ export default function TransformationPreviewerPage() {
                                                     value={selectedDims[0].toString()}
                                                     onValueChange={(v) => setSelectedDims([parseInt(v), selectedDims[1]])}
                                                 >
-                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black shadow-sm">
+                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-popover border-border text-popover-foreground">
@@ -168,7 +168,7 @@ export default function TransformationPreviewerPage() {
                                                     value={selectedDims[1].toString()}
                                                     onValueChange={(v) => setSelectedDims([selectedDims[0], parseInt(v)])}
                                                 >
-                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black shadow-sm">
+                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-popover border-border text-popover-foreground">
@@ -189,7 +189,7 @@ export default function TransformationPreviewerPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0, transition: { delay: 0.1 } }}
                     >
-                        <Card className="border-border shadow-2xl rounded-3xl bg-card transition-all">
+                        <Card className="border-border rounded-3xl bg-card transition-all">
                             <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
                                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
                                     <Wand2 className="h-4 w-4" />
@@ -217,7 +217,7 @@ export default function TransformationPreviewerPage() {
                                 </div>
 
                                 <Button
-                                    className="w-full bg-foreground text-background hover:opacity-90 font-black h-11 shadow-lg shadow-indigo-500/5 transition-all hover:scale-[1.02] active:scale-95 text-xs tracking-widest uppercase group"
+                                    className="w-full bg-foreground text-background hover:opacity-90 font-black h-11 transition-all hover:scale-[1.02] active:scale-95 text-xs tracking-widest uppercase group"
                                     onClick={handlePreview}
                                     disabled={!selectedDataset || previewMutation.isPending}
                                 >
@@ -235,9 +235,9 @@ export default function TransformationPreviewerPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1, transition: { delay: 0.2 } }}
-                        className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-[2rem] flex gap-4 shadow-sm"
+                        className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-[2rem] flex gap-4"
                     >
-                        <div className="bg-background p-2 rounded-xl h-fit border border-indigo-500/20 shadow-sm">
+                        <div className="bg-background p-2 rounded-xl h-fit border border-indigo-500/20">
                             <Info className="h-4 w-4 text-indigo-500 shrink-0" />
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed font-bold">
@@ -273,10 +273,10 @@ export default function TransformationPreviewerPage() {
                             >
                                 <div className="relative mb-10">
                                     <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                                    <div className="relative w-24 h-24 bg-card rounded-[2.5rem] shadow-2xl shadow-indigo-500/10 flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-border">
+                                    <div className="relative w-24 h-24 bg-card rounded-[2.5rem] flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-border">
                                         <Layers className="h-12 w-12 text-indigo-400 opacity-60" />
                                     </div>
-                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 rounded-2xl shadow-lg flex items-center justify-center">
+                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center">
                                         <Share2 className="h-5 w-5 text-white" />
                                     </div>
                                 </div>

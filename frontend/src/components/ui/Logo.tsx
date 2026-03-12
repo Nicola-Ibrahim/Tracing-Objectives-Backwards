@@ -15,18 +15,19 @@ export const Logo: React.FC<LogoProps> = ({ className, simple = false }) => {
                 viewBox="0 0 100 100"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="drop-shadow-sm"
+                className=""
             >
                 {/* Background Circle / Shield */}
-                <rect width="100" height="100" rx="24" fill="currentColor" className="text-muted/30" />
+                <rect width="100" height="100" rx="24" fill="currentColor" className="text-foreground" />
 
                 {/* The Backward Arrow morphing into data nodes */}
                 <path
                     d="M75 50H30M30 50L45 35M30 50L45 65"
-                    stroke="white"
+                    stroke="currentColor"
                     strokeWidth="6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    className="text-background"
                 />
 
                 {/* Data Nodes (Abstract Circles) */}

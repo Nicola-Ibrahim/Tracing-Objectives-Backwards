@@ -78,10 +78,10 @@ export function DynamicConfigForm({
                     value={value !== undefined && value !== null ? String(value) : ""}
                     onValueChange={(val) => handleValueChange(name, val)}
                 >
-                    <SelectTrigger className="w-full bg-background border-border text-foreground font-medium rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                    <SelectTrigger className="w-full bg-background border-border text-foreground font-medium rounded-xl focus:ring-2 focus:ring-indigo-500/10 transition-all">
                         <SelectValue placeholder={`Select ${name}`} />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border-border text-popover-foreground rounded-xl shadow-2xl">
+                    <SelectContent className="bg-popover border-border text-popover-foreground rounded-xl">
                         {options.map((opt) => (
                             <SelectItem key={String(opt)} value={String(opt)} className="hover:bg-muted focus:bg-muted cursor-pointer transition-colors">
                                 {String(opt)}
@@ -134,7 +134,7 @@ export function DynamicConfigForm({
                     <Textarea
                         placeholder={`Enter JSON for ${name}`}
                         value={typeof value === 'object' ? JSON.stringify(value) : (value || "")}
-                        className="font-mono text-xs bg-muted/20 border-border text-foreground min-h-[100px] focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 rounded-2xl transition-all shadow-inner"
+                        className="font-mono text-xs bg-muted/20 border-border text-foreground min-h-[100px] focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 rounded-2xl transition-all"
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                             const raw = e.target.value;
                             try {
@@ -185,7 +185,7 @@ export function DynamicConfigForm({
                                                 <InfoIcon className="size-3 text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
                                             </div>
                                         </TooltipTrigger>
-                                        <TooltipContent className="max-w-[200px] text-[10px] bg-popover text-popover-foreground border border-border shadow-xl rounded-lg font-medium p-3">
+                                        <TooltipContent className="max-w-[200px] text-[10px] bg-popover text-popover-foreground border border-border rounded-lg font-medium p-3">
                                             <p>{param.description}</p>
                                         </TooltipContent>
                                     </Tooltip>

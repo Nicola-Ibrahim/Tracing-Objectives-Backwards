@@ -129,7 +129,7 @@ export function BasePlot({
     }
 
     return (
-        <Card className={cn("border-border shadow-sm flex flex-col transition-colors duration-300", className)} style={{ minHeight: minPlotHeight }}>
+        <Card className={cn("border-border flex flex-col transition-colors duration-300", className)} style={{ minHeight: minPlotHeight }}>
             <CardHeader className="bg-muted/30 py-3 border-b border-border px-6">
                 <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center justify-between">
                     <div className="flex items-center gap-2">

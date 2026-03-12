@@ -60,7 +60,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                     return (
                         <div
                             key={idx}
-                            className="flex flex-col p-4 bg-background border border-border rounded-2xl shadow-sm hover:border-indigo-500/30 transition-all group relative overflow-hidden"
+                            className="flex flex-col p-4 bg-background border border-border rounded-2xl hover:border-indigo-500/30 transition-all group relative overflow-hidden"
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/20 group-hover:bg-indigo-500 transition-colors" />
                             <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                                                     <Settings2 className="h-4 w-4" />
                                                 </Button>
                                             </DialogTrigger>
-                                            <DialogContent className="sm:max-w-md p-0 rounded-3xl shadow-2xl border-border bg-card overflow-hidden">
+                                            <DialogContent className="sm:max-w-md p-0 rounded-3xl border-border bg-card overflow-hidden">
                                                 <div className="space-y-0">
                                                     <DialogHeader className="flex flex-row items-center gap-4 bg-muted/30 p-6 border-b border-border space-y-0 text-left">
                                                         <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">

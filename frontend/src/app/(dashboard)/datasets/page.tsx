@@ -96,7 +96,7 @@ export default function DatasetsPage() {
                     className="flex flex-col gap-2 relative"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-600/20">
+                        <div className="p-2 bg-indigo-600 rounded-lg">
                             <Database className="h-6 w-6 text-white" />
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
@@ -119,7 +119,7 @@ export default function DatasetsPage() {
                             <Button
                                 variant="destructive"
                                 onClick={() => setIsBulkDeleting(true)}
-                                className="font-bold shadow-lg shadow-rose-500/10 transition-all hover:scale-105 active:scale-95"
+                                className="font-bold transition-all hover:scale-105 active:scale-95"
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete ({selectedNames.length})
@@ -127,7 +127,7 @@ export default function DatasetsPage() {
                         )}
                         <Button
                             onClick={() => setShowGenerator(true)}
-                            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-600/10 transition-all hover:scale-105 active:scale-95"
+                            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold transition-all hover:scale-105 active:scale-95"
                         >
                             <Wand2 className="h-4 w-4 mr-2" />
                             New Dataset
@@ -136,7 +136,7 @@ export default function DatasetsPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search datasets..."
-                                className="pl-9 bg-background border-border shadow-sm focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                                className="pl-9 bg-background border-border focus:ring-2 focus:ring-indigo-500/10 transition-all"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -204,7 +204,7 @@ export default function DatasetsPage() {
             </Dialog>
 
             <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
-                <DialogContent className="sm:max-w-[750px] p-0 border-border bg-card shadow-2xl h-[85vh] flex flex-col">
+                <DialogContent className="sm:max-w-[750px] p-0 border-border bg-card h-[85vh] flex flex-col">
                     <DialogHeader className="p-6 border-b border-border shrink-0">
                         <DialogTitle className="text-xl font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
                             <Wand2 className="h-5 w-5 text-indigo-500" />
@@ -224,7 +224,7 @@ export default function DatasetsPage() {
             </Dialog>
 
             <Dialog open={!!selectedDatasetName} onOpenChange={(open) => !open && setSelectedDatasetName(null)}>
-                <DialogContent className="sm:max-w-[1000px] border-border bg-card shadow-2xl p-0 overflow-hidden">
+                <DialogContent className="sm:max-w-[1000px] border-border bg-card p-0 overflow-hidden">
                     {selectedDatasetName && (
                         <div className="flex flex-col h-full max-h-[90vh]">
                             <div className="bg-muted/30 border-b border-border p-6">
@@ -235,7 +235,7 @@ export default function DatasetsPage() {
                                     <div className="min-w-0">
                                         <h2 className="text-2xl font-black text-foreground truncate tracking-tight uppercase">{selectedDatasetName}</h2>
                                         <div className="flex items-center gap-3 mt-1">
-                                            <Badge variant="outline" className="bg-background text-indigo-500 border-indigo-500/20 text-[10px] font-mono shadow-sm">
+                                            <Badge variant="outline" className="bg-background text-indigo-500 border-indigo-500/20 text-[10px] font-mono">
                                                 ID: {selectedDatasetName.slice(0, 10)}
                                             </Badge>
                                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Decision & Objective Space Visualization</p>
@@ -296,9 +296,9 @@ export default function DatasetsPage() {
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                 >
-                    <Card className="border-border shadow-xl rounded-[2.5rem] overflow-hidden bg-card transition-all">
+                    <Card className="border-border rounded-[2.5rem] overflow-hidden bg-card transition-all">
                         <CardContent className="p-16 text-center bg-linear-to-b from-card to-muted/20">
-                            <div className="bg-background p-8 rounded-full inline-block mb-6 shadow-xl border border-border group-hover:scale-110 transition-transform ring-8 ring-muted/50">
+                            <div className="bg-background p-8 rounded-full inline-block mb-6 border border-border group-hover:scale-110 transition-transform ring-8 ring-muted/50">
                                 <FileText className="h-12 w-12 text-muted-foreground/30" />
                             </div>
                             <h3 className="text-2xl font-black text-foreground tracking-tight uppercase">No datasets found</h3>
@@ -307,7 +307,7 @@ export default function DatasetsPage() {
                             </p>
                             <Button
                                 onClick={() => setShowGenerator(true)}
-                                className="mt-10 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 px-12 rounded-2xl shadow-lg shadow-indigo-600/20"
+                                className="mt-10 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 px-12 rounded-2xl"
                             >
                                 <Sparkles className="h-4 w-4 mr-2" />
                                 Create Discovery Asset
@@ -327,9 +327,9 @@ export default function DatasetsPage() {
                                 exit={{ opacity: 0, scale: 0.95 }}
                             >
                                 <Card
-                                    className={`border-border shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden bg-card rounded-2xl border-l-[6px] ${
+                                    className={`border-border transition-all duration-300 group overflow-hidden bg-card rounded-2xl border-l-[6px] ${
                                         selectedNames.includes(dataset.name) 
-                                            ? 'border-l-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-indigo-500/5' 
+                                            ? 'border-l-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/20' 
                                             : 'border-l-transparent hover:border-l-indigo-500/50'
                                     }`}
                                 >
@@ -345,7 +345,7 @@ export default function DatasetsPage() {
                                             className="flex items-center gap-6 flex-1 min-w-0 cursor-pointer"
                                             onClick={() => setSelectedDatasetName(dataset.name)}
                                         >
-                                            <div className="h-12 w-12 bg-muted/50 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-indigo-500/10 border border-border group-hover:border-indigo-500/20 transition-all duration-300 shadow-inner">
+                                            <div className="h-12 w-12 bg-muted/50 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-indigo-500/10 border border-border group-hover:border-indigo-500/20 transition-all duration-300">
                                                 <Database className="h-6 w-6 text-muted-foreground/50 group-hover:text-indigo-500 group-hover:scale-110 transition-all duration-300" />
                                             </div>
                                             <div className="min-w-0 flex-1">

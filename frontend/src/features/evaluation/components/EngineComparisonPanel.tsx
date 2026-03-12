@@ -55,7 +55,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
     };
 
     return (
-        <Card className="border-border shadow-2xl bg-card/50 backdrop-blur-sm rounded-[2rem] overflow-hidden">
+        <Card className="border-border bg-card/50 backdrop-blur-sm rounded-[2rem] overflow-hidden">
             <CardHeader className="bg-muted/10 border-b border-border p-8">
                 <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground uppercase tracking-tight">
                     <Activity className="h-6 w-6 text-indigo-500" />
@@ -70,7 +70,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                         <SelectTrigger className="bg-background border-border text-foreground h-12 rounded-2xl focus:ring-2 focus:ring-indigo-500/10 transition-all">
                             <SelectValue placeholder="Select target dataset" />
                         </SelectTrigger>
-                        <SelectContent className="bg-popover border-border text-popover-foreground rounded-2xl shadow-2xl">
+                        <SelectContent className="bg-popover border-border text-popover-foreground rounded-2xl">
                             {datasets.map(d => (
                                 <SelectItem key={d} value={d} className="hover:bg-muted focus:bg-muted cursor-pointer font-bold tracking-tight">{d}</SelectItem>
                             ))}
@@ -99,8 +99,8 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                                             onClick={() => toggleEngine(e)}
                                             className={`flex items-center justify-between p-4 border rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group ${
                                                 isSelected 
-                                                    ? "bg-indigo-500/10 border-indigo-500/50 text-foreground ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5" 
-                                                    : "hover:border-indigo-500/30 bg-background border-border text-foreground hover:shadow-md"
+                                                    ? "bg-indigo-500/10 border-indigo-500/50 text-foreground ring-1 ring-indigo-500/20" 
+                                                    : "hover:border-indigo-500/30 bg-background border-border text-foreground"
                                             }`}
                                         >
                                             {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />}
@@ -128,7 +128,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                     <div className="pt-6 border-t border-border flex flex-col gap-6 animate-in fade-in duration-500">
                         <div className="flex flex-wrap gap-2 pt-2">
                             {selectedEngines.map(e => (
-                                <Badge key={`${e.solver_type}_v${e.version}`} variant="indigo" className="flex items-center gap-2 group px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/10">
+                                <Badge key={`${e.solver_type}_v${e.version}`} variant="indigo" className="flex items-center gap-2 group px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest">
                                     {e.solver_type} v{e.version}
                                     <X className="h-3 w-3 cursor-pointer opacity-50 group-hover:opacity-100 hover:scale-125 transition-all text-white" onClick={(e_event) => {
                                         e_event.stopPropagation();
@@ -141,7 +141,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                         <Button
                             disabled={isLoading}
                             onClick={handleDiagnose}
-                            className={`w-full py-8 transition-all duration-500 relative overflow-hidden group/btn rounded-2xl border border-transparent shadow-2xl ${
+                            className={`w-full py-8 transition-all duration-500 relative overflow-hidden group/btn rounded-2xl border border-transparent ${
                                 isLoading
                                     ? "bg-muted cursor-not-allowed text-muted-foreground opacity-50"
                                     : "bg-foreground text-background hover:bg-indigo-500 hover:text-white active:scale-[0.98]"

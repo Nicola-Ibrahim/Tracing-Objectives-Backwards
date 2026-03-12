@@ -8,7 +8,7 @@ interface CardProps {
 
 export function Card({ children, className = "", title }: CardProps) {
     return (
-        <div className={`bg-card text-card-foreground border border-border shadow-sm rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md ${className}`}>
+        <div className={`bg-card text-card-foreground border border-border rounded-2xl overflow-hidden transition-all duration-300 ${className}`}>
             {title && (
                 <div className="flex items-center justify-between py-4 px-6 border-b border-border bg-muted/30">
                     <h3 className="text-sm font-bold tracking-tight">{title}</h3>
@@ -30,7 +30,7 @@ export function Badge({ children, variant = "default", className = "" }: { child
         indigo: "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20",
     };
     return (
-        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${variants[variant]} ${className}`}>
+        <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${variants[variant]} ${className}`}>
             {children}
         </span>
     );
@@ -52,7 +52,7 @@ export function StatCard({ label, value, subValue, icon, trend }: { label: strin
                     </div>
                     {subValue && <p className="text-[10px] text-muted-foreground font-medium">{subValue}</p>}
                 </div>
-                {icon && <div className="p-3 bg-secondary rounded-2xl text-secondary-foreground shadow-sm">{icon}</div>}
+                {icon && <div className="p-3 bg-secondary rounded-2xl text-secondary-foreground">{icon}</div>}
             </div>
         </Card>
     );
@@ -72,11 +72,11 @@ export function Button({
     ...props
 }: ButtonProps) {
     const variants = {
-        primary: "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-indigo-600/30 dark:bg-indigo-500 dark:hover:bg-indigo-600",
-        secondary: "bg-secondary text-secondary-foreground border border-border hover:bg-muted shadow-sm",
+        primary: "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600",
+        secondary: "bg-secondary text-secondary-foreground border border-border hover:bg-muted",
         outline: "bg-transparent border-2 border-indigo-500 text-indigo-500 hover:bg-indigo-500/10",
         ghost: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-        amber: "bg-amber-600 text-white shadow-lg shadow-amber-600/20 hover:bg-amber-700 hover:shadow-amber-600/30",
+        amber: "bg-amber-600 text-white hover:bg-amber-700",
     };
 
     return (
@@ -108,7 +108,7 @@ export function Input({ label, description, className = "", value, ...props }: I
                 {description && <p className="text-[10px] text-muted-foreground font-medium leading-tight">{description}</p>}
             </div>
             <input
-                className={`w-full px-4 py-3 rounded-xl border border-input bg-background focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm shadow-sm placeholder:text-muted-foreground ${className}`}
+                className={`w-full px-4 py-3 rounded-xl border border-input bg-background focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm placeholder:text-muted-foreground ${className}`}
                 {...props}
                 value={safeValue}
             />

@@ -14,6 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/index";
 import { Logo } from "@/components/ui/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+
+import { HeroVisual } from "@/components/ui/HeroVisual";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -53,63 +56,80 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-8 text-sm font-bold text-muted-foreground uppercase tracking-widest">
           <Link href="#infrastructure" className="hover:text-indigo-500 transition-colors">Infrastructure</Link>
           <Link href="/datasets" className="hover:text-indigo-500 transition-colors">Data Hub</Link>
-          <Button variant="secondary" className="rounded-2xl" asChild>
-            <Link href="/datasets">Open Console</Link>
-          </Button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Button className="rounded-2xl bg-foreground text-background hover:bg-foreground/90 transition-all border-none active:scale-95" asChild>
+              <Link href="/datasets">Open Console</Link>
+            </Button>
+          </div>
         </nav>
       </motion.header>
 
       {/* Hero Section */}
       <section className="relative pt-16 pb-24 md:pt-32 md:pb-48 z-10">
         <div className="container mx-auto px-6">
-          <div className="max-w-5xl mx-auto text-center">
-            <motion.div
-              {...fadeIn}
-              className="inline-block"
-            >
-              <Badge variant="indigo" className="mb-8 px-5 py-2">
-                <Sparkles className="h-3 w-3 mr-2 font-bold" />
-                Advanced Inverse Mapping Protocol v1.2.0
-              </Badge>
-            </motion.div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Content Column */}
+            <div className="lg:col-span-7 flex flex-col items-start text-left order-2 lg:order-1">
+              <motion.div
+                {...fadeIn}
+                className="inline-block"
+              >
+                <Badge variant="indigo" className="mb-8 px-5 py-2 font-bold tracking-tight">
+                  <Sparkles className="h-3 w-3 mr-2 font-bold" />
+                  Advanced Inverse Mapping Protocol v1.2.0
+                </Badge>
+              </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="text-7xl md:text-9xl font-black tracking-tighter text-foreground mb-10 leading-[0.85] text-balance"
-            >
-              Trace Your Objectives <br />
-              <span className="bg-clip-text text-transparent bg-linear-to-r from-indigo-600 via-blue-500 to-indigo-600 dark:from-indigo-400 dark:via-blue-400 dark:to-indigo-400">
-                Backwards
-              </span>
-            </motion.h1>
+              <motion.h1
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="text-6xl md:text-8xl xl:text-9xl font-black tracking-tighter text-foreground mb-10 leading-[0.85] text-balance"
+              >
+                Trace Your <br className="hidden md:block" />
+                Objectives <br />
+                <span className="bg-clip-text text-transparent bg-linear-to-r from-indigo-600 via-blue-500 to-indigo-600 dark:from-indigo-400 dark:via-blue-400 dark:to-indigo-400">
+                  Backwards
+                </span>
+              </motion.h1>
 
-            <motion.p
-              {...fadeIn}
-              transition={{ delay: 0.2 }}
-              className="text-xl md:text-2xl text-muted-foreground mb-14 leading-relaxed max-w-3xl mx-auto font-medium"
-            >
-              Invert high-dimensional models with mathematical precision.
-              Find the optimal path from target outcomes back to their decision parameters.
-            </motion.p>
+              <motion.p
+                {...fadeIn}
+                transition={{ delay: 0.2 }}
+                className="text-xl md:text-2xl text-muted-foreground mb-14 leading-relaxed max-w-2xl font-medium"
+              >
+                Invert high-dimensional models with mathematical precision.
+                Find the optimal path from target outcomes back to their decision parameters.
+              </motion.p>
 
-            <motion.div
-              {...fadeIn}
-              transition={{ delay: 0.4 }}
-              className="flex flex-wrap items-center justify-center gap-8"
+              <motion.div
+                {...fadeIn}
+                transition={{ delay: 0.4 }}
+                className="flex flex-wrap items-center justify-start gap-8"
+              >
+                <Button size="lg" className="rounded-3xl h-20 px-12 text-2xl font-black transition-all hover:scale-105 active:scale-95 group" asChild>
+                  <Link href="/inverse/generate">
+                    Launch Explorer
+                    <ArrowRight className="ml-3 h-8 w-8 group-hover:translate-x-2 transition-transform" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="secondary" className="rounded-3xl h-20 px-10 text-xl font-bold bg-background/50 backdrop-blur-sm border-border hover:bg-muted transition-all" asChild>
+                  <Link href="/datasets">
+                    Data Workbench
+                  </Link>
+                </Button>
+              </motion.div>
+            </div>
+
+            {/* Right Visual Column */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, x: 30 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="lg:col-span-5 relative order-1 lg:order-2 flex items-center justify-center"
             >
-              <Button size="lg" className="rounded-3xl h-20 px-12 text-2xl font-black transition-all hover:scale-105 active:scale-95 group" asChild>
-                <Link href="/inverse/generate">
-                  Launch Explorer
-                  <ArrowRight className="ml-3 h-8 w-8 group-hover:translate-x-2 transition-transform" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="secondary" className="rounded-3xl h-20 px-10 text-xl font-bold bg-background/50 backdrop-blur-sm border-border hover:bg-muted transition-all" asChild>
-                <Link href="/datasets">
-                  Data Workbench
-                </Link>
-              </Button>
+              <HeroVisual className="w-full max-w-[500px]" />
             </motion.div>
           </div>
         </div>
@@ -138,11 +158,11 @@ export default function LandingPage() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             {/* Data Hub */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <Database size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mb-8 shadow-lg shadow-indigo-600/20">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mb-8">
                 <Database className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Data Analytics Hub</h3>
@@ -155,11 +175,11 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Train Engine */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:shadow-xl hover:border-blue-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-blue-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <Cpu size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mb-8 shadow-lg shadow-blue-600/20">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mb-8">
                 <Cpu className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Engine Construction</h3>
@@ -172,11 +192,11 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Inference Hub */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:shadow-xl hover:border-purple-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-purple-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <Sparkles size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center mb-8 shadow-lg shadow-purple-600/20">
+              <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center mb-8">
                 <Sparkles className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Inference Registry</h3>
@@ -189,11 +209,11 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Evaluation */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:shadow-xl hover:border-emerald-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-emerald-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <BarChart3 size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mb-8 shadow-lg shadow-emerald-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mb-8">
                 <BarChart3 className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Leaderboard Metrics</h3>
@@ -211,7 +231,7 @@ export default function LandingPage() {
       {/* Registry Summary Section */}
       <section className="py-32 bg-background/50 transition-colors duration-500">
         <div className="container mx-auto px-6">
-          <div className="bg-card border border-border rounded-[4rem] p-16 flex flex-col items-center text-center relative overflow-hidden group shadow-2xl shadow-indigo-500/5">
+          <div className="bg-card border border-border rounded-[4rem] p-16 flex flex-col items-center text-center relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.05),transparent_70%)]"></div>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -254,7 +274,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="md:col-span-5 flex flex-col items-end">
-              <div className="bg-muted border border-border p-8 rounded-[2.5rem] w-full max-w-sm flex items-center justify-between group cursor-pointer transition-all shadow-sm overflow-hidden relative">
+              <div className="bg-muted border border-border p-8 rounded-[2.5rem] w-full max-w-sm flex items-center justify-between group cursor-pointer transition-all overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-full h-full bg-indigo-500/5 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                 <div className="flex flex-col relative z-10">
                   <span className="font-black text-2xl tracking-tighter italic text-muted-foreground group-hover:text-indigo-500 transition-colors">Start Generating</span>

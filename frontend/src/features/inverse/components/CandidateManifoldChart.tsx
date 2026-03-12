@@ -213,11 +213,11 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
 
             {data && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-border bg-card shadow-2xl overflow-hidden relative group/winner rounded-[2.5rem] transition-all">
+                    <Card className="border-border bg-card overflow-hidden relative group/winner rounded-[2.5rem] transition-all">
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
                         <CardContent className="py-8 pl-10 pr-10">
                             <div className="flex items-start gap-4">
-                                <div className="bg-indigo-500 p-3 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+                                <div className="bg-indigo-500 p-3 rounded-2xl text-white">
                                     <CheckCircle2 className="h-6 w-6" />
                                 </div>
                                 <div className="grow">
@@ -225,9 +225,9 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                     <p className="text-[10px] font-black text-muted-foreground mb-8 uppercase tracking-widest opacity-60">Best candidate approximation identified at index #{data.best_index}.</p>
 
                                     <div className="flex flex-col gap-5 mt-6">
-                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background hover:shadow-xl transition-all duration-500">
+                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background transition-all duration-500">
                                             <div className="flex items-center gap-4">
-                                                <div className="bg-background p-3 rounded-xl shadow-sm group-hover/row:bg-indigo-500/10 border border-border transition-colors">
+                                                <div className="bg-background p-3 rounded-xl group-hover/row:bg-indigo-500/10 border border-border transition-colors">
                                                     <Target className="h-5 w-5 text-indigo-500" />
                                                 </div>
                                                 <div>
@@ -251,9 +251,9 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                             </div>
                                         </div>
 
-                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background hover:shadow-xl transition-all duration-500">
+                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background transition-all duration-500">
                                             <div className="flex items-center gap-4">
-                                                <div className="bg-background p-3 rounded-xl shadow-sm border border-border transition-colors group-hover/row:bg-rose-500/10">
+                                                <div className="bg-background p-3 rounded-xl border border-border transition-colors group-hover/row:bg-rose-500/10">
                                                     <Activity className="h-5 w-5 text-muted-foreground group-hover/row:text-rose-500" />
                                                 </div>
                                                 <div>
@@ -261,14 +261,14 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">L2 Approximation Error</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-background/50 px-6 py-4 rounded-2xl border border-border font-mono text-sm font-bold text-foreground shadow-inner text-center">
+                                            <div className="bg-background/50 px-6 py-4 rounded-2xl border border-border font-mono text-sm font-bold text-foreground text-center">
                                                 {data.best_candidate_residual.toExponential(4)}
                                             </div>
                                         </div>
 
-                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background hover:shadow-xl transition-all duration-500">
+                                        <div className="bg-muted/30 p-6 rounded-[2rem] border border-border flex flex-col gap-5 group/row hover:bg-background transition-all duration-500">
                                             <div className="flex items-center gap-4">
-                                                <div className="bg-background p-3 rounded-xl shadow-sm border border-border transition-colors group-hover/row:bg-indigo-500/10">
+                                                <div className="bg-background p-3 rounded-xl border border-border transition-colors group-hover/row:bg-indigo-500/10">
                                                     <Network className="h-5 w-5 text-muted-foreground group-hover/row:text-indigo-500" />
                                                 </div>
                                                 <div>
@@ -276,14 +276,14 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">High-dim parameter sample</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-background p-4 rounded-2xl border border-border shadow-sm">
+                                            <div className="bg-background p-4 rounded-2xl border border-border">
                                                 <div className="font-mono text-[10px] text-muted-foreground break-all leading-relaxed bg-muted/50 p-2 rounded-lg mb-4 border border-border/50">
                                                     {`[ ${data.best_candidate_decision.slice(0, 5).map(v => v.toFixed(3)).join(", ")} ... ]`}
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <div className="grow h-2 bg-muted rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-indigo-500 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.6)]"
+                                                            className="h-full bg-indigo-500 rounded-full"
                                                             style={{ width: `${Math.min(100, Math.max(10, (1 - data.best_candidate_residual) * 100))}%` }}
                                                         />
                                                     </div>
@@ -299,7 +299,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
 
                     <div className="flex flex-col gap-6">
                         {data.solver_type === "GBPI" ? (
-                            <Card className="border-border bg-card shadow-2xl rounded-[2.5rem] transition-all">
+                            <Card className="border-border bg-card rounded-[2.5rem] transition-all">
                                 <CardContent className="py-8 px-10">
                                     <div className="flex items-start gap-4">
                                         <div className="bg-muted p-2.5 rounded-xl text-muted-foreground">
@@ -326,10 +326,10 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                 </CardContent>
                             </Card>
                         ) : (data.metadata?.log_likelihood ? (
-                            <Card className="border-border bg-card shadow-2xl rounded-[2.5rem] transition-all">
+                            <Card className="border-border bg-card rounded-[2.5rem] transition-all">
                                 <CardContent className="py-8 px-10">
                                     <div className="flex items-start gap-4">
-                                        <div className="bg-indigo-500 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                                        <div className="bg-indigo-500 p-2.5 rounded-xl text-white">
                                             <Activity className="h-5 w-5" />
                                         </div>
                                         <div className="grow">
