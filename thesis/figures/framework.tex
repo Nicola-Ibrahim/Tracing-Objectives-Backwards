@@ -1,7 +1,7 @@
 \begin{tikzpicture}[
     % --- Global Color Definitions ---
     execute at begin picture={
-        \definecolor{colInv}{RGB}{0, 119, 182}    
+        \definecolor{colInv}{RGB}{0, 119, 182}   
         \definecolor{colFwd}{RGB}{208, 0, 0}      
         \definecolor{colSelect}{RGB}{247, 127, 0} 
         \definecolor{colSuccess}{RGB}{43, 147, 72} 
@@ -14,8 +14,8 @@
     base/.style={font=\sffamily\footnotesize, align=center, minimum height=0.7cm, draw, line width=0.7pt, rounded corners=3pt},
     data/.style={base, draw=colTrain, fill=colTrain!5, dashed, minimum width=2.8cm},
     norm/.style={base, draw=colNorm, fill=colNorm!10, text=colNorm!80!black, minimum width=2.8cm},
-    inverse/.style={base, draw=colInv, fill=colInv!10, text=colInv, font=\sffamily\bfseries\footnotesize, minimum width=3.4cm},
-    forward/.style={base, draw=colFwd, fill=colFwd!10, text=colFwd, minimum width=3.2cm},
+    inverse/.style={base, draw=colInv, fill=colInv!10, text=colInv, font=\sffamily\bfseries\footnotesize, minimum width=3.8cm},
+    forward/.style={base, draw=colFwd, fill=colFwd!10, text=colFwd, minimum width=3.8cm},
     target/.style={base, fill=white, draw=black, minimum width=2.6cm, double, double distance=1pt},
     ranking/.style={base, draw=colSelect, fill=colSelect!10, text=colSelect!80!black, minimum width=3.8cm},
     result/.style={base, fill=colSuccess, draw=colSuccess!70!black, text=white, font=\sffamily\bfseries\footnotesize, minimum width=3.8cm},
@@ -30,10 +30,13 @@
 
         \node[data, below=0.5cm of Title1] (RawData) {Raw Examples $\mathcal{D}_{raw}$};
         \node[norm, below=of RawData] (Preprocessing) {Normalization \&\\Preprocessing};
-        \node[inverse, below=of Preprocessing] (InverseModel) {Inverse Model\\$q_\theta(x|y)$};
+        
+        % UPDATED: Now encompasses both paradigms
+        \node[inverse, below=of Preprocessing] (InverseModel) {Inverse Engine};
 
         \draw[->, colTrain] (RawData) -- (Preprocessing);
-        \draw[->, colTrain] (Preprocessing) -- node[right, font=\tiny] {Fit Generator} (InverseModel);
+        % UPDATED: "Fit" for NN, "Construct" for GBPI Mesh
+        \draw[->, colTrain] (Preprocessing) -- node[right, font=\tiny] {Fit / Construct} (InverseModel);
 
         \begin{scope}[on background layer]
             \node[draw=black!10, fill=black!2, dashed, rounded corners=12pt, inner sep=15pt, fit=(Title1) (InverseModel)] (Box1) {};
@@ -43,18 +46,18 @@
     % =============================================================================
     % PHASE 2: INTERACTIVE EXPLORATION (Online)
     % =============================================================================
-    \begin{scope}[xshift=7.5cm, local bounding box=OnlineScope]
+    \begin{scope}[xshift=7.8cm, local bounding box=OnlineScope]
         \node[titleStyle] (Title2) at (0.8, 0.8) {INTERACTIVE EXPLORATION};
 
         % Functional Flow
         \node[target, below=0.5cm of Title2] (Target) {Target Outcome\\$y^\star \in \mathcal{Y}$};
         \node[inverse, below=of Target] (Propose) {Proposal Mechanism\\Generate $\{\hat{x}^{(k)}\}_{k=1}^K$};
         
-        % Forward Surrogate
-        \node[forward, right=1.2cm of Propose] (Surrogate) {Forward Surrogate\\$\hat{f}(x)$};
+        % UPDATED: Now explicitly represents the Universal Evaluator
+        \node[forward, right=1.0cm of Propose] (Surrogate) {Outcome Evaluator $\mathcal{E}$\\(Simulator or Surrogate)};
         
-        % Unified Evaluation & Analysis Block
-        \node[ranking, below=1.2cm of Propose] (Evaluation) {Evaluation \& Analysis\\$\hat{f}(\hat{x}^{(k)}) \to$ Rank by Discrepancy};
+        % UPDATED: Math reflects the universal evaluator \mathcal{E}
+        \node[ranking, below=1.2cm of Propose] (Evaluation) {Evaluation \& Analysis\\$\mathcal{E}(\hat{x}^{(k)}) \to$ Rank by Discrepancy};
         
         % Final Decision Node
         \node[result, below=1.2cm of Evaluation] (Decision) {Validated Decision $\hat{x}$\\\& Insights};
@@ -76,7 +79,7 @@
     % =============================================================================
     % CROSS-PHASE DEPLOYMENT
     % =============================================================================
-    \draw[->, colInv, dotted, line width=1.4pt] (InverseModel.east) -- ++(0.8,0) |- (Propose.west)
+    \draw[->, colInv, dotted, line width=1.4pt] (InverseModel.east) -- ++(0.6,0) |- (Propose.west)
         node[pos=0.25, above, font=\tiny\bfseries] {Deployed};
 
 \end{tikzpicture}

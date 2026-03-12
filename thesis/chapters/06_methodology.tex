@@ -19,38 +19,45 @@ candidates in objective space using a stated outcome evaluator and a task-define
 
 
 %-------------------------------------------------------------------------------
-\section{Problem formulation}\label{sec:problem_formulation}
+\section{Problem Formulation}\label{sec:problem_formulation}
 %-------------------------------------------------------------------------------
 
-Inverse querying is formulated as learning a conditional model over decisions given objectives.
-Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the admissible decision space and
-$\mathcal{Y}\subset\mathbb{R}^{m}$ the objective space. A query specifies a target
-$\vect{y}^{\star}\in\mathcal{Y}$. The method returns a set of candidate decisions
-$\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}\subset\mathcal{X}$ together with an ordering induced by
-objective-space attainment. 
+The core objective of this research is to solve the one-to-many inverse mapping problem. Let $\mathcal{X}\subset\mathbb{R}^{n}$ denote the high-dimensional, admissible decision space (design parameters) and $\mathcal{Y}\subset\mathbb{R}^{m}$ the objective space (performance metrics). A query specifies a desired target performance $\vect{y}^{\star}\in\mathcal{Y}$. 
 
-Building on the conceptual framework established in Equation~\eqref{eq:candidate_sampling}, the inverse component is represented as a parametric conditional distribution $q_\theta(\vect{x}\mid\vect{y})$. Utilizing the likelihood-based principle defined in Equation~\eqref{eq:prob_mle}, training fits parameters by minimizing the empirical negative log-likelihood (NLL) over the dataset:
+Because the mapping from $\mathcal{X} \to \mathcal{Y}$ is inherently surjective (multiple distinct designs can yield the exact same performance), the problem cannot be solved with a simple deterministic function. Instead, an inverse query must return a diverse set of candidate decisions $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}\subset\mathcal{X}$, together with an ordering induced by their objective-space attainment. 
+
+To achieve this, this thesis investigates two fundamentally distinct mathematical paradigms for formulating the inverse generator, dictated by the availability of training data:
+
+\subsection{Paradigm 1: Global Parametric Modeling (Data-Rich Environments)}
+Building on the conceptual framework established in Equation~\eqref{eq:candidate_sampling}, traditional deep learning approaches (such as MDNs, CVAEs, and INNs) formulate the inverse component as a global parametric conditional distribution $q_\theta(\vect{x}\mid\vect{y})$. Utilizing the likelihood-based principle defined in Equation~\eqref{eq:prob_mle}, training fits the neural network parameters $\theta$ by minimizing the empirical negative log-likelihood (NLL) over the dataset:
 \begin{equation}
 \widehat{\theta}\in\arg\min_{\theta}\frac{1}{N}\sum_{i=1}^{N}
 \Big[-\log q_\theta(\vect{x}_i\mid\vect{y}_i)\Big].
 \label{eq:cond_mle_methodology}
 \end{equation}
-While Equation~\eqref{eq:prob_mle} defines the statistical goal of maximizing probability mass, the negative formulation in \eqref{eq:cond_mle_methodology} is mathematically equivalent and aligns the objective with standard gradient-based minimization protocols used in deep learning. This objective relies solely on the empirical distribution of the training data and does not require active calls to a forward operator during the model synthesis phase.
-
-At query time, the method instantiates the proposal stage by drawing a fixed-size candidate set:
+While Equation~\eqref{eq:prob_mle} defines the statistical goal of maximizing probability mass, the negative formulation in \eqref{eq:cond_mle_methodology} aligns the objective with standard gradient-based minimization protocols. At query time, the method draws a fixed-size candidate set directly from the learned distribution:
 \begin{equation}
   \widehat{\vect{x}}^{(k)} \sim q_{\widehat{\theta}}(\vect{x}\mid\vect{y}^\star),
   \qquad k=1,\dots,K.
   \label{eq:candidate_generation_methodology}
 \end{equation}
-To verify these proposals, we operationalize the scoring logic introduced in Equation~\eqref{eq:verify_score_bg}. Specifically, we assess attainment using an outcome evaluator $\mathcal{E}:\mathcal{X}\to\mathcal{Y}$ and a discrepancy function $d:\mathcal{Y} \times \mathcal{Y} \to \mathbb{R}_{\ge 0}$. Each candidate $k$ receives a score:
+This formulation relies solely on the empirical distribution of the training data and does not require active calls to a forward operator during the synthesis phase. However, it requires a massive dataset ($N$) to accurately shape $q_\theta$.
+
+\subsection{Paradigm 2: Local Geometric \& Bounded Optimization (Data-Sparse Environments)}
+When the dataset is strictly constrained ($N \le 100$), minimizing the NLL (Equation \ref{eq:cond_mle_methodology}) across a high-dimensional space leads to severe overfitting and physical hallucinations. Therefore, this thesis proposes formulating the inverse problem not as a global probability distribution, but as a localized geometric interpolation bounded by a fast forward-surrogate operator, $f_{surrogate}: \mathcal{X} \to \mathcal{Y}$. 
+
+Instead of drawing from a global $q_\theta$, candidates are generated by dynamically constructing a local, coherent topological simplex around $\vect{y}^\star$ and sampling via constrained probabilistic rules (e.g., Dirichlet distributions), or via bounded gradient-descent: $\min \|f_{surrogate}(\vect{x}) - \vect{y}^\star\|^2$. This localized formulation forms the mathematical basis for the novel Geometrically Bounded Probabilistic Inversion (GBPI) framework, the mechanics of which are detailed extensively in \ref{sec:gbpi_framework}.
+
+\subsection{Universal Candidate Evaluation}
+Regardless of whether the candidates are generated via Paradigm 1 (Deep Learning) or Paradigm 2 (GBPI), they must be evaluated using a universal, mathematically rigorous metric. To verify the proposals, we operationalize the scoring logic introduced in Equation~\eqref{eq:verify_score_bg}. 
+
+Specifically, we assess attainment using an outcome evaluator $\mathcal{E}:\mathcal{X}\to\mathcal{Y}$ (representing the ground-truth physical simulator) and a discrepancy function $d:\mathcal{Y} \times \mathcal{Y} \to \mathbb{R}_{\ge 0}$. Each candidate $k$ receives a score:
 \begin{equation}
   r^{(k)}(\vect{y}^\star) \;=\;
   d\!\big(\mathcal{E}(\widehat{\vect{x}}^{(k)}),\,\vect{y}^\star\big),
   \label{eq:candidate_scores_methodology}
 \end{equation}
-which induces a ranking over the set. In this framework, $d(\cdot,\cdot)$ is typically realized as a distance metric, such as the Euclidean ($L_2$) norm, or a task-specific weighted discrepancy. Fixing the triplet $(K,\mathcal{E},d)$ defines the evaluation contract used throughout the thesis, ensuring that attainment claims are traceable to the explicit, shared rule established in the foundational theory.
-
+which induces a definitive ranking over the set. In this framework, $d(\cdot,\cdot)$ is typically realized as a distance metric, such as the Euclidean ($L_2$) norm, or a task-specific weighted discrepancy. Fixing the triplet $(K,\mathcal{E},d)$ defines the evaluation contract used throughout the thesis, ensuring that attainment claims for both traditional and novel algorithms are traceable to an explicit, shared mathematical rule.
 
 %-------------------------------------------------------------------------------
 \section{Rationale and trade-offs}\label{sec:rationale_tradeoffs}
@@ -91,53 +98,66 @@ Bayesian optimization can refine candidates, they introduce additional design ch
 confound fair comparisons between model families. Consequently, this thesis prioritizes 
 direct candidate generation with explicit ranking as the primary baseline.
 
+
 %-------------------------------------------------------------------------------
-\section{Framework and protocol}\label{sec:framework}
+\section{Rationale and Trade-Offs}\label{sec:rationale_tradeoffs}
 %-------------------------------------------------------------------------------
 
-Figure~\ref{fig:framework} summarizes the workflow used throughout the thesis. The protocol follows
-a propose--check structure: an inverse model proposes candidate decisions for a queried target, and a
-separate checking stage evaluates and ranks those candidates in objective space under the declared
-evaluator and discrepancy. The separation ensures that ambiguity is handled through generation, while
-attainment is assessed by an explicit scoring rule.
+The adoption of these distinct inverse mapping paradigms is fundamentally motivated by the inherent one-to-many nature of inverse decision mapping. Both paradigms explicitly acknowledge that multiple distinct physical decisions may be compatible with a single performance target. This foundational assumption avoids the catastrophic risk of ``mode averaging'' (referred to as the ``Centroid Trap'' in geometric contexts)---a common failure in standard deterministic regression where a model predicts the mean of multiple valid but distinct solutions, resulting in an infeasible or non-physical design.
+
+However, the choice between the Global Parametric paradigm (Deep Learning) and the Local Geometric paradigm (GBPI) introduces distinct rationales and structural trade-offs:
+
+\subsection{Trade-Offs in Global Parametric Models (CVAEs, INNs)}
+The primary rationale for utilizing a global parametric distribution $q_\theta(\vect{x}\mid\vect{y})$ is to support \textit{amortized inference}. The immense computational burden of learning the inverse mapping is entirely front-loaded into the offline training phase. Once the network is trained, the cost of answering new queries is reduced to simple, instantaneous sampling, aligning with established practices in simulation-based inference \cite{Papamakarios2021}.
+
+\textbf{The Trade-Off:} This approach is extremely data-hungry. Performance depends heavily on the diversity and volume of the training data. If the dataset is highly sparse ($N \le 100$), the global $q_\theta$ distribution tends to over-smooth the objective space. When a target $\vect{y}^\star$ falls outside heavily sampled regions or between distinct physical archetypes, these models will confidently hallucinate candidates that appear mathematically plausible under $q_\theta$, but fail catastrophically when checked against the true physical evaluator $\mathcal{E}$. 
+
+\subsection{Trade-Offs in Local Geometric Inversion (GBPI)}
+The GBPI framework is motivated explicitly by the failure of deep learning models in data-sparse environments. By abandoning a global learned parameter ($\theta$) in favor of exact topological meshing (Delaunay triangulation) and strict mathematical boundaries ($D_{max}$), GBPI guarantees that generated candidates remain physically coherent. Furthermore, when faced with out-of-distribution (OOD) targets where parametric models hallucinate, GBPI proactively halts interpolation and defaults to mathematically bounded surrogate optimization. 
+
+\textbf{The Trade-Off:} The geometric approach trades the smooth, global generalization of deep learning for strict, localized physical safety. Its primary limitation is its reliance on the offline pre-computation of the topological mesh, which scales poorly if the objective space dimensionality ($m$) becomes excessively high. Furthermore, its generative capability relies heavily on the fidelity of the lightweight forward surrogate to act as an accurate filter against Pareto Sag. 
+
+\subsection{Standardized Benchmarking Rationale}
+A final, critical motivation for this dual-paradigm formulation is ensuring fair comparability across highly heterogeneous algorithms. Comparing a probabilistic neural network to a geometrically bounded optimization framework is historically difficult. 
+
+By defining ultimate attainment exclusively through a shared, independent evaluator $\mathcal{E}$ and a standardized discrepancy function $d$, this methodology explicitly isolates the candidate generation mechanism from the evaluation mechanism. Utilizing a fixed candidate budget $K$ enforces a strict trade-off between computational cost and the probability of ``hitting'' a high-quality mode. This ensures that any claims of algorithmic superiority between the baselines and the novel GBPI framework are grounded in an identical, traceable mathematical contract.
+
+
+%-------------------------------------------------------------------------------
+\section{Framework and Protocol}\label{sec:framework}
+%-------------------------------------------------------------------------------
+
+Figure~\ref{fig:framework} summarizes the universal workflow used throughout the thesis. To ensure a fair comparison across fundamentally different algorithmic families, the protocol follows a strict propose--check structure: an inverse model proposes a set of candidate decisions for a queried target, and a separate, independent checking stage evaluates and ranks those candidates in the objective space under a declared evaluator and discrepancy metric. This separation ensures that one-to-many ambiguity is handled exclusively by the generative mechanism, while ultimate attainment is assessed by an objective, mathematical scoring rule.
 
 \begin{figure}[!htbp]
   \centering
   \begin{adjustbox}{width=\linewidth}
       \input{figures/framework}
   \end{adjustbox}
-  \caption[Propose--Check Workflow Framework]{Propose--check workflow used throughout the thesis. An inverse model generates a candidate set for a target objective vector, and an explicit evaluation stage scores and ranks candidates using a stated outcome evaluator.}
+  \caption[Propose--Check Workflow Framework]{Propose--check workflow used throughout the thesis. An inverse model (either parametric or geometric) generates a candidate set for a target objective vector, and an explicit evaluation stage scores and ranks candidates using a stated outcome evaluator.}
   \label{fig:framework}
 \end{figure}
 
-The workflow separates model synthesis from interactive exploration. In the model synthesis phase, the
-inverse proposal model is fit from paired data using the conditional likelihood objective in
-\eqref{eq:cond_mle_methodology}. When a forward surrogate is used, it is learned and aligned with the
-proposal mechanism so that proposal and checking share a consistent representation of the forward
-relation. In the interactive exploration phase, a query $\vect{y}^{\star}$
-is answered by sampling $K$ candidates from the conditional model, as in \eqref{eq:candidate_generation_methodology}.
-Treating $K$ as fixed is part of the experimental interface and keeps the output format consistent
-across model families. Each candidate is then checked by applying the evaluator and discrepancy in
-\eqref{eq:candidate_scores_methodology}, after which candidates are filtered and ranked in objective space under
-the declared rule. The evaluator $\mathcal{E}$ is selected to match the benchmark and deployment
-context and may be a trusted simulator, a measurement routine, a surrogate used for checking, or a mapping reserved for evaluation. When a single decision is
-required, the best-ranked candidate under the declared rule is selected.
+The workflow strictly separates offline model synthesis from online interactive exploration. In the \textit{model synthesis phase}, the specific algorithmic engine is prepared. For global parametric models (e.g., CVAEs, INNs), this involves fitting the proposal model from paired data using the conditional likelihood objective in \eqref{eq:cond_mle_methodology}. For the geometric GBPI framework, this involves pre-computing the Delaunay mesh, training the RBF surrogate, and establishing the coherence threshold ($D_{max}$). 
 
-Two practical implications follow from this protocol. Candidate generation reflects what is supported
-by the training archive through $q_{\widehat{\theta}}(\vect{x}\mid\vect{y})$, while attainment is
-defined by the pair $(\mathcal{E},d)$. Recording $(K,\mathcal{E},d)$ alongside model configuration
-therefore makes results auditable and enables fair comparison across inverse model families.
+In the \textit{interactive exploration phase}, a query $\vect{y}^{\star}$ is answered by generating $K$ candidates—either by sampling from the learned parametric conditional model $q_{\widehat{\theta}}(\vect{x}\mid\vect{y}^\star)$, or by routing through GBPI's bounded generative pathways. Treating the budget $K$ as fixed is a critical part of the experimental interface, keeping the output format consistent regardless of the underlying model family. 
+
+Each candidate is then checked by applying the evaluator and discrepancy defined in \eqref{eq:candidate_scores_methodology}, after which candidates are filtered and ranked in objective space. The evaluator $\mathcal{E}$ is selected to match the benchmark and deployment context; it may be a trusted simulator, a measurement routine, or a high-fidelity surrogate reserved strictly for evaluation. When a single optimal decision is required, the best-ranked candidate under the declared rule is selected. Recording the evaluation triplet $(K,\mathcal{E},d)$ alongside model configuration makes results fully auditable and enables rigorous, unbiased comparisons across distinct inverse model paradigms.
 
 
 %-------------------------------------------------------------------------------
 \section{Normalization and Data Preparation}\label{sec:normalization}
 %-------------------------------------------------------------------------------
 
-We begin from a raw paired archive $\mathcal{D}_{\mathrm{raw}}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$. Before fitting any models, we apply a deterministic preprocessing pipeline to ensure that training, candidate generation, and discrepancy-based scoring are performed in a consistent and numerically stable coordinate system. The paired archive is split into training, validation, and test subsets. To prevent information leakage, all preprocessing parameters are estimated using only the training split. We employ a feature-wise min-max scaling—referred to here as a hypercube normalization—which maps both decisions and outcomes into a specified range, typically $[0, 1]^D$. 
+We begin from a raw paired archive $\mathcal{D}_{\mathrm{raw}}=\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{N}$. Before fitting any models or building any topological meshes, we apply a deterministic preprocessing pipeline to ensure that training, candidate generation, and discrepancy-based scoring are performed in a consistent and numerically stable coordinate system. The paired archive is split into training, validation, and test subsets. To prevent information leakage, all preprocessing parameters are estimated using only the training split. We employ a feature-wise min-max scaling—referred to here as a hypercube normalization—which maps both decisions and outcomes into a uniform $[0, 1]$ range. 
 
-The choice of min-max normalization over alternative methods, such as Z-score standardization, is motivated by the specific requirements of the inverse modeling framework. First, it ensures metric fairness; since the evaluation contract relies on a Euclidean discrepancy $d$, it is essential that all objective dimensions span an identical numerical range. Min-max scaling ensures that a 10\% error in one objective is mathematically equivalent to a 10\% error in another, preventing the distance metric from being dominated by variables with naturally larger absolute magnitudes. Second, it promotes generative stability. Deep generative architectures, such as CVAEs and INNs, often utilize bounded activation functions like Sigmoid or Tanh. Mapping the decision space $\mathcal{X}$ to a unit hypercube aligns the target data with these activation ranges, improving gradient flow and preventing numerical instability during backpropagation \cite{Sola1997, Sarle1997}. Finally, bounding the data within $[0, 1]$ defines a clear feasible region for the conditional sampler, which is particularly beneficial for Mixture Density Networks when initializing variance parameters.
+The choice of min-max normalization over alternative methods (such as Z-score standardization) is an absolute mathematical necessity for the dual-paradigm framework utilized in this thesis:
 
-
+\begin{enumerate}
+    \item Metric Fairness and Attainment Scoring: Since the evaluation contract relies on a Euclidean discrepancy $d$, it is essential that all objective dimensions span an identical numerical range. Min-max scaling ensures that a 10\% error in one objective is mathematically equivalent to a 10\% error in another, preventing the distance metric from being dominated by variables with naturally larger absolute magnitudes.
+    \item Parametric Generative Stability: Deep generative architectures, such as CVAEs and INNs, often utilize bounded activation functions like Sigmoid or Tanh. Mapping the decision space $\mathcal{X}$ to a unit hypercube aligns the target data with these activation ranges, improving gradient flow and preventing numerical instability during backpropagation \cite{Sola1997, Sarle1997}. It also defines a clear feasible boundary for initializing Mixture Density Networks (MDNs).
+    \item Geometric and Topological Unbiasedness (GBPI): For the GBPI framework, normalization is the bedrock of physical safety. Because GBPI relies heavily on K-Nearest Neighbors (KNN) to calculate the Coherence Threshold ($D_{max}$), the decision space must be perfectly isotropic. Without min-max normalization, physical parameters with massive scales (e.g., thousands of RPMs) would entirely dominate fractional parameters (e.g., geometric ratios), rendering local neighborhood calculations and spatial topologies mathematically meaningless.
+\end{enumerate}
 
 We denote the resulting fitted normalization maps by $T_x$ for decisions and $T_y$ for outcomes. Applying these maps yields the normalized pairs:
 \begin{equation}
@@ -148,7 +168,10 @@ We denote the resulting fitted normalization maps by $T_x$ for decisions and $T_
 \end{equation}
 where the vectors $\min$ and $\max$ are determined feature-wise from the training data. For constant features where $\max = \min$, the range is set to unity to maintain numerical stability and avoid division-by-zero errors. 
 
-During inference, model outputs are transformed back to their physical units using the inverse map $T_x^{-1}$. Similarly, the target query $\vect{y}^\star$ is transformed via $T_y$ before the discrepancy $d$ is computed. This ensures that the distance metric is not biased by differing physical units, allowing for a fair and unit-agnostic assessment of attainment across the entire objective space.
+During inference, generated model outputs are transformed back to their original physical units using the inverse map $T_x^{-1}$. Similarly, the target query $\vect{y}^\star$ is transformed via $T_y$ before the discrepancy $d$ is computed. This guarantees that distance metrics, interpolation weights, and generative boundaries are completely agnostic to arbitrary physical units.
+
+
+
 
 %-------------------------------------------------------------------------------
 \section{Inverse-model training}\label{sec:training}
@@ -259,7 +282,7 @@ GBPI is specifically engineered to operate under highly constrained environments
   \begin{adjustbox}{width=0.85\linewidth}
       \input{figures/gbpi_architecture}
   \end{adjustbox}
-  \caption{The GBPI Framework routing architecture, illustrating the transition from offline pre-processing to real-time generative and optimization pathways.}
+  \caption[GBPI Framework Routing Architecture]{The GBPI Framework routing architecture, illustrating the transition from offline pre-processing to real-time generative and optimization pathways.}
  \label{fig:gbpi_workflow}
 \end{figure}
 
@@ -318,7 +341,7 @@ Before any real-time user interaction occurs, the system executes two critical o
   \begin{adjustbox}{width=0.8\linewidth}
       \input{figures/dmax_distribution}
   \end{adjustbox}
-    \caption{Distribution of local distances ($\mathcal{D}_{KNN}$) in the decision space. The 95th percentile establishes $D_{max}$, mathematically separating safe intra-modal continuous regions from dangerous inter-modal topological voids.}
+    \caption[Distribution of Local Distances for $D_{max}$]{Distribution of local distances ($\mathcal{D}_{KNN}$) in the decision space. The 95th percentile establishes $D_{max}$, mathematically separating safe intra-modal continuous regions from dangerous inter-modal topological voids.}
     \label{fig:dmax_distribution}
 \end{figure}
 
@@ -337,7 +360,7 @@ Once the offline mathematical environment is established, the GBPI framework tra
         \begin{adjustbox}{width=0.8\linewidth}
           \input{figures/target_localization}
       \end{adjustbox}
-        \caption{Visualization of Phase 1: Target Localization. The continuous 2D Objective Space ($Y$) is meshed via Delaunay Triangulation. The arbitrary user target ($y^*$) is located within a specific simplex, and its geometric proximity to the known anchor points ($y_A, y_B, y_C$) is quantified by the exact Barycentric weights ($\bar{w}_A, \bar{w}_B, \bar{w}_C$).}
+        \caption[Phase 1: Target Localization in Objective Space]{Visualization of Phase 1: Target Localization. The continuous 2D Objective Space ($Y$) is meshed via Delaunay Triangulation. The arbitrary user target ($y^*$) is located within a specific simplex, and its geometric proximity to the known anchor points ($y_A, y_B, y_C$) is quantified by the exact Barycentric weights ($\bar{w}_A, \bar{w}_B, \bar{w}_C$).}
         \label{fig:target_localization}
     \end{figure}
 
@@ -360,7 +383,7 @@ Once the offline mathematical environment is established, the GBPI framework tra
             \begin{adjustbox}{width=0.8\linewidth}
               \input{figures/dirichlet_sampling}
           \end{adjustbox}
-            \caption{Visualization of Pathway A: Probabilistic Generative Mapping. Once a simplex is verified as physically coherent, the exact deterministic target is utilized as the mean for a Dirichlet distribution. The algorithm samples $K$ probabilistic weight vectors, generating a dense, diverse cloud of novel configurations ($X_{candidates}$) bounded entirely within the safe, established physical manifold.}
+            \caption[Pathway A: Probabilistic Generative Mapping]{Visualization of Pathway A: Probabilistic Generative Mapping. Once a simplex is verified as physically coherent, the exact deterministic target is utilized as the mean for a Dirichlet distribution. The algorithm samples $K$ probabilistic weight vectors, generating a dense, diverse cloud of novel configurations ($X_{candidates}$) bounded entirely within the safe, established physical manifold.}
             \label{fig:dirichlet_sampling}
         \end{figure}
         
@@ -378,7 +401,7 @@ Once the offline mathematical environment is established, the GBPI framework tra
         \begin{adjustbox}{width=0.8\linewidth}
           \input{figures/trust_region_opt}
       \end{adjustbox}
-        \caption{Visualization of Pathway B: Surrogate-Assisted Trust-Region Optimization. When the user's target ($y^*$) requires extrapolation into an unknown topological void, the framework proactively abandons interpolation. The closest known anchor is designated as the Base Design ($x_{base}$). An L-BFGS-B gradient descent optimizes new configurations towards the target, but is mathematically blocked from hallucinating impossible physics by a strict Trust Region Boundary.}
+        \caption[Pathway B: Surrogate-Assisted Trust-Region Optimization]{Visualization of Pathway B: Surrogate-Assisted Trust-Region Optimization. When the user's target ($y^*$) requires extrapolation into an unknown topological void, the framework proactively abandons interpolation. The closest known anchor is designated as the Base Design ($x_{base}$). An L-BFGS-B gradient descent optimizes new configurations towards the target, but is mathematically blocked from hallucinating impossible physics by a strict Trust Region Boundary.}
         \label{fig:trust_region_opt}
     \end{figure}
 
@@ -406,8 +429,7 @@ Two complementary evaluation views are reported. The first view evaluates the us
 querying interface by measuring attainment in objective space under the checker. The second view
 evaluates the inverse model as a conditional sampler in design space, focusing on uncertainty
 behavior. The separation is deliberate: objective-space metrics quantify whether a target can be
-matched under the declared checker, while design-space diagnostics quantify whether sampled candidates
-behave like a meaningful conditional distribution over decisions.
+matched under the declared checker, while design-space diagnostics quantify whether the generated candidates behave as a physically meaningful and coherent set of decisions.
 
 
 %%-------------------------------------------------------------------------------
@@ -533,8 +555,7 @@ When a single decision is required, the best-shot candidate under the declared r
 Scalar discrepancy scores $s^{(k)}(\vect{y}^{\star})$ support ranking within a candidate set, but they
 do not by themselves describe how the full set behaves around the requested target. For user-facing
 decision support, the aggregate geometry of the checked outcomes
-$\{ \widehat{\vect{y}}^{(1)}, \dots, \widehat{\vect{y}}^{(K)} \}$ matters because it indicates whether
-the inverse sampler produces a concentrated, target-centered cloud or a diffuse or systematically
+$\{ \widehat{\vect{y}}^{(1)}, \dots, \widehat{\vect{y}}^{(K)} \}$ matters because it indicates whether the generative framework produces a concentrated, target-centered cloud or a diffuse or systematically
 shifted set of outcomes.
 
 We therefore evaluate candidate-set behavior in the same target-centered residual space used for
@@ -827,6 +848,8 @@ Through this framework, we can identify whether a model’s poor performance ste
   \caption[Diagnostic Signatures of CRPS and PIT Calibration]{Diagnostic signatures of model performance across the CRPS--PIT landscape.}
   \label{fig:diagnostic_signatures_grid}
 \end{figure}
+
+
 % %-------------------------------------------------------------------------------
 % \section{Pipelines}\label{sec:pipelines}
 % %-------------------------------------------------------------------------------
