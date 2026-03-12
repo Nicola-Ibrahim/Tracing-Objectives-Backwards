@@ -51,12 +51,16 @@ dev = [
 # ====================================================================================
 
 [tool.poe.tasks.data-gen]
-shell = "python -m src.cli.generating.generate_dataset --function-id $fid"
-help = "GENERATE: Create synthetic Pareto data. Usage: --fid 5"
+shell = "python -m src.cli.dataset.generate_dataset --function-id $fid --n-var $nvar"
+help = "GENERATE: Create synthetic Pareto data. Usage: --fid 5 --nvar 10"
   [[tool.poe.tasks.data-gen.args]]
   name = "fid"
   options = ["--fid"]
   default = "5"
+  [[tool.poe.tasks.data-gen.args]]
+  name = "nvar"
+  options = ["--n-var"]
+  default = "2"
 
 [tool.poe.tasks.data-viz]
 shell = "python -m src.cli.visualizing.visualize_dataset --dataset-name $data"

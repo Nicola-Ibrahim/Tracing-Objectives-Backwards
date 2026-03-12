@@ -1,6 +1,6 @@
 import cocoex
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pymoo.core.problem import Problem
 
 
@@ -24,6 +24,16 @@ class COCOBiObjectiveProblemConfig(BaseModel):
     )
     n_obj: int = Field(2, frozen=True, description="Number of objectives")
     n_constr: int = Field(0, frozen=True, description="Number of constraints")
+
+    @model_validator(mode="after")
+    def validate_dimension(self) -> "COCOBiObjectiveProblemConfig":
+        allowed_dims = [2, 3, 5, 10, 20, 40]
+        if self.n_var not in allowed_dims:
+            raise ValueError(
+                f"Dimension {self.n_var} not supported by 'bbob-biobj' suite. "
+                f"Supported dimensions are {allowed_dims}."
+            )
+        return self
 
 
 class COCOBiObjectiveProblem(Problem):
