@@ -16,7 +16,7 @@ class EmpiricalDistribution(BaseModel):
     y: list[float]  # cumulative probabilities
 
     @classmethod
-    def from_samples(cls, samples: np.ndarray, max_points: int = 100) -> Self:
+    def from_samples(cls, samples: list[float], max_points: int = 100) -> Self:
         """Factory: builds an ECDF from raw sample values."""
         arr = np.asarray(samples).flatten()
         if arr.size == 0:

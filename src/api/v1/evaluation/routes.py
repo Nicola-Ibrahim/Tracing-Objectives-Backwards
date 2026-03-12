@@ -32,25 +32,40 @@ async def diagnose_engines(
     )
 
     result = service.execute(params)
-
     return result.match(
-        on_success=lambda diagnostics: DiagnoseResponse(
+        on_success=lambda reports: DiagnoseResponse(
             dataset_name=request.dataset_name,
             engines=[
-                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})"
-                for diag in diagnostics
+                f"{report.engine.type} (v{report.engine.version})" for report in reports
             ],
             ecdf={
-                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})": diag.accuracy.discrepancy_profile.model_dump()
-                for diag in diagnostics
+                f"{report.engine.type} (v{report.engine.version})": {
+                    "x": report.objective_space.ecdf_profile.x_values,
+                    "y": report.objective_space.ecdf_profile.cumulative_probabilities,
+                }
+                for report in reports
             },
             pit={
-                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})": diag.reliability.pit_profile.model_dump()
-                for diag in diagnostics
+                f"{report.engine.type} (v{report.engine.version})": (
+                    {
+                        "x": report.decision_space.calibration_curve.nominal_coverage,
+                        "y": report.decision_space.calibration_curve.empirical_coverage,
+                    }
+                    if hasattr(report.decision_space, "calibration_curve")
+                    else {
+                        "x": report.decision_space.ecdf_profile.x_values,
+                        "y": report.decision_space.ecdf_profile.cumulative_probabilities,
+                    }
+                )
+                for report in reports
             },
             mace={
-                f"{diag.metadata.estimator.type} (v{diag.metadata.estimator.version})": diag.reliability.calibration_error
-                for diag in diagnostics
+                f"{report.engine.type} (v{report.engine.version})": (
+                    report.decision_space.mace
+                    if hasattr(report.decision_space, "mace")
+                    else report.decision_space.mean_coverage_error
+                )
+                for report in reports
             },
             warnings=[],
         ),

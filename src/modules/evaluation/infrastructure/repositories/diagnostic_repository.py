@@ -3,7 +3,7 @@ from typing import Any
 
 from ....shared.config import ROOT_PATH
 from ....shared.infrastructure.processing.files.json import JsonFileHandler
-from ...domain.aggregates.diagnostic_result import DiagnosticResult
+from ...domain.aggregates.diagnostic_report import DiagnosticReport
 from ...domain.interfaces.base_diagnostic_repository import BaseDiagnosticRepository
 
 
@@ -32,7 +32,7 @@ class RunNumberManager:
 
 class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
     """
-    Persists DiagnosticResult entities as JSON using sequential run numbering.
+    Persists DiagnosticReport entities as JSON using sequential run numbering.
     Location: ROOT/diagnostics/<dataset>/<direction>/<type>/v<version>/run<N>-<date>/
     """
 
@@ -66,68 +66,63 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
                 return entry
         return None
 
-    def save(self, result: DiagnosticResult) -> int:
-        meta = result.metadata
+    def save(self, report: DiagnosticReport) -> int:
         version_dir = self._compute_version_directory(
-            meta.estimator.mapping_direction,
-            meta.dataset_name,
-            meta.estimator.type,
-            meta.estimator.version,
+            report.engine.mapping_direction,
+            report.dataset_name,
+            report.engine.type,
+            report.engine.version,
         )
         version_dir.mkdir(parents=True, exist_ok=True)
 
         # Assign sequential run number
         next_run = self._run_manager.get_next_run_number(version_dir)
-        result.metadata.run_number = next_run
+        report.run_number = next_run
 
         # runN-YYYY-MM-DD
-        run_name = f"run{next_run}-{meta.created_at.strftime('%Y-%m-%d')}"
+        run_name = f"run{next_run}-{report.created_at.strftime('%Y-%m-%d')}"
         run_dir = version_dir / run_name
         run_dir.mkdir(exist_ok=True)
 
         save_path = run_dir / "evaluation.json"
 
-        # Pydantic dict() handles nested models, then JsonFileHandler writes it
-        self._json_handler.save(result.dict(), save_path)
+        # Pydantic dict() (or model_dump in newer pydantic) handles nested models
+        self._json_handler.save(report.model_dump(), save_path)
 
         return next_run
 
     def load(
         self,
-        estimator_type: str,
-        estimator_version: int,
+        engine_type: str,
+        engine_version: int,
         run_number: int,
         dataset_name: str,
         mapping_direction: str = "inverse",
-    ) -> DiagnosticResult:
+    ) -> DiagnosticReport:
         version_dir = self._compute_version_directory(
-            mapping_direction, dataset_name, estimator_type, estimator_version
+            mapping_direction, dataset_name, engine_type, engine_version
         )
         run_dir = self._find_run_dir(version_dir, run_number)
 
         if not run_dir or not (run_dir / "evaluation.json").exists():
             raise FileNotFoundError(
-                f"Evaluation run {run_number} not found for {estimator_type} v{estimator_version}."
+                f"Evaluation run {run_number} not found for {engine_type} v{engine_version}."
             )
 
         data = self._json_handler.load(run_dir / "evaluation.json")
 
         # Use factory method for clean reconstruction
-        return DiagnosticResult.from_data(
-            metadata=data["metadata"],
-            accuracy=data["accuracy"],
-            reliability=data["reliability"],
-        )
+        return DiagnosticReport.from_data(data)
 
     def get_all_runs(
         self,
-        estimator_type: str,
-        estimator_version: int,
+        engine_type: str,
+        engine_version: int,
         dataset_name: str,
         mapping_direction: str = "inverse",
-    ) -> list[DiagnosticResult]:
+    ) -> list[DiagnosticReport]:
         version_dir = self._compute_version_directory(
-            mapping_direction, dataset_name, estimator_type, estimator_version
+            mapping_direction, dataset_name, engine_type, engine_version
         )
         if not version_dir.exists():
             return []
@@ -139,8 +134,8 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
                     run_num = int(entry.name.split("-")[0].replace("run", ""))
                     results.append(
                         self.load(
-                            estimator_type,
-                            estimator_version,
+                            engine_type,
+                            engine_version,
                             run_num,
                             dataset_name,
                             mapping_direction,
@@ -150,49 +145,49 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
                     continue
 
         # Sort by run number (descending)
-        results.sort(key=lambda r: r.metadata.run_number or 0, reverse=True)
+        results.sort(key=lambda r: r.run_number or 0, reverse=True)
         return results
 
     def get_latest_run(
         self,
-        estimator_type: str,
-        estimator_version: int,
+        engine_type: str,
+        engine_version: int,
         dataset_name: str,
         mapping_direction: str = "inverse",
-    ) -> DiagnosticResult:
+    ) -> DiagnosticReport:
         runs = self.get_all_runs(
-            estimator_type, estimator_version, dataset_name, mapping_direction
+            engine_type, engine_version, dataset_name, mapping_direction
         )
         if not runs:
             raise FileNotFoundError(
-                f"No diagnostic runs found for {estimator_type} v{estimator_version}."
+                f"No diagnostic runs found for {engine_type} v{engine_version}."
             )
         return runs[0]
 
     def get_batch(
         self,
-        estimators: list[Any],
+        engines: list[Any],
         dataset_name: str,
         mapping_direction: str = "inverse",
-    ) -> dict[str, DiagnosticResult]:
+    ) -> dict[str, DiagnosticReport]:
         """
         Fetches multiple runs. Expects objects with .type, .version, and .run_number.
         """
         results_map = {}
-        for estimator in estimators:
-            display_name = f"{estimator.type.value} (v{estimator.version})"
-            if estimator.run_number is None:
+        for engine_req in engines:
+            display_name = f"{engine_req.type} (v{engine_req.version})"
+            if engine_req.run_number is None:
                 results_map[display_name] = self.get_latest_run(
-                    estimator.type.value,
-                    estimator.version,
+                    engine_req.type,
+                    engine_req.version,
                     dataset_name,
                     mapping_direction,
                 )
             else:
                 results_map[display_name] = self.load(
-                    estimator.type.value,
-                    estimator.version,
-                    estimator.run_number,
+                    engine_req.type,
+                    engine_req.version,
+                    engine_req.run_number,
                     dataset_name,
                     mapping_direction,
                 )

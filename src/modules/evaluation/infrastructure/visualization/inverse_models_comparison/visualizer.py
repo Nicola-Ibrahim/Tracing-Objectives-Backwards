@@ -1,8 +1,7 @@
-import numpy as np
 import plotly.graph_objects as go
 
 from .....shared.config import ROOT_PATH
-from ....domain.aggregates.diagnostic_result import DiagnosticResult
+from ....domain.aggregates.diagnostic_report import DiagnosticReport
 from ....domain.interfaces.base_visualizer import BaseVisualizer
 from .color_utils import get_model_colors
 from .panels.accuracy_bias_dispersion_plot import create_accuracy_bias_dispersion_figure
@@ -20,7 +19,7 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
     def __init__(self, output_dir: str = "reports/evaluation/figures"):
         super().__init__(ROOT_PATH / output_dir)
 
-    def plot(self, results: list[DiagnosticResult]) -> None:
+    def plot(self, results: list[DiagnosticReport]) -> None:
         """
         Generates and persists each diagnostic plot individually based on the data contract.
         """
@@ -29,58 +28,52 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
         ecdf_data = {}
         bias_data = {}
         dispersion_data = {}
-        residuals_data = {}
         metric_data = {
             "mace": {},
             "crps": {},
             "diversity": {},
             "sharpness": {},
+            "winkler": {},
         }
 
         model_names = []
         for res in results:
-            model_name = (
-                f"{res.metadata.estimator.type} (v{res.metadata.estimator.version})"
-            )
+            model_name = f"{res.engine.type} (v{res.engine.version})"
             model_names.append(model_name)
 
-            # a. Calibration
-            if res.reliability and res.reliability.calibration_curve:
+            # a. Objective Space
+            ecdf_data[model_name] = {
+                "x_sorted": res.objective_space.ecdf_profile.x_values,
+                "y_ecdf": res.objective_space.ecdf_profile.cumulative_probabilities,
+                "label": model_name,
+                "median_val": res.objective_space.median_best_shot,
+            }
+            # Note: The new domain only provides means for bias/dispersion.
+            # We wrap them in a list for compatibility with existing box plots.
+            bias_data[model_name] = [res.objective_space.mean_bias]
+            dispersion_data[model_name] = [res.objective_space.mean_dispersion]
+
+            # b. Decision Space
+            ds = res.decision_space
+            if hasattr(ds, "mace"): # DecisionSpaceDistributionAssessment
+                metric_data["mace"][model_name] = ds.mace
+                metric_data["crps"][model_name] = ds.mean_crps
+                metric_data["diversity"][model_name] = ds.mean_diversity
+                metric_data["sharpness"][model_name] = ds.mean_interval_width
+                
                 calibration_data[model_name] = {
-                    "pit_values": res.reliability.calibration_curve.pit_values,
-                    "cdf_y": res.reliability.calibration_curve.cdf_y,
+                    "pit_values": ds.calibration_curve.nominal_coverage,
+                    "cdf_y": ds.calibration_curve.empirical_coverage,
                 }
-            # b. ECDF & Residuals
-            if res.accuracy:
-                # if scores is None and res.accuracy.discrepancy_scores is not None:
-                #     scores = np.min(res.accuracy.discrepancy_scores, axis=1)
-
-                if res.accuracy.best_shot_scores is not None:
-                    residuals_data[model_name] = res.accuracy.best_shot_scores
-                    x_sorted = np.sort(res.accuracy.best_shot_scores)
-                    y_ecdf = np.arange(1, len(x_sorted) + 1) / len(x_sorted)
-                    ecdf_data[model_name] = {
-                        "x_sorted": x_sorted,
-                        "y_ecdf": y_ecdf,
-                        "label": model_name,
-                        "median_val": np.median(res.accuracy.best_shot_scores),
-                    }
-
-                # c. Bias & Dispersion
-                bias_data[model_name] = res.accuracy.systematic_bias
-                dispersion_data[model_name] = res.accuracy.cloud_dispersion
-
-            # d. Scalar Metrics
-            if res.reliability:
-                metric_data["mace"][model_name] = res.reliability.calibration_error
-                metric_data["crps"][model_name] = res.reliability.crps
-                if res.reliability.summary:
-                    metric_data["diversity"][model_name] = (
-                        res.reliability.summary.mean_diversity
-                    )
-                    metric_data["sharpness"][model_name] = (
-                        res.reliability.summary.mean_interval_width
-                    )
+            elif hasattr(ds, "mean_coverage_error"): # DecisionSpaceIntervalAssessment
+                metric_data["mace"][model_name] = ds.mean_coverage_error # Use error as a proxy
+                metric_data["sharpness"][model_name] = ds.mean_interval_width
+                metric_data["winkler"][model_name] = ds.mean_winkler_score
+                
+                calibration_data[model_name] = {
+                    "pit_values": ds.ecdf_profile.x_values,
+                    "cdf_y": ds.ecdf_profile.cumulative_probabilities,
+                }
 
         color_map = get_model_colors(model_names)
 

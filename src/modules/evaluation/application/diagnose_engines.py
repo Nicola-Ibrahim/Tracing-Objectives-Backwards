@@ -12,16 +12,15 @@ from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import 
 )
 from ...shared.domain.interfaces.base_logger import BaseLogger
 from ...shared.result import Result
-from ..domain.aggregates.diagnostic_result import DiagnosticResult
-from ..domain.entities.accuracy_lens import AccuracyLens
-from ..domain.entities.reliability_lens import ReliabilityLens
+from ..domain.aggregates.diagnostic_report import DiagnosticReport
+from ..domain.enums.engine_capability import EngineCapability
+from ..domain.enums.mapping_direction import MappingDirection
 from ..domain.interfaces.base_diagnostic_repository import (
     BaseDiagnosticRepository,
 )
-from ..domain.services.accuracy_auditor import AccuracyAuditor
-from ..domain.services.reliability_auditor import ReliabilityAuditor
-from ..domain.value_objects.empirical_distribution import EmpiricalDistribution
-from ..domain.value_objects.estimator import Estimator
+from ..domain.services.decision_space_auditor import DecisionSpaceAuditor
+from ..domain.services.objective_space_auditor import ObjectiveSpaceAuditor
+from ..domain.value_objects.engine import Engine as EngineVO
 
 
 class EngineCandidate(BaseModel):
@@ -65,6 +64,16 @@ class RunDiagnosticsService:
     Computes diagnostics and persists them via the Diagnostic Repository.
     """
 
+    @staticmethod
+    def map_capability(solver_type: str) -> EngineCapability:
+        """Determines evaluation capability based on solver type."""
+        st = solver_type.upper().strip()
+        if st in ["MDN", "CVAE", "INN", "CAVA"]:
+            return EngineCapability.FULL_DISTRIBUTION
+        if st in ["GBPI"]:
+            return EngineCapability.PREDICTION_INTERVAL
+        return EngineCapability.FULL_DISTRIBUTION  # Conservative default
+
     def __init__(
         self,
         engine_repository: BaseInverseMappingEngineRepository,
@@ -77,7 +86,7 @@ class RunDiagnosticsService:
         self._diag_repo = diagnostic_repository
         self._logger = logger
 
-    def execute(self, command: RunDiagnosticsCommand) -> Result[list[DiagnosticResult]]:
+    def execute(self, command: RunDiagnosticsCommand) -> Result[list[DiagnosticReport]]:
         try:
             self._logger.log_info(
                 f"Starting Diagnostic Compute for engines on dataset '{command.dataset_name}'"
@@ -90,10 +99,11 @@ class RunDiagnosticsService:
                 dataset_name=command.dataset_name,
             )
 
-            diagnostics = []
+            reports = []
 
             for engine, version in engines_to_diagnose:
-                engine_name = f"{engine.solver.type()} (v{version})"
+                engine_type = engine.solver.type()
+                engine_name = f"{engine_type} (v{version})"
                 self._logger.log_info(f"Diagnosing {engine_name}")
 
                 test_indices = dataset.test_indices
@@ -128,47 +138,41 @@ class RunDiagnosticsService:
                     dataset.y[dataset.train_indices]
                 )
 
-                accuracy_audit = AccuracyAuditor.audit(
+                # 1. Objective Space Assessment (Accuracy)
+                objective_assessment = ObjectiveSpaceAuditor.audit(
                     training_objectives=y_train_norm,
                     candidates=all_candidates_y_norm,
                     reference=X_test_norm,
                     distance="euclidean",
                 )
 
-                reliability_audit = ReliabilityAuditor.audit(
+                # 2. Decision Space Assessment (Probabilistic/Calibration)
+                capability = self.map_capability(engine_type)
+                decision_assessment = DecisionSpaceAuditor.audit(
+                    capability=capability,
                     samples=all_candidates_X_norm,
                     truth=y_test_norm,
                 )
 
-                result = DiagnosticResult.create(
-                    estimator=Estimator(
-                        type=engine.solver.type(),
+                # 3. Create Aggregate
+                report = DiagnosticReport.create(
+                    engine=EngineVO(
+                        type=engine_type,
                         version=version,
-                        mapping_direction="inverse",
+                        mapping_direction=MappingDirection.INVERSE,
+                        capability=capability,
                     ),
                     dataset_name=command.dataset_name,
                     num_samples=command.num_samples,
-                    scale_method=command.scale_method,
-                    accuracy=AccuracyLens(
-                        discrepancy_profile=EmpiricalDistribution.from_samples(
-                            accuracy_audit.discrepancy_scores
-                        ),
-                        summary=accuracy_audit.summary,
-                    ),
-                    reliability=ReliabilityLens(
-                        calibration_error=float(reliability_audit.calibration_error),
-                        crps=float(reliability_audit.crps),
-                        pit_profile=reliability_audit.calibration_curve,
-                        calibration_curve=reliability_audit.calibration_curve,
-                        summary=reliability_audit.summary,
-                    ),
+                    objective_space=objective_assessment,
+                    decision_space=decision_assessment,
                 )
 
-                # Persist result
-                self._diag_repo.save(result)
-                diagnostics.append(result)
+                # Persist report
+                self._diag_repo.save(report)
+                reports.append(report)
 
-            return Result.ok(diagnostics)
+            return Result.ok(reports)
 
         except FileNotFoundError as e:
             return Result.fail(
