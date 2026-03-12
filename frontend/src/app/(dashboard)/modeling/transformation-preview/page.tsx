@@ -21,7 +21,6 @@ export default function TransformationPreviewerPage() {
     const [xChain, setXChain] = useState<TransformationStep[]>([]);
     const [yChain, setYChain] = useState<TransformationStep[]>([]);
     const [compareMode, setCompareMode] = useState<boolean>(true);
-    const [selectedDims, setSelectedDims] = useState<[number, number]>([0, 1]);
 
     const { data: datasets = [] } = useQuery({
         queryKey: ["datasets"],
@@ -142,45 +141,10 @@ export default function TransformationPreviewerPage() {
                                     </SelectContent>
                                 </Select>
 
-                                {(previewMutation.data || datasetDetails.data) && (
-                                    <div className="space-y-3 pt-4 border-t border-border">
-                                        <Label className="text-[10px] uppercase font-black text-muted-foreground/40 tracking-widest pl-1">Space Projections</Label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-bold text-muted-foreground/60 ml-1">Axis Ω₁</Label>
-                                                <Select
-                                                    value={selectedDims[0].toString()}
-                                                    onValueChange={(v) => setSelectedDims([parseInt(v), selectedDims[1]])}
-                                                >
-                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-popover border-border text-popover-foreground">
-                                                        {Array.from({ length: (previewMutation.data?.transformed.X[0]?.length || datasetDetails.data?.X[0]?.length || 0) }).map((_, i) => (
-                                                            <SelectItem key={i} value={i.toString()} className="hover:bg-muted focus:bg-muted cursor-pointer transition-colors">X_{i}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-bold text-muted-foreground/60 ml-1">Axis Ω₂</Label>
-                                                <Select
-                                                    value={selectedDims[1].toString()}
-                                                    onValueChange={(v) => setSelectedDims([selectedDims[0], parseInt(v)])}
-                                                >
-                                                    <SelectTrigger className="h-9 bg-background border-border text-xs font-black">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-popover border-border text-popover-foreground">
-                                                        {Array.from({ length: (previewMutation.data?.transformed.X[0]?.length || datasetDetails.data?.X[0]?.length || 0) }).map((_, i) => (
-                                                            <SelectItem key={i} value={i.toString()} className="hover:bg-muted focus:bg-muted cursor-pointer transition-colors">X_{i}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
+                                    <div className="pt-4 border-t border-border">
+                                        <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest pl-1">Space Projection</p>
+                                        <p className="text-[11px] font-bold text-muted-foreground/60 ml-1 mt-2">Visualizing first two dimensions of the manifold.</p>
                                     </div>
-                                )}
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -259,7 +223,7 @@ export default function TransformationPreviewerPage() {
                                 <TransformationPreviewChart
                                     original={previewMutation.data.original}
                                     transformed={previewMutation.data.transformed}
-                                    dims={selectedDims}
+                                    dims={[0, 1]}
                                     showComparison={compareMode}
                                 />
                             </motion.div>

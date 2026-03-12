@@ -42,7 +42,7 @@ export function TransformationPreviewChart({
                 opacity: 0.7,
                 line: { width: 1, color: 'white' }
             },
-            hovertemplate: `<b>${label}</b><br>Dim ${xDim}: %{x:.4f}<br>Dim ${yDim}: %{y:.4f}<extra></extra>`,
+            hovertemplate: `<b>${label}</b><br>Ω₁: %{x:.4f}<br>Ω₂: %{y:.4f}<extra></extra>`,
             hoverlabel: {
                 bgcolor: 'white',
                 bordercolor: color,
@@ -77,12 +77,12 @@ export function TransformationPreviewChart({
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between px-3">
                                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Original Architecture</span>
-                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-black opacity-60 px-3 rounded-full">X[{dims[0]}] vs X[{dims[1]}]</Badge>
+                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-black opacity-60 px-3 rounded-full">Primary Manifold Projection</Badge>
                                     </div>
                                     <div className="bg-background border border-border rounded-[2.5rem] p-4 overflow-hidden">
                                         <BasePlot
                                             data={getPlotData(original.X, "Reference X", "rgba(148, 163, 184, 0.4)", dims)}
-                                            layout={getLayout(`X[${dims[0]}]`, `X[${dims[1]}]`)}
+                                            layout={getLayout("Ω₁ Axis", "Ω₂ Axis")}
                                         />
                                     </div>
                                 </div>
@@ -92,12 +92,12 @@ export function TransformationPreviewChart({
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/80">
                                         {showComparison ? "Transformed State" : "Result State"}
                                     </span>
-                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-black px-3 rounded-full">X[{dims[0]}] vs X[{dims[1]}]</Badge>
+                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-black px-3 rounded-full">Transformed Manifold</Badge>
                                 </div>
                                 <div className={cn("bg-indigo-500/5 border border-indigo-500/20 rounded-[2.5rem] p-4 overflow-hidden transition-all hover:scale-[1.01]")}>
                                     <BasePlot
                                         data={getPlotData(transformed.X, "Transformed X", "rgba(99, 102, 241, 0.8)", dims)}
-                                        layout={getLayout(`X[${dims[0]}]`, `X[${dims[1]}]`)}
+                                        layout={getLayout("Ω₁ Axis", "Ω₂ Axis")}
                                     />
                                 </div>
                             </div>
@@ -110,12 +110,12 @@ export function TransformationPreviewChart({
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between px-3">
                                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Original Objective Map</span>
-                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-black opacity-60 px-3 rounded-full">y[0] vs y[1]</Badge>
+                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-black opacity-60 px-3 rounded-full">Reference Objective Map</Badge>
                                     </div>
                                     <div className="bg-background border border-border rounded-[2.5rem] p-4 overflow-hidden">
                                         <BasePlot
                                             data={getPlotData(original.y, "Reference y", "rgba(148, 163, 184, 0.4)", [0, 1])}
-                                            layout={getLayout(`y[0]`, original.y[0]?.length > 1 ? `y[1]` : "Value")}
+                                            layout={getLayout("Object 1", original.y[0]?.length > 1 ? "Object 2" : "Magnitude")}
                                         />
                                     </div>
                                 </div>
@@ -125,12 +125,12 @@ export function TransformationPreviewChart({
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/80">
                                         {showComparison ? "Transformed Results" : "Result Mapping"}
                                     </span>
-                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-black px-3 rounded-full">y[0] vs y[1]</Badge>
+                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-black px-3 rounded-full">Resulting Geometry</Badge>
                                 </div>
                                 <div className={cn("bg-indigo-500/5 border border-indigo-500/20 rounded-[2.5rem] p-4 overflow-hidden transition-all hover:scale-[1.01]")}>
                                     <BasePlot
                                         data={getPlotData(transformed.y, "Transformed y", "rgba(99, 102, 241, 0.8)", [0, 1])}
-                                        layout={getLayout(`y[0]`, transformed.y[0]?.length > 1 ? `y[1]` : "Value")}
+                                        layout={getLayout("Object 1", transformed.y[0]?.length > 1 ? "Object 2" : "Magnitude")}
                                     />
                                 </div>
                             </div>

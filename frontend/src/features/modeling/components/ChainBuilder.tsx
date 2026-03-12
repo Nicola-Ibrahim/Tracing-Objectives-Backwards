@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
     DialogTitle,
     DialogHeader,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ChainBuilderProps {
     title?: string;
@@ -127,19 +128,26 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-                {transformers.map((t) => (
-                    <Button
-                        key={t.type}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addStep(t.type)}
-                        className="justify-start gap-3 h-10 border-border bg-background text-muted-foreground hover:text-indigo-500 hover:border-indigo-500/50 hover:bg-indigo-500/5 rounded-2xl px-4 transition-all group"
-                    >
-                        <Plus className="h-3.5 w-3.5 group-hover:rotate-90 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest truncate">{t.name}</span>
-                    </Button>
-                ))}
+            <div className="pt-2">
+                <Select key={chain.length} onValueChange={(type) => addStep(type)}>
+                    <SelectTrigger className="w-full h-12 border-dashed border-2 border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-indigo-500/30 rounded-2xl transition-all group">
+                        <div className="flex items-center justify-center gap-3 w-full text-muted-foreground group-hover:text-indigo-500 transition-colors">
+                            <Plus className="h-4 w-4 text-indigo-500 group-hover:rotate-90 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Transformation Step</span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border text-popover-foreground rounded-2xl">
+                        {transformers.map((t) => (
+                            <SelectItem 
+                                key={t.type} 
+                                value={t.type}
+                                className="hover:bg-muted focus:bg-muted cursor-pointer font-bold tracking-tight py-3"
+                            >
+                                {t.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
         </div>
     );
