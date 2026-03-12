@@ -19,12 +19,22 @@ export interface MetricPlotData {
   [engineLabel: string]: MetricSeries;
 }
 
+export interface DomainAssessmentData {
+  ecdf: MetricPlotData;
+  calibration_curves: MetricPlotData;
+  metrics: {
+    [engineLabel: string]: {
+      [metricName: string]: number;
+    };
+  };
+}
+
 export interface DiagnoseResponse {
   dataset_name: string;
   engines: string[];
-  ecdf: MetricPlotData;
-  pit: MetricPlotData;
-  mace: Record<string, number>;
+  capabilities: { [engineName: string]: string };
+  objective_space: DomainAssessmentData;
+  decision_space: DomainAssessmentData;
   warnings: string[];
 }
 

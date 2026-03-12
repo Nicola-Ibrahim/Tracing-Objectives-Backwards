@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const Plot = dynamic(() => import("react-plotly.js"), {
     ssr: false,
     loading: () => (
-        <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl animate-pulse py-20">
+        <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-[1rem] animate-pulse py-20">
             <div className="h-10 w-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Initialising Component Canvas</span>
         </div>
@@ -125,7 +125,7 @@ export function BasePlot({
     );
 
     if (!title) {
-        return <div className={cn("w-full h-full bg-white rounded-lg", contentClassName)} style={{ minHeight: minPlotHeight }}>{content}</div>;
+        return <div className={cn("w-full h-full bg-white rounded-[1rem]", contentClassName)} style={{ minHeight: minPlotHeight }}>{content}</div>;
     }
 
     return (

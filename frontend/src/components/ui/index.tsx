@@ -8,7 +8,7 @@ interface CardProps {
 
 export function Card({ children, className = "", title }: CardProps) {
     return (
-        <div className={`bg-card text-card-foreground border border-border rounded-2xl overflow-hidden transition-all duration-300 ${className}`}>
+        <div className={`bg-card text-card-foreground border border-border rounded-[1rem] overflow-hidden transition-all duration-300 ${className}`}>
             {title && (
                 <div className="flex items-center justify-between py-4 px-6 border-b border-border bg-muted/30">
                     <h3 className="text-sm font-bold tracking-tight">{title}</h3>
@@ -52,7 +52,7 @@ export function StatCard({ label, value, subValue, icon, trend }: { label: strin
                     </div>
                     {subValue && <p className="text-[10px] text-muted-foreground font-medium">{subValue}</p>}
                 </div>
-                {icon && <div className="p-3 bg-secondary rounded-2xl text-secondary-foreground">{icon}</div>}
+                {icon && <div className="p-3 bg-secondary rounded-[1rem] text-secondary-foreground">{icon}</div>}
             </div>
         </Card>
     );
@@ -81,7 +81,7 @@ export function Button({
 
     return (
         <button
-            className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm ${variants[variant]} ${className}`}
+            className={`px-4 py-2.5 rounded-[1rem] font-bold transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm ${variants[variant]} ${className}`}
             disabled={isLoading || disabled}
             {...props}
         >
@@ -108,7 +108,7 @@ export function Input({ label, description, className = "", value, ...props }: I
                 {description && <p className="text-[10px] text-muted-foreground font-medium leading-tight">{description}</p>}
             </div>
             <input
-                className={`w-full px-4 py-3 rounded-xl border border-input bg-background focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm placeholder:text-muted-foreground ${className}`}
+                className={`w-full px-4 py-3 rounded-[1rem] border border-input bg-background focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm placeholder:text-muted-foreground ${className}`}
                 {...props}
                 value={safeValue}
             />

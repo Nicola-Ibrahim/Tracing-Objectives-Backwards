@@ -30,7 +30,7 @@ export function ThemeToggle() {
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="h-9 w-9 rounded-xl hover:bg-muted transition-all duration-300 relative overflow-hidden group"
+            className="h-9 w-9 rounded-[1rem] hover:bg-muted transition-all duration-300 relative overflow-hidden group"
             title={`Current theme: ${resolvedTheme}. Click to toggle.`}
         >
             <div className="relative h-5 w-5 flex items-center justify-center">

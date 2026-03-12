@@ -71,7 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </div>
                     <Link
                         href="/"
-                        className="group-data-[collapsible=icon]:hidden flex items-center gap-2 px-2 py-1.5 text-xs font-bold text-indigo-500 hover:bg-muted rounded-lg transition-colors border border-indigo-500/20"
+                        className="group-data-[collapsible=icon]:hidden flex items-center gap-2 px-2 py-1.5 text-xs font-bold text-indigo-500 hover:bg-muted rounded-[1rem] transition-colors border border-indigo-500/20"
                     >
                         <LayoutDashboard className="h-3.5 w-3.5" />
                         Back to Landing

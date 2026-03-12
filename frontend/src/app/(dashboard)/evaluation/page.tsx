@@ -6,13 +6,42 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getDatasets } from "@/features/inverse/api";
 import { diagnoseEngines } from "@/features/evaluation/api";
 import { EngineComparisonPanel } from "@/features/evaluation/components/EngineComparisonPanel";
-import { PerformanceChart, MetricBarChart } from "@/features/evaluation/components/EvaluationCharts";
+import { PerformanceChart } from "@/features/evaluation/components/EvaluationCharts";
 import { DiagnoseRequest, DiagnoseResponse } from "@/features/evaluation/types";
-import { LineChart, AlertCircle, TrendingUp, Info, Table as TableIcon, Loader2, Sparkles, Trophy } from "lucide-react";
+import { 
+    LineChart, 
+    AlertCircle, 
+    TrendingUp, 
+    Loader2, 
+    Sparkles, 
+    Trophy, 
+    Target, 
+    ShieldCheck, 
+    Activity,
+    Brain,
+    Scale,
+    Layers,
+    Info
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+    Tooltip, 
+    TooltipContent, 
+    TooltipProvider, 
+    TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+const METRIC_DEFINITIONS = {
+    MACE: "Mean Absolute Calibration Error: Average discrepancy between nominal and empirical coverage. Lower is better.",
+    CRPS: "Standardized Continuous Ranked Probability Score: Evaluates absolute accuracy and uncertainty sharpness. Lower is better.",
+    Diversity: "Measures the variety or spread of generated candidates. Higher values indicate better exploration of the solution space.",
+    RelWidth: "Relative Interval Width: Average size of prediction intervals relative to data scale. Narrower is more precise."
+};
 
 export default function EvaluationPage() {
     const [result, setResult] = useState<DiagnoseResponse | null>(null);
@@ -34,11 +63,9 @@ export default function EvaluationPage() {
     const handleDiagnose = async (params: DiagnoseRequest) => {
         setIsLocalLoading(true);
         try {
-            // First attempt to retrieve cached results
             const cachedResult = await diagnoseEngines(params);
             setResult(cachedResult);
         } catch (error) {
-            // If cache miss (404), trigger new diagnosis
             await mutation.mutateAsync(params);
         } finally {
             setIsLocalLoading(false);
@@ -48,221 +75,411 @@ export default function EvaluationPage() {
     const isPending = isLocalLoading || mutation.isPending;
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto pb-16 px-4 md:px-0">
-            <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col gap-2 relative"
-            >
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-600 rounded-lg">
-                        <LineChart className="h-6 w-6 text-white" />
+        <TooltipProvider>
+            <div className="space-y-8 max-w-full mx-auto pb-16 px-4 md:px-0 bg-background/50 min-h-screen transition-colors duration-500">
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col gap-2 relative mt-4"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-linear-to-br from-indigo-600 to-violet-700 rounded-[1rem] shadow-lg shadow-indigo-500/20">
+                            <LineChart className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight text-foreground font-sans uppercase">
+                                Model Evaluation
+                            </h1>
+                            <p className="text-muted-foreground font-medium italic text-sm">Benchmark engine calibration and predictive fidelity across high-dimensional objectives.</p>
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
-                        Model Evaluation
-                    </h1>
-                </div>
-                <p className="text-muted-foreground font-medium ml-12 italic">Benchmark engine calibration and predictive fidelity across high-dimensional objectives.</p>
-                <div className="absolute -top-10 -right-10 opacity-5 pointer-events-none">
-                    <TrendingUp className="h-64 w-64 text-indigo-500 rotate-12" />
-                </div>
-            </motion.div>
+                </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-1">
-                    <EngineComparisonPanel
-                        datasets={datasets}
-                        onDiagnose={handleDiagnose}
-                        isLoading={isPending}
-                    />
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-1">
+                        <EngineComparisonPanel
+                            datasets={datasets}
+                            onDiagnose={handleDiagnose}
+                            isLoading={isPending}
+                        />
+                    </div>
 
-                <div className="lg:col-span-3 space-y-8 min-h-[600px]">
-                    <AnimatePresence mode="wait">
-                        {mutation.isError ? (
-                            <motion.div
-                                key="error"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                            >
-                                <Alert variant="destructive" className="border-destructive/20 bg-destructive/10">
-                                    <AlertCircle className="h-4 w-4 text-destructive" />
-                                    <AlertTitle className="text-destructive font-black uppercase tracking-tight">Benchmark Failed</AlertTitle>
-                                    <AlertDescription className="text-destructive/80 font-medium italic">
-                                        {(mutation.error as any)?.response?.data?.detail || "An unexpected error occurred during model diagnosis."}
-                                    </AlertDescription>
-                                </Alert>
-                            </motion.div>
-                        ) : isPending ? (
-                            <motion.div 
-                                key="loading"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="space-y-8"
-                            >
-                                <div className="grid grid-cols-2 gap-8 mb-8 min-w-0">
-                                    <div className="h-[350px] bg-muted/30 backdrop-blur-sm rounded-2xl border border-border animate-pulse min-w-0" />
-                                    <div className="h-[350px] bg-muted/30 backdrop-blur-sm rounded-2xl border border-border animate-pulse min-w-0" />
-                                </div>
-                                <div className="flex flex-col items-center justify-center p-20 bg-muted/5 rounded-3xl border border-dashed border-border transition-all">
-                                    <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-6" />
-                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Processing diagnostics</span>
-                                    <div className="mt-3 text-[10px] text-muted-foreground/60 animate-pulse font-medium italic tracking-wide">Computing Kolmogorov-Smirnov statistics...</div>
-                                </div>
-                            </motion.div>
-                        ) : result ? (
-                            <motion.div 
-                                key="results"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="space-y-8"
-                            >
-                                <div className="grid grid-cols-2 gap-8 min-w-0">
-                                    <div className="min-w-0">
-                                        <PerformanceChart
-                                            title="ECDF (Calibration)"
-                                            description="Empirical Cumulative Distribution Function of residuals. Focus on top-left area."
-                                            data={result.ecdf}
-                                            xAxisLabel="Normalized Residual"
-                                            yAxisLabel="Cumulative Prob."
-                                        />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <PerformanceChart
-                                            title="PIT (Probabilistic Calibration)"
-                                            description="Calibration of uncertainty. Perfectly calibrated models align with diagonal."
-                                            data={result.pit}
-                                            xAxisLabel="PIT Value"
-                                            yAxisLabel="Cumulative Frequency"
-                                            showIdeal
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-                                    <div className="lg:col-span-3">
-                                        <MetricBarChart
-                                            title="MACE Comparison"
-                                            description="Mean Absolute Calibration Error. Lower is more reliable."
-                                            data={result.mace}
-                                            yAxisLabel="MACE Score"
-                                        />
-                                    </div>
-                                    <div className="lg:col-span-2">
-                                        <Card className="border-border bg-card/80 backdrop-blur-md h-full overflow-hidden flex flex-col rounded-3xl">
-                                            <CardHeader className="py-6 px-8 bg-muted/10 border-b border-border flex flex-row items-center justify-between space-y-0">
-                                                <CardTitle className="text-xs font-black flex items-center gap-3 text-foreground uppercase tracking-widest">
-                                                    <Trophy className="h-4 w-4 text-amber-500" />
-                                                    Engine Leaderboard
-                                                </CardTitle>
-                                                <Badge variant="outline" className="bg-background text-[9px] font-black border-border px-3 rounded-full opacity-60">
-                                                    TOP PERFORMERS
-                                                </Badge>
-                                            </CardHeader>
-                                            <CardContent className="p-0 grow">
-                                                <Table>
-                                                    <TableHeader className="bg-muted/5">
-                                                        <TableRow className="hover:bg-transparent border-border/50 uppercase tracking-tighter">
-                                                            <TableHead className="font-black text-muted-foreground/40 text-[9px] h-12 px-8 tracking-[0.2em] uppercase">Rank & Engine</TableHead>
-                                                            <TableHead className="text-right font-black text-muted-foreground/40 text-[9px] h-12 px-8 tracking-[0.2em] uppercase">MACE Score</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {Object.entries(result.mace)
-                                                            .sort(([, a], [, b]) => a - b)
-                                                            .map(([engine, score], index) => (
-                                                                <TableRow key={engine} className="border-border/50 hover:bg-muted/30 transition-all group">
-                                                                    <TableCell className="py-5 px-8">
-                                                                        <div className="flex items-center gap-4">
-                                                                            <span className={`flex items-center justify-center w-7 h-7 rounded-lg text-[10px] font-black ${
-                                                                                index === 0 ? "bg-amber-500/20 text-amber-500 border border-amber-500/20" : "bg-muted text-muted-foreground/60 border border-border"
-                                                                            }`}>
-                                                                                {index + 1}
-                                                                            </span>
-                                                                            <div className="flex flex-col">
-                                                                                <span className="font-black text-foreground text-sm group-hover:text-indigo-500 transition-colors tracking-tight uppercase">{engine}</span>
-                                                                                <div className="flex items-center gap-2 mt-1">
-                                                                                    {score < 0.05 && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                                                                                    <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                                                                        score < 0.05 ? "text-emerald-500" : "text-muted-foreground/40"
-                                                                                    }`}>
-                                                                                        {score < 0.05 ? "Elite precision" : "Baseline"}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </TableCell>
-                                                                    <TableCell className="text-right py-5 px-8">
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className="font-mono text-xs font-black text-foreground tabular-nums">
-                                                                                {score.toFixed(4)}
-                                                                            </span>
-                                                                            <div className="w-20 h-1.5 bg-muted rounded-full mt-2.5 overflow-hidden border border-border/10">
-                                                                                <div 
-                                                                                    className={`h-full rounded-full transition-all duration-1000 ${score < 0.05 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                                                                                    style={{ width: `${Math.max(5, 100 - score * 500)}%` }}
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                </div>
-
-                                {result.warnings.length > 0 && (
-                                    <Alert className="bg-indigo-500/5 border-indigo-500/10 text-foreground rounded-3xl">
-                                        <div className="flex items-start gap-4">
-                                            <div className="bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20">
-                                                <Sparkles className="h-5 w-5 text-indigo-500" />
+                    <div className="lg:col-span-3 space-y-8 min-h-[700px]">
+                        <AnimatePresence mode="wait">
+                            {mutation.isError ? (
+                                <motion.div
+                                    key="error"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                >
+                                    <Alert variant="destructive" className="border-destructive/20 bg-destructive/5 rounded-[1rem] p-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-destructive/10 rounded-[1rem]">
+                                                <AlertCircle className="h-6 w-6 text-destructive" />
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <AlertTitle className="text-foreground font-black uppercase tracking-widest text-sm mb-3 opacity-90">System Insights</AlertTitle>
-                                                <AlertDescription>
-                                                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
-                                                        {result.warnings.map((w, i) => (
-                                                            <li key={i} className="flex items-center gap-3 text-[11px] font-bold text-muted-foreground hover:text-indigo-500 transition-colors group cursor-default">
-                                                                <div className="h-1.5 w-1.5 bg-indigo-500/40 rounded-full shrink-0 group-hover:scale-125 transition-transform" />
-                                                                {w}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
+                                            <div>
+                                                <AlertTitle className="text-destructive font-black uppercase tracking-widest text-xs">Benchmark Failed</AlertTitle>
+                                                <AlertDescription className="text-destructive/80 font-medium italic mt-1">
+                                                    {(mutation.error as any)?.response?.data?.detail?.message || "An unexpected error occurred during model diagnosis."}
                                                 </AlertDescription>
                                             </div>
                                         </div>
                                     </Alert>
-                                )}
-                            </motion.div>
-                        ) : (
-                            <motion.div 
-                                key="empty"
-                                initial={{ opacity: 0, scale: 0.98 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="flex flex-col items-center justify-center h-[600px] border-2 border-dashed border-border rounded-[2.5rem] bg-muted/5 backdrop-blur-[2px] p-10 text-center relative overflow-hidden group"
-                            >
-                                <div className="absolute inset-0 bg-linear-to-br from-indigo-500/5 via-transparent to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                                <div className="bg-background border border-border p-8 rounded-[2rem] mb-10 relative z-10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
-                                    <TrendingUp className="h-12 w-12 text-indigo-500" />
-                                </div>
-                                <h3 className="text-3xl font-black text-foreground mb-4 relative z-10 tracking-tight uppercase">Performance Benchmarking</h3>
-                                <p className="text-muted-foreground/70 max-w-sm mb-12 relative z-10 font-medium italic leading-relaxed">
-                                    Gain deep insights into your model's reliability. Select target datasets and engine candidates to begin the comparative audit.
-                                </p>
-                                <div className="flex items-center gap-3 text-indigo-500 font-black text-[10px] uppercase tracking-[0.25em] relative z-10 bg-indigo-500/5 px-6 py-3 rounded-2xl border border-indigo-500/20">
-                                    <Sparkles className="h-4 w-4 animate-pulse" />
-                                    Awaiting Calibration Input
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                </motion.div>
+                            ) : isPending ? (
+                                <motion.div 
+                                    key="loading"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-8"
+                                >
+                                    <div className="grid grid-cols-2 gap-8 mb-8 min-w-0">
+                                        <div className="h-[400px] bg-muted/20 backdrop-blur-sm rounded-[1rem] border border-border animate-pulse" />
+                                        <div className="h-[400px] bg-muted/20 backdrop-blur-sm rounded-[1rem] border border-border animate-pulse" />
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center p-24 bg-muted/5 rounded-[1rem] border-2 border-dashed border-border transition-all">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 blur-xl bg-indigo-500/20 animate-pulse rounded-full" />
+                                            <Loader2 className="h-12 w-12 animate-spin text-indigo-500 relative z-10" />
+                                        </div>
+                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em] mt-8">Processing Diagnostics</span>
+                                        <div className="mt-4 text-[11px] text-muted-foreground/50 animate-pulse font-bold italic tracking-wider">Computing objective-space residuals and probabilistic coverage...</div>
+                                    </div>
+                                </motion.div>
+                            ) : result ? (
+                                <motion.div 
+                                    key="results"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="space-y-8"
+                                >
+                                    <Tabs defaultValue="decision" className="w-full">
+                                        <div className="flex items-center justify-between mb-8 bg-muted/30 p-1.5 rounded-[1rem] border border-border/50 backdrop-blur-sm">
+                                            <TabsList className="bg-transparent h-12 p-0 gap-2">
+                                                <TabsTrigger 
+                                                    value="decision" 
+                                                    className="rounded-full px-8 h-10 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-indigo-500 font-black uppercase text-[10px] tracking-widest transition-all duration-300"
+                                                >
+                                                    <ShieldCheck className="h-3.5 w-3.5 mr-2" />
+                                                    Decision Reliability
+                                                </TabsTrigger>
+                                                <TabsTrigger 
+                                                    value="objective" 
+                                                    className="rounded-full px-8 h-10 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-teal-500 font-black uppercase text-[10px] tracking-widest transition-all duration-300"
+                                                >
+                                                    <Target className="h-3.5 w-3.5 mr-2" />
+                                                    Objective Accuracy
+                                                </TabsTrigger>
+                                            </TabsList>
+                                            <div className="px-6 flex items-center gap-2">
+                                                <Activity className="h-3.5 w-3.5 text-indigo-500/50" />
+                                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">Diagnostic Lens: Global Comparison</span>
+                                            </div>
+                                        </div>
+
+                                        <TabsContent value="decision" className="space-y-8 animate-in fade-in zoom-in duration-500 mt-0">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-w-0">
+                                                {/* Calibration Reliability Plot (Distributional Engines only) */}
+                                                <div className="min-w-0">
+                                                    {Object.keys(result.decision_space.calibration_curves).length > 0 ? (
+                                                        <PerformanceChart
+                                                            title="Calibration Reliability"
+                                                            description="Nominal vs Empirical coverage for distributional engines (INN, MDN)."
+                                                            data={result.decision_space.calibration_curves}
+                                                            xAxisLabel="Nominal Coverage"
+                                                            yAxisLabel="Empirical Coverage"
+                                                            showIdeal
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center p-12 bg-muted/5 rounded-[1rem] border border-border/50 h-[300px] text-center">
+                                                            <Activity className="h-8 w-8 text-muted-foreground/20 mb-4" />
+                                                            <span className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No Distributional Data</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Uncertainty Profile Plot (ECDF for Interval Engines) */}
+                                                <div className="min-w-0">
+                                                    {Object.keys(result.decision_space.ecdf).length > 0 ? (
+                                                        <PerformanceChart
+                                                            title="Uncertainty Profile (ECDF)"
+                                                            description="Empirical Cumulative Distribution Function of coverage for interval engines (GBPI)."
+                                                            data={result.decision_space.ecdf}
+                                                            xAxisLabel="Coverage Level"
+                                                            yAxisLabel="Cumulative Density"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center p-12 bg-muted/5 rounded-[1rem] border border-border/50 h-[300px] text-center">
+                                                            <Layers className="h-8 w-8 text-muted-foreground/20 mb-4" />
+                                                            <span className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No Interval Data</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <Card className="border-border bg-card/40 backdrop-blur-xl rounded-[1rem] overflow-hidden border-2">
+                                                <CardHeader className="py-8 px-10 border-b border-border/50 bg-muted/10 flex flex-row items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 bg-indigo-500/10 rounded-[1rem] border border-indigo-500/20">
+                                                            <ShieldCheck className="h-5 w-5 text-indigo-500" />
+                                                        </div>
+                                                        <div>
+                                                            <CardTitle className="text-sm font-black uppercase tracking-widest text-foreground">Decision Space Metrics</CardTitle>
+                                                            <CardDescription className="text-[11px] font-medium italic text-muted-foreground mt-1 tracking-tight">Reliability benchmarks for decision-space predictions.</CardDescription>
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant="outline" className="px-5 py-1.5 rounded-full bg-background/50 text-[10px] font-black border-border/80 text-muted-foreground/60 tracking-widest uppercase">
+                                                        P(x|y) Evaluation
+                                                    </Badge>
+                                                </CardHeader>
+                                                <CardContent className="p-0">
+                                                    <Table>
+                                                        <TableHeader className="bg-muted/5">
+                                                            <TableRow className="border-border/50 hover:bg-transparent">
+                                                                <TableHead className="px-10 h-16 font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">Engine Instance</TableHead>
+                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        MACE Error
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Mean Absolute Calibration Error</p>
+                                                                                <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.MACE}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </div>
+                                                                </TableHead>
+                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        S-CRPS
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Standardized CRPS</p>
+                                                                                <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.CRPS}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </div>
+                                                                </TableHead>
+                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        Diversity
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Decision Diversity</p>
+                                                                                <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.Diversity}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </div>
+                                                                </TableHead>
+                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        Rel. Width
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Relative Interval Width</p>
+                                                                                <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.RelWidth}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </div>
+                                                                </TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {Object.entries(result.decision_space.metrics).map(([engine, metrics]) => (
+                                                                <TableRow key={engine} className="group border-border/50 hover:bg-indigo-500/5 transition-all duration-300">
+                                                                    <TableCell className="px-10 py-6">
+                                                                        <div className="flex items-center gap-4">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="font-black text-sm text-foreground uppercase tracking-tight group-hover:text-indigo-500 transition-colors">{engine}</span>
+                                                                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest mt-1">
+                                                                                    {result.capabilities[engine] === "full_distribution" ? "Distributional Engine" : "Interval Engine"}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell className="px-10 py-6 text-right relative group/item">
+                                                                        <span className="font-mono text-xs font-black text-foreground tabular-nums">{(metrics.mace || metrics.mean_coverage_error || 0).toFixed(4)}</span>
+                                                                        <div className="mt-2 text-[9px] font-black uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Lower is Better</div>
+                                                                    </TableCell>
+                                                                    <TableCell className="px-10 py-6 text-right relative">
+                                                                        <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">{(metrics.mean_crps || 0).toFixed(4)}</span>
+                                                                        <div className="mt-2 text-[9px] font-black uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Lower is Better</div>
+                                                                    </TableCell>
+                                                                    <TableCell className="px-10 py-6 text-right relative">
+                                                                        <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">{(metrics.diversity || 0).toFixed(3)}</span>
+                                                                        <div className="mt-2 text-[9px] font-black uppercase text-violet-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Higher is Better</div>
+                                                                    </TableCell>
+                                                                    <TableCell className="px-10 py-6 text-right relative">
+                                                                        <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">{(metrics.interval_width || 0).toFixed(3)}</span>
+                                                                        <div className="mt-2 text-[9px] font-black uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Lower is Better</div>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </CardContent>
+                                            </Card>
+                                        </TabsContent>
+
+                                        <TabsContent value="objective" className="space-y-8 animate-in fade-in zoom-in duration-500 mt-0">
+                                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                                                <div className="lg:col-span-3 min-w-0">
+                                                    <PerformanceChart
+                                                        title="Global Accuracy Profile"
+                                                        description="Empirical Cumulative Distribution Function of objective-space residuals."
+                                                        data={result.objective_space.ecdf}
+                                                        xAxisLabel="Normalized Residual (Distance)"
+                                                        yAxisLabel="Cumulative Density"
+                                                    />
+                                                </div>
+                                                <div className="lg:col-span-2 min-w-0">
+                                                    <Card className="border-border bg-card/8 backdrop-blur-md h-full rounded-[1rem] border-2 shadow-xl shadow-teal-500/5">
+                                                        <CardHeader className="py-8 px-10 border-b border-border/50 bg-muted/10">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="p-3 bg-teal-500/10 rounded-[1rem] border border-teal-500/20">
+                                                                    <Target className="h-5 w-5 text-teal-500" />
+                                                                </div>
+                                                                <div>
+                                                                    <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-foreground">Objective Metrics</CardTitle>
+                                                                    <CardDescription className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1">Accuracy Leaderboard</CardDescription>
+                                                                </div>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent className="p-0">
+                                                            <div className="p-8 space-y-6">
+                                                                {Object.entries(result.objective_space.metrics)
+                                                                    .sort(([, a], [, b]) => a.mean_best_shot - b.mean_best_shot)
+                                                                    .map(([engine, metrics], index) => (
+                                                                        <div key={engine} className="relative group p-6 rounded-[1.5rem] bg-muted/10 border border-border/50 hover:bg-teal-500/5 hover:border-teal-500/20 transition-all duration-300">
+                                                                            <div className="flex items-center justify-between mb-4">
+                                                                                <div className="flex items-center gap-4">
+                                                                                    <div className={cn(
+                                                                                        "w-8 h-8 rounded-[1rem] flex items-center justify-center text-[10px] font-black border-2",
+                                                                                        index === 0 ? "bg-teal-500/20 text-teal-600 border-teal-500/30" : "bg-muted text-muted-foreground/40 border-border"
+                                                                                    )}>
+                                                                                        {index + 1}
+                                                                                    </div>
+                                                                                    <span className="font-black text-xs uppercase tracking-tight text-foreground truncate max-w-[120px]">{engine}</span>
+                                                                                </div>
+                                                                                <div className="flex flex-col items-end">
+                                                                                    <span className="font-mono text-sm font-black text-foreground">{metrics.mean_best_shot.toFixed(4)}</span>
+                                                                                    <span className="text-[8px] font-black uppercase text-teal-500 tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Lower is Better</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/10">
+                                                                                <div className="group/metric">
+                                                                                    <div className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                                                                                        Mean Bias
+                                                                                        <span className="text-[6px] text-teal-500 opacity-0 group-hover/metric:opacity-100 transition-opacity">Lower is Better</span>
+                                                                                    </div>
+                                                                                    <div className="font-mono text-[10px] font-bold text-foreground">{metrics.mean_bias.toFixed(4)}</div>
+                                                                                </div>
+                                                                                <div className="group/metric">
+                                                                                    <div className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                                                                                        Dispersion
+                                                                                        <span className="text-[6px] text-teal-500 opacity-0 group-hover/metric:opacity-100 transition-opacity">Lower is Better</span>
+                                                                                    </div>
+                                                                                    <div className="font-mono text-[10px] font-bold text-foreground">{metrics.mean_dispersion.toFixed(4)}</div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {index === 0 && (
+                                                                                <div className="absolute -top-2 -right-2 p-1.5 bg-background border border-teal-500/30 rounded-full shadow-lg">
+                                                                                    <Sparkles className="h-3 w-3 text-teal-500 animate-pulse" />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                </div>
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
+
+                                    {result.warnings.length > 0 && (
+                                        <Alert className="bg-indigo-500/5 border-indigo-500/10 text-foreground rounded-[1rem] p-8 border-2">
+                                            <div className="flex items-start gap-6">
+                                                <div className="bg-indigo-500/10 p-4 rounded-[1rem] border border-indigo-500/20">
+                                                    <Sparkles className="h-6 w-6 text-indigo-500" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <AlertTitle className="text-foreground font-black uppercase tracking-[0.25em] text-xs mb-4 opacity-90">Engine Audit Insights</AlertTitle>
+                                                    <AlertDescription>
+                                                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                                                            {result.warnings.map((w, i) => (
+                                                                <li key={i} className="flex items-center gap-4 text-[11px] font-bold text-muted-foreground/70 hover:text-indigo-500 transition-colors group cursor-default">
+                                                                    <div className="h-2 w-2 bg-indigo-500/30 rounded-full shrink-0 group-hover:scale-125 transition-transform group-hover:bg-indigo-500" />
+                                                                    {w}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </AlertDescription>
+                                                </div>
+                                            </div>
+                                        </Alert>
+                                    )}
+                                </motion.div>
+                            ) : (
+                                <motion.div 
+                                    key="empty"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="flex flex-col items-center justify-center h-[700px] border-[3px] border-dashed border-border rounded-[1rem] bg-muted/5 backdrop-blur-[4px] p-20 text-center relative overflow-hidden group"
+                                >
+                                    <div className="absolute inset-0 bg-linear-to-br from-indigo-500/5 via-transparent to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                                    
+                                    <div className="grid grid-cols-2 gap-6 mb-16 relative z-10 transition-all duration-700 group-hover:scale-105">
+                                        <div className="p-8 bg-background border border-border rounded-[1rem] shadow-xl group-hover:shadow-indigo-500/10 group-hover:-translate-y-2 transition-all duration-500">
+                                            <ShieldCheck className="h-10 w-10 text-indigo-500" />
+                                            <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Decision Reliability</div>
+                                        </div>
+                                        <div className="p-8 bg-background border border-border rounded-[1rem] shadow-xl group-hover:shadow-teal-500/10 group-hover:translate-y-2 transition-all duration-500">
+                                            <Target className="h-10 w-10 text-teal-500" />
+                                            <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Objective Accuracy</div>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="text-4xl font-black text-foreground mb-6 relative z-10 tracking-tighter uppercase max-w-lg leading-tight">
+                                        Global Model Performance Benchmark
+                                    </h3>
+                                    <p className="text-muted-foreground/70 max-w-md mb-16 relative z-10 font-medium italic text-lg leading-relaxed">
+                                        Comparative calibration audit across decision and objective spaces. Select targets to initiate diagnostic compute.
+                                    </p>
+
+                                    <div className="flex items-center gap-4 relative z-10">
+                                        <div className="flex items-center gap-3 text-indigo-500 font-black text-[11px] uppercase tracking-[0.3em] bg-indigo-500/5 px-10 py-5 rounded-[1rem] border border-indigo-500/20 shadow-lg shadow-indigo-500/5 group-hover:scale-110 transition-all duration-500">
+                                            <Sparkles className="h-5 w-5 animate-pulse" />
+                                            Awaiting Multi-Engine Selection
+                                        </div>
+                                    </div>
+
+                                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-6 opacity-20 relative z-10">
+                                        <Brain className="h-5 w-5" />
+                                        <Scale className="h-5 w-5" />
+                                        <Activity className="h-5 w-5" />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
-        </div>
+        </TooltipProvider>
     );
 }

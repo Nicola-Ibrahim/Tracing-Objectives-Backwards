@@ -58,7 +58,7 @@ export default function LandingPage() {
           <Link href="/datasets" className="hover:text-indigo-500 transition-colors">Data Hub</Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Button className="rounded-2xl bg-foreground text-background hover:bg-foreground/90 transition-all border-none active:scale-95" asChild>
+            <Button className="rounded-[1rem] bg-foreground text-background hover:bg-foreground/90 transition-all border-none active:scale-95" asChild>
               <Link href="/datasets">Open Console</Link>
             </Button>
           </div>
@@ -108,13 +108,13 @@ export default function LandingPage() {
                 transition={{ delay: 0.4 }}
                 className="flex flex-wrap items-center justify-start gap-8"
               >
-                <Button size="lg" className="rounded-3xl h-20 px-12 text-2xl font-black transition-all hover:scale-105 active:scale-95 group" asChild>
+                <Button size="lg" className="rounded-[1rem] h-20 px-12 text-2xl font-black transition-all hover:scale-105 active:scale-95 group" asChild>
                   <Link href="/inverse/generate">
                     Launch Explorer
                     <ArrowRight className="ml-3 h-8 w-8 group-hover:translate-x-2 transition-transform" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="secondary" className="rounded-3xl h-20 px-10 text-xl font-bold bg-background/50 backdrop-blur-sm border-border hover:bg-muted transition-all" asChild>
+                <Button size="lg" variant="secondary" className="rounded-[1rem] h-20 px-10 text-xl font-bold bg-background/50 backdrop-blur-sm border-border hover:bg-muted transition-all" asChild>
                   <Link href="/datasets">
                     Data Workbench
                   </Link>
@@ -158,11 +158,11 @@ export default function LandingPage() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             {/* Data Hub */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[1rem] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <Database size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mb-8">
+              <div className="w-12 h-12 rounded-[1rem] bg-indigo-600 text-white flex items-center justify-center mb-8">
                 <Database className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Data Analytics Hub</h3>
@@ -175,11 +175,11 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Train Engine */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-blue-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[1rem] p-8 hover:border-blue-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <Cpu size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mb-8">
+              <div className="w-12 h-12 rounded-[1rem] bg-blue-600 text-white flex items-center justify-center mb-8">
                 <Cpu className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Engine Construction</h3>
@@ -192,11 +192,11 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Inference Hub */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-purple-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[1rem] p-8 hover:border-purple-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <Sparkles size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center mb-8">
+              <div className="w-12 h-12 rounded-[1rem] bg-purple-600 text-white flex items-center justify-center mb-8">
                 <Sparkles className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Inference Registry</h3>
@@ -209,11 +209,11 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Evaluation */}
-            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-emerald-500/30 transition-all group relative overflow-hidden">
+            <motion.div variants={fadeIn} className="bg-card border border-border rounded-[1rem] p-8 hover:border-emerald-500/30 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity text-foreground">
                 <BarChart3 size={120} />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mb-8">
+              <div className="w-12 h-12 rounded-[1rem] bg-emerald-600 text-white flex items-center justify-center mb-8">
                 <BarChart3 className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Leaderboard Metrics</h3>
@@ -231,7 +231,7 @@ export default function LandingPage() {
       {/* Registry Summary Section */}
       <section className="py-32 bg-background/50 transition-colors duration-500">
         <div className="container mx-auto px-6">
-          <div className="bg-card border border-border rounded-[4rem] p-16 flex flex-col items-center text-center relative overflow-hidden group">
+          <div className="bg-card border border-border rounded-[1rem] p-16 flex flex-col items-center text-center relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.05),transparent_70%)]"></div>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -242,10 +242,10 @@ export default function LandingPage() {
               <Logo simple className="scale-150 mb-12 opacity-30 dark:opacity-20 transition-all duration-700 hover:opacity-50" />
               <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-8 text-foreground">Ready to invert your models?</h2>
               <div className="flex flex-wrap justify-center gap-6">
-                <Button size="lg" className="rounded-2xl h-16 px-8 transition-all active:scale-95" asChild>
+                <Button size="lg" className="rounded-[1rem] h-16 px-8 transition-all active:scale-95" asChild>
                   <Link href="/inverse/train">Initialize Training</Link>
                 </Button>
-                <Button size="lg" variant="secondary" className="rounded-2xl h-16 px-8 transition-all active:scale-95" asChild>
+                <Button size="lg" variant="secondary" className="rounded-[1rem] h-16 px-8 transition-all active:scale-95" asChild>
                   <Link href="/datasets">Explore Datasets</Link>
                 </Button>
               </div>
@@ -274,13 +274,13 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="md:col-span-5 flex flex-col items-end">
-              <div className="bg-muted border border-border p-8 rounded-[2.5rem] w-full max-w-sm flex items-center justify-between group cursor-pointer transition-all overflow-hidden relative">
+              <div className="bg-muted border border-border p-8 rounded-[1rem] w-full max-w-sm flex items-center justify-between group cursor-pointer transition-all overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-full h-full bg-indigo-500/5 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                 <div className="flex flex-col relative z-10">
                   <span className="font-black text-2xl tracking-tighter italic text-muted-foreground group-hover:text-indigo-500 transition-colors">Start Generating</span>
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Target Objective v1.2</span>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center group-hover:scale-110 transition-transform relative z-10">
+                <div className="w-12 h-12 rounded-[1rem] bg-foreground text-background flex items-center justify-center group-hover:scale-110 transition-transform relative z-10">
                   <ArrowRight />
                 </div>
               </div>

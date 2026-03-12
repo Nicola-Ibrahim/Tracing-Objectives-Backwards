@@ -12,6 +12,8 @@ from .dependencies import get_diagnose_service, get_performance_service
 from .schemas import (
     DiagnoseRequest,
     DiagnoseResponse,
+    DomainAssessmentData,
+    MetricSeries,
     PerformanceRequest,
     PerformanceResponse,
 )
@@ -38,35 +40,63 @@ async def diagnose_engines(
             engines=[
                 f"{report.engine.type} (v{report.engine.version})" for report in reports
             ],
-            ecdf={
-                f"{report.engine.type} (v{report.engine.version})": {
-                    "x": report.objective_space.ecdf_profile.x_values,
-                    "y": report.objective_space.ecdf_profile.cumulative_probabilities,
-                }
+            capabilities={
+                f"{report.engine.type} (v{report.engine.version})": report.engine.capability.value
                 for report in reports
             },
-            pit={
-                f"{report.engine.type} (v{report.engine.version})": (
-                    {
-                        "x": report.decision_space.calibration_curve.nominal_coverage,
-                        "y": report.decision_space.calibration_curve.empirical_coverage,
+            objective_space=DomainAssessmentData(
+                ecdf={
+                    f"{report.engine.type} (v{report.engine.version})": MetricSeries(
+                        x=report.objective_space.ecdf_profile.x_values,
+                        y=report.objective_space.ecdf_profile.cumulative_probabilities,
+                    )
+                    for report in reports
+                },
+                metrics={
+                    f"{report.engine.type} (v{report.engine.version})": {
+                        "mean_best_shot": report.objective_space.mean_best_shot,
+                        "median_best_shot": report.objective_space.median_best_shot,
+                        "mean_bias": report.objective_space.mean_bias,
+                        "mean_dispersion": report.objective_space.mean_dispersion,
                     }
+                    for report in reports
+                },
+            ),
+            decision_space=DomainAssessmentData(
+                ecdf={
+                    f"{report.engine.type} (v{report.engine.version})": MetricSeries(
+                        x=report.decision_space.ecdf_profile.x_values,
+                        y=report.decision_space.ecdf_profile.cumulative_probabilities,
+                    )
+                    for report in reports
+                    if hasattr(report.decision_space, "ecdf_profile")
+                },
+                calibration_curves={
+                    f"{report.engine.type} (v{report.engine.version})": MetricSeries(
+                        x=report.decision_space.calibration_curve.nominal_coverage,
+                        y=report.decision_space.calibration_curve.empirical_coverage,
+                    )
+                    for report in reports
                     if hasattr(report.decision_space, "calibration_curve")
-                    else {
-                        "x": report.decision_space.ecdf_profile.x_values,
-                        "y": report.decision_space.ecdf_profile.cumulative_probabilities,
-                    }
-                )
-                for report in reports
-            },
-            mace={
-                f"{report.engine.type} (v{report.engine.version})": (
-                    report.decision_space.mace
-                    if hasattr(report.decision_space, "mace")
-                    else report.decision_space.mean_coverage_error
-                )
-                for report in reports
-            },
+                },
+                metrics={
+                    f"{report.engine.type} (v{report.engine.version})": (
+                        {
+                            "mace": report.decision_space.mace,
+                            "mean_crps": report.decision_space.mean_crps,
+                            "interval_width": report.decision_space.mean_interval_width,
+                            "diversity": report.decision_space.mean_diversity,
+                        }
+                        if hasattr(report.decision_space, "pit_profile")
+                        else {
+                            "mace": report.decision_space.mean_coverage_error,
+                            "interval_width": report.decision_space.mean_interval_width,
+                            "winkler_score": report.decision_space.mean_winkler_score,
+                        }
+                    )
+                    for report in reports
+                },
+            ),
             warnings=[],
         ),
         on_failure=lambda error: HTTPException(
@@ -80,43 +110,6 @@ async def diagnose_engines(
             },
         ),
     )
-
-
-# @router.post("/diagnose/cached", response_model=DiagnoseResponse)
-# async def get_cached_diagnose(
-#     request: DiagnoseRequest,
-#     service: DiagnoseInverseModelsService = Depends(get_diagnose_service),
-# ):
-#     """
-#     Retrieve existing diagnostics from database if available.
-#     Returns 404 if any engine in the request has no cached diagnostics.
-#     """
-#     candidates = [
-#         InverseEngineCandidate(solver_type=c.solver_type, version=c.version)
-#         for c in request.candidates
-#     ]
-#     params = DiagnoseInverseModelsParams(
-#         dataset_name=request.dataset_name,
-#         inverse_engine_candidates=candidates,
-#         num_samples=request.num_samples,
-#         scale_method=request.scale_method,
-#     )
-
-#     result = service.get_cached_diagnostics(params)
-#     return result.match(
-#         on_success=lambda diagnostics: DiagnoseResponse(
-#             dataset_name=diagnostics.dataset_name,
-#             engine_diagnostics=diagnostics.engine_diagnostics,
-#         ),
-#         on_failure=lambda error: HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail={
-#                 "message": error.message,
-#                 "error_code": error.code,
-#                 "details": error.details,
-#             },
-#         ),
-#     )
 
 
 @router.post("/performance", response_model=PerformanceResponse)

@@ -183,7 +183,7 @@ export function TrainEngineForm({
                 <Button
                     type="submit"
                     disabled={isLoading || !isDynamicValid}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 rounded-2xl transition-all active:scale-[0.98] mt-4"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 rounded-[1rem] transition-all active:scale-[0.98] mt-4"
                 >
                     {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />

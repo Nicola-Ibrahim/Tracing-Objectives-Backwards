@@ -61,11 +61,11 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                     return (
                         <div
                             key={idx}
-                            className="flex flex-col p-4 bg-background border border-border rounded-2xl hover:border-indigo-500/30 transition-all group relative overflow-hidden"
+                            className="flex flex-col p-4 bg-background border border-border rounded-[1rem] hover:border-indigo-500/30 transition-all group relative overflow-hidden"
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/20 group-hover:bg-indigo-500 transition-colors" />
                             <div className="flex items-center gap-4">
-                                <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground shrink-0 border border-border/50 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                                <div className="h-7 w-7 rounded-[1rem] bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground shrink-0 border border-border/50 group-hover:bg-indigo-500 group-hover:text-white transition-all">
                                     {idx + 1}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -78,14 +78,14 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                                     {meta && (
                                         <Dialog>
                                             <DialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/20 transition-all">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-[1rem] text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/20 transition-all">
                                                     <Settings2 className="h-4 w-4" />
                                                 </Button>
                                             </DialogTrigger>
-                                            <DialogContent className="sm:max-w-md p-0 rounded-3xl border-border bg-card overflow-hidden">
+                                            <DialogContent className="sm:max-w-md p-0 rounded-[1rem] border-border bg-card overflow-hidden">
                                                 <div className="space-y-0">
                                                     <DialogHeader className="flex flex-row items-center gap-4 bg-muted/30 p-6 border-b border-border space-y-0 text-left">
-                                                        <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                                                        <div className="h-12 w-12 rounded-[1rem] bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
                                                             <Settings2 className="h-6 w-6 text-indigo-500" />
                                                         </div>
                                                         <div className="min-w-0">
@@ -110,7 +110,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => removeStep(idx)}
-                                        className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
+                                        className="h-8 w-8 rounded-[1rem] text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -121,7 +121,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                 })}
 
                 {chain.length === 0 && (
-                    <div className="py-12 border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center text-center bg-muted/5 group hover:bg-muted/10 transition-colors">
+                    <div className="py-12 border-2 border-dashed border-border rounded-[1rem] flex flex-col items-center justify-center text-center bg-muted/5 group hover:bg-muted/10 transition-colors">
                         <Plus className="h-5 w-5 text-muted-foreground/20 mb-3 group-hover:scale-110 transition-transform" />
                         <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">No transformations added yet.</p>
                     </div>
@@ -130,13 +130,13 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
 
             <div className="pt-2">
                 <Select key={chain.length} onValueChange={(type) => addStep(type)}>
-                    <SelectTrigger className="w-full h-12 border-dashed border-2 border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-indigo-500/30 rounded-2xl transition-all group">
+                    <SelectTrigger className="w-full h-12 border-dashed border-2 border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-indigo-500/30 rounded-[1rem] transition-all group">
                         <div className="flex items-center justify-center gap-3 w-full text-muted-foreground group-hover:text-indigo-500 transition-colors">
                             <Plus className="h-4 w-4 text-indigo-500 group-hover:rotate-90 transition-transform" />
                             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Transformation Step</span>
                         </div>
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border-border text-popover-foreground rounded-2xl">
+                    <SelectContent className="bg-popover border-border text-popover-foreground rounded-[1rem]">
                         {transformers.map((t) => (
                             <SelectItem 
                                 key={t.type} 

@@ -55,7 +55,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
     };
 
     return (
-        <Card className="border-border bg-card/50 backdrop-blur-sm rounded-[2rem] overflow-hidden">
+        <Card className="border-border bg-card/50 backdrop-blur-sm rounded-[1rem] overflow-hidden">
             <CardHeader className="bg-muted/10 border-b border-border p-8">
                 <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground uppercase tracking-tight">
                     <Activity className="h-6 w-6 text-indigo-500" />
@@ -67,10 +67,10 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                 <div className="space-y-3">
                     <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] ml-1">Dataset Scope</label>
                     <Select onValueChange={setSelectedDataset} value={selectedDataset}>
-                        <SelectTrigger className="bg-background border-border text-foreground h-12 rounded-2xl focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                        <SelectTrigger className="bg-background border-border text-foreground h-12 rounded-[1rem] focus:ring-2 focus:ring-indigo-500/10 transition-all">
                             <SelectValue placeholder="Select target dataset" />
                         </SelectTrigger>
-                        <SelectContent className="bg-popover border-border text-popover-foreground rounded-2xl">
+                        <SelectContent className="bg-popover border-border text-popover-foreground rounded-[1rem]">
                             {datasets.map(d => (
                                 <SelectItem key={d} value={d} className="hover:bg-muted focus:bg-muted cursor-pointer font-bold tracking-tight">{d}</SelectItem>
                             ))}
@@ -82,11 +82,11 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
                         <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] ml-1">Available Engines</label>
                         {fetchingEngines ? (
-                            <div className="flex items-center justify-center p-12 border-2 border-dashed rounded-3xl border-border/40 bg-muted/5">
+                            <div className="flex items-center justify-center p-12 border-2 border-dashed rounded-[1rem] border-border/40 bg-muted/5">
                                 <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
                             </div>
                         ) : availableEngines.length === 0 ? (
-                            <div className="p-12 border-2 border-dashed rounded-3xl border-border/40 text-center bg-muted/5">
+                            <div className="p-12 border-2 border-dashed rounded-[1rem] border-border/40 text-center bg-muted/5">
                                 <p className="text-xs font-black text-muted-foreground/40 uppercase tracking-widest italic">No trained engines found.</p>
                             </div>
                         ) : (
@@ -97,7 +97,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                                         <div
                                             key={`${e.solver_type}_v${e.version}`}
                                             onClick={() => toggleEngine(e)}
-                                            className={`flex items-center justify-between p-4 border rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group ${
+                                            className={`flex items-center justify-between p-4 border rounded-[1rem] cursor-pointer transition-all duration-300 relative overflow-hidden group ${
                                                 isSelected 
                                                     ? "bg-indigo-500/10 border-indigo-500/50 text-foreground ring-1 ring-indigo-500/20" 
                                                     : "hover:border-indigo-500/30 bg-background border-border text-foreground"
@@ -141,7 +141,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                         <Button
                             disabled={isLoading}
                             onClick={handleDiagnose}
-                            className={`w-full py-8 transition-all duration-500 relative overflow-hidden group/btn rounded-2xl border border-transparent ${
+                            className={`w-full py-8 transition-all duration-500 relative overflow-hidden group/btn rounded-[1rem] border border-transparent ${
                                 isLoading
                                     ? "bg-muted cursor-not-allowed text-muted-foreground opacity-50"
                                     : "bg-foreground text-background hover:bg-indigo-500 hover:text-white active:scale-[0.98]"

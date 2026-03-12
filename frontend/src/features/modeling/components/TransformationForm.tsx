@@ -41,7 +41,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                 step={type === "int" ? "1" : "0.1"}
                                 value={value ?? 0}
                                 onChange={(e) => handleParamChange(name, parseFloat(e.target.value))}
-                                className="bg-background border-border text-foreground h-11 focus:ring-2 focus:ring-indigo-500/10 rounded-xl transition-all"
+                                className="bg-background border-border text-foreground h-11 focus:ring-2 focus:ring-indigo-500/10 rounded-[1rem] transition-all"
                             />
                         ) : type === "list" || name === "feature_range" ? (
                             <div className="grid grid-cols-2 gap-3">
@@ -54,7 +54,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                             newVal[0] = parseFloat(e.target.value);
                                             handleParamChange(name, newVal);
                                         }}
-                                        className="bg-background border-border text-foreground h-11 rounded-xl pl-9"
+                                        className="bg-background border-border text-foreground h-11 rounded-[1rem] pl-9"
                                     />
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground/40 uppercase">Min</span>
                                 </div>
@@ -67,7 +67,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                             newVal[1] = parseFloat(e.target.value);
                                             handleParamChange(name, newVal);
                                         }}
-                                        className="bg-background border-border text-foreground h-11 rounded-xl pl-9"
+                                        className="bg-background border-border text-foreground h-11 rounded-[1rem] pl-9"
                                     />
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground/40 uppercase">Max</span>
                                 </div>
@@ -77,7 +77,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                 id={name}
                                 value={value ?? ""}
                                 onChange={(e) => handleParamChange(name, e.target.value)}
-                                className="bg-background border-border text-foreground h-11 rounded-xl focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                                className="bg-background border-border text-foreground h-11 rounded-[1rem] focus:ring-2 focus:ring-indigo-500/10 transition-all"
                             />
                         )}
                     </div>

@@ -88,7 +88,7 @@ export default function DatasetsPage() {
     );
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto pb-16 px-4 md:px-0">
+        <div className="space-y-8 max-w-full mx-auto pb-16 px-4 md:px-0">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
                 <motion.div 
                     initial={{ opacity: 0, y: -10 }}
@@ -287,7 +287,7 @@ export default function DatasetsPage() {
             </Dialog>
 
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-[2.5rem] bg-muted/10">
+                <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-[1rem] bg-muted/10">
                     <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
                     <p className="text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] animate-pulse">Synchronizing with registry...</p>
                 </div>
@@ -296,7 +296,7 @@ export default function DatasetsPage() {
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                 >
-                    <Card className="border-border rounded-[2.5rem] overflow-hidden bg-card transition-all">
+                    <Card className="border-border rounded-[1rem] overflow-hidden bg-card transition-all">
                         <CardContent className="p-16 text-center bg-linear-to-b from-card to-muted/20">
                             <div className="bg-background p-8 rounded-full inline-block mb-6 border border-border group-hover:scale-110 transition-transform ring-8 ring-muted/50">
                                 <FileText className="h-12 w-12 text-muted-foreground/30" />
@@ -421,7 +421,7 @@ export default function DatasetsPage() {
 
                     {filteredDatasets.length === 0 && searchQuery && (
                         <div className="py-24 text-center">
-                            <div className="bg-muted/30 p-8 rounded-full inline-block mb-6 ring-8 ring-muted/10">
+                            <div className="bg-muted/30 p-8 rounded-[1rem] ring-8 ring-muted/10">
                                 <Search className="h-10 w-10 text-muted-foreground/30" />
                             </div>
                             <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">

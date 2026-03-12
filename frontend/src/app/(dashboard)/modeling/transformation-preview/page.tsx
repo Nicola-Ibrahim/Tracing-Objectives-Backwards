@@ -56,15 +56,15 @@ export default function TransformationPreviewerPage() {
     const transformers = transformersData?.transformers || [];
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto pb-16 px-4 md:px-0">
+        <div className="space-y-8 max-w-full mx-auto pb-16 px-4 md:px-0">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col gap-2 relative"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-lg">
+                        <div className="p-2 bg-indigo-600 rounded-[1rem]">
                             <Binary className="h-6 w-6 text-white" />
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
@@ -77,10 +77,10 @@ export default function TransformationPreviewerPage() {
                     </div>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-4 bg-muted/30 p-1 rounded-2xl border border-border/50 backdrop-blur-sm"
+                    className="flex items-center gap-4 bg-muted/30 p-1 rounded-[1rem] border border-border/50 backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-1 px-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mr-2">Layout</span>
@@ -89,7 +89,7 @@ export default function TransformationPreviewerPage() {
                             size="sm"
                             onClick={() => setCompareMode(true)}
                             className={cn(
-                                "h-8 rounded-xl font-bold text-[10px] px-4 transition-all",
+                                "h-8 rounded-[1rem] font-bold text-[10px] px-4 transition-all",
                                 compareMode ? "bg-background text-indigo-500 border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -100,7 +100,7 @@ export default function TransformationPreviewerPage() {
                             size="sm"
                             onClick={() => setCompareMode(false)}
                             className={cn(
-                                "h-8 rounded-xl font-bold text-[10px] px-4 transition-all",
+                                "h-8 rounded-[1rem] font-bold text-[10px] px-4 transition-all",
                                 !compareMode ? "bg-background text-indigo-500 border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -117,13 +117,13 @@ export default function TransformationPreviewerPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                     >
-                        <Card className="border-border rounded-3xl bg-card transition-all">
+                        <Card className="border-border rounded-[1rem] bg-card transition-all">
                             <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
                                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
                                     <Database className="h-4 w-4" />
                                     Source
                                 </CardTitle>
-                                <div className="bg-indigo-500/10 p-1.5 rounded-lg">
+                                <div className="bg-indigo-500/10 p-1.5 rounded-[1rem]">
                                     <Database className="h-3.5 w-3.5 text-indigo-500" />
                                 </div>
                             </CardHeader>
@@ -141,10 +141,10 @@ export default function TransformationPreviewerPage() {
                                     </SelectContent>
                                 </Select>
 
-                                    <div className="pt-4 border-t border-border">
-                                        <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest pl-1">Space Projection</p>
-                                        <p className="text-[11px] font-bold text-muted-foreground/60 ml-1 mt-2">Visualizing first two dimensions of the manifold.</p>
-                                    </div>
+                                <div className="pt-4 border-t border-border">
+                                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest pl-1">Space Projection</p>
+                                    <p className="text-[11px] font-bold text-muted-foreground/60 ml-1 mt-2">Visualizing first two dimensions of the manifold.</p>
+                                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -153,13 +153,13 @@ export default function TransformationPreviewerPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0, transition: { delay: 0.1 } }}
                     >
-                        <Card className="border-border rounded-3xl bg-card transition-all">
+                        <Card className="border-border rounded-[1rem] bg-card transition-all">
                             <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
                                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
                                     <Wand2 className="h-4 w-4" />
                                     Estimators
                                 </CardTitle>
-                                <div className="bg-indigo-500/10 p-1.5 rounded-lg">
+                                <div className="bg-indigo-500/10 p-1.5 rounded-[1rem]">
                                     <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
                                 </div>
                             </CardHeader>
@@ -199,9 +199,9 @@ export default function TransformationPreviewerPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1, transition: { delay: 0.2 } }}
-                        className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-[2rem] flex gap-4"
+                        className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-[1rem] flex gap-4"
                     >
-                        <div className="bg-background p-2 rounded-xl h-fit border border-indigo-500/20">
+                        <div className="bg-background p-2 rounded-[1rem] h-fit border border-indigo-500/20">
                             <Info className="h-4 w-4 text-indigo-500 shrink-0" />
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed font-bold">
@@ -233,14 +233,14 @@ export default function TransformationPreviewerPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="h-full flex flex-col items-center justify-center p-12 text-center group bg-muted/10 border-2 border-dashed border-border/60 rounded-[3rem]"
+                                className="h-full flex flex-col items-center justify-center p-12 text-center group bg-muted/10 border-2 border-dashed border-border/60 rounded-[1rem]"
                             >
                                 <div className="relative mb-10">
                                     <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                                    <div className="relative w-24 h-24 bg-card rounded-[2.5rem] flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-border">
+                                    <div className="relative w-24 h-24 bg-card rounded-[1rem] flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-border">
                                         <Layers className="h-12 w-12 text-indigo-400 opacity-60" />
                                     </div>
-                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center">
+                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 rounded-[1rem] flex items-center justify-center">
                                         <Share2 className="h-5 w-5 text-white" />
                                     </div>
                                 </div>
