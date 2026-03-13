@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getDatasets } from "@/features/inverse/api";
 import { diagnoseEngines } from "@/features/evaluation/api";
 import { EngineComparisonPanel } from "@/features/evaluation/components/EngineComparisonPanel";
-import { PerformanceChart } from "@/features/evaluation/components/EvaluationCharts";
+import { PerformanceChart, MetricBarChart } from "@/features/evaluation/components/EvaluationCharts";
 import { DiagnoseRequest, DiagnoseResponse } from "@/features/evaluation/types";
 import { 
     LineChart, 
@@ -155,7 +155,14 @@ export default function EvaluationPage() {
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="space-y-8"
                                 >
-                                    <Tabs defaultValue="decision" className="w-full">
+                                    {(() => {
+                                        const maceData = Object.entries(result.decision_space.metrics).reduce((acc, [engine, metrics]) => {
+                                            acc[engine] = metrics.mace || metrics.mean_coverage_error || 0;
+                                            return acc;
+                                        }, {} as Record<string, number>);
+
+                                        return (
+                                            <Tabs defaultValue="decision" className="w-full">
                                         <div className="flex items-center justify-between mb-8 bg-muted/30 p-1.5 rounded-[1rem] border border-border/50 backdrop-blur-sm">
                                             <TabsList className="bg-transparent h-12 p-0 gap-2">
                                                 <TabsTrigger 
@@ -217,6 +224,15 @@ export default function EvaluationPage() {
                                                         </div>
                                                     )}
                                                 </div>
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <MetricBarChart 
+                                                    title="Mean Absolute Calibration Error (MACE)"
+                                                    description="Global discrepancy between nominal and empirical coverage. Lower values indicate superior engine calibration."
+                                                    data={maceData}
+                                                    yAxisLabel="MACE Error"
+                                                />
                                             </div>
 
                                             <Card className="border-border bg-card/40 backdrop-blur-xl rounded-[1rem] overflow-hidden border-2">
@@ -411,7 +427,9 @@ export default function EvaluationPage() {
                                                 </div>
                                             </div>
                                         </TabsContent>
-                                    </Tabs>
+                                            </Tabs>
+                                        );
+                                    })()}
 
                                     {result.warnings.length > 0 && (
                                         <Alert className="bg-indigo-500/5 border-indigo-500/10 text-foreground rounded-[1rem] p-8 border-2">
