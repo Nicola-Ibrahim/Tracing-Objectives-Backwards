@@ -2,23 +2,20 @@
 % Experiments
 %-------------------------------------------------------------------------------
 
-
 \chapter{Experiments}\label{chap:experiments}
 
-\section{bi-objective case}\label{sec:exp_coco}
-The selection of a bi-objective configuration for this study is motivated by the need to rigorously evaluate the inverse model's ability to capture the Pareto front while maintaining interpretability. Bi-objective problems serve as a fundamental benchmark in multi-objective optimization, providing a non-trivial trade-off surface that remains amenable to high-fidelity visualization. This dimensionality allows for a direct, intuitive assessment of how the model explores the decision space relative to the objective-space conflict. 
-
+\section{Bi-Objective Case}\label{sec:exp_coco}
+The selection of a bi-objective configuration for this study is motivated by the need to rigorously evaluate the inverse models' ability to capture the Pareto front while maintaining interpretability. Bi-objective problems serve as a fundamental benchmark in multi-objective optimization, providing a non-trivial trade-off surface that remains amenable to high-fidelity visualization. This dimensionality allows for a direct, intuitive assessment of how both parametric networks and geometric frameworks explore the decision space relative to the objective-space conflict. 
 
 %-------------------------------------------------------------------------------
-\subsection{Data Acquisition}\label{sec:exp_coco}
+\subsection{Data Acquisition}\label{sec:exp_coco_data}
 %-------------------------------------------------------------------------------
 
-To evaluate the inverse models, we construct a bi-objective optimization problem (MOP) using the COCO BBOB benchmark suite \cite{cocoexDocs, cocoBBOBOverview}. This section describes the problem formulation and the procedure for generating the training and testing archives.
+To evaluate the inverse models, we construct a bi-objective optimization problem (MOP) using the COCO BBOB benchmark suite \cite{cocoexDocs, cocoBBOBOverview}. This section describes the problem formulation and the procedure for generating the heavily constrained, data-sparse training and testing archives.
 
+\subsubsection{Problem Formulation ($f_5$ Sphere/Sharp Ridge)}
 
-\subsubsection{Problem Formulation ($F_5$ Sphere/Sharp Ridge)}
-
-A general MOP involves finding a decision vector $\vect{x} \in \calX \subset \R^n$ that minimizes an objective vector $\vect{f}(\vect{x}) = (f_1(\vect{x}), \dots, f_m(\vect{x}))$. In this study, we focus on the bi-objective problem $F_5$ from the BBOB-biobj suite, which is constructed by combining two distinct unimodal landscapes: the Sphere function ($f_1$) and the Sharp Ridge function ($f_{13}$). We select this problem because it creates a fundamental tension between a smooth, separable objective and a non-separable, non-differentiable ridge. The objective vector is defined as:
+A general MOP involves finding a decision vector $\vect{x} \in \calX \subset \R^n$ that minimizes an objective vector $\vect{f}(\vect{x}) = (f_1(\vect{x}), \dots, f_m(\vect{x}))$. In this study, we focus on the bi-objective problem $f_5$ from the BBOB-biobj suite, which is constructed by combining two distinct unimodal landscapes: the Sphere function ($f_1$) and the Sharp Ridge function ($f_{13}$). We select this problem because it creates a fundamental tension between a smooth, separable objective and a non-separable, non-differentiable ridge. The objective vector is defined as:
 
 \begin{equation}
     \vect{f}(\vect{x}) = \big(f_1(\vect{z}),\; f_{13}(\vect{z})\big) + \vect{f}_{\mathrm{opt}},
@@ -31,11 +28,9 @@ where $\vect{z}$ represents the decision vector $\vect{x}$ after applying the de
     f_{13}(\vect{z}) &= z_1^2 + 100 \sqrt{\sum_{i = 2}^{D} z_i^2},
 \end{align}
 
-where $D$ is the decision dimension. Unlike problems with simple trade-offs, $F_5$ is characterized by a sharp ridge in the second objective where the gradient remains constant even as the ridge is approached. This property makes the inverse task particularly difficult for probabilistic samplers, as the model must accurately resolve a non-smooth manifold to locate solutions that satisfy the desired trade-off between the simple sphere and the ill-conditioned ridge.
+where $D$ is the decision dimension. Unlike problems with simple trade-offs, $f_5$ is characterized by a sharp ridge in the second objective where the gradient remains constant even as the ridge is approached. This property makes the inverse task particularly difficult. Parametric samplers (like CVAEs) must accurately resolve a non-smooth manifold, while geometric frameworks (like GBPI) must successfully navigate topological voids near the ill-conditioned ridge without hallucinating impossible physics.
 
-
-
-\subsubsection{Data Generation via NSGA-II}
+\subsubsection{Data Generation via NSGA-II and Extreme Sparsity}
 
 The construction of our dataset begins with a formal definition of the optimization landscape. A multi-objective optimization problem (MOP) is characterized by decision variables $\vect{x}=(x_1,\dots,x_n)\in\calX\subset\R^n$ and an objective vector $\vect{f}=(f_1,\dots,f_m)\colon \calX\to\calY\subset\R^m$. In this study, we consider the simultaneous minimization of all objectives:
 \begin{align}
@@ -55,73 +50,65 @@ Trade-offs between conflicting objectives are formalized through the principle o
   \label{fig:pareto_front}
 \end{figure}
 
-To generate the necessary data for our inverse models, we utilize the Non-dominated Sorting Genetic Algorithm II (NSGA-II) algorithm as a data-generation tool for the bi-objective $f_5$ problem. Rather than retaining only the final converged Pareto set, we record the comprehensive search history to assemble an archive of $8,000$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{8000}$. This historical data provides the model with a dense and varied characterization of the objective space, spanning from high-performance Pareto-optimal solutions to sub-optimal exploratory points.
+To generate the necessary data for our inverse models, we utilize the Non-dominated Sorting Genetic Algorithm II (NSGA-II) as a data-generation tool for the bi-objective $f_5$ problem. Rather than allowing the optimizer to run to full convergence, we strictly limit the evaluation budget to assemble an explicitly sparse archive of just $N=100$ evaluated pairs $\{(\vect{x}_i,\vect{y}_i)\}_{i=1}^{100}$. 
 
-As illustrated in Figure~\ref{fig:pareto_front}, the raw distribution of this archive is categorized into:
+As illustrated conceptually in Figure~\ref{fig:pareto_front}, the distribution of this sparse archive is categorized into:
 \begin{itemize}
     \item Non-dominated solutions: The empirical Pareto front (represented in blue) which serves as the primary target for inverse queries.
-    \item Exploratory solutions: Dominated points (represented in gray) that reflect the broader search history, providing the necessary context for the model to learn the global mapping $\calY \to \calX$.
+    \item Exploratory solutions: Dominated points (represented in gray) that reflect the limited search history.
 \end{itemize}
 
+The characteristic structure of the data collected during this heavily restricted process is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Raw Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. The right panel depicts the Raw Objective Space ($y_1$ vs. $y_2$), showing the convergence of the search history toward the non-dominated Pareto front at the lower-left boundary.
 
-The characteristic structure of the Pareto data collected during this process is visualized in Figure~\ref{fig:data_distribution}. The left panel illustrates the Raw Decision Space ($x_1$ vs. $x_2$), where the optimized solutions (orange) represent the Pareto set. These points form a distinct manifold, demonstrating the specific coordinate-wise dependencies inherent in the $f_5$ linear slope construction. The right panel depicts the Raw Objective Space ($y_1$ vs. $y_2$), where the non-dominated solutions (blue) clearly delineate the Pareto front at the lower-left boundary of the search history. This visual separation between the broad exploration cloud (gray) and the converged, Pareto-relevant set highlights the specific target regions our inverse model is designed to characterize before any normalization is applied.
+A central objective of this experimental design is to replicate the severe data sparsity commonly encountered in real-world engineering, where evaluating a forward simulator or conducting physical experiments is highly expensive. By deliberately restricting our training archive to a sparse regime of just 100 samples, we establish a rigorous stress test for all evaluated models. This heavily constrained workspace forces the deep learning baselines (MDN, CVAE, INN) to operate far below their optimal data density, allowing us to explicitly evaluate their robustness and safety under extreme limitations. Simultaneously, it provides the exact conditions needed to test whether the proposed geometric framework (GBPI) can successfully leverage spatial boundaries to navigate inverse design safely when physical data is fundamentally limited.
+
 
 \begin{figure}[!htbp]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{images/pareto_set.png}
+        \includegraphics[width=\linewidth]{images/decision_space.png}
         \caption{Raw Decision Space ($\calX$)}
         \label{fig:pareto_set_dist}
     \end{subfigure}
     \hfill 
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{images/pareto_front.png}
+        \includegraphics[width=\linewidth]{images/objective_space.png}
         \caption{Raw Objective Space ($\calY$)}
         \label{fig:pareto_front_dist}
     \end{subfigure}
     
-    \caption[Raw Distribution of the $f_5$ Dataset]{Distribution of the $f_5$ bi-objective dataset prior to normalization. Panel (a) shows the raw decision space manifold where the optimized solutions (Pareto set) are located. Panel (b) illustrates the objective space, showing the convergence of the search history toward the non-dominated Pareto front at the lower-left boundary.}
+    \caption[Raw Distribution of the Sparse $f_5$ Dataset]{Distribution of the heavily constrained $f_5$ bi-objective dataset ($N=100$) prior to normalization. Panel (a) shows the raw decision space manifold where the optimized solutions (Pareto set) are located. Panel (b) illustrates the objective space, showing the limited search history converging toward the Pareto front at the lower-left boundary.}
     \label{fig:data_distribution}
 \end{figure}
 
 
 \subsubsection{Preprocessing and Normalization}
 
-The archive is split into training, validation, and test sets (80/10/10) using a fixed seed. While Figure~\ref{fig:data_distribution} visualizes the raw geometric manifolds and original scales of the problem, inverse modeling necessitates numerical stability and comparable scoring across different decision dimensions. To achieve this, we apply the \texttt{HypercubeNormalizer} as defined in Section~\ref{sec:normalization}. 
+The sparse archive of $N=100$ paired observations is partitioned strictly for model training and validation (utilizing an 80/20 split) to ensure the deep learning baselines can be properly monitored for overfitting during optimization. However, rigorously evaluating an inverse model requires assessing its candidate generation across the entire continuous trade-off surface. Therefore, testing is conducted on an independent, high-density query set. Once trained, the models are queried using $N_{test} \ge 1000$ synthetically generated, uniformly spaced target objectives ($y^*$) spanning the true empirical Pareto front. This deliberate decoupling of the sparse training environment from the dense evaluation grid allows for a comprehensive assessment of both objective attainment and generative diversity.
 
-The normalization maps $T_x$ and $T_y$ are estimated solely from the training split, mapping both spaces into a consistent $[0,1]$ coordinate system. All subsequent evaluation metrics discussed in Section~\ref{sec:evaluation} are performed within this normalized framework. This ensures that discrepancies are measured on a standardized scale regardless of the original function ranges of the decision variables or objectives visible in the raw data plots.
+Furthermore, while Figure~\ref{fig:data_distribution} visualizes the raw geometric manifolds, inverse modeling necessitates numerical stability and comparable scoring across different physical dimensions. To achieve this, we apply the \texttt{HypercubeNormalizer} defined in Section~\ref{sec:normalization}. The normalization bounds ($T_x$ and $T_y$) are estimated strictly from the training split, mapping both decision and objective spaces into a consistent $[0,1]$ coordinate system. All subsequent inverse queries and evaluation metrics (discussed in Section~\ref{sec:evaluation}) are performed within this normalized framework, ensuring that deployment discrepancies are measured on a standardized, dimensionless scale.
 
 \subsection{Modeling Parameter Rationale}
 
-To provide a transparent basis for the comparative analysis of the $f_5$ inverse problem, model configurations were varied systematically across architectural and optimization dimensions. No architectural component was held universally fixed across versions; instead, structural depth, width, latent dimensionality, transformation complexity, mixture resolution, and optimization trajectories were treated as tunable elements. This approach ensures that performance patterns are attributed to identifiable structural and regularization choices rather than to arbitrary hyperparameter settings.
+To provide a transparent basis for the comparative analysis of the $f_5$ inverse problem, the configurations for both the deep generative baselines and the proposed geometric framework were carefully established. Rather than treating hyperparameter selection as an arbitrary tuning exercise, structural choices were explicitly tied to the challenge of preventing overfitting and hallucination in the extreme sparse-data regime.
 
-For feedforward density-parameterizing architectures, structural capacity and distributional resolution were varied jointly. The number of hidden layers $L$ was explored within $L \in \{2,3\}$, with the number of neurons per layer $H_\ell$ adjusted to modulate representational capacity. While larger $H_\ell$ enhances the approximation of highly non-linear conditional relationships between $\vect{y}$ and $\vect{x}$, reduced $L$ or $H_\ell$ imposes a stronger inductive bias. In parallel, the number of mixture components $M$ served as a variable for expressive granularity in approximating $p(\vect{x}\mid\vect{y})$. Moderate values of $M$ encourage smoother, aggregated representations of the inverse manifold, while higher values enable the resolution of the finer, more numerous modes characteristic of complex multi-objective landscapes. The distribution family $\mathcal{K}$ of the mixture kernels was also varied, contrasting Gaussian components ($\mathcal{K}=\mathcal{N}$) for gradient stability with Laplace components ($\mathcal{K}=\mathrm{Lap}$), whose heavier tails can improve coverage in high-precision regimes.
+For the parametric deep generative baselines, which include the MDN, CVAE, and INN architectures, the primary objective was to balance representational capacity against the severe risk of overfitting on a limited budget of $N=100$ samples. In feedforward networks and Mixture Density Networks, the structural depth ($L \in \{2,3\}$ hidden layers) and mixture resolution ($M$) were deliberately constrained; while larger architectures enhance non-linear mapping, they rapidly memorize sparse datasets. In latent-variable formulations like the CVAE, the latent dimension ($d_z$) and the Kullback--Leibler divergence weight ($\beta$) were tuned to prioritize robust prior regularization, preventing posterior collapse while maintaining a compressed representation of the inverse manifold. For Invertible Neural Networks, the number of coupling transformations ($T$) was restricted to prevent the bijective mapping from heavily warping the base distribution around isolated data points. Across all neural baselines, optimization parameters such as learning rate ($\eta$) and epoch limits were strictly monitored against the validation set to halt training before generative hallucination could occur.
 
-
-In latent-variable formulations, the latent dimension $d_z$ was tuned across multiple values to regulate the capacity of the compressed representation. A larger $d_z$ enables a richer encoding of the inverse solution manifold and facilitates diversity in generated candidates, while a smaller $d_z$ imposes stronger compression to improve regularity. This structural choice was evaluated in conjunction with the architectural depth of the encoder and decoder networks, where the number of hidden layers $L$ was varied to modulate the complexity of the non-linear mappings into and out of the latent space. Furthermore, the weighting coefficient $\beta$ applied to the Kullback--Leibler divergence term was varied to control the strength of prior regularization. Lower values of $\beta$ prioritize reconstruction fidelity and reduce the risk of posterior collapse, whereas higher $\beta$ values enforce stricter adherence to the prior distribution, directly influencing the calibration and dispersion properties of the resulting sampler.
-
-
-In latent-variable formulations, the latent dimension $d_z$ was tuned to regulate the capacity of the compressed representation. A larger $d_z$ enables a richer encoding of the inverse solution manifold and facilitates candidate diversity, while a smaller $d_z$ imposes stronger compression to improve regularity. This was paired with the weighting coefficient $\beta$ applied to the Kullback--Leibler divergence. Lower values of $\beta$ prioritize reconstruction fidelity and mitigate the risk of posterior collapse, whereas higher $\beta$ values enforce stricter adherence to the prior distribution, directly influencing the calibration and dispersion properties of the resulting sampler.
-
-For invertible architectures, the number of coupling transformations $T$ was adjusted to vary the flexibility of the bijective mapping. Configurations with smaller $T$ provide a more constrained warping of the base distribution, whereas larger $T$ allows for increasingly complex transformations of probability mass. The internal hidden dimension $H_c$ of the transformation subnetworks was likewise varied to study its effect on capturing fine-grained posterior structures without excessive computational burden.
-
-Optimization parameters were similarly treated as non-static. The learning rate $\eta$ was explored within $\eta \in \{10^{-4}, 10^{-3}, 10^{-2}\}$ to balance convergence speed with stability across different architectural settings. Furthermore, the number of training epochs $E \in \{100, 150, 200\}$ and mini-batch size $B$ were tuned to regulate the trade-off between optimization stability and the implicit regularization afforded by stochastic gradient noise. By allowing the parameter vector $(L, H_\ell, M, \mathcal{K}, d_z, \beta, T, H_c, \eta, E, B)$ to vary, the study establishes a rigorous framework for interpreting downstream differences in attainment, calibration, and discrepancy metrics.
-
-
+In distinct contrast to these parametric baselines, the proposed Geometrically Bounded Probabilistic Inversion (GBPI) framework does not require gradient-based optimization or latent space compression. Instead, its configuration is governed by explicitly geometric and probabilistic thresholds. The most critical hyperparameter is the Dynamic Coherence Threshold ($D_{max}$), mathematically derived from the 95th percentile of local $K$-Nearest Neighbor distances ($\mathcal{D}_{KNN}$) within the training data. This threshold dictates the framework's internal routing logic. For safe queries inside the topological bounds, the generative pathway utilizes a Dirichlet concentration parameter ($\alpha$) set to uniformly sample the barycentric simplex, with the generation budget fixed to $K=100$ candidates per query to match the sampling throughput of the neural networks. Conversely, for out-of-distribution queries that trigger a $D_{max}$ violation, the optimization pathway anchors the Trust Region boundary radius directly to the $D_{max}$ distance. This ensures that the L-BFGS-B optimizer is strictly bounded to physically known regions of the decision space. By defining both the parametric and geometric constraints explicitly, this study establishes a rigorous foundation for attributing performance differences to the underlying architectures rather than to hyperparameter advantages.
 
 
 %%-------------------------------------------------------------------------------
-\subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
+\subsection{Objective-Space Diagnostics}\label{subsec:objective_diagnostics}
 %-------------------------------------------------------------------------------
 
-Objective-space diagnostics evaluate inverse estimators as conditional samplers within the propose--check loop introduced in Section~\ref{sec:evaluation}. For a given target $\vect{y}^{\star}$, the model generates a candidate set $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$, which is subsequently mapped to the outcome space via the evaluator $\mathcal{E}$ to obtain checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$. This section assesses the accuracy of these outcomes and the geometric structure of the resulting candidate clouds.
+Objective-space diagnostics evaluate inverse estimators as conditional samplers within the propose--verify loop introduced in Section~\ref{sec:evaluation}. For a given target $\vect{y}^{\star}$, the model generates a candidate set $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$, which is subsequently mapped to the outcome space via the evaluator $\mathcal{E}$ to obtain checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$. This section assesses the accuracy of these outcomes to determine which framework can most reliably satisfy user queries under the strict $N=100$ data budget.
 
 As established in the framework (Section~\ref{sec:framework}), all computations are performed in a common normalized coordinate system. This ensures that discrepancy magnitudes are comparable across objectives and that the performance metrics remain consistent across different estimator families.
 
 %-------------------------------------------------------------------------------
-\subsubsection{Scoring contract and best-shot attainment}\label{subsubsec:objective_contract}
+\subsubsection{Scoring Contract and Best-Shot Attainment}\label{subsubsec:objective_contract}
 %-------------------------------------------------------------------------------
 
 Following the evaluation framework defined in Section~\ref{sec:evaluation}, we quantify the performance of individual candidates using the target-centered residual vector $\vect{r}^{(k)}$ and the Euclidean discrepancy score $s^{(k)}$. As specified in Eq.~\ref{eq:discrepancy_residual_euclid}, these are defined as:
@@ -141,58 +128,164 @@ To illustrate the application of this contract, consider a bi-objective scenario
   0.094.
 \end{equation}
 
-Since inverse samplers return a set rather than a point, we summarize attainment per target using the best-shot score:
+Since inverse samplers return a set rather than a single point, we summarize attainment per target using the best-shot score:
 \begin{equation}
   s_{\min}(\vect{y}^{\star}) 
   \;=\; 
   \min_{k\in\{1,\dots,K\}} s^{(k)}(\vect{y}^{\star}).
   \label{eq:objective_best_shot}
 \end{equation}
-This score identifies the most accurate match within the budget $K$. Because increasing $K$ provides more opportunities to sample a close candidate, all comparative experiments in this chapter fix $K$ to ensure a fair evaluation of the models' underlying conditional distributions.
-
+This score identifies the most accurate match within the generation budget $K$. Because increasing $K$ provides more opportunities to sample a close candidate by pure chance, all comparative experiments in this chapter fix $K=100$ to ensure a fair evaluation of the models' underlying capabilities.
 
 %-------------------------------------------------------------------------------
 \subsubsection{Empirical Cumulative Distribution Functions (ECDF)}\label{subsubsec:objective_ecdf}
 %-------------------------------------------------------------------------------
 
-While individual residuals provide local snapshots of performance, we require a global diagnostic to assess the consistency of the inverse estimators. To this end, we employ the Empirical Cumulative Distribution Function (ECDF) as a primary tool for evaluating attainment reliability and probabilistic precision. By aggregating best-shot scores across the entire target set, the ECDF reveals how robustly a model can satisfy a specific accuracy requirement. Specifically, it allows us to measure:
+While individual residuals provide local snapshots of performance, we require a global diagnostic to assess the consistency of the inverse estimators across the entire target space. To this end, we employ the Empirical Cumulative Distribution Function (ECDF). By aggregating best-shot scores across the entire dense target set ($N_{test} \ge 1000$), the ECDF reveals how robustly a model can satisfy specific accuracy requirements under the extreme constraints of the sparse training regime. 
+
+As illustrated in Figure~\ref{fig:ecdf_demo}, the ECDF provides a non-parametric view of cumulative probability. In the context of inverse design, it specifically measures two critical dimensions of performance:
 \begin{itemize}
-    \item High-Precision Accuracy: How quickly the model identifies candidates within extremely tight tolerances (e.g., $10^{-5}$).
-    \item Global Reliability: The total fraction of targets the model is capable of solving as the error threshold relaxes.
+    \item High-Precision Accuracy: How quickly the curve rises on the left-hand side, indicating the model's ability to identify candidates within extremely tight tolerances (e.g., $10^{-3}$).
+    \item Global Reliability: The asymptotic height of the curve on the right-hand side, representing the total fraction of targets the model is capable of solving before failing completely.
 \end{itemize}
 
-Crucially, the ECDF allows us to analyze the models across a continuous range of discrepancy thresholds $t$. By treating $t$ as a sliding scale of "success criteria," we can observe different performance snapshots: a model that excels at a coarse threshold ($t=10^{-1}$) might fail completely in high-precision regimes ($t=10^{-5}$). Evaluating the models across these multiple snapshots ensures that we do not cherry-pick a single favorable threshold, providing a more transparent and comprehensive assessment of each architecture's limits.
+\begin{figure}[!htbp]
+    \centering
+    \begin{adjustbox}{width=0.85\linewidth}
+        \input{figures/ecdf_illustration.tex} 
+    \end{adjustbox}
+    \caption[Analyzing an ECDF Chart]{Illustration of an Empirical Cumulative Distribution Function (ECDF) for a sample of $n=5$. The step function rises by exactly $1/n$ at each sorted data point, allowing robust, non-parametric percentile estimations (e.g., tracking the median) independent of theoretical assumptions.}
+    \label{fig:ecdf_demo}
+\end{figure}
 
-For a set of $N$ targets, the ECDF is defined as:
+For a set of $N_{test}$ queries, the mathematical formulation of the ECDF is defined as:
 \begin{equation}
   \widehat{F}(t) 
   \;=\; 
-  \frac{1}{N}\sum_{i=1}^{N}\mathbb{I}\!\left[s_{\min}(\vect{y}^{\star}_i)\le t\right],
+  \frac{1}{N_{test}}\sum_{i=1}^{N_{test}}\mathbb{I}\!\left[s_{\min}(\vect{y}^{\star}_i)\le t\right], \quad \forall t \in \mathcal{T},
   \label{eq:objective_ecdf_definition}
 \end{equation}
-where $t \ge 0$ is a discrepancy threshold and $\mathbb{I}[\cdot]$ is the indicator function. The value $\widehat{F}(t)$ reports the proportion of targets solved to within accuracy $t$ under budget $K$. For example, if $N=5$ targets yield sorted best-shot scores $\{0.01, 0.02, 0.03, 0.04, 0.10\}$, the ECDF at threshold $t=0.03$ is $\widehat{F}(0.03) = 4/5 = 0.8$.
+where $\mathbb{I}[\cdot]$ is the indicator function, and $\mathcal{T}$ represents the spectrum of discrepancy thresholds under evaluation. In our experiments, rather than assessing a single arbitrary tolerance, we define $\mathcal{T}$ as a continuous range (or logarithmically spaced grid) spanning from extreme high-precision requirements to loose approximations (e.g., $t \in [10^{-5}, 10^{0}]$). By sweeping the evaluation across $\mathcal{T}$, the ECDF generates a complete, non-parametric profile of the model's attainment behavior across all possible strictness levels.
 
+\subsubsection{Objective Attainment Results: GBPI vs. Parametric Baselines}
 
-
-
-We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) problem to identify optimal configurations for the CVAE, MDN, and INN families. Figure~\ref{fig:ablation_ecdf_f5} presents the resulting ECDF curves. Visually, curves that rise faster (higher initial slope) indicate high precision, while the asymptotic behavior in the right tail indicates the fraction of targets that remain "hard" to solve.
-
-
-The ECDF profiles on the logarithmic discrepancy scale provide a high-resolution view of model performance, particularly at the extreme precision limits required for complex inverse tasks. The \texttt{mdn (v10)} and \texttt{inn (v1)} configurations emerge as the clear frontrunners, with their curves rising significantly earlier than the competition. At a discrepancy threshold of $10\mu$ ($10^{-5}$), these models have already successfully solved approximately $25\%$ of the targets, whereas the CVAE models have yet to register a single successful attainment. This indicates that the combination of MDN’s multi-modal density estimation and the INN’s bijective mapping provides the necessary "resolution" to place candidates in the immediate vicinity of the ground truth.
-
-A closer look at the architectural variants reveals that deeper models do not always equate to higher precision. In the INN family, the 6-layer \texttt{inn (v1)} consistently outperforms the 10-layer \texttt{inn (v5)} across the entire range of thresholds, suggesting that the simpler architecture is more effective at capturing the sharp peaks of the posterior distribution without introducing unnecessary training instability. Similarly, while \texttt{mdn (v8)} showed the best average probabilistic accuracy in earlier metrics, \texttt{mdn (v10)} demonstrates a slight advantage in the high-precision regime. This suggests that the use of Laplace kernels or increased mixture components ($K_{mix}=20$) in \texttt{v10} may provide better "best-shot" coverage for specific targets, even if the overall distribution is slightly less sharp than \texttt{v8}.
-
-The performance gap is most pronounced when examining the Conditional Variational Autoencoders. The \texttt{cvae (v5)} model displays a massive "attainment lag," with its curve only beginning to rise steeply after the $100\mu$ threshold—a point where the MDN and INN models have already solved over $60\%$ of the targets. Even the \texttt{cvae (v4)} configuration, which utilizes a slightly smaller latent dimension, remains significantly behind the leading architectures, only crossing the $50\%$ attainment mark at a discrepancy threshold ($10^{-4}$) nearly an order of magnitude larger than that of the leading MDNs. This behavior reinforces the conclusion that even with expanded latent capacities and inverse mapping, the inherent pressure to match a Gaussian prior in CVAEs limits their ability to resolve the fine-grained multi-objective boundaries of the $f_5$ landscape.
-
+Figure~\ref{fig:ablation_ecdf_f5} presents the ECDF curves for the proposed GBPI framework alongside the highest-performing configurations of the CVAE, MDN, and INN baselines, all trained on the heavily restricted $N=100$ dataset. Plotted on a logarithmic scale, the results visually confirm the central hypothesis of this thesis: parametric neural networks suffer severe structural degradation in data-sparse environments, while the geometrically bounded framework successfully maintains rigorous mathematical precision.
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{images/accuracy_ecdf_best_shot.png}
-  \caption[Attainment Profiles across Error Thresholds]{Objective-space ablation: ECDF of the best-shot discrepancy $s_{\min}(\vect{y}^{\star})$. Curves that lie higher at small $t$ indicate a more reliable near-target attainment, demonstrating the model's ability to generate at least one candidate within a specific tolerance of the conditioning target.}
+  \caption[Objective Attainment ECDF (Sparse Regime)]{Objective-space performance: ECDF of the best-shot discrepancy $s_{\min}(\vect{y}^{\star})$ for GBPI and the deep learning baselines trained on $N=100$. The logarithmic x-axis acts as a microscope on the micro-precision regime. Curves that climb rapidly on the far left indicate superior, high-fidelity target attainment.}
   \label{fig:ablation_ecdf_f5}
 \end{figure}
 
-The ECDF analysis provides a practical roadmap for model selection based on the desired precision of the propose--check loop. By observing where the curves rise, we conclude that the \texttt{mdn} and \texttt{inn} families are the superior choice for high-fidelity tasks, as they consistently place candidates within tight error tolerances ($10^{-5}$ to $10^{-3}$) that the CVAE models simply cannot reach. Ultimately, these curves demonstrate that while the \texttt{cvae (v4)} and \texttt{v5} configurations can solve a majority of targets given a loose enough tolerance, the structural advantages of MDNs and INNs provide a significantly higher "success rate" at a lower computational budget, ensuring more reliable and precise inverse solutions in complex objective spaces.
+The ECDF profiles reveal a stark divergence in high-precision capability. The proposed GBPI framework emerges as the undisputed frontrunner in the extreme micro-precision regime (discrepancy $< 10^{-3}$). By shifting the inverse design paradigm from global probabilistic approximation to local geometric anchoring, GBPI locks onto verified physical coordinates via exact Delaunay meshing (Pathway A) and strictly bounded Trust-Region optimization (Pathway B). Consequently, its attainment curve shoots upward almost immediately, registering exact matches well below the $1\mu$ scale. At a rigorous error tolerance of $100\mu$ ($10^{-4}$), GBPI has already successfully solved nearly 40\% of the target queries.
+
+In severe contrast, the deep generative models exhibit massive attainment lag at high fidelities. At the $100\mu$ threshold where GBPI thrives, the MDN and INN remain entirely uncompetitive (below 5\% attainment). The CVAE displays the most profound degradation; forced to compress only 100 data points into a continuous Gaussian prior, its latent space collapses. The CVAE curve remains entirely flat (0\% attainment) until the error tolerance is drastically relaxed past $10^{-3}$, indicating a complete failure to resolve the fine-grained, non-linear boundaries of the $f_5$ landscape.
+
+Crucially, the logarithmic plot captures a highly instructive trade-off between the mathematical paradigms at looser tolerances. As the discrepancy threshold relaxes toward $0.003$, the MDN and INN curves experience a sharp vertical rise, eventually overtaking GBPI. This crossover behavior perfectly illustrates the fundamental difference between geometric safety and parametric approximation. Because neural networks lack strict spatial boundaries, they freely extrapolate, scattering "blurry" candidate guesses across the entire domain. They eventually solve the remaining targets, but only if macroscopic, low-fidelity errors are deemed acceptable by the user. Conversely, GBPI's curve exhibits a deliberate plateau in the mid-range. This is not a failure, but a designed fail-safe: GBPI trades macroscopic guessing for microscopic certainty. Its Trust Region logic actively blocks the framework from hallucinating impossible physics when navigating severe topological voids, choosing to halt rather than output an unsafe design.
+
+\subsubsection{Scalability and the Curse of Dimensionality ($D=5$)}\label{subsubsec:dimensionality_scaling}
+
+To rigorously stress-test the inverse estimators under extreme sparsity, the experimental complexity was escalated by expanding the decision space dimensionality from $D=2$ to $D=5$, while strictly maintaining the data budget of $N=100$. The objective space remains bi-objective ($m=2$). This configuration deliberately introduces the \textit{curse of dimensionality}: as the volume of the decision space grows exponentially, the spatial density of the 100 training points drops drastically, creating vast topological voids separated by sparse, disjointed manifolds.
+
+Figure~\ref{fig:ecdf_5d} presents the resulting ECDF profiles for the 5D configuration. The plot reveals a dramatic exacerbation of the performance gap, severely penalizing the parametric architectures while validating GBPI's geometric robustness.
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/accuracy_ecdf_best_shot_5d.png}
+  \caption[Objective Attainment ECDF (5D Decision Space)]{Objective-space performance in a 5D decision space ($N=100$). The curse of dimensionality severely degrades the parametric baselines (shifting them rightward into the low-fidelity regime), while GBPI maintains its micro-precision by leveraging local dimensional invariance.}
+  \label{fig:ecdf_5d}
+\end{figure}
+
+The most prominent feature of the 5D analysis is the complete high-precision collapse of the neural network baselines. While the INN and MDN demonstrated marginal capability in the 2D micro-precision regime, their 5D attainment curves do not even begin to register until the discrepancy threshold is relaxed past $500\mu$ ($0.0005$). The CVAE again exhibits the most severe degradation, failing to surpass 20\% attainment until the error tolerance reaches $0.01$. 
+
+This collapse is not a consequence of poor hyperparameter tuning, but a fundamental information-theoretic limitation. Global density estimators require dense, overlapping data to parameterize high-dimensional probability distributions. In the 5D void, 100 points do not contain enough spatial information to support these global mappings. Consequently, their latent spaces become overwhelmingly diffuse, resulting in severely "diluted" candidates that fail to map precisely to the 2D target boundaries.
+
+In stark contrast, the proposed GBPI framework demonstrates extraordinary dimensional resilience. The GBPI curve (orange) continues to dominate the high-fidelity domain, successfully registering exact target matches at the nanometer scale ($10n$ to $100n$) and solving over 60\% of targets at a strict $1\mu$ tolerance. 
+
+This resilience is deeply rooted in GBPI's local architectural focus. Unlike neural networks that attempt to learn the entirety of the vast 5D volume, GBPI relies on exact, localized geometric connections. If a target query falls within a validated Delaunay simplex, the exact barycentric coordinates accurately preserve the physical trade-offs entirely independent of the surrounding empty global space. Furthermore, if a query falls outside the mesh, the Trust Region boundary actively tethered to known anchor points prevents the optimizer from wandering into the unknown 5D void. Consequently, this stress test definitively proves that in severely data-constrained engineering environments, enforcing strict local geometric boundaries is mathematically superior to scaling up global parametric model capacity.
+
+% %%-------------------------------------------------------------------------------
+% \subsection{Objective-space diagnostics}\label{subsec:objective_diagnostics}
+% %-------------------------------------------------------------------------------
+
+% Objective-space diagnostics evaluate inverse estimators as conditional samplers within the propose--check loop introduced in Section~\ref{sec:evaluation}. For a given target $\vect{y}^{\star}$, the model generates a candidate set $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$, which is subsequently mapped to the outcome space via the evaluator $\mathcal{E}$ to obtain checked outcomes $\{\widehat{\vect{y}}^{(k)}\}_{k=1}^{K}$. This section assesses the accuracy of these outcomes and the geometric structure of the resulting candidate clouds.
+
+% As established in the framework (Section~\ref{sec:framework}), all computations are performed in a common normalized coordinate system. This ensures that discrepancy magnitudes are comparable across objectives and that the performance metrics remain consistent across different estimator families.
+
+% %-------------------------------------------------------------------------------
+% \subsubsection{Scoring contract and best-shot attainment}\label{subsubsec:objective_contract}
+% %-------------------------------------------------------------------------------
+
+% Following the evaluation framework defined in Section~\ref{sec:evaluation}, we quantify the performance of individual candidates using the target-centered residual vector $\vect{r}^{(k)}$ and the Euclidean discrepancy score $s^{(k)}$. As specified in Eq.~\ref{eq:discrepancy_residual_euclid}, these are defined as:
+% \begin{equation}
+%   \vect{r}^{(k)}(\vect{y}^{\star}) \;=\; \widehat{\vect{y}}^{(k)} - \vect{y}^{\star}, \qquad s^{(k)}(\vect{y}^{\star}) \;=\; \lVert \vect{r}^{(k)}(\vect{y}^{\star}) \rVert_{2} = \sqrt{\sum_{j=1}^{m}\Big(r^{(k)}_{j}(\vect{y}^{\star})\Big)^{2}}.
+% \end{equation}
+% The $j$-th component $r^{(k)}_{j} > 0$ indicates that the candidate overshoots the target on objective $j$, while $r^{(k)}_{j} < 0$ indicates an undershoot.
+
+% To illustrate the application of this contract, consider a bi-objective scenario ($m=2$) where the user requests a target $\vect{y}^{\star}=(0.40,\,0.70)$. If a checked candidate outcome is $\widehat{\vect{y}}^{(k)}=(0.45,\,0.62)$, the residual vector is $\vect{r}^{(k)} = (0.05, -0.08)$. The resulting scalar discrepancy score is:
+% \begin{equation}
+%   s^{(k)}(\vect{y}^{\star})
+%   \;=\;
+%   \sqrt{0.05^{2}+(-0.08)^{2}}
+%   \;=\;
+%   \sqrt{0.0089}
+%   \;\approx\;
+%   0.094.
+% \end{equation}
+
+% Since inverse samplers return a set rather than a point, we summarize attainment per target using the best-shot score:
+% \begin{equation}
+%   s_{\min}(\vect{y}^{\star}) 
+%   \;=\; 
+%   \min_{k\in\{1,\dots,K\}} s^{(k)}(\vect{y}^{\star}).
+%   \label{eq:objective_best_shot}
+% \end{equation}
+% This score identifies the most accurate match within the budget $K$. Because increasing $K$ provides more opportunities to sample a close candidate, all comparative experiments in this chapter fix $K$ to ensure a fair evaluation of the models' underlying conditional distributions.
+
+
+% %-------------------------------------------------------------------------------
+% \subsubsection{Empirical Cumulative Distribution Functions (ECDF)}\label{subsubsec:objective_ecdf}
+% %-------------------------------------------------------------------------------
+
+% While individual residuals provide local snapshots of performance, we require a global diagnostic to assess the consistency of the inverse estimators. To this end, we employ the Empirical Cumulative Distribution Function (ECDF) as a primary tool for evaluating attainment reliability and probabilistic precision. By aggregating best-shot scores across the entire target set, the ECDF reveals how robustly a model can satisfy a specific accuracy requirement. Specifically, it allows us to measure:
+% \begin{itemize}
+%     \item High-Precision Accuracy: How quickly the model identifies candidates within extremely tight tolerances (e.g., $10^{-5}$).
+%     \item Global Reliability: The total fraction of targets the model is capable of solving as the error threshold relaxes.
+% \end{itemize}
+
+% Crucially, the ECDF allows us to analyze the models across a continuous range of discrepancy thresholds $t$. By treating $t$ as a sliding scale of "success criteria," we can observe different performance snapshots: a model that excels at a coarse threshold ($t=10^{-1}$) might fail completely in high-precision regimes ($t=10^{-5}$). Evaluating the models across these multiple snapshots ensures that we do not cherry-pick a single favorable threshold, providing a more transparent and comprehensive assessment of each architecture's limits.
+
+% For a set of $N$ targets, the ECDF is defined as:
+% \begin{equation}
+%   \widehat{F}(t) 
+%   \;=\; 
+%   \frac{1}{N}\sum_{i=1}^{N}\mathbb{I}\!\left[s_{\min}(\vect{y}^{\star}_i)\le t\right],
+%   \label{eq:objective_ecdf_definition}
+% \end{equation}
+% where $t \ge 0$ is a discrepancy threshold and $\mathbb{I}[\cdot]$ is the indicator function. The value $\widehat{F}(t)$ reports the proportion of targets solved to within accuracy $t$ under budget $K$. For example, if $N=5$ targets yield sorted best-shot scores $\{0.01, 0.02, 0.03, 0.04, 0.10\}$, the ECDF at threshold $t=0.03$ is $\widehat{F}(0.03) = 4/5 = 0.8$.
+
+
+
+
+% We conducted a hyperparameter ablation study on the COCO $f_5$ (Linear Slope) problem to identify optimal configurations for the CVAE, MDN, and INN families. Figure~\ref{fig:ablation_ecdf_f5} presents the resulting ECDF curves. Visually, curves that rise faster (higher initial slope) indicate high precision, while the asymptotic behavior in the right tail indicates the fraction of targets that remain "hard" to solve.
+
+
+% The ECDF profiles on the logarithmic discrepancy scale provide a high-resolution view of model performance, particularly at the extreme precision limits required for complex inverse tasks. The \texttt{mdn (v10)} and \texttt{inn (v1)} configurations emerge as the clear frontrunners, with their curves rising significantly earlier than the competition. At a discrepancy threshold of $10\mu$ ($10^{-5}$), these models have already successfully solved approximately $25\%$ of the targets, whereas the CVAE models have yet to register a single successful attainment. This indicates that the combination of MDN’s multi-modal density estimation and the INN’s bijective mapping provides the necessary "resolution" to place candidates in the immediate vicinity of the ground truth.
+
+% A closer look at the architectural variants reveals that deeper models do not always equate to higher precision. In the INN family, the 6-layer \texttt{inn (v1)} consistently outperforms the 10-layer \texttt{inn (v5)} across the entire range of thresholds, suggesting that the simpler architecture is more effective at capturing the sharp peaks of the posterior distribution without introducing unnecessary training instability. Similarly, while \texttt{mdn (v8)} showed the best average probabilistic accuracy in earlier metrics, \texttt{mdn (v10)} demonstrates a slight advantage in the high-precision regime. This suggests that the use of Laplace kernels or increased mixture components ($K_{mix}=20$) in \texttt{v10} may provide better "best-shot" coverage for specific targets, even if the overall distribution is slightly less sharp than \texttt{v8}.
+
+% The performance gap is most pronounced when examining the Conditional Variational Autoencoders. The \texttt{cvae (v5)} model displays a massive "attainment lag," with its curve only beginning to rise steeply after the $100\mu$ threshold—a point where the MDN and INN models have already solved over $60\%$ of the targets. Even the \texttt{cvae (v4)} configuration, which utilizes a slightly smaller latent dimension, remains significantly behind the leading architectures, only crossing the $50\%$ attainment mark at a discrepancy threshold ($10^{-4}$) nearly an order of magnitude larger than that of the leading MDNs. This behavior reinforces the conclusion that even with expanded latent capacities and inverse mapping, the inherent pressure to match a Gaussian prior in CVAEs limits their ability to resolve the fine-grained multi-objective boundaries of the $f_5$ landscape.
+
+
+% \begin{figure}[!htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{images/accuracy_ecdf_best_shot.png}
+%   \caption[Attainment Profiles across Error Thresholds]{Objective-space ablation: ECDF of the best-shot discrepancy $s_{\min}(\vect{y}^{\star})$. Curves that lie higher at small $t$ indicate a more reliable near-target attainment, demonstrating the model's ability to generate at least one candidate within a specific tolerance of the conditioning target.}
+%   \label{fig:ablation_ecdf_f5}
+% \end{figure}
+
+% The ECDF analysis provides a practical roadmap for model selection based on the desired precision of the propose--check loop. By observing where the curves rise, we conclude that the \texttt{mdn} and \texttt{inn} families are the superior choice for high-fidelity tasks, as they consistently place candidates within tight error tolerances ($10^{-5}$ to $10^{-3}$) that the CVAE models simply cannot reach. Ultimately, these curves demonstrate that while the \texttt{cvae (v4)} and \texttt{v5} configurations can solve a majority of targets given a loose enough tolerance, the structural advantages of MDNs and INNs provide a significantly higher "success rate" at a lower computational budget, ensuring more reliable and precise inverse solutions in complex objective spaces.
 
 
 
@@ -223,123 +316,33 @@ The ECDF analysis provides a practical roadmap for model selection based on the 
 
 
 
+%-------------------------------------------------------------------------------
+\subsection{Decision-Space Diagnostics}\label{subsec:decision_diagnostics}
+%-------------------------------------------------------------------------------
+
+While objective-space diagnostics evaluate whether an inverse model can satisfy a user's performance target, decision-space diagnostics analyze the quality, safety, and distribution of the generated physical configurations $\{\widehat{\vect{x}}^{(k)}\}_{k=1}^{K}$. For each held-out case $(\vect{x}_i,\vect{y}_i)$, we condition on $\vect{y}_i$ and draw a candidate set. In highly constrained engineering problems, hitting a performance target in the objective space is insufficient if the proposed decision variables are physically impossible, non-diverse, or extrapolated far beyond the known boundaries of the training data.
+
+Evaluating the decision space in this study focuses on diagnosing the probabilistic health of the deep learning baselines (CVAE, MDN, INN). It is critical to note that the proposed GBPI framework is inherently exempt from these specific diagnostics. Because GBPI acts as a deterministic geometric router rather than a continuous density estimator, it does not map the decision space into continuous Gaussian or Laplace distributions. Consequently, it lacks a parametric likelihood or cumulative distribution function. Standard density-based metrics are mathematically incompatible with its architecture. Therefore, the following analysis serves strictly to evaluate the statistical reliability and calibration of the parametric baselines under the $N=100$ data budget.
 
 %-------------------------------------------------------------------------------
-\subsection{Decision-space diagnostics}\label{subsec:decision_diagnostics}
+\subsubsection{Statistical Reliability and Probabilistic Accuracy}\label{subsubsec:prob_diagnostics}
 %-------------------------------------------------------------------------------
 
-Decision-space diagnostics evaluate inverse models as conditional samplers over decisions. For each
-held-out paired case $(\vect{x}_i,\vect{y}_i)$, we condition on $\vect{y}_i$ and draw a candidate set
-$\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. 
-Unlike objective-space metrics that measure the proximity of outcomes to a target, these diagnostics quantify whether the generated candidate set $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$ accurately reflects the distribution of the ground-truth decision $\vect{x}_i$ when conditioned on the observation $\vect{y}_i$. The objective is to determine if the model behaves as a statistically trustworthy estimator of the inverse mapping.
-
-
-%-------------------------------------------------------------------------------
-\subsubsection{Statistical Reliability: PIT, Calibration Curves, and MACE}\label{subsubsec:reliability}
-%-------------------------------------------------------------------------------
-While the ECDF captures the model's ability to find high-precision solutions, it does not account for the quality of the model's predicted uncertainty. A model might achieve a low best-shot error by sheer luck or by spreading mass too thinly. To evaluate the statistical reliability of the conditional samplers, we must determine if the model is "honest" about its own precision. In this section, we transition from measuring spatial accuracy to measuring probabilistic calibration: the degree to which a model's predicted distribution matches the actual distribution of observed errors. This allows us to diagnose whether a model is overconfident (underestimating error) or underconfident (overestimating error).
-
-The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
+Traditionally, generative inverse models are evaluated using density-based probabilistic metrics that assess how well the model's predicted continuous probability density function matches the true underlying distribution of the data. To evaluate the statistical reliability of the conditional neural samplers, we use the Probability Integral Transform (PIT) rank statistic. This allows us to diagnose whether a model is overconfident (underestimating error) or underconfident (overestimating error). Following Eq.~\eqref{eq:pit_empirical}, for a test case $i$, the PIT value is calculated as:
 \begin{equation}
     z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
 \end{equation}
-Here, $z_{i,d}$ represents the local quantile of the true decision value $x_{i\textbf{},d}$ within the model's generated sample set. The indicator function $\mathbb{I}[\cdot]$ effectively \textbf{counts} how many of the $K$ generated candidates are smaller than or equal to the ground truth. By normalizing this count by $K$, we obtain a value in the range $[0, 1]$. For a perfectly calibrated conditional sampler, these values are uniformly distributed, meaning the truth is just as likely to fall in the 10th percentile as the 90th percentile of the model's predictions. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies, such as over- or under-estimation of the posterior variance.
-
-The calibration of the inverse models is visually analyzed using the PIT calibration curve. To move from local ranks to a global diagnostic, we aggregate the PIT values across all test cases $i$ and all decision dimensions $d$ to form a pooled set $\{z_\ell\}_{\ell=1}^{L}$, where $L$ is the total number of observations ($N \times D$). We then compute the empirical calibration curve $\widehat{G}(t)$ according to Eq.~\eqref{eq:pit_ecdf}:
+Here, $z_{i,d}$ represents the local quantile of the true decision value $x_{i,d}$ within the model's generated sample set. To move from local ranks to a global diagnostic, we compute the empirical calibration curve $\widehat{G}(t)$ according to Eq.~\eqref{eq:pit_ecdf}:
 \begin{equation}
     \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
 \end{equation}
-
-In this context, $\widehat{G}(t)$ is the Cumulative Distribution Function (CDF) of the pooled PIT values. It measures the proportion of PIT values that fall below a given probability threshold $t$. Under the condition of perfect calibration, the ranks are uniform, and the CDF should closely follow the diagonal $\widehat{G}(t) = t$. Departures from this diagonal allow us to identify specific model behaviors based on the direction of the deviation. For example, an "S-shaped" curve that dips below the diagonal before swinging above it—as observed in the \texttt{cvae (v5)} results—indicates that the model's predicted variance is too large, signifying underconfidence. Conversely, a curve that bulges above the diagonal and then drops below it would indicate that the variance is too narrow, signifying overconfidence.
-
-To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
+Under perfect calibration, the ranks are uniform, and the CDF closely follows the diagonal $\widehat{G}(t) = t$. We summarize this calibration with a single scalar, the Mean Absolute Calibration Error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal:
 \begin{equation}
     \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
     \label{eq:mace_def}
 \end{equation}
-A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability across the entire distribution.
 
-
-
-% The reliability of a model—defined as the consistency between predicted uncertainty and observed errors—is assessed via the Probability Integral Transform (PIT) rank statistic. For a test case $i$, conditioning on $\vect{y}_i$ yields $K$ decision samples $\{\widehat{\vect{x}}^{(k)}_i\}_{k=1}^{K}$. Following Eq.~\eqref{eq:pit_empirical}, the PIT value is calculated as:
-% \begin{equation}
-%     z_{i,d} = \frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left[\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right].
-% \end{equation}
-% For a perfectly calibrated conditional sampler, these values are uniformly distributed. Deviations from this uniformity provide a diagnostic signature of specific model deficiencies, such as over- or under-estimation of the posterior variance.
-
-% The calibration of the inverse models is visually analyzed using the PIT calibration curve, following the formal definition established in Section~\ref{sec:eval_design}. By aggregating the PIT values across test cases and decision dimensions to form the pooled set $\{z_\ell\}_{\ell=1}^{L}$, we compute the empirical calibration curve according to Eq.~\eqref{eq:pit_ecdf}:
-% \begin{equation}
-%     \widehat{G}(t) = \frac{1}{L}\sum_{\ell=1}^{L}\mathbb{I}\!\left[z_\ell \le t\right], \qquad t\in[0,1].
-% \end{equation}
-% This curve represents the empirical CDF of the PIT values and serves as a primary diagnostic tool for reliability. Under the condition of perfect calibration, the curve should closely follow the diagonal $\widehat{G}(t) = t$. In the context of this experiment, departures from this diagonal allow us to identify whether specific configurations lead to overconfident or underconfident conditional samplers.
-
-% To summarize calibration with a single scalar, we report the mean absolute calibration error (MACE), defined in Eq.~\eqref{eq:mace_def} as the average absolute deviation of the PIT curve from the diagonal over a grid $\{t_j\}_{j=1}^{J}\subset[0,1]$:
-% \begin{equation}
-%     \mathrm{MACE} = \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(t_j)-t_j\big|.
-%     \label{eq:mace_def}
-% \end{equation}
-% A lower MACE value indicates that the PIT curve resides closer to the ideal diagonal, signifying superior statistical reliability.
-
-The empirical results for the COCO $f_5$ dataset reveal a sharp contrast in how different architectural philosophies navigate the complexities of multi-objective inverse problems. The data clearly distinguishes between models that merely learn a simplified mapping and those that truly capture the underlying distribution.
-
-The \texttt{mdn (v8)} configuration serves as a high-capacity powerhouse, achieving a remarkably low Mean Absolute Calibration Error (MACE $\approx$ 0.031). However, the \texttt{inn (v5)} configuration, utilizing 10 coupling layers, emerges as the most statistically reliable model in this study, tracking the ideal diagonal with the highest precision (MACE $\approx$ 0.028). Parallel to this, the \texttt{inn (v1)} model remains a strong contender, yielding a competitive MACE of 0.044. While \texttt{mdn (v10)} remains highly reliable, the slight increase in error compared to \texttt{v8} suggests that further increasing mixture complexity to 20 or changing noise kernels to Laplace may reach a point of diminishing returns.
-
-
-
-In contrast, the updated CVAE configurations exhibit significant calibration pathologies despite the increased latent dimensionality. The \texttt{cvae (v5)} configuration suffers from an underconfidence problem, strikingly visible in its PIT curve, which dips below the diagonal before swinging above it. This signature indicates that the model's predicted distributions are far too wide relative to the actual error distribution, essentially overestimating the necessary search space. While \texttt{cvae (v4)} performs slightly better than its larger counterpart, it still exhibits a MACE ($\approx 0.068$) that is more than double that of the MDN and INN leaders, such as \texttt{inn (v5)} at $\approx 0.028$.
-
-
-
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=\linewidth]{images/pit_calibration_curve.png}
-    \caption[PIT calibration curves across model configurations]{PIT calibration curves for different models on COCO $f_5$. The \texttt{inn (v5)} and \texttt{mdn (v8)} curves reside closest to the diagonal, while \texttt{cvae (v2)} displays a prominent S-curve characteristic of underconfidence.}
-    \label{fig:f5_pit_ablation}
-\end{figure}
-
-
-\begin{figure}[!htbp]
-  \centering
-  \includegraphics[width=\linewidth]{images/reliability_calibration_error_mace.png} 
-  \caption[Mean Absolute Calibration Error (MACE) across models]{Statistical reliability comparison: MACE values for all configurations on COCO $f_5$. Lower values indicate better calibration, with \texttt{inn (v5)} and \texttt{mdn (v8)} showing the highest reliability.}
-  \label{fig:f5_mace_bars}
-\end{figure}
-
-
-\begin{table}[!htbp]
-\centering
-\small
-\setlength{\tabcolsep}{8pt}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{l l c}
-\toprule
-\textbf{Model Configuration} & \textbf{Details} & \textbf{MACE} $\downarrow$ \\
-\midrule
-mdn (v8) & 3x256, $K_{mix}=8$, Normal, lr: 0.001 & 0.0312 \\
-mdn (v10) & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0348 \\
-\midrule
-inn (v1) & 6 layers, dim: 128, lr: 0.001 & 0.0435 \\
-\textbf{inn (v5)} & 10 layers, dim: 128, lr: 0.001 & \textbf{0.0281} \\
-\midrule
-cvae (v4) & dim: 128, $z=128$, $\beta=0.8$, lr: 0.01 & 0.0678 \\
-cvae (v5) & dim: 128, $z=265$, $\beta=0.8$, lr: 0.01 & 0.0732 \\
-\bottomrule
-\end{tabular}
-\caption[COCO $f_5$: MACE across all evaluated models]{Mean absolute calibration error (MACE) derived from PIT curves. Both CVAE variants show higher errors than MDN or INN models.}
-\label{tab:f5_mace_ablation}
-\end{table}
-
-
-
-The analysis of PIT curves and MACE values provides a crucial "honesty check" that spatial accuracy alone cannot reveal. By observing these distributions, we conclude that achieving high-precision results is only valuable if the model accurately communicates its own uncertainty. The primary achievement of this diagnostic is the identification of model trustworthiness: while the \texttt{cvae (v4)} and \texttt{v5} configurations are reasonably well-aligned with the diagonal, they still exhibit a noticeable S-curve characteristic of underconfidence compared to the other architectures. This indicates that their internal uncertainty estimates are slightly too narrow, resulting in the highest observed calibration errors in the study (MACE $\approx$ 0.068--0.073). Conversely, the near-perfect diagonal performance of \texttt{inn (v5)} and \texttt{mdn (v8)} proves that these architectures have more successfully mastered the underlying probabilistic geometry. For the practitioner, this means that while the CVAE models are functional, the MDN and INN variants provide a more reliable proxy for the actual search effort required to find valid solutions in autonomous propose--check loops.
-
-
-%-------------------------------------------------------------------------------
-\subsubsection{Probabilistic Accuracy: CRPS}\label{subsubsec:accuracy}
-%-------------------------------------------------------------------------------
-While the ECDF evaluates attainment and PIT/MACE evaluates statistical honesty, we require a final metric that considers the entire distribution's quality. To this end, we employ the Continuous Ranked Probability Score (CRPS) as the primary measure of \textbf{probabilistic accuracy}. CRPS evaluates how effectively a model balances \textbf{precision} (sharpness of the distribution) with \textbf{reliability} (capturing the ground truth). Unlike metrics that only consider the single "best" sample, CRPS accounts for the placement of all generated candidates, effectively penalizing both over-dispersion and systematic bias.
-
-As per Eq.~\eqref{eq:crps_expectation}, for each test case $i$ and each decision dimension $d$, the empirical CRPS is computed from the sampled set $\{\widehat{x}^{(k)}_{i,d}\}_{k=1}^{K}$ and the realized truth $x_{i,d}$. To clarify the mechanics of the calculation, the score can be decomposed into two distinct physical quantities:
+Furthermore, to evaluate the sharpness and accuracy of these probability distributions, we employ the Continuous Ranked Probability Score (CRPS). CRPS accounts for the placement of all generated candidates, effectively penalizing both over-dispersion and systematic bias. As per Eq.~\eqref{eq:crps_expectation}, the score can be decomposed into two distinct physical quantities:
 \begin{equation}
   \mathrm{CRPS}_{i,d}
   \;=\;
@@ -348,67 +351,32 @@ As per Eq.~\eqref{eq:crps_expectation}, for each test case $i$ and each decision
   \underbrace{\frac{1}{2}\text{MD}(X, X')}_{\text{Dispersion}},
   \label{eq:crps_decomposed}
 \end{equation}
-where $X$ and $X'$ represent independent samples drawn from the model's posterior. This decomposition reveals the dual-objective nature of the metric:
-\begin{itemize}
-    \item Mean Absolute Error (MAE): $\mathbb{E}|X - x_{i,d}|$ measures the average distance of the model's predictions from the truth. This is a pure measure of accuracy.
-    \item Mean Difference (MD): $\mathbb{E}|X - X'|$ measures the internal variety of the model's samples. A large value indicates high uncertainty or "blurry" predictions.
-\end{itemize}
+where $X$ and $X'$ represent independent samples drawn from the model's posterior.
 
+Applying these metrics to the deep generative models reveals how data sparsity corrupts their internal uncertainty estimates. To clearly illustrate this degradation, we first establish the baseline calibration in the 2D decision space before examining the severe pathologies induced by the curse of dimensionality in the 5D space.
 
-
-By subtracting the dispersion from the error, CRPS rewards models that are both "close" and "certain." A model that is very accurate but highly uncertain (large dispersion) will receive a worse score than a model that is slightly less accurate but much more precise. Aggregating across decision dimensions yields the final per-case score:
-\begin{equation}
-    \mathrm{CRPS}_i = \frac{1}{D}\sum_{d=1}^{D}\mathrm{CRPS}_{i,d}.
-\end{equation}
-In this aggregation, we first compute the score for each individual decision dimension $d \in \{1, \dots, D\}$ to evaluate how well the model captures the specific parameters of the inverse solution. We then calculate the arithmetic mean across these dimensions to produce $\mathrm{CRPS}_i$, which represents the model's probabilistic performance for a single specific target. 
-
-To arrive at the final values presented in our results, we take one further step by averaging these per-case scores across the entire test set of $N$ targets. This resulting global mean provides a robust, scalar summary of the model’s overall probabilistic accuracy, ensuring that the reported performance reflects the model's behavior across the full variety of targets in the dataset rather than a single successful or failed prediction.
-
-We evaluate probabilistic accuracy via CRPS bar charts (Figure~\ref{fig:f5_crps_ablation}). These charts summarize the typical performance across held-out cases. Hyperparameter variants are evaluated within each model family under the same candidate budget $K$ and over the same held-out test set.
-
-The distribution of CRPS values across the various architectures provides a rigorous metric for evaluating how effectively each model concentrates its probability mass near the ground truth. In this regard, the \texttt{mdn (v8)} configuration and the \texttt{inn (v1)} configuration demonstrate clear superiority, achieving the lowest CRPS values.
-
-The Mixture Density Network family shows that high-capacity hidden architectures are essential for minimizing probabilistic error. \texttt{mdn (v8)} stands as the most precise configuration in the study (CRPS $\approx$ 0.021). By utilizing three hidden layers of 256 units with 8 mixture components, the model provides sufficient expressive bandwidth to represent the decision space with sharp components. In contrast, the \texttt{mdn (v10)} configuration yields a slightly higher CRPS ($\approx$ 0.023).
-
-The Invertible Neural Network configurations, \texttt{inn (v1)} and \texttt{inn (v5)}, show the impact of model depth on precision. While \texttt{inn (v1)}, with its six coupling layers, effectively transforms the latent distribution into a sharp representation of the target posterior ($\approx 0.026$), the 10-layer \texttt{inn (v5)} exhibits a slightly higher CRPS ($\approx 0.030$). This suggests a state of diminishing returns; for a 2D decision space, the six-layer architecture provides a superior balance of precision compared to the more complex 10-layer variant.
-
-
-In contrast, the Conditional Variational Autoencoders show good values in CRPS compared to previous iterations but still fail to reach the precision levels of the MDN or INN leaders. \texttt{cvae (v4)}, utilizing $z=128$, achieves a CRPS of $\approx 0.028$. Interestingly, \texttt{cvae (v5)}, which further increases the latent dimension to 265, results in a slightly higher (worse) error of $\approx 0.029$. This reinforces the observation that increasing latent capacity in CVAEs does not linearly translate to better posterior resolution. The higher error in both CVAE configurations confirms that the expressive mixture modeling of MDNs and the direct bijective mapping of INNs remain the most effective strategies for high-precision inverse exploration.
-
+Figure~\ref{fig:pit_2d} presents the PIT calibration curves for the baseline 2D decision space. In this lower-dimensional scenario, the parametric models show varying degrees of calibration error but largely manage to approximate the ideal diagonal. The INN tracks the diagonal moderately well, indicating that its predicted uncertainty is relatively consistent with its actual errors. The CVAE and MDN display early signs of miscalibration, yet their distributions remain somewhat functional because the 2D topological voids between the 100 training points are not vast enough to trigger complete posterior collapse.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\linewidth]{images/reliability_probabilistic_error_crps.png}
-    \caption[CRPS performance across model configurations]{CRPS values for all evaluated models. Lower bars indicate that \texttt{mdn (v8)} and \texttt{inn (v1)} produce more accurate conditional distributions.}
-    \label{fig:f5_crps_ablation}
+    \includegraphics[width=0.85\linewidth]{images/pit_calibration_2d.png}
+    \caption[PIT calibration curves (2D Decision Space)]{PIT calibration curves for the 2D decision space ($N=100$). The INN tracks the ideal diagonal moderately well, while the CVAE and MDN display early signs of miscalibration due to data sparsity.}
+    \label{fig:pit_2d}
 \end{figure}
 
+However, when the experimental complexity is escalated to the 5D decision space, the calibration pathologies become glaringly apparent. Figure~\ref{fig:pit_5d} demonstrates how the curse of dimensionality heavily distorts the model distributions, forcing them into states of extreme overconfidence or underconfidence. 
 
-\begin{table}[!htbp]
-\centering
-\small
-\setlength{\tabcolsep}{8pt}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{l l c}
-\toprule
-\textbf{Model Configuration} & \textbf{Details} & \textbf{CRPS} $\downarrow$ \\
-\midrule
-\textbf{mdn (v8)} & 3x256, $K_{mix}=8$, Normal, lr: 0.001 & \textbf{0.0213} \\
-mdn (v10) & 3x256, $K_{mix}=20$, Laplace, lr: 0.001 & 0.0234 \\
-\midrule
-inn (v1) & 6 layers, dim: 128, lr: 0.001 & 0.0258 \\
-inn (v5) & 10 layers, dim: 128, lr: 0.001 & 0.0295 \\
-\midrule
-cvae (v4) & dim: 4, $z=128$, $\beta=0.8$, lr: 0.01 & 0.0282 \\
-cvae (v5) & dim: 4, $z=265$, $\beta=0.8$, lr: 0.01 & 0.0289 \\
-\bottomrule
-\end{tabular}
-\caption[COCO $f_5$: CRPS across all evaluated models]{Continuous Ranked Probability Score (CRPS) for all configurations. The \texttt{mdn (v8)} model provides the highest probabilistic accuracy by concentrating mass most effectively around the ground truth.}
-\label{tab:f5_crps_ablation}
-\end{table}
+The MDN configuration exhibits underconfidence in this high-dimensional void. Its PIT curve bulges heavily above the diagonal before dropping below it, forming an inverse S-shape. This signature indicates that the model's predicted variance is far too wide. Because the 5D latent space is starved of data, the MDN smears its probability mass across the empty topological voids, resulting in blurry, highly dispersed candidates and poor CRPS accuracy.
 
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{images/pit_calibration_5d.png}    
+    \caption[PIT calibration curves (5D Decision Space)]{PIT calibration curves for the 5D decision space ($N=100$). The curse of dimensionality heavily distorts the model distributions. The MDN exhibits severe underconfidence (inverse S-shape), while the CVAE exhibits overconfidence (pronounced S-shape).}
+    \label{fig:pit_5d}
+\end{figure}
 
-The analysis of CRPS values serves as the final arbiter of model quality by measuring the "efficiency" of the predicted distributions. By observing these results, we conclude that a model's true utility lies in its ability to be simultaneously accurate and sharp. The primary achievement of this metric is the confirmation that \texttt{mdn (v8)} is the most effective architecture for the $f_5$ landscape, as it minimizes the wasted probability mass (dispersion) while maintaining the highest proximity to the truth. For the practitioner, these values prove that while the \texttt{cvae} configurations are competitive and "good enough" for general tasks, the \texttt{mdn} and \texttt{inn} variants provide more refined search spaces. Ultimately, analyzing CRPS ensures that we select a model that doesn't just find the solution, but does so with the highest possible confidence and the least amount of "noise," streamlining the transition from probabilistic sampling to real-world decision-making.
+Conversely, the CVAE configuration displays a pronounced S-shape, dipping below the diagonal early on and crossing above it later. This classic signature indicates severe overconfidence. In an attempt to map the sparse 5D data to a continuous Gaussian prior, the CVAE's latent space collapses. It predicts a distribution that is too narrow, entirely missing the true physical variance of the inverse manifold. Finally, while the INN maintains a relatively stable diagonal track in 5D—indicating that its internal uncertainty estimates are statistically honest—it still fundamentally relies on continuous probability manifolds that, as previously proven in the objective-space diagnostics, fail to achieve exact micro-precision.
+
 
 % \section{Discussion of Results}
 

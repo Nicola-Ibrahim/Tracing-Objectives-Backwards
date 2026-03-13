@@ -1,0 +1,53 @@
+\begin{tikzpicture}
+    \begin{axis}[
+        width=12cm,  % Expanded width for clarity
+        height=8cm,  % Expanded height for clarity
+        title={\Large \textbf{Empirical Cumulative Distribution Function (ECDF)}},
+        title style={yshift=2ex}, % Pushes title up slightly
+        xlabel={\large Data Value ($x$)},
+        ylabel={\large Cumulative Proportion $F_n(x)$},
+        xmin=0, xmax=6.5, % Adjusted x-axis to fit annotations
+        ymin=-0.05, ymax=1.15,
+        xtick={0,1,2,3,4,5,6},
+        ytick={0, 0.2, 0.4, 0.6, 0.8, 1.0},
+        grid=major,
+        legend pos=south east, % Moved legend away from the curve
+        axis lines=left,
+        legend style={font=\normalsize, cells={anchor=west}},
+    ]
+
+    % Theoretical CDF (Smooth line)
+    \addplot[blue, smooth, thick, domain=0:6] { min((x/5)^2, 1) };
+    \addlegendentry{Theoretical CDF (e.g., Beta)};
+
+    % ECDF Step Function (Choppy line)
+    \addplot[red, ultra thick, const plot, mark=*, mark options={solid, scale=1.2}, jump mark left] coordinates {
+        (1.2, 0)
+        (1.2, 0.2)
+        (2.5, 0.4)
+        (3.1, 0.6)
+        (4.0, 0.8)
+        (4.8, 1.0)
+        (6.2, 1.0) 
+    };
+    \addlegendentry{ECDF ($n=5$)};
+
+    % --- ANNOTATIONS ---
+
+    % 1. Jump height explanation
+    \draw[<-, darkgray, thick] (axis cs:3.15, 0.5) -- (axis cs:4.2, 0.5) 
+        node[right, text=black] {Jump height = $\frac{1}{n} = 0.2$};
+
+    % 2. Start and End points
+    \node[anchor=south west, red] at (axis cs: 1.25, 0.02) {Starts at $0$};
+    \node[anchor=south, red] at (axis cs: 5.5, 1.02) {$F_n(x) \to 1.0$};
+
+    % 3. Highlighting Percentile Calculation (e.g., 50th percentile)
+    \draw[dashed, thick, darkgray] (axis cs: 0, 0.5) -- (axis cs: 2.8, 0.5);
+    \draw[dashed, thick, darkgray, ->] (axis cs: 2.8, 0.5) -- (axis cs: 2.8, 0);
+
+    \node[anchor=south west] at (axis cs: 0.1, 0.5) {$p=0.50$ (Median)};
+    \node[anchor=south west] at (axis cs: 2.8, 0.05) {Median Est. $\approx 2.8$};
+
+    \end{axis}
+\end{tikzpicture}
