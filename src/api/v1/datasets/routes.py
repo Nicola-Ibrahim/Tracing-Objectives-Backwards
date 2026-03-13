@@ -4,6 +4,9 @@ from ....modules.dataset.application.dataset_service import (
     DatasetConfiguration,
     DatasetService,
 )
+from ....modules.inverse.application.inverse_service import InverseService
+from ..inverse.dependencies import get_inverse_service
+from ..inverse.schemas import BulkDeleteEnginesRequest, EngineListItem
 from .dependencies import get_dataset_service
 from .schemas import (
     BulkDeleteDatasetsRequest,
@@ -14,9 +17,6 @@ from .schemas import (
     DatasetSummary,
     GeneratorsDiscoveryResponse,
 )
-from ..inverse.dependencies import get_inverse_service
-from ....modules.inverse.application.inverse_service import InverseService
-from ..inverse.schemas import EngineListItem, BulkDeleteEnginesRequest
 
 router = APIRouter()
 
@@ -63,7 +63,7 @@ async def delete_engines_for_dataset(
     # Ensure all engines in the request belong to the specified dataset
     for engine in request.engines:
         engine["dataset_name"] = dataset_name
-        
+
     result = service.delete_engines(request.engines)
 
     return result.match(
@@ -112,9 +112,9 @@ async def list_datasets(
         on_success=lambda datasets: [
             DatasetSummary(
                 name=dataset["name"],
-                n_samples=dataset["n_samples"],
                 n_features=dataset["n_features"],
                 n_objectives=dataset["n_objectives"],
+                metadata=dataset["metadata"],
                 trained_engines_count=dataset["trained_engines_count"],
             )
             for dataset in datasets
@@ -146,9 +146,9 @@ async def get_dataset_details(
     return result.match(
         on_success=lambda value: DatasetDetailResponse(
             name=value["name"],
-            samples=value["samples"],
-            objectives_count=value["objectives_count"],
-            decisions_count=value["decisions_count"],
+            objectives_dim=value["objectives_dim"],
+            decisions_dim=value["decisions_dim"],
+            metadata=value["metadata"],
             X=value["X"],
             y=value["y"],
             is_pareto=value["is_pareto"],

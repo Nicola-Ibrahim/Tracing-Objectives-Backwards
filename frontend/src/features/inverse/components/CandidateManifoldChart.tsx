@@ -26,7 +26,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 mode: 'markers',
                 type: 'scatter',
                 name: "Reference Data",
-                marker: { color: 'rgba(203, 213, 225, 0.4)', size: 6 },
+                marker: { color: 'rgba(203, 213, 225, 0.4)', size: 8 },
                 hoverinfo: 'skip'
             });
         }
@@ -39,7 +39,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 mode: 'markers',
                 type: 'scatter',
                 name: "Generated Candidates",
-                marker: { color: 'rgba(99, 102, 241, 0.5)', size: 10 },
+                marker: { color: 'rgba(99, 102, 241, 0.5)', size: 14 },
                 hovertemplate: 'Candidate<br>f1: %{x:.4f}<br>f2: %{y:.4f}<extra></extra>',
                 hoverlabel: { bgcolor: 'white', bordercolor: '#6366f1', font: { family: 'Inter, sans-serif' } }
             });
@@ -51,7 +51,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 mode: 'lines',
                 type: 'scatter',
                 name: "Alignment",
-                line: { color: 'rgba(79, 70, 229, 0.3)', width: 2, dash: 'dot' },
+                line: { color: 'rgba(79, 70, 229, 0.3)', width: 3, dash: 'dot' },
                 hoverinfo: 'skip'
             });
 
@@ -67,8 +67,8 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                         name: "Local Simplex",
                         fill: 'toself',
                         fillcolor: 'rgba(245, 158, 11, 0.05)',
-                        line: { color: 'rgba(245, 158, 11, 0.6)', width: 2 },
-                        marker: { size: 6, color: 'white', line: { width: 1, color: '#f59e0b' } },
+                        line: { color: 'rgba(245, 158, 11, 0.6)', width: 3 },
+                        marker: { size: 8, color: 'white', line: { width: 1.5, color: '#f59e0b' } },
                         hoverinfo: 'skip'
                     });
                 }
@@ -83,9 +83,9 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 name: "Best Candidate",
                 marker: {
                     symbol: 'star',
-                    size: 18,
+                    size: 24,
                     color: '#ef4444',
-                    line: { width: 1.5, color: 'white' }
+                    line: { width: 2, color: 'white' }
                 },
                 hovertemplate: 'Best Selection<br>f1: %{x:.6f}<br>f2: %{y:.6f}<extra></extra>',
                 hoverlabel: { bgcolor: 'white', bordercolor: '#ef4444', font: { family: 'Inter, sans-serif' } }
@@ -100,9 +100,9 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 name: "Target",
                 marker: {
                     symbol: 'x-thin',
-                    size: 16,
+                    size: 24,
                     color: '#22c55e',
-                    line: { width: 3, color: '#22c55e' }
+                    line: { width: 4, color: '#22c55e' }
                 },
                 hovertemplate: 'Target Profile<br>f1: %{x:.4f}<br>f2: %{y:.4f}<extra></extra>',
                 hoverlabel: { bgcolor: 'white', bordercolor: '#22c55e', font: { family: 'Inter, sans-serif' } }
@@ -121,7 +121,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 mode: 'markers',
                 type: 'scatter',
                 name: "Reference Data",
-                marker: { color: 'rgba(203, 213, 225, 0.4)', size: 6 },
+                marker: { color: 'rgba(203, 213, 225, 0.4)', size: 8 },
                 hoverinfo: 'skip'
             });
         }
@@ -133,7 +133,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 mode: 'markers',
                 type: 'scatter',
                 name: "Generated Decisions",
-                marker: { color: 'rgba(245, 158, 11, 0.4)', size: 10 },
+                marker: { color: 'rgba(245, 158, 11, 0.4)', size: 14 },
                 hovertemplate: 'Decision Sample<br>x1: %{x:.4f}<br>x2: %{y:.4f}<extra></extra>',
                 hoverlabel: { bgcolor: 'white', bordercolor: '#f59e0b', font: { family: 'Inter, sans-serif' } }
             });
@@ -144,7 +144,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                 mode: 'markers',
                 type: 'scatter',
                 name: "Best Decision",
-                marker: { symbol: 'star', size: 18, color: '#ef4444', line: { width: 1.5, color: 'white' } },
+                marker: { symbol: 'star', size: 24, color: '#ef4444', line: { width: 2, color: 'white' } },
                 hovertemplate: 'Optimal Features<extra></extra>',
                 hoverlabel: { bgcolor: 'white', bordercolor: '#ef4444', font: { family: 'Inter, sans-serif' } }
             });
@@ -158,7 +158,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                         mode: 'lines',
                         type: 'scatter',
                         name: "Simplex Bound",
-                        line: { color: 'rgba(245, 158, 11, 0.4)', width: 1.5, dash: 'dot' },
+                        line: { color: 'rgba(245, 158, 11, 0.4)', width: 2.5, dash: 'dot' },
                         hoverinfo: 'skip'
                     });
                 }

@@ -241,6 +241,37 @@ export default function DatasetsPage() {
                                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Decision & Objective Space Visualization</p>
                                         </div>
                                     </div>
+
+                                    <div className="mt-12 pt-8 border-t border-border/60">
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <Layers className="h-4 w-4 text-indigo-500" />
+                                            <h4 className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Synthesis Metadata</h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Test Split Ratio</p>
+                                                <p className="text-base font-black text-foreground tabular-nums">{(selectedDetails.metadata.split_ratio * 100).toFixed(0)}%</p>
+                                            </div>
+                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Random Seed</p>
+                                                <p className="text-base font-black text-foreground tabular-nums">{selectedDetails.metadata.random_state}</p>
+                                            </div>
+                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Aggregate Points</p>
+                                                <p className="text-base font-black text-foreground tabular-nums">{selectedDetails.metadata.n_samples.toLocaleString()}</p>
+                                            </div>
+                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Generation Date</p>
+                                                <p className="text-sm font-black text-foreground tabular-nums truncate">
+                                                    {new Date(selectedDetails.metadata.created_at).toLocaleDateString(undefined, {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -259,6 +290,16 @@ export default function DatasetsPage() {
                                                 labelX="X[0] (Feature 1)"
                                                 labelY="X[1] (Feature 2)"
                                             />
+                                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                                <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Dimensions</p>
+                                                    <p className="text-sm font-black text-foreground mt-1">{selectedDetails.decisions_dim}D Space</p>
+                                                </div>
+                                                <div className="p-3 bg-indigo-500/5 rounded-lg border border-indigo-500/10">
+                                                    <p className="text-[9px] font-black uppercase text-indigo-500 tracking-widest truncate">Train Split</p>
+                                                    <p className="text-sm font-black text-foreground mt-1 tabular-nums">{selectedDetails.metadata.n_train.toLocaleString()}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div className="space-y-4">
                                             <DatasetChart
@@ -267,6 +308,16 @@ export default function DatasetsPage() {
                                                 labelX="y[0] (Objective 1)"
                                                 labelY="y[1] (Objective 2)"
                                             />
+                                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                                <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Objectives</p>
+                                                    <p className="text-sm font-black text-foreground mt-1">{selectedDetails.objectives_dim}D Target</p>
+                                                </div>
+                                                <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
+                                                    <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest truncate">Test Split</p>
+                                                    <p className="text-sm font-black text-foreground mt-1 tabular-nums">{selectedDetails.metadata.n_test.toLocaleString()}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
@@ -369,7 +420,7 @@ export default function DatasetsPage() {
                                                 <p className="text-[9px] uppercase font-black text-muted-foreground/40 tracking-widest">Samples</p>
                                                 <div className="flex items-center gap-2">
                                                     <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
-                                                    <span className="text-sm font-black text-foreground tabular-nums">{dataset.n_samples.toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-foreground tabular-nums">{dataset.metadata.n_samples.toLocaleString()}</span>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-1 min-w-[70px]">

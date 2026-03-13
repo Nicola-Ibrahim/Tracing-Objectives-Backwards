@@ -32,7 +32,7 @@ import { GeneratorSchema } from "../types";
 const generateDatasetSchema = z.object({
     dataset_name: z.string().min(3, "Name must be at least 3 characters"),
     generator_type: z.string().min(1, "Generator type is required"),
-    split_ratio: z.coerce.number().min(0).max(0.5).default(0.2),
+    split_ratio: z.coerce.number().min(0).max(0.99).default(0.2),
     random_state: z.coerce.number().default(42),
 });
 

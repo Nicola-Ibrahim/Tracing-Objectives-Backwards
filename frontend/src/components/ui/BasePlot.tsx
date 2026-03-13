@@ -57,7 +57,7 @@ export function BasePlot({
             y: -0.22,
             xanchor: 'center',
             x: 0.5,
-            font: { size: 12, color: '#64748b' },
+            font: { size: 14, color: '#64748b', weight: 600 },
             bgcolor: 'rgba(255, 255, 255, 0.8)',
             bordercolor: '#f1f5f9',
             borderwidth: 1
@@ -65,14 +65,14 @@ export function BasePlot({
         xaxis: {
             gridcolor: '#f8fafc',
             zeroline: false,
-            tickfont: { size: 12, color: '#94a3b8' },
-            title: { font: { size: 14, color: '#94a3b8', weight: 800 } }
+            tickfont: { size: 14, color: '#94a3b8', weight: 500 },
+            title: { font: { size: 18, color: '#64748b', weight: 800 } }
         },
         yaxis: {
             gridcolor: '#f8fafc',
             zeroline: false,
-            tickfont: { size: 12, color: '#94a3b8' },
-            title: { font: { size: 14, color: '#94a3b8', weight: 800 } }
+            tickfont: { size: 14, color: '#94a3b8', weight: 500 },
+            title: { font: { size: 18, color: '#64748b', weight: 800 } }
         },
         paper_bgcolor: 'white',
         plot_bgcolor: 'white',

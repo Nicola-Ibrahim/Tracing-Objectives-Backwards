@@ -12,6 +12,7 @@ from ...shared.result import Result
 from ..domain.entities.dataset import Dataset
 from ..domain.interfaces.base_repository import BaseDatasetRepository
 from ..domain.interfaces.base_visualizer import BaseVisualizer
+from ..domain.value_objects.metadata import DatasetMetadata
 from ..domain.value_objects.pareto import Pareto
 from ..infrastructure.sources.factory import DataGeneratorFactory
 
@@ -58,15 +59,12 @@ class DatasetService:
                 dataset = self._repository.load(name)
                 engines_meta = self._engine_repository.list_engines(name)
 
-                objs = np.atleast_2d(dataset.y)
-                decs = np.atleast_2d(dataset.X)
-
                 summaries.append(
                     {
                         "name": name,
-                        "n_samples": objs.shape[0],
-                        "n_features": decs.shape[1],
-                        "n_objectives": objs.shape[1],
+                        "n_features": dataset.X.shape[1],
+                        "n_objectives": dataset.y.shape[1],
+                        "metadata": dataset.metadata.model_dump(),
                         "trained_engines_count": len(engines_meta),
                     }
                 )
@@ -118,11 +116,9 @@ class DatasetService:
             return Result.ok(
                 {
                     "name": dataset.name,
-                    "samples": len(objectives),
-                    "objectives_count": objectives.shape[1]
-                    if objectives.size > 0
-                    else 0,
-                    "decisions_count": decisions.shape[1] if decisions.size > 0 else 0,
+                    "objectives_dim": objectives.shape[1],
+                    "decisions_dim": decisions.shape[1],
+                    "metadata": dataset.metadata.model_dump(),
                     "X": [row.tolist() for row in decisions],
                     "y": [row.tolist() for row in objectives],
                     "is_pareto": is_pareto,
@@ -166,6 +162,8 @@ class DatasetService:
 
     def generate_dataset(self, config: DatasetConfiguration) -> Result[Path]:
         """Orchestrates dataset generation using the factory."""
+        from sklearn.model_selection import train_test_split
+
         try:
             self._logger.log_info(
                 f"Starting dataset generation with {config.generator_type} for dataset {config.dataset_name}"
@@ -176,6 +174,30 @@ class DatasetService:
             )
 
             raw_data = data_source.generate()
+            X, y = raw_data.decisions, raw_data.objectives
+            n_samples = len(X)
+
+            # Perform splitting in application layer
+            indices = np.arange(n_samples)
+            if config.split_ratio > 0.0:
+                train_indices, test_indices = train_test_split(
+                    indices,
+                    test_size=config.split_ratio,
+                    random_state=config.random_state,
+                    shuffle=True,
+                )
+            else:
+                train_indices = indices
+                test_indices = np.array([], dtype=int)
+
+            # Create Metadata
+            metadata = DatasetMetadata(
+                n_samples=n_samples,
+                n_train=len(train_indices),
+                n_test=len(test_indices),
+                split_ratio=config.split_ratio,
+                random_state=config.random_state,
+            )
 
             pareto = None
             if raw_data.pareto_set is not None and raw_data.pareto_front is not None:
@@ -186,11 +208,12 @@ class DatasetService:
 
             dataset = Dataset.create(
                 name=config.dataset_name,
-                X=raw_data.decisions,
-                y=raw_data.objectives,
+                X=X,
+                y=y,
+                metadata=metadata,
+                train_indices=train_indices,
+                test_indices=test_indices,
                 pareto=pareto,
-                split_ratio=config.split_ratio,
-                random_state=config.random_state,
             )
 
             saved_path = self._repository.save(dataset)

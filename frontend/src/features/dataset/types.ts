@@ -1,19 +1,34 @@
+export interface DatasetMetadata {
+  n_samples: number;
+  n_train: number;
+  n_test: number;
+  split_ratio: number;
+  random_state: number;
+  created_at: string;
+}
+
 export interface DatasetInfo {
   name: string;
-  n_samples: number;
   n_features: number;
   n_objectives: number;
+  metadata: DatasetMetadata;
   trained_engines_count: number;
 }
 
-export interface DatasetDetails extends DatasetInfo {
-  samples: number;
-  objectives_count: number;
-  decisions_count: number;
+export interface DatasetDetails {
+  name: string;
+  metadata: DatasetMetadata;
+  objectives_dim: number;
+  decisions_dim: number;
   X: number[][];
   y: number[][];
   is_pareto: boolean[];
   bounds: Record<string, [number, number]>;
+  trained_engines?: {
+    solver_type: string;
+    version: number;
+    created_at: string;
+  }[];
 }
 
 export interface ParameterDefinition {

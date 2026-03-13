@@ -23,11 +23,20 @@ class GeneratorsDiscoveryResponse(BaseModel):
     generators: List[GeneratorSchema]
 
 
+class DatasetMetadataSchema(BaseModel):
+    n_samples: int
+    n_train: int
+    n_test: int
+    split_ratio: float
+    random_state: int
+    created_at: str
+
+
 class DatasetSummary(BaseModel):
     name: str
-    n_samples: int
     n_features: int
     n_objectives: int
+    metadata: DatasetMetadataSchema
     trained_engines_count: int
 
 
@@ -39,9 +48,9 @@ class EngineInfo(BaseModel):
 
 class DatasetDetailResponse(BaseModel):
     name: str
-    samples: int
-    objectives_count: int
-    decisions_count: int
+    objectives_dim: int
+    decisions_dim: int
+    metadata: DatasetMetadataSchema
     X: list[list[float]]
     y: list[list[float]]
     is_pareto: list[bool]
@@ -55,7 +64,7 @@ class DatasetGenerationRequest(BaseModel):
     params: dict[str, Any] = Field(
         default_factory=dict, description="Generator-specific hyperparameters"
     )
-    split_ratio: float = 0.2
+    split_ratio: float = Field(default=0.2, ge=0.0, lt=1.0)
     random_state: int = 42
 
 

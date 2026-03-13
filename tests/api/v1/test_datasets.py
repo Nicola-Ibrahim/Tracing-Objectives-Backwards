@@ -25,8 +25,10 @@ def test_get_dataset_details_success(client, mock_get_dataset_details_service):
     mock_get_dataset_details_service.execute.return_value = {
         "name": "test_ds",
         "samples": 1,
-        "objectives_count": 2,
-        "decisions_count": 2,
+        "objectives_dim": 2,
+        "decisions_dim": 2,
+        "n_train": 1,
+        "n_test": 0,
         "X": [[1.0, 2.0]],
         "y": [[3.0, 4.0]],
         "is_pareto": [True],

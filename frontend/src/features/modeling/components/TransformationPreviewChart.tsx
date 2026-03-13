@@ -38,9 +38,9 @@ export function TransformationPreviewChart({
             name: label,
             marker: {
                 color: color,
-                size: 6,
-                opacity: 0.7,
-                line: { width: 1, color: 'white' }
+                size: 10,
+                opacity: 0.8,
+                line: { width: 1.5, color: 'white' }
             },
             hovertemplate: `<b>${label}</b><br>Ω₁: %{x:.4f}<br>Ω₂: %{y:.4f}<extra></extra>`,
             hoverlabel: {
@@ -52,8 +52,8 @@ export function TransformationPreviewChart({
     };
 
     const getLayout = (labelX: string, labelY: string) => ({
-        xaxis: { title: { text: labelX } },
-        yaxis: { title: { text: labelY } },
+        xaxis: { title: { text: labelX, font: { size: 18, weight: 800 } }, tickfont: { size: 14, weight: 600 } },
+        yaxis: { title: { text: labelY, font: { size: 18, weight: 800 } }, tickfont: { size: 14, weight: 600 } },
     });
 
     return (

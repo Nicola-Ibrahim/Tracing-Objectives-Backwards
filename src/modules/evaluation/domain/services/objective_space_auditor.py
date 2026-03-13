@@ -1,9 +1,12 @@
-import numpy as np
-from ..value_objects.objective_assessment import ObjectiveSpaceAssessment
-from ..value_objects.ecdf_profile import ECDFProfile
 from typing import Literal
 
+import numpy as np
+
+from ..value_objects.ecdf_profile import ECDFProfile
+from ..value_objects.objective_assessment import ObjectiveSpaceAssessment
+
 DistanceType = Literal["euclidean", "mahalanobis"]
+
 
 class ObjectiveSpaceAuditor:
     """
@@ -29,7 +32,7 @@ class ObjectiveSpaceAuditor:
             distance: "euclidean" | "mahalanobis".
         """
         n_points, k_samples, m_dims = candidates.shape
-        
+
         # 1. Residuals (y_hat - y*)
         residuals = candidates - reference[:, np.newaxis, :]  # (N, K, M)
 
@@ -52,7 +55,7 @@ class ObjectiveSpaceAuditor:
         # 4. Bias and Dispersion
         mean_residual = np.mean(residuals, axis=1)  # (N, M)
         bias = np.linalg.norm(mean_residual, axis=1) / np.sqrt(m_dims)  # (N,)
-        
+
         centered_residuals = residuals - mean_residual[:, np.newaxis, :]
         dist_to_mean = np.linalg.norm(centered_residuals, axis=2)
         dispersion = np.median(dist_to_mean, axis=1) / np.sqrt(m_dims)  # (N,)
@@ -69,19 +72,31 @@ class ObjectiveSpaceAuditor:
         )
 
     @staticmethod
-    def _compute_ecdf(scores: np.ndarray, max_points: int = 100) -> ECDFProfile:
-        sorted_scores = np.sort(scores)
+    def _compute_ecdf(scores: np.ndarray, max_points: int = 10000) -> ECDFProfile:
+        """
+        Computes the Empirical Cumulative Distribution Function.
+        Increased max_points to 10,000 to preserve high-resolution data
+        required for logarithmic plotting.
+        """
+        # 1. Filter out exact zeros to prevent log(0) errors in plotting
+        # (A distance of exactly 0.0 breaks logarithmic axes)
+        safe_scores = scores[scores > 1e-12]
+
+        # If all scores were exactly zero (unlikely), handle gracefully
+        if len(safe_scores) == 0:
+            safe_scores = scores
+
+        sorted_scores = np.sort(safe_scores)
         n = len(sorted_scores)
-        
+
+        # 2. Only downsample if ridiculously large, otherwise return exact steps
         if n > max_points:
+            # Using unique values or a much higher limit preserves log-scale details
             indices = np.linspace(0, n - 1, max_points, dtype=int)
             x_values = sorted_scores[indices].tolist()
             y_values = ((indices + 1) / n).tolist()
         else:
             x_values = sorted_scores.tolist()
             y_values = (np.arange(1, n + 1) / n).tolist()
-            
-        return ECDFProfile(
-            x_values=x_values,
-            cumulative_probabilities=y_values
-        )
+
+        return ECDFProfile(x_values=x_values, cumulative_probabilities=y_values)

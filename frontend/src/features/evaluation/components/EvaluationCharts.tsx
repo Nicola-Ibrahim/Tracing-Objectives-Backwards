@@ -27,6 +27,7 @@ interface PerformanceChartProps {
     xAxisLabel: string;
     yAxisLabel: string;
     showIdeal?: boolean;
+    xAxisType?: "linear" | "log";
 }
 
 export function PerformanceChart({
@@ -35,7 +36,8 @@ export function PerformanceChart({
     data,
     xAxisLabel,
     yAxisLabel,
-    showIdeal = false
+    showIdeal = false,
+    xAxisType = "linear"
 }: PerformanceChartProps) {
 
 
@@ -48,7 +50,7 @@ export function PerformanceChart({
             mode: 'lines' as const,
             line: {
                 color: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
-                width: 3,
+                width: 4,
                 shape: 'spline' as const,
                 smoothing: 1.3
             },
@@ -69,7 +71,7 @@ export function PerformanceChart({
                 mode: 'lines' as const,
                 line: {
                     color: 'rgba(100, 116, 139, 0.4)',
-                    width: 1.5,
+                    width: 2.5,
                     dash: 'dash' as const
                 },
                 fill: 'none' as const,
@@ -83,15 +85,16 @@ export function PerformanceChart({
     const layout = {
         xaxis: {
             title: { text: xAxisLabel },
+            type: xAxisType,
             gridcolor: '#f1f5f9', // Muted slate grid
             zeroline: false,
-            tickfont: { family: 'Inter, sans-serif', color: '#64748b' }
+            tickfont: { family: 'Inter, sans-serif', color: '#64748b', size: 14 }
         },
         yaxis: {
             title: { text: yAxisLabel },
             range: [0, 1.05],
             gridcolor: '#f1f5f9',
-            tickfont: { family: 'Inter, sans-serif', color: '#64748b' }
+            tickfont: { family: 'Inter, sans-serif', color: '#64748b', size: 14 }
         },
     };
 
@@ -146,7 +149,7 @@ export function MetricBarChart({
         showlegend: true,
         xaxis: {
             gridcolor: 'transparent',
-            tickfont: { size: 12, weight: 700, color: '#64748b' },
+            tickfont: { size: 14, weight: 700, color: '#64748b' },
             linecolor: '#e2e8f0',
             automargin: true
         },
@@ -154,7 +157,7 @@ export function MetricBarChart({
             title: { text: yAxisLabel },
             gridcolor: '#f1f5f9',
             zeroline: false,
-            tickfont: { family: 'Inter, sans-serif', color: '#64748b' }
+            tickfont: { family: 'Inter, sans-serif', color: '#64748b', size: 14 }
         },
         margin: { b: 150, t: 40, l: 60, r: 20 },
     };

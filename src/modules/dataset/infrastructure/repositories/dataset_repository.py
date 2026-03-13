@@ -6,6 +6,7 @@ from ....shared.infrastructure.processing.files.json import JsonFileHandler
 from ....shared.infrastructure.processing.files.pickle import PickleFileHandler
 from ...domain.entities.dataset import Dataset
 from ...domain.interfaces.base_repository import BaseDatasetRepository
+from ...domain.value_objects.metadata import DatasetMetadata
 from ...domain.value_objects.pareto import Pareto
 
 
@@ -45,11 +46,9 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             "X": dataset.X,
             "y": dataset.y,
             "pareto": dataset.pareto,
+            "metadata": dataset.metadata,
             "train_indices": dataset.train_indices,
             "test_indices": dataset.test_indices,
-            "split_ratio": dataset.split_ratio,
-            "random_state": dataset.random_state,
-            "created_at": dataset.created_at,
         }
         raw_dir = self._raw_dir(dataset.name)
         raw_dir.mkdir(parents=True, exist_ok=True)
@@ -86,15 +85,52 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
         if X is None or y is None:
             raise ValueError(f"Dataset '{name}' is missing core data (X or y).")
 
+        # Metadata extraction
+        metadata = payload.get("metadata")
+        if isinstance(metadata, dict):
+            metadata = DatasetMetadata(**metadata)
+        elif metadata is None:
+            # Fallback for old data or partial payloads
+            metadata = DatasetMetadata(
+                split_ratio=payload.get("split_ratio", 0.0),
+                random_state=payload.get("random_state", 42),
+            )
+
+        # Indices
+        train_indices = payload.get("train_indices")
+        test_indices = payload.get("test_indices")
+
+        if train_indices is None or test_indices is None:
+            # Reconstruct indices if missing
+            import numpy as np
+            from sklearn.model_selection import train_test_split
+            n_samples = len(X)
+            indices = np.arange(n_samples)
+            if metadata.split_ratio > 0.0:
+                train_indices, test_indices = train_test_split(
+                    indices,
+                    test_size=metadata.split_ratio,
+                    random_state=metadata.random_state,
+                    shuffle=True,
+                )
+            else:
+                train_indices = indices
+                test_indices = np.array([], dtype=int)
+
+        # Re-verify metadata has correct counts if they were missing or zero
+        if metadata.n_samples == 0:
+            metadata.n_samples = len(X)
+            metadata.n_train = len(train_indices)
+            metadata.n_test = len(test_indices)
+
         return Dataset.create(
             name=payload.get("name", name),
             X=X,
             y=y,
+            metadata=metadata,
+            train_indices=train_indices,
+            test_indices=test_indices,
             pareto=pareto,
-            train_indices=payload.get("train_indices", []),
-            test_indices=payload.get("test_indices", []),
-            split_ratio=payload.get("split_ratio", 0.0),
-            random_state=payload.get("random_state", 42),
         )
 
     def list_all(self) -> list[str]:

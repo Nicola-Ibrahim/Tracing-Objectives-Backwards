@@ -343,6 +343,7 @@ export default function EvaluationPage() {
                                                         data={result.objective_space.ecdf}
                                                         xAxisLabel="Normalized Residual (Distance)"
                                                         yAxisLabel="Cumulative Density"
+                                                        xAxisType="log"
                                                     />
                                                 </div>
                                                 <div className="lg:col-span-2 min-w-0">

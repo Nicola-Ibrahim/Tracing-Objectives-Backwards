@@ -1,14 +1,10 @@
-from datetime import UTC, datetime
 from typing import Optional, Self
 
 import numpy as np
 from pydantic import BaseModel, Field
 
+from ..value_objects.metadata import DatasetMetadata
 from ..value_objects.pareto import Pareto
-
-
-def _iso_timestamp() -> str:
-    return datetime.now(tz=UTC).isoformat()
 
 
 class Dataset(BaseModel):
@@ -28,16 +24,12 @@ class Dataset(BaseModel):
         description="Pareto set and front, if available from the data source",
     )
 
-    # Split metadata
-    train_indices: np.ndarray = Field(default_factory=lambda: np.array([], dtype=int))
-    test_indices: np.ndarray = Field(default_factory=lambda: np.array([], dtype=int))
-    split_ratio: float = Field(default=0.2, ge=0.0, lt=1.0)
-    random_state: int = Field(default=42)
+    # Metadata Value Object (Mandatory)
+    metadata: DatasetMetadata = Field(..., description="Dataset metadata")
 
-    created_at: str = Field(
-        default_factory=_iso_timestamp,
-        description="ISO 8601 timestamp of dataset creation.",
-    )
+    # Indices (still kept as direct fields for performance of split operations)
+    train_indices: np.ndarray = Field(..., description="Indices for training set")
+    test_indices: np.ndarray = Field(..., description="Indices for testing set")
 
     class Config:
         arbitrary_types_allowed = True
@@ -64,36 +56,17 @@ class Dataset(BaseModel):
         *,
         X: np.ndarray,
         y: np.ndarray,
-        train_indices: np.ndarray | None = None,
-        test_indices: np.ndarray | None = None,
+        metadata: DatasetMetadata,
+        train_indices: np.ndarray,
+        test_indices: np.ndarray,
         pareto: Optional[Pareto] = None,
-        split_ratio: float = 0.2,
-        random_state: int = 42,
     ) -> Self:
-        from sklearn.model_selection import train_test_split
-
-        if (train_indices is None or len(train_indices) == 0) and (
-            test_indices is None or len(test_indices) == 0
-        ):
-            indices = np.arange(len(X))
-            if split_ratio > 0.0:
-                train_indices, test_indices = train_test_split(
-                    indices,
-                    test_size=split_ratio,
-                    random_state=random_state,
-                    shuffle=True,
-                )
-            else:
-                train_indices = indices
-                test_indices = np.array([], dtype=int)
-
         return cls(
             name=name,
             X=X,
             y=y,
             pareto=pareto,
+            metadata=metadata,
             train_indices=train_indices,
             test_indices=test_indices,
-            split_ratio=split_ratio,
-            random_state=random_state,
         )
