@@ -383,7 +383,7 @@ export default function DatasetsPage() {
                                                         <div className="flex items-center justify-between px-2">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="h-2 w-2 rounded-full bg-indigo-400" />
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Decision Space (X - Test)</span>
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-heading">Decision Space (X - Test)</span>
                                                             </div>
                                                         </div>
                                                         <div className="bg-card/50 rounded-2xl border border-border/50 p-2 shadow-2xl shadow-indigo-500/5">

@@ -317,14 +317,14 @@ export default function EnginesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="p-8 bg-card flex justify-end gap-3">
-                        <Button variant="ghost" onClick={() => setEngineToDelete(null)} className="rounded-[1rem] font-black uppercase tracking-widest text-[10px] h-11 px-6">
+                        <Button variant="ghost" onClick={() => setEngineToDelete(null)} className="rounded-[1rem] font-bold uppercase tracking-widest text-[10px] h-11 px-6 font-heading">
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={() => engineToDelete && deleteMutation.mutate(engineToDelete)}
                             disabled={deleteMutation.isPending}
-                            className="rounded-[1rem] font-black uppercase tracking-widest text-[10px] h-11 px-8"
+                            className="rounded-[1rem] font-bold uppercase tracking-widest text-[10px] h-11 px-8 font-heading"
                         >
                             {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Purge"}
                         </Button>
@@ -345,14 +345,14 @@ export default function EnginesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="p-8 bg-card flex justify-end gap-3">
-                        <Button variant="ghost" onClick={() => setIsBulkDeleting(false)} className="rounded-[1rem] font-black uppercase tracking-widest text-[10px] h-11 px-6">
+                        <Button variant="ghost" onClick={() => setIsBulkDeleting(false)} className="rounded-[1rem] font-bold uppercase tracking-widest text-[10px] h-11 px-6 font-heading">
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={() => bulkDeleteMutation.mutate(selectedEngines)}
                             disabled={bulkDeleteMutation.isPending}
-                            className="rounded-[1rem] font-black uppercase tracking-widest text-[10px] h-11 px-8"
+                            className="rounded-[1rem] font-bold uppercase tracking-widest text-[10px] h-11 px-8 font-heading"
                         >
                             {bulkDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Purge ${selectedEngines.length} Engines`}
                         </Button>
@@ -431,7 +431,7 @@ export default function EnginesPage() {
                                                 checked={Object.values(solverGroups).flat().every(en => selectedEngines.some(se => se.dataset_name === en.dataset_name && se.solver_type === en.solver_type && se.version === en.version))}
                                                 className="h-4 w-4 border-border/60 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 pointer-events-none rounded-md"
                                             />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 group-hover/select:text-indigo-500 transition-colors">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 group-hover/select:text-indigo-500 transition-colors font-heading">
                                                 Select Partition
                                             </span>
                                         </div>
@@ -595,7 +595,7 @@ export default function EnginesPage() {
                             <div className="bg-muted p-10 rounded-[1rem] inline-block mb-8 border border-border/50">
                                 <Search className="h-12 w-12 text-muted-foreground/20" />
                             </div>
-                            <p className="text-muted-foreground font-black uppercase tracking-[0.2em] text-sm">No registry assets match "<span className="text-indigo-500">{searchQuery}</span>"</p>
+                            <p className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-sm font-heading">No registry assets match "<span className="text-indigo-500">{searchQuery}</span>"</p>
                         </div>
                     )}
                 </div>

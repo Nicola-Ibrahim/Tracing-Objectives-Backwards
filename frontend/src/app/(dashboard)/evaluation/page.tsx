@@ -253,7 +253,7 @@ export default function EvaluationPage() {
                                                                         </Tooltip>
                                                                     </div>
                                                                 </TableHead>
-                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                <TableHead className="px-10 h-16 text-right font-bold text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em] font-heading">
                                                                     <div className="flex items-center justify-end gap-2">
                                                                         S-CRPS
                                                                         <Tooltip>

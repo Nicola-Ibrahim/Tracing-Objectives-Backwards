@@ -70,7 +70,7 @@ export function EngineDetailsInspector({
                                             <Badge variant="outline" className="bg-indigo-500/5 text-indigo-500 border-indigo-500/20 font-bold text-[9px] uppercase tracking-widest px-3 py-1 rounded-full">
                                                 Registry Asset
                                             </Badge>
-                                            <span className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider italic">
+                                            <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider italic font-heading">
                                                 <Database className="h-3 w-3" />
                                                 {details.dataset_name}
                                             </span>
@@ -78,7 +78,7 @@ export function EngineDetailsInspector({
                                     </div>
                                 </div>
                                 <div className="text-right hidden md:block">
-                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.3em] mb-1">Authenticated At</p>
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.3em] mb-1 font-heading">Authenticated At</p>
                                     <div className="flex items-center gap-2 justify-end text-sm font-medium text-foreground italic uppercase font-mono">
                                         <Calendar className="h-4 w-4 text-indigo-500/40" />
                                         {new Date(details.created_at).toLocaleString()}
@@ -148,7 +148,7 @@ export function EngineDetailsInspector({
                                                     {i + 1}
                                                 </div>
                                                 <div className="flex-1 p-4 bg-muted/10 border border-border rounded-[1rem] group-hover:bg-muted/20 transition-all">
-                                                    <span className="text-sm font-semibold text-foreground uppercase tracking-tight">{t}</span>
+                                                    <span className="text-sm font-bold text-foreground uppercase tracking-tight font-heading">{t}</span>
                                                 </div>
                                                 {i < details.transform_summary.length - 1 && (
                                                     <div className="flex flex-col items-center gap-1 opacity-20">
