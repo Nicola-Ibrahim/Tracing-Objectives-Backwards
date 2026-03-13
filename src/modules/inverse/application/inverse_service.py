@@ -318,7 +318,7 @@ class InverseService:
             )
         except FileNotFoundError as e:
             return Result.fail(
-                message=f"Engine or dataset not found",
+                message="Engine or dataset not found",
                 details=str(e),
                 code="NOT_FOUND",
             )

@@ -8,7 +8,6 @@ from ....modules.inverse.application.inverse_service import (
 )
 from .dependencies import get_inverse_service
 from .schemas import (
-    EngineDetailResponse,
     EngineListItem,
     GenerateRequest,
     GenerateResponse,

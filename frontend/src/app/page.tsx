@@ -50,7 +50,7 @@ export default function LandingPage() {
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="relative z-50 container mx-auto px-6 py-8 flex items-center justify-between"
+        className="relative z-50 container mx-auto px-6 py-4 flex items-center justify-between"
       >
         <Logo className="scale-110" />
         <nav className="hidden md:flex items-center gap-8 text-sm font-bold text-muted-foreground uppercase tracking-widest font-heading">
@@ -66,7 +66,7 @@ export default function LandingPage() {
       </motion.header>
 
       {/* Hero Section */}
-      <section className="relative pt-16 pb-24 md:pt-32 md:pb-48 z-10">
+      <section className="relative pt-6 pb-24 md:pt-12 md:pb-48 z-10">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content Column */}
@@ -75,7 +75,7 @@ export default function LandingPage() {
                 {...fadeIn}
                 className="inline-block"
               >
-                <Badge variant="indigo" className="mb-8 px-5 py-2 font-bold tracking-tight font-heading">
+                <Badge variant="indigo" className="mb-4 px-5 py-2 font-bold tracking-tight font-heading">
                   <Sparkles className="h-3 w-3 mr-2 font-bold" />
                   Advanced Inverse Mapping Protocol v1.2.0
                 </Badge>
