@@ -179,13 +179,13 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                             <Target className="h-3.5 w-3.5 mr-1.5" />
                             Target: {data.target_objective.map(v => v.toFixed(3)).join(", ")}
                         </Badge>
-                        <Badge variant="outline" className="py-1.5 px-3 text-muted-foreground font-black uppercase tracking-widest text-[10px] bg-background border-border">
+                        <Badge variant="outline" className="py-1.5 px-3 text-muted-foreground font-bold uppercase tracking-widest text-[10px] bg-background border-border font-heading">
                             {data.candidate_decisions.length} Candidates Identified
                         </Badge>
                     </div>
                 ) : (
                     <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border py-1.5 px-3 uppercase text-[10px] font-black tracking-widest">
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border py-1.5 px-3 uppercase text-[10px] font-bold tracking-widest font-heading">
                             <Info className="h-3.5 w-3.5 mr-1.5" />
                             Selection Mode: Define targets on manifold
                         </Badge>
@@ -199,7 +199,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                     description="Y-Space mapping of reference data and candidates"
                     data={objectiveTraces}
                     layout={layoutX}
-                    headerExtra={<Badge variant="outline" className="text-[10px] border-border text-muted-foreground px-2 py-0.5 leading-tight font-black uppercase tracking-widest">Y-Space</Badge>}
+                    headerExtra={<Badge variant="outline" className="text-[10px] border-border text-muted-foreground px-2 py-0.5 leading-tight font-bold uppercase tracking-widest font-heading">Y-Space</Badge>}
                 />
 
                 <BasePlot
@@ -207,7 +207,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                     description="X-Space mapping of latent features"
                     data={decisionTraces}
                     layout={layoutY}
-                    headerExtra={<Badge variant="outline" className="text-[10px] border-border text-muted-foreground px-2 py-0.5 leading-tight font-black uppercase tracking-widest">X-Space</Badge>}
+                    headerExtra={<Badge variant="outline" className="text-[10px] border-border text-muted-foreground px-2 py-0.5 leading-tight font-bold uppercase tracking-widest font-heading">X-Space</Badge>}
                 />
             </div>
 
@@ -221,8 +221,8 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                     <CheckCircle2 className="h-6 w-6" />
                                 </div>
                                 <div className="grow">
-                                    <h4 className="font-black text-foreground text-xl tracking-tight uppercase">Optimal Solution Vector</h4>
-                                    <p className="text-[10px] font-black text-muted-foreground mb-8 uppercase tracking-widest opacity-60">Best candidate approximation identified at index #{data.best_index}.</p>
+                                    <h4 className="font-bold text-foreground text-xl tracking-tight uppercase font-heading">Optimal Solution Vector</h4>
+                                    <p className="text-[10px] font-bold text-muted-foreground mb-8 uppercase tracking-widest opacity-60 font-heading">Best candidate approximation identified at index <span className="font-mono text-indigo-500 font-bold">#{data.best_index}</span>.</p>
 
                                     <div className="flex flex-col gap-5 mt-6">
                                         <div className="bg-muted/30 p-6 rounded-[1rem] border border-border flex flex-col gap-5 group/row hover:bg-background transition-all duration-500">
@@ -231,19 +231,19 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <Target className="h-5 w-5 text-indigo-500" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-black text-indigo-500 block tracking-widest">Objective Alignment</span>
+                                                    <span className="text-[10px] uppercase font-bold text-indigo-500 block tracking-widest font-heading">Objective Alignment</span>
                                                     <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">Distance to Manifold target profile</span>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[9px] text-indigo-500/70 font-black uppercase tracking-[0.15em]">f1 Objective</span>
+                                                    <span className="text-[9px] text-indigo-500/70 font-bold uppercase tracking-[0.15em] font-heading">f1 Objective</span>
                                                     <span className="font-mono text-sm font-bold text-foreground break-all leading-tight">
                                                         {data.best_candidate_objective[0].toFixed(6)}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[9px] text-indigo-500/70 font-black uppercase tracking-[0.15em]">f2 Objective</span>
+                                                    <span className="text-[9px] text-indigo-500/70 font-bold uppercase tracking-[0.15em] font-heading">f2 Objective</span>
                                                     <span className="font-mono text-sm font-bold text-foreground break-all leading-tight">
                                                         {data.best_candidate_objective[1].toFixed(6)}
                                                     </span>
@@ -257,7 +257,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <Activity className="h-5 w-5 text-muted-foreground group-hover/row:text-rose-500" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-black text-muted-foreground group-hover/row:text-rose-500 block tracking-widest transition-colors">Residual Tolerance</span>
+                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover/row:text-rose-500 block tracking-widest transition-colors font-heading">Residual Tolerance</span>
                                                     <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">L2 Approximation Error</span>
                                                 </div>
                                             </div>
@@ -272,7 +272,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                     <Network className="h-5 w-5 text-muted-foreground group-hover/row:text-indigo-500" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-black text-muted-foreground group-hover/row:text-indigo-500 block tracking-widest transition-colors">Feature Vectors</span>
+                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover/row:text-indigo-500 block tracking-widest transition-colors font-heading">Feature Vectors</span>
                                                     <span className="text-[10px] text-muted-foreground block font-bold italic opacity-60">High-dim parameter sample</span>
                                                 </div>
                                             </div>
@@ -287,7 +287,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                                             style={{ width: `${Math.min(100, Math.max(10, (1 - data.best_candidate_residual) * 100))}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-[9px] font-black text-indigo-500 tracking-widest uppercase">Stability</span>
+                                                    <span className="text-[9px] font-bold text-indigo-500 tracking-widest uppercase font-heading">Stability</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -306,17 +306,17 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                             <Network className="h-5 w-5" />
                                         </div>
                                         <div className="grow">
-                                            <h4 className="font-black text-foreground text-xs uppercase tracking-[0.2em] mb-4">Geometric Analysis</h4>
+                                            <h4 className="font-bold text-foreground text-xs uppercase tracking-[0.2em] mb-4 font-heading">Geometric Analysis</h4>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1 bg-muted/30 p-4 rounded-[1rem] border border-border hover:bg-background transition-colors">
-                                                    <span className="text-[9px] font-black uppercase text-muted-foreground block tracking-widest">Propagation</span>
-                                                    <Badge variant="outline" className={`text-[10px] font-black uppercase border-0 shadow-none p-0 ${data.metadata?.pathway === 'coherent' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                    <span className="text-[9px] font-bold uppercase text-muted-foreground block tracking-widest font-heading">Propagation</span>
+                                                    <Badge variant="outline" className={`text-[10px] font-bold uppercase border-0 shadow-none p-0 font-heading ${data.metadata?.pathway === 'coherent' ? 'text-emerald-500' : 'text-amber-500'}`}>
                                                         {data.metadata?.pathway || "Asynchronous"}
                                                     </Badge>
                                                 </div>
                                                 <div className="space-y-1 bg-muted/30 p-4 rounded-[1rem] border border-border hover:bg-background transition-colors">
-                                                    <span className="text-[9px] font-black uppercase text-muted-foreground block tracking-widest">Topology</span>
-                                                    <span className="text-[10px] font-black text-foreground uppercase">
+                                                    <span className="text-[9px] font-bold uppercase text-muted-foreground block tracking-widest font-heading">Topology</span>
+                                                    <span className="text-[10px] font-bold text-foreground uppercase font-heading">
                                                         {data.metadata?.is_simplex_found ? "Simplex Anchor" : "KNN Interpolation"}
                                                     </span>
                                                 </div>
@@ -333,9 +333,9 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
                                             <Activity className="h-5 w-5" />
                                         </div>
                                         <div className="grow">
-                                            <h4 className="font-black text-foreground text-xs uppercase tracking-[0.2em] mb-4">Generative Density</h4>
+                                            <h4 className="font-bold text-foreground text-xs uppercase tracking-[0.2em] mb-4 font-heading">Generative Density</h4>
                                             <div className="space-y-4">
-                                                <div className="flex items-center justify-between text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                                <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest font-heading">
                                                     <span>Log-Likelihood Manifold</span>
                                                     <div className="flex gap-4">
                                                         <span>Min: {Math.min(...data.metadata.log_likelihood).toFixed(2)}</span>

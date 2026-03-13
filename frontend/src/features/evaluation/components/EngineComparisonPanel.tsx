@@ -57,7 +57,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
     return (
         <Card className="border-border bg-card/50 backdrop-blur-sm rounded-[1rem] overflow-hidden">
             <CardHeader className="bg-muted/10 border-b border-border p-8">
-                <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground uppercase tracking-tight">
+                <CardTitle className="text-xl font-bold flex items-center gap-3 text-foreground uppercase tracking-tight font-heading">
                     <Activity className="h-6 w-6 text-indigo-500" />
                     Diagnostic Controller
                 </CardTitle>
@@ -65,7 +65,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
             </CardHeader>
             <CardContent className="p-8 space-y-8">
                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] ml-1">Dataset Scope</label>
+                    <label className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] ml-1 font-heading">Dataset Scope</label>
                     <Select onValueChange={setSelectedDataset} value={selectedDataset}>
                         <SelectTrigger className="bg-background border-border text-foreground h-12 rounded-[1rem] focus:ring-2 focus:ring-indigo-500/10 transition-all">
                             <SelectValue placeholder="Select target dataset" />
@@ -80,14 +80,14 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
 
                 {selectedDataset && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                        <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] ml-1">Available Engines</label>
+                        <label className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] ml-1 font-heading">Available Engines</label>
                         {fetchingEngines ? (
                             <div className="flex items-center justify-center p-12 border-2 border-dashed rounded-[1rem] border-border/40 bg-muted/5">
                                 <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
                             </div>
                         ) : availableEngines.length === 0 ? (
                             <div className="p-12 border-2 border-dashed rounded-[1rem] border-border/40 text-center bg-muted/5">
-                                <p className="text-xs font-black text-muted-foreground/40 uppercase tracking-widest italic">No trained engines found.</p>
+                                <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest italic font-heading">No trained engines found.</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 gap-3">
@@ -111,11 +111,11 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                                                     className="border-border data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 rounded-md transition-all" 
                                                 />
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black uppercase tracking-tight">{e.solver_type}</span>
-                                                    <span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest italic">v{e.version}</span>
+                                                    <span className="text-sm font-bold uppercase tracking-tight font-heading">{e.solver_type}</span>
+                                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest italic font-mono">v{e.version}</span>
                                                 </div>
                                             </div>
-                                            <Badge variant="secondary" className="text-[9px] font-black bg-muted/50 text-muted-foreground/60 border-border/50 uppercase tracking-widest px-3 rounded-full">Trained</Badge>
+                                            <Badge variant="secondary" className="text-[9px] font-bold bg-muted/50 text-muted-foreground/60 border-border/50 uppercase tracking-widest px-3 rounded-full font-heading">Trained</Badge>
                                         </div>
                                     );
                                 })}
@@ -128,7 +128,7 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                     <div className="pt-6 border-t border-border flex flex-col gap-6 animate-in fade-in duration-500">
                         <div className="flex flex-wrap gap-2 pt-2">
                             {selectedEngines.map(e => (
-                                <Badge key={`${e.solver_type}_v${e.version}`} variant="indigo" className="flex items-center gap-2 group px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest">
+                                <Badge key={`${e.solver_type}_v${e.version}`} variant="indigo" className="flex items-center gap-2 group px-4 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-widest font-heading">
                                     {e.solver_type} v{e.version}
                                     <X className="h-3 w-3 cursor-pointer opacity-50 group-hover:opacity-100 hover:scale-125 transition-all text-white" onClick={(e_event) => {
                                         e_event.stopPropagation();
@@ -154,12 +154,12 @@ export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: Engin
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
-                                        <span className="font-black uppercase tracking-[0.2em] text-xs">Analysing Engines...</span>
+                                        <span className="font-bold uppercase tracking-[0.2em] text-xs font-heading">Analysing Engines...</span>
                                     </>
                                 ) : (
                                     <>
                                         <Activity className="h-6 w-6 text-indigo-500 group-hover/btn:text-white transition-all transform group-hover/btn:scale-110 group-hover/btn:rotate-12" />
-                                        <span className="font-black uppercase tracking-[0.2em] text-xs">Run Comparative Audit</span>
+                                        <span className="font-bold uppercase tracking-[0.2em] text-xs font-heading">Run Comparative Audit</span>
                                     </>
                                 )}
                             </div>

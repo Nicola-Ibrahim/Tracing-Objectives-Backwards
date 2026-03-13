@@ -87,7 +87,7 @@ export default function EvaluationPage() {
                             <LineChart className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-foreground font-sans uppercase">
+                            <h1 className="text-3xl font-bold tracking-tight text-foreground font-heading uppercase">
                                 Model Evaluation
                             </h1>
                             <p className="text-muted-foreground font-medium italic text-sm">Benchmark engine calibration and predictive fidelity across high-dimensional objectives.</p>
@@ -119,7 +119,7 @@ export default function EvaluationPage() {
                                                 <AlertCircle className="h-6 w-6 text-destructive" />
                                             </div>
                                             <div>
-                                                <AlertTitle className="text-destructive font-black uppercase tracking-widest text-xs">Benchmark Failed</AlertTitle>
+                                                <AlertTitle className="text-destructive font-bold uppercase tracking-widest text-xs font-heading">Benchmark Failed</AlertTitle>
                                                 <AlertDescription className="text-destructive/80 font-medium italic mt-1">
                                                     {(mutation.error as any)?.response?.data?.detail?.message || "An unexpected error occurred during model diagnosis."}
                                                 </AlertDescription>
@@ -144,7 +144,7 @@ export default function EvaluationPage() {
                                             <div className="absolute inset-0 blur-xl bg-indigo-500/20 animate-pulse rounded-full" />
                                             <Loader2 className="h-12 w-12 animate-spin text-indigo-500 relative z-10" />
                                         </div>
-                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em] mt-8">Processing Diagnostics</span>
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.4em] mt-8 font-heading">Processing Diagnostics</span>
                                         <div className="mt-4 text-[11px] text-muted-foreground/50 animate-pulse font-bold italic tracking-wider">Computing objective-space residuals and probabilistic coverage...</div>
                                     </div>
                                 </motion.div>
@@ -160,14 +160,14 @@ export default function EvaluationPage() {
                                             <TabsList className="bg-transparent h-12 p-0 gap-2">
                                                 <TabsTrigger 
                                                     value="decision" 
-                                                    className="rounded-full px-8 h-10 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-indigo-500 font-black uppercase text-[10px] tracking-widest transition-all duration-300"
+                                                    className="rounded-full px-8 h-10 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-indigo-500 font-bold uppercase text-[10px] tracking-widest transition-all duration-300 font-heading"
                                                 >
                                                     <ShieldCheck className="h-3.5 w-3.5 mr-2" />
                                                     Decision Reliability
                                                 </TabsTrigger>
                                                 <TabsTrigger 
                                                     value="objective" 
-                                                    className="rounded-full px-8 h-10 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-teal-500 font-black uppercase text-[10px] tracking-widest transition-all duration-300"
+                                                    className="rounded-full px-8 h-10 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-teal-500 font-bold uppercase text-[10px] tracking-widest transition-all duration-300 font-heading"
                                                 >
                                                     <Target className="h-3.5 w-3.5 mr-2" />
                                                     Objective Accuracy
@@ -175,7 +175,7 @@ export default function EvaluationPage() {
                                             </TabsList>
                                             <div className="px-6 flex items-center gap-2">
                                                 <Activity className="h-3.5 w-3.5 text-indigo-500/50" />
-                                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">Diagnostic Lens: Global Comparison</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] font-heading">Diagnostic Lens: Global Comparison</span>
                                             </div>
                                         </div>
 
@@ -195,7 +195,7 @@ export default function EvaluationPage() {
                                                     ) : (
                                                         <div className="flex flex-col items-center justify-center p-12 bg-muted/5 rounded-[1rem] border border-border/50 h-[300px] text-center">
                                                             <Activity className="h-8 w-8 text-muted-foreground/20 mb-4" />
-                                                            <span className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No Distributional Data</span>
+                                                            <span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest font-heading">No Distributional Data</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -213,7 +213,7 @@ export default function EvaluationPage() {
                                                     ) : (
                                                         <div className="flex flex-col items-center justify-center p-12 bg-muted/5 rounded-[1rem] border border-border/50 h-[300px] text-center">
                                                             <Layers className="h-8 w-8 text-muted-foreground/20 mb-4" />
-                                                            <span className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No Interval Data</span>
+                                                            <span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest font-heading">No Interval Data</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -226,11 +226,11 @@ export default function EvaluationPage() {
                                                             <ShieldCheck className="h-5 w-5 text-indigo-500" />
                                                         </div>
                                                         <div>
-                                                            <CardTitle className="text-sm font-black uppercase tracking-widest text-foreground">Decision Space Metrics</CardTitle>
+                                                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-foreground font-heading">Decision Space Metrics</CardTitle>
                                                             <CardDescription className="text-[11px] font-medium italic text-muted-foreground mt-1 tracking-tight">Reliability benchmarks for decision-space predictions.</CardDescription>
                                                         </div>
                                                     </div>
-                                                    <Badge variant="outline" className="px-5 py-1.5 rounded-full bg-background/50 text-[10px] font-black border-border/80 text-muted-foreground/60 tracking-widest uppercase">
+                                                    <Badge variant="outline" className="px-5 py-1.5 rounded-full bg-background/50 text-[10px] font-bold border-border/80 text-muted-foreground/60 tracking-widest uppercase font-heading">
                                                         P(x|y) Evaluation
                                                     </Badge>
                                                 </CardHeader>
@@ -238,8 +238,8 @@ export default function EvaluationPage() {
                                                     <Table>
                                                         <TableHeader className="bg-muted/5">
                                                             <TableRow className="border-border/50 hover:bg-transparent">
-                                                                <TableHead className="px-10 h-16 font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">Engine Instance</TableHead>
-                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                <TableHead className="px-10 h-16 font-bold text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em] font-heading">Engine Instance</TableHead>
+                                                                <TableHead className="px-10 h-16 text-right font-bold text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em] font-heading">
                                                                     <div className="flex items-center justify-end gap-2">
                                                                         MACE Error
                                                                         <Tooltip>
@@ -247,7 +247,7 @@ export default function EvaluationPage() {
                                                                                 <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
                                                                             </TooltipTrigger>
                                                                             <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
-                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Mean Absolute Calibration Error</p>
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider font-heading">Mean Absolute Calibration Error</p>
                                                                                 <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.MACE}</p>
                                                                             </TooltipContent>
                                                                         </Tooltip>
@@ -261,13 +261,13 @@ export default function EvaluationPage() {
                                                                                 <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
                                                                             </TooltipTrigger>
                                                                             <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
-                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Standardized CRPS</p>
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider font-heading">Standardized CRPS</p>
                                                                                 <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.CRPS}</p>
                                                                             </TooltipContent>
                                                                         </Tooltip>
                                                                     </div>
                                                                 </TableHead>
-                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                <TableHead className="px-10 h-16 text-right font-bold text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em] font-heading">
                                                                     <div className="flex items-center justify-end gap-2">
                                                                         Diversity
                                                                         <Tooltip>
@@ -275,13 +275,13 @@ export default function EvaluationPage() {
                                                                                 <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
                                                                             </TooltipTrigger>
                                                                             <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
-                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Decision Diversity</p>
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider font-heading">Decision Diversity</p>
                                                                                 <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.Diversity}</p>
                                                                             </TooltipContent>
                                                                         </Tooltip>
                                                                     </div>
                                                                 </TableHead>
-                                                                <TableHead className="px-10 h-16 text-right font-black text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em]">
+                                                                <TableHead className="px-10 h-16 text-right font-bold text-muted-foreground/30 text-[10px] uppercase tracking-[0.2em] font-heading">
                                                                     <div className="flex items-center justify-end gap-2">
                                                                         Rel. Width
                                                                         <Tooltip>
@@ -289,7 +289,7 @@ export default function EvaluationPage() {
                                                                                 <Info className="h-3 w-3 cursor-help text-muted-foreground/40 hover:text-indigo-500 transition-colors" />
                                                                             </TooltipTrigger>
                                                                             <TooltipContent className="max-w-xs bg-card border-border text-foreground shadow-2xl p-3">
-                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider">Relative Interval Width</p>
+                                                                                <p className="font-bold mb-1 uppercase text-[10px] tracking-wider font-heading">Relative Interval Width</p>
                                                                                 <p className="font-medium text-[10px] leading-relaxed italic">{METRIC_DEFINITIONS.RelWidth}</p>
                                                                             </TooltipContent>
                                                                         </Tooltip>
@@ -303,28 +303,28 @@ export default function EvaluationPage() {
                                                                     <TableCell className="px-10 py-6">
                                                                         <div className="flex items-center gap-4">
                                                                             <div className="flex flex-col">
-                                                                                <span className="font-black text-sm text-foreground uppercase tracking-tight group-hover:text-indigo-500 transition-colors">{engine}</span>
-                                                                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest mt-1">
+                                                                                <span className="font-bold text-sm text-foreground uppercase tracking-tight group-hover:text-indigo-500 transition-colors font-heading">{engine}</span>
+                                                                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-1 font-heading">
                                                                                     {result.capabilities[engine] === "full_distribution" ? "Distributional Engine" : "Interval Engine"}
                                                                                 </span>
                                                                             </div>
                                                                         </div>
                                                                     </TableCell>
                                                                     <TableCell className="px-10 py-6 text-right relative group/item">
-                                                                        <span className="font-mono text-xs font-black text-foreground tabular-nums">{(metrics.mace || metrics.mean_coverage_error || 0).toFixed(4)}</span>
-                                                                        <div className="mt-2 text-[9px] font-black uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Lower is Better</div>
+                                                                        <span className="font-mono text-xs font-bold text-foreground tabular-nums">{(metrics.mace || metrics.mean_coverage_error || 0).toFixed(4)}</span>
+                                                                        <div className="mt-2 text-[9px] font-bold uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 font-heading">Lower is Better</div>
                                                                     </TableCell>
                                                                     <TableCell className="px-10 py-6 text-right relative">
-                                                                        <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">{(metrics.mean_crps || 0).toFixed(4)}</span>
-                                                                        <div className="mt-2 text-[9px] font-black uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Lower is Better</div>
+                                                                        <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">{(metrics.mean_crps || 0).toFixed(4)}</span>
+                                                                        <div className="mt-2 text-[9px] font-bold uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 font-heading">Lower is Better</div>
                                                                     </TableCell>
                                                                     <TableCell className="px-10 py-6 text-right relative">
-                                                                        <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">{(metrics.diversity || 0).toFixed(3)}</span>
-                                                                        <div className="mt-2 text-[9px] font-black uppercase text-violet-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Higher is Better</div>
+                                                                        <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">{(metrics.diversity || 0).toFixed(3)}</span>
+                                                                        <div className="mt-2 text-[9px] font-bold uppercase text-violet-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 font-heading">Higher is Better</div>
                                                                     </TableCell>
                                                                     <TableCell className="px-10 py-6 text-right relative">
-                                                                        <span className="font-mono text-xs font-bold text-muted-foreground tabular-nums">{(metrics.interval_width || 0).toFixed(3)}</span>
-                                                                        <div className="mt-2 text-[9px] font-black uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">Lower is Better</div>
+                                                                        <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">{(metrics.interval_width || 0).toFixed(3)}</span>
+                                                                        <div className="mt-2 text-[9px] font-bold uppercase text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 font-heading">Lower is Better</div>
                                                                     </TableCell>
                                                                 </TableRow>
                                                             ))}
@@ -354,8 +354,8 @@ export default function EvaluationPage() {
                                                                     <Target className="h-5 w-5 text-teal-500" />
                                                                 </div>
                                                                 <div>
-                                                                    <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-foreground">Objective Metrics</CardTitle>
-                                                                    <CardDescription className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1">Accuracy Leaderboard</CardDescription>
+                                                                    <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] text-foreground font-heading">Objective Metrics</CardTitle>
+                                                                    <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1 font-heading">Accuracy Leaderboard</CardDescription>
                                                                 </div>
                                                             </div>
                                                         </CardHeader>
@@ -368,33 +368,33 @@ export default function EvaluationPage() {
                                                                             <div className="flex items-center justify-between mb-4">
                                                                                 <div className="flex items-center gap-4">
                                                                                     <div className={cn(
-                                                                                        "w-8 h-8 rounded-[1rem] flex items-center justify-center text-[10px] font-black border-2",
+                                                                                        "w-8 h-8 rounded-[1rem] flex items-center justify-center text-[10px] font-bold border-2 font-mono",
                                                                                         index === 0 ? "bg-teal-500/20 text-teal-600 border-teal-500/30" : "bg-muted text-muted-foreground/40 border-border"
                                                                                     )}>
                                                                                         {index + 1}
                                                                                     </div>
-                                                                                    <span className="font-black text-xs uppercase tracking-tight text-foreground truncate max-w-[120px]">{engine}</span>
+                                                                                    <span className="font-bold text-xs uppercase tracking-tight text-foreground truncate max-w-[120px] font-heading">{engine}</span>
                                                                                 </div>
                                                                                 <div className="flex flex-col items-end">
-                                                                                    <span className="font-mono text-sm font-black text-foreground">{metrics.mean_best_shot.toFixed(4)}</span>
-                                                                                    <span className="text-[8px] font-black uppercase text-teal-500 tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Lower is Better</span>
+                                                                                    <span className="font-mono text-sm font-bold text-foreground tabular-nums">{metrics.mean_best_shot.toFixed(4)}</span>
+                                                                                    <span className="text-[8px] font-bold uppercase text-teal-500 tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity font-heading">Lower is Better</span>
                                                                                 </div>
                                                                             </div>
                                                                             
                                                                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/10">
                                                                                 <div className="group/metric">
-                                                                                    <div className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                                                                                    <div className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5 flex items-center justify-between font-heading">
                                                                                         Mean Bias
                                                                                         <span className="text-[6px] text-teal-500 opacity-0 group-hover/metric:opacity-100 transition-opacity">Lower is Better</span>
                                                                                     </div>
-                                                                                    <div className="font-mono text-[10px] font-bold text-foreground">{metrics.mean_bias.toFixed(4)}</div>
+                                                                                    <div className="font-mono text-[10px] font-semibold text-foreground">{metrics.mean_bias.toFixed(4)}</div>
                                                                                 </div>
                                                                                 <div className="group/metric">
-                                                                                    <div className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                                                                                    <div className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5 flex items-center justify-between font-heading">
                                                                                         Dispersion
                                                                                         <span className="text-[6px] text-teal-500 opacity-0 group-hover/metric:opacity-100 transition-opacity">Lower is Better</span>
                                                                                     </div>
-                                                                                    <div className="font-mono text-[10px] font-bold text-foreground">{metrics.mean_dispersion.toFixed(4)}</div>
+                                                                                    <div className="font-mono text-[10px] font-semibold text-foreground">{metrics.mean_dispersion.toFixed(4)}</div>
                                                                                 </div>
                                                                             </div>
 
@@ -420,11 +420,11 @@ export default function EvaluationPage() {
                                                     <Sparkles className="h-6 w-6 text-indigo-500" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <AlertTitle className="text-foreground font-black uppercase tracking-[0.25em] text-xs mb-4 opacity-90">Engine Audit Insights</AlertTitle>
+                                                    <AlertTitle className="text-foreground font-bold uppercase tracking-[0.25em] text-xs mb-4 opacity-90 font-heading">Engine Audit Insights</AlertTitle>
                                                     <AlertDescription>
                                                         <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
                                                             {result.warnings.map((w, i) => (
-                                                                <li key={i} className="flex items-center gap-4 text-[11px] font-bold text-muted-foreground/70 hover:text-indigo-500 transition-colors group cursor-default">
+                                                                <li key={i} className="flex items-center gap-4 text-[11px] font-semibold text-muted-foreground/70 hover:text-indigo-500 transition-colors group cursor-default">
                                                                     <div className="h-2 w-2 bg-indigo-500/30 rounded-full shrink-0 group-hover:scale-125 transition-transform group-hover:bg-indigo-500" />
                                                                     {w}
                                                                 </li>
@@ -448,15 +448,15 @@ export default function EvaluationPage() {
                                     <div className="grid grid-cols-2 gap-6 mb-16 relative z-10 transition-all duration-700 group-hover:scale-105">
                                         <div className="p-8 bg-background border border-border rounded-[1rem] shadow-xl group-hover:shadow-indigo-500/10 group-hover:-translate-y-2 transition-all duration-500">
                                             <ShieldCheck className="h-10 w-10 text-indigo-500" />
-                                            <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Decision Reliability</div>
+                                            <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 font-heading">Decision Reliability</div>
                                         </div>
                                         <div className="p-8 bg-background border border-border rounded-[1rem] shadow-xl group-hover:shadow-teal-500/10 group-hover:translate-y-2 transition-all duration-500">
                                             <Target className="h-10 w-10 text-teal-500" />
-                                            <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Objective Accuracy</div>
+                                            <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 font-heading">Objective Accuracy</div>
                                         </div>
                                     </div>
 
-                                    <h3 className="text-4xl font-black text-foreground mb-6 relative z-10 tracking-tighter uppercase max-w-lg leading-tight">
+                                    <h3 className="text-4xl font-bold text-foreground mb-6 relative z-10 tracking-tighter uppercase max-w-lg leading-tight font-heading">
                                         Global Model Performance Benchmark
                                     </h3>
                                     <p className="text-muted-foreground/70 max-w-md mb-16 relative z-10 font-medium italic text-lg leading-relaxed">
@@ -464,7 +464,7 @@ export default function EvaluationPage() {
                                     </p>
 
                                     <div className="flex items-center gap-4 relative z-10">
-                                        <div className="flex items-center gap-3 text-indigo-500 font-black text-[11px] uppercase tracking-[0.3em] bg-indigo-500/5 px-10 py-5 rounded-[1rem] border border-indigo-500/20 shadow-lg shadow-indigo-500/5 group-hover:scale-110 transition-all duration-500">
+                                        <div className="flex items-center gap-3 text-indigo-500 font-bold text-[11px] uppercase tracking-[0.3em] bg-indigo-500/5 px-10 py-5 rounded-[1rem] border border-indigo-500/20 shadow-lg shadow-indigo-500/5 group-hover:scale-110 transition-all duration-500 font-heading">
                                             <Sparkles className="h-5 w-5 animate-pulse" />
                                             Awaiting Multi-Engine Selection
                                         </div>

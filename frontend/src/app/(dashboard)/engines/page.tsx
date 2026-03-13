@@ -226,7 +226,7 @@ export default function EnginesPage() {
                         <div className="p-2 bg-indigo-600 rounded-[1rem]">
                             <Layers className="h-6 w-6 text-white" />
                         </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
+                        <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-heading uppercase">
                             Engine Registry
                         </h1>
                     </div>
@@ -252,7 +252,7 @@ export default function EnginesPage() {
                             />
                         </div>
                         <Select value={datasetFilter} onValueChange={setDatasetFilter}>
-                            <SelectTrigger className="w-full md:w-[180px] bg-background border-border font-black text-foreground h-11 rounded-[1rem]">
+                            <SelectTrigger className="w-full md:w-[180px] bg-background border-border font-bold text-[11px] uppercase tracking-wider text-foreground h-11 rounded-[1rem]">
                                 <SelectValue placeholder="All Datasets" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover border-border text-popover-foreground rounded-[1rem]">
@@ -269,7 +269,7 @@ export default function EnginesPage() {
                             <Button
                                 variant="destructive"
                                 onClick={() => setIsBulkDeleting(true)}
-                                className="font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 px-6 h-11 rounded-[1rem]"
+                                className="font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95 px-6 h-11 rounded-[1rem] text-[10px]"
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Decommission ({selectedEngines.length})
@@ -298,7 +298,7 @@ export default function EnginesPage() {
                 />
                 <label
                     htmlFor="select-all"
-                    className="text-[10px] font-black text-muted-foreground uppercase cursor-pointer select-none tracking-[0.2em]"
+                    className="text-[10px] font-bold text-muted-foreground uppercase cursor-pointer select-none tracking-[0.2em]"
                 >
                     Global Selection
                 </label>
@@ -308,12 +308,12 @@ export default function EnginesPage() {
             <Dialog open={!!engineToDelete} onOpenChange={(open) => !open && setEngineToDelete(null)}>
                 <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border">
                     <DialogHeader className="p-8 bg-destructive/5 border-b border-border space-y-3">
-                        <DialogTitle className="flex items-center gap-3 text-destructive font-black uppercase tracking-tight text-xl">
+                        <DialogTitle className="flex items-center gap-3 text-destructive font-bold uppercase tracking-tight text-xl font-heading">
                             <AlertCircle className="h-6 w-6" />
                             Purge Engine
                         </DialogTitle>
                         <DialogDescription className="text-muted-foreground font-medium italic">
-                            You are about to permanently delete <span className="font-black text-foreground uppercase tracking-tight">{engineToDelete?.solver_type} v{engineToDelete?.version}</span> from <span className="font-black text-foreground italic">"{engineToDelete?.dataset_name}"</span>.
+                            You are about to permanently delete <span className="font-bold text-foreground uppercase tracking-tight font-heading">{engineToDelete?.solver_type} <span className="font-mono text-sm">v{engineToDelete?.version}</span></span> from <span className="font-bold text-foreground italic">"{engineToDelete?.dataset_name}"</span>.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="p-8 bg-card flex justify-end gap-3">
@@ -336,12 +336,12 @@ export default function EnginesPage() {
             <Dialog open={isBulkDeleting} onOpenChange={setIsBulkDeleting}>
                 <DialogContent className="sm:max-w-[425px] p-0 rounded-[2rem] overflow-hidden bg-card border-border">
                     <DialogHeader className="p-8 bg-destructive/5 border-b border-border space-y-3">
-                        <DialogTitle className="flex items-center gap-3 text-destructive font-black uppercase tracking-tight text-xl">
+                        <DialogTitle className="flex items-center gap-3 text-destructive font-bold uppercase tracking-tight text-xl font-heading">
                             <AlertCircle className="h-6 w-6" />
                             Bulk Decommission
                         </DialogTitle>
                         <DialogDescription className="text-muted-foreground font-medium italic">
-                            You are about to decommission <span className="font-black text-foreground uppercase tracking-tight">{selectedEngines.length}</span> trained engines across the registry. This operation is irreversible.
+                            You are about to decommission <span className="font-bold text-foreground uppercase tracking-tight">{selectedEngines.length}</span> trained engines across the registry. This operation is irreversible.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="p-8 bg-card flex justify-end gap-3">
@@ -363,7 +363,7 @@ export default function EnginesPage() {
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-[1rem] bg-muted/5 backdrop-blur-sm transition-all">
                     <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-6" />
-                    <p className="text-muted-foreground/60 font-black uppercase tracking-[0.25em] text-[10px] animate-pulse">Scanning Engine Registry...</p>
+                    <p className="text-muted-foreground/60 font-bold uppercase tracking-[0.25em] text-[10px] animate-pulse font-heading">Scanning Engine Registry...</p>
                 </div>
             ) : Object.keys(groupedEngines).length === 0 ? (
                 <motion.div
@@ -375,7 +375,7 @@ export default function EnginesPage() {
                             <div className="bg-background border border-border p-10 rounded-full inline-block mb-8 ring-8 ring-muted/5 transition-transform hover:scale-110 duration-500">
                                 <Cpu className="h-14 w-14 text-muted-foreground/20" />
                             </div>
-                            <h3 className="text-3xl font-black text-foreground tracking-tight uppercase mb-4">Registry Empty</h3>
+                            <h3 className="text-3xl font-bold text-foreground tracking-tight uppercase mb-4 font-heading">Registry Empty</h3>
                             <p className="text-muted-foreground/70 max-w-sm mx-auto font-medium italic leading-relaxed">
                                 You haven't registered any inverse engines yet. Initialize your first model in the construction pipeline.
                             </p>
@@ -402,7 +402,7 @@ export default function EnginesPage() {
                                             expandedDatasets[datasetName] === false ? "bg-muted" : "bg-indigo-500"
                                         )} />
                                         <div className="flex flex-col">
-                                            <h2 className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-[0.3em] flex items-center gap-3 group-hover/dataset:text-indigo-500 transition-colors">
+                                            <h2 className="text-[11px] font-bold uppercase text-muted-foreground/40 tracking-[0.3em] flex items-center gap-3 group-hover/dataset:text-indigo-500 transition-colors font-heading">
                                                 Registry Partition
                                                 {expandedDatasets[datasetName] === false ? (
                                                     <ChevronRight className="h-4 w-4 animate-pulse" />
@@ -410,9 +410,9 @@ export default function EnginesPage() {
                                                     <ChevronDown className="h-4 w-4" />
                                                 )}
                                             </h2>
-                                            <span className="text-2xl font-black text-foreground tracking-tight uppercase group-hover/dataset:translate-x-1 transition-transform">{datasetName}</span>
+                                            <span className="text-2xl font-bold text-foreground tracking-tight uppercase group-hover/dataset:translate-x-1 transition-transform font-heading">{datasetName}</span>
                                         </div>
-                                        <Badge variant="outline" className="bg-indigo-500/5 text-indigo-500 border-indigo-500/20 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full ml-4">
+                                        <Badge variant="outline" className="bg-indigo-500/5 text-indigo-500 border-indigo-500/20 font-bold text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full ml-4 font-mono">
                                             {Object.values(solverGroups).flat().length} Assets
                                         </Badge>
                                     </div>
@@ -469,10 +469,10 @@ export default function EnginesPage() {
                                                             <div className="p-2.5 bg-muted/30 rounded-[1rem] border border-border group-hover/title:bg-indigo-500/10 group-hover/title:border-indigo-500/30 transition-all">
                                                                 <Layers className="h-5 w-5 text-indigo-500" />
                                                             </div>
-                                                            <h3 className="text-lg font-black text-foreground tracking-tight uppercase group-hover/title:text-indigo-500 transition-colors">
+                                                            <h3 className="text-lg font-bold text-foreground tracking-tight uppercase group-hover/title:text-indigo-500 transition-colors font-heading">
                                                                 {solverType}
                                                             </h3>
-                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground/60 border-border/50 text-[9px] h-5 font-black uppercase tracking-widest px-3 rounded-full">
+                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground/60 border-border/50 text-[9px] h-5 font-bold uppercase tracking-widest px-3 rounded-full font-mono">
                                                                 {versions.length} VARIATIONS
                                                             </Badge>
                                                             {isExpanded ? (
@@ -513,32 +513,32 @@ export default function EnginesPage() {
                                                                             
                                                                             <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-6 items-center w-full">
                                                                                 <div className="space-y-1.5">
-                                                                                    <h3 className="text-lg font-black text-foreground tracking-tight group-hover:text-indigo-500 transition-colors uppercase">
-                                                                                        Variation v{engine.version}
+                                                                                    <h3 className="text-lg font-bold text-foreground tracking-tight group-hover:text-indigo-500 transition-colors uppercase font-heading">
+                                                                                        Variation <span className="font-mono text-base ml-1">v{engine.version}</span>
                                                                                     </h3>
                                                                                     <div className="flex items-center gap-3">
-                                                                                        <Badge className="bg-indigo-500 text-white font-black text-[9px] px-3 h-4.5 rounded-full uppercase tracking-tighter">
+                                                                                        <Badge className="bg-indigo-500 text-white font-bold text-[9px] px-3 h-4.5 rounded-full uppercase tracking-tighter font-mono">
                                                                                             REV-{engine.version}
                                                                                         </Badge>
-                                                                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] italic opacity-60">
+                                                                                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] italic opacity-60">
                                                                                             Active Assets
                                                                                         </span>
                                                                                     </div>
                                                                                 </div>
 
                                                                                 <div className="hidden md:block">
-                                                                                    <p className="text-[9px] uppercase font-black text-muted-foreground/20 tracking-[0.2em] mb-2">Registered At</p>
-                                                                                    <p className="text-[10px] font-black text-muted-foreground/70 flex items-center gap-2 uppercase tracking-tight">
+                                                                                    <p className="text-[9px] uppercase font-bold text-muted-foreground/20 tracking-[0.2em] mb-2 font-heading">Registered At</p>
+                                                                                    <p className="text-[10px] font-medium text-muted-foreground/70 flex items-center gap-2 uppercase tracking-tight font-mono">
                                                                                         <Calendar className="h-3.5 w-3.5 text-indigo-500/40" />
                                                                                         {new Date(engine.created_at).toLocaleDateString()}
                                                                                     </p>
                                                                                 </div>
 
                                                                                 <div className="hidden md:block">
-                                                                                    <p className="text-[9px] uppercase font-black text-muted-foreground/20 tracking-[0.2em] mb-2">Telemetry Status</p>
+                                                                                    <p className="text-[9px] uppercase font-bold text-muted-foreground/20 tracking-[0.2em] mb-2 font-heading">Telemetry Status</p>
                                                                                     <div className="flex items-center gap-2.5">
                                                                                         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                                                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Stable</span>
+                                                                                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest font-heading">Stable</span>
                                                                                     </div>
                                                                                 </div>
 

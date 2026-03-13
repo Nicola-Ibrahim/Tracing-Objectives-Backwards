@@ -52,23 +52,23 @@ export function TransformationPreviewChart({
     };
 
     const getLayout = (labelX: string, labelY: string) => ({
-        xaxis: { title: { text: labelX, font: { size: 18, weight: 800 } }, tickfont: { size: 14, weight: 600 } },
-        yaxis: { title: { text: labelY, font: { size: 18, weight: 800 } }, tickfont: { size: 14, weight: 600 } },
+        xaxis: { title: { text: labelX, font: { family: 'Outfit, sans-serif', size: 18, weight: 700 } }, tickfont: { family: 'JetBrains Mono, monospace', size: 14, weight: 600 } },
+        yaxis: { title: { text: labelY, font: { family: 'Outfit, sans-serif', size: 18, weight: 700 } }, tickfont: { family: 'JetBrains Mono, monospace', size: 14, weight: 600 } },
     });
 
     return (
         <Card className="border-border bg-card overflow-hidden rounded-[1rem]">
             <CardHeader className="p-8 bg-muted/10 border-b border-border flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle className="text-2xl font-black text-foreground tracking-tight uppercase">Distribution Analysis</CardTitle>
-                    <CardDescription className="text-[10px] font-black text-muted-foreground/50 mt-1 uppercase tracking-[0.2em] italic opacity-80">Multi-Objective Topology mapping</CardDescription>
+                    <CardTitle className="text-2xl font-bold text-foreground tracking-tight uppercase font-heading">Distribution Analysis</CardTitle>
+                    <CardDescription className="text-[10px] font-bold text-muted-foreground/50 mt-1 uppercase tracking-[0.2em] italic opacity-80 font-heading">Multi-Objective Topology mapping</CardDescription>
                 </div>
             </CardHeader>
             <CardContent className="p-8">
                 <Tabs defaultValue="x-space" className="space-y-8">
                     <TabsList className="bg-muted p-1 h-14 rounded-[1rem] border border-border/50">
-                        <TabsTrigger value="x-space" className="rounded-[1rem] px-10 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-indigo-500 transition-all">Decision Space (X)</TabsTrigger>
-                        <TabsTrigger value="y-space" className="rounded-[1rem] px-10 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-indigo-500 transition-all">Objective Space (y)</TabsTrigger>
+                        <TabsTrigger value="x-space" className="rounded-[1rem] px-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-indigo-500 transition-all font-heading">Decision Space (X)</TabsTrigger>
+                        <TabsTrigger value="y-space" className="rounded-[1rem] px-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-indigo-500 transition-all font-heading">Objective Space (y)</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="x-space" className="space-y-8 focus-visible:outline-none">
@@ -76,8 +76,8 @@ export function TransformationPreviewChart({
                             {showComparison && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between px-3">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Original Architecture</span>
-                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-black opacity-60 px-3 rounded-full">Primary Manifold Projection</Badge>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 font-heading">Original Architecture</span>
+                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-bold opacity-60 px-3 rounded-full font-heading">Primary Manifold Projection</Badge>
                                     </div>
                                     <div className="bg-background border border-border rounded-[1rem] p-4 overflow-hidden">
                                         <BasePlot
@@ -89,10 +89,10 @@ export function TransformationPreviewChart({
                             )}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-3">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/80">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500/80 font-heading">
                                         {showComparison ? "Transformed State" : "Result State"}
                                     </span>
-                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-black px-3 rounded-full">Transformed Manifold</Badge>
+                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-bold px-3 rounded-full font-heading">Transformed Manifold</Badge>
                                 </div>
                                 <div className={cn("bg-indigo-500/5 border border-indigo-500/20 rounded-[1rem] p-4 overflow-hidden transition-all hover:scale-[1.01]")}>
                                     <BasePlot
@@ -109,8 +109,8 @@ export function TransformationPreviewChart({
                             {showComparison && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between px-3">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Original Objective Map</span>
-                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-black opacity-60 px-3 rounded-full">Reference Objective Map</Badge>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 font-heading">Original Objective Map</span>
+                                        <Badge variant="outline" className="text-[9px] bg-muted border-border font-bold opacity-60 px-3 rounded-full font-heading">Reference Objective Map</Badge>
                                     </div>
                                     <div className="bg-background border border-border rounded-[1rem] p-4 overflow-hidden">
                                         <BasePlot
@@ -122,10 +122,10 @@ export function TransformationPreviewChart({
                             )}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-3">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/80">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500/80 font-heading">
                                         {showComparison ? "Transformed Results" : "Result Mapping"}
                                     </span>
-                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-black px-3 rounded-full">Resulting Geometry</Badge>
+                                    <Badge variant="outline" className="text-[9px] bg-indigo-500/5 border-indigo-500/20 text-indigo-500 font-bold px-3 rounded-full font-heading">Resulting Geometry</Badge>
                                 </div>
                                 <div className={cn("bg-indigo-500/5 border border-indigo-500/20 rounded-[1rem] p-4 overflow-hidden transition-all hover:scale-[1.01]")}>
                                     <BasePlot

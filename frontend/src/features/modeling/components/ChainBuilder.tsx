@@ -50,8 +50,8 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
     return (
         <div className="space-y-4">
             {title && (
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">{title}</span>
+                <div className="flex items-center gap-2 mb-2 font-heading">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest">{title}</span>
                 </div>
             )}
             <div className="space-y-3">
@@ -65,11 +65,11 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/20 group-hover:bg-indigo-500 transition-colors" />
                             <div className="flex items-center gap-4">
-                                <div className="h-7 w-7 rounded-[1rem] bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground shrink-0 border border-border/50 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                                <div className="h-7 w-7 rounded-[1rem] bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground shrink-0 border border-border/50 group-hover:bg-indigo-500 group-hover:text-white transition-all font-mono">
                                     {idx + 1}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-black text-foreground truncate uppercase tracking-tight group-hover:text-indigo-500 transition-colors">
+                                    <p className="text-xs font-bold text-foreground truncate uppercase tracking-tight group-hover:text-indigo-500 transition-colors font-heading">
                                         {step.type.replace("_", " ")}
                                     </p>
                                 </div>
@@ -89,10 +89,10 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                                                             <Settings2 className="h-6 w-6 text-indigo-500" />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <DialogTitle className="text-sm font-black text-foreground uppercase tracking-tight truncate">
+                                                            <DialogTitle className="text-sm font-bold text-foreground uppercase tracking-tight truncate font-heading">
                                                                 {step.type.replace("_", " ")}
                                                             </DialogTitle>
-                                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60 mt-1">Configure transformation parameters</p>
+                                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60 mt-1 font-heading">Configure transformation parameters</p>
                                                         </div>
                                                     </DialogHeader>
                                                     <div className="p-8">
@@ -123,7 +123,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                 {chain.length === 0 && (
                     <div className="py-12 border-2 border-dashed border-border rounded-[1rem] flex flex-col items-center justify-center text-center bg-muted/5 group hover:bg-muted/10 transition-colors">
                         <Plus className="h-5 w-5 text-muted-foreground/20 mb-3 group-hover:scale-110 transition-transform" />
-                        <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">No transformations added yet.</p>
+                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest font-heading">No transformations added yet.</p>
                     </div>
                 )}
             </div>
@@ -133,7 +133,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                     <SelectTrigger className="w-full h-12 border-dashed border-2 border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-indigo-500/30 rounded-[1rem] transition-all group">
                         <div className="flex items-center justify-center gap-3 w-full text-muted-foreground group-hover:text-indigo-500 transition-colors">
                             <Plus className="h-4 w-4 text-indigo-500 group-hover:rotate-90 transition-transform" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Transformation Step</span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] font-heading">Add Transformation Step</span>
                         </div>
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border text-popover-foreground rounded-[1rem]">
@@ -141,7 +141,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
                             <SelectItem 
                                 key={t.type} 
                                 value={t.type}
-                                className="hover:bg-muted focus:bg-muted cursor-pointer font-bold tracking-tight py-3"
+                                className="hover:bg-muted focus:bg-muted cursor-pointer font-bold tracking-tight py-3 font-heading"
                             >
                                 {t.name}
                             </SelectItem>

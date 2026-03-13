@@ -43,7 +43,7 @@ export function StatCard({ label, value, subValue, icon, trend }: { label: strin
                 <div className="space-y-1.5">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">{label}</p>
                     <div className="flex items-baseline gap-2">
-                        <h4 className="text-2xl font-black text-foreground tracking-tighter">{value}</h4>
+                        <h4 className="text-2xl font-bold text-foreground tracking-tighter font-heading">{value}</h4>
                         {trend && (
                             <span className={`text-[10px] font-bold ${trend === "up" ? "text-emerald-500" : trend === "down" ? "text-rose-500" : "text-muted-foreground"}`}>
                                 {trend === "up" ? "↑" : trend === "down" ? "↓" : "•"}

@@ -26,7 +26,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                 return (
                     <div key={name} className="space-y-3">
                         <div className="flex justify-between items-center group/label">
-                            <Label htmlFor={name} className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 transition-colors group-hover/label:text-indigo-500">
+                            <Label htmlFor={name} className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 transition-colors group-hover/label:text-indigo-500 font-heading">
                                 {name.replace("_", " ")}
                             </Label>
                             {description && (
@@ -56,7 +56,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                         }}
                                         className="bg-background border-border text-foreground h-11 rounded-[1rem] pl-9"
                                     />
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground/40 uppercase">Min</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground/40 uppercase font-heading">Min</span>
                                 </div>
                                 <div className="relative">
                                     <Input
@@ -69,7 +69,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                         }}
                                         className="bg-background border-border text-foreground h-11 rounded-[1rem] pl-9"
                                     />
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground/40 uppercase">Max</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground/40 uppercase font-heading">Max</span>
                                 </div>
                             </div>
                         ) : (

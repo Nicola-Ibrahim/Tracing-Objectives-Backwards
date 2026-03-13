@@ -67,7 +67,7 @@ export default function TransformationPreviewerPage() {
                         <div className="p-2 bg-indigo-600 rounded-[1rem]">
                             <Binary className="h-6 w-6 text-white" />
                         </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
+                        <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-heading">
                             Topology Preview
                         </h1>
                     </div>
@@ -83,13 +83,13 @@ export default function TransformationPreviewerPage() {
                     className="flex items-center gap-4 bg-muted/30 p-1 rounded-[1rem] border border-border/50 backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-1 px-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mr-2">Layout</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mr-2 font-heading">Layout</span>
                         <Button
                             variant={compareMode ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setCompareMode(true)}
                             className={cn(
-                                "h-8 rounded-[1rem] font-bold text-[10px] px-4 transition-all",
+                                "h-8 rounded-[1rem] font-bold text-[10px] px-4 transition-all font-heading",
                                 compareMode ? "bg-background text-indigo-500 border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -100,7 +100,7 @@ export default function TransformationPreviewerPage() {
                             size="sm"
                             onClick={() => setCompareMode(false)}
                             className={cn(
-                                "h-8 rounded-[1rem] font-bold text-[10px] px-4 transition-all",
+                                "h-8 rounded-[1rem] font-bold text-[10px] px-4 transition-all font-heading",
                                 !compareMode ? "bg-background text-indigo-500 border border-border/50 hover:bg-background/80" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -119,7 +119,7 @@ export default function TransformationPreviewerPage() {
                     >
                         <Card className="border-border rounded-[1rem] bg-card transition-all">
                             <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
-                                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60 font-heading">
                                     <Database className="h-4 w-4" />
                                     Source
                                 </CardTitle>
@@ -129,7 +129,7 @@ export default function TransformationPreviewerPage() {
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
                                 <Select value={selectedDataset} onValueChange={setSelectedDataset}>
-                                    <SelectTrigger className="w-full bg-background border-border font-bold text-foreground h-10">
+                                    <SelectTrigger className="w-full bg-background border-border font-bold text-foreground h-10 font-heading">
                                         <SelectValue placeholder="Select dataset..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover border-border text-popover-foreground">
@@ -142,7 +142,7 @@ export default function TransformationPreviewerPage() {
                                 </Select>
 
                                 <div className="pt-4 border-t border-border">
-                                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest pl-1">Space Projection</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest pl-1 font-heading">Space Projection</p>
                                     <p className="text-[11px] font-bold text-muted-foreground/60 ml-1 mt-2">Visualizing first two dimensions of the manifold.</p>
                                 </div>
                             </CardContent>
@@ -155,7 +155,7 @@ export default function TransformationPreviewerPage() {
                     >
                         <Card className="border-border rounded-[1rem] bg-card transition-all">
                             <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between space-y-0 text-foreground">
-                                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-muted-foreground/60 font-heading">
                                     <Wand2 className="h-4 w-4" />
                                     Estimators
                                 </CardTitle>
@@ -181,7 +181,7 @@ export default function TransformationPreviewerPage() {
                                 </div>
 
                                 <Button
-                                    className="w-full bg-foreground text-background hover:opacity-90 font-black h-11 transition-all hover:scale-[1.02] active:scale-95 text-xs tracking-widest uppercase group"
+                                    className="w-full bg-foreground text-background hover:opacity-90 font-bold h-11 transition-all hover:scale-[1.02] active:scale-95 text-xs tracking-widest uppercase group font-heading"
                                     onClick={handlePreview}
                                     disabled={!selectedDataset || previewMutation.isPending}
                                 >
@@ -205,7 +205,7 @@ export default function TransformationPreviewerPage() {
                             <Info className="h-4 w-4 text-indigo-500 shrink-0" />
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed font-bold">
-                            High-density sampling is capped at <span className="text-foreground font-extrabold underline decoration-indigo-500/30">2,000 observations</span> to maintain interactive frame rates.
+                            High-density sampling is capped at <span className="text-foreground font-bold underline decoration-indigo-500/30">2,000 observations</span> to maintain interactive frame rates.
                         </p>
                     </motion.div>
                 </div>
@@ -244,11 +244,11 @@ export default function TransformationPreviewerPage() {
                                         <Share2 className="h-5 w-5 text-white" />
                                     </div>
                                 </div>
-                                <h3 className="text-2xl font-black text-foreground tracking-tight mb-3">Initialize Mapping Preview</h3>
+                                <h3 className="text-2xl font-bold text-foreground tracking-tight mb-3 font-heading">Initialize Mapping Preview</h3>
                                 <p className="text-muted-foreground max-w-sm font-medium leading-relaxed mb-8">
                                     Select a reference dataset and construct a transformation manifold to visualize spatial coherence and topology drift.
                                 </p>
-                                <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest animate-bounce">
+                                <div className="flex items-center gap-2 text-indigo-500 font-bold text-[10px] uppercase tracking-widest animate-bounce font-heading">
                                     <ChevronRight className="h-4 w-4 rotate-90" />
                                     Configure parameters in the sidebar
                                 </div>

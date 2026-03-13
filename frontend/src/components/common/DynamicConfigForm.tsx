@@ -102,7 +102,7 @@ export function DynamicConfigForm({
                         onCheckedChange={(checked) => handleValueChange(name, !!checked)}
                         className="border-border data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 transition-all"
                     />
-                    <Label htmlFor={`field-${name}`} className="text-[10px] font-black uppercase text-muted-foreground tracking-widest cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity">
+                    <Label htmlFor={`field-${name}`} className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity font-heading">
                         {required ? `${name}*` : name}
                     </Label>
                 </div>
@@ -174,7 +174,7 @@ export function DynamicConfigForm({
                 <div key={param.name} className={`space-y-2 ${["dict", "list", "object", "array"].includes(param.type.toLowerCase()) ? "md:col-span-2" : ""}`}>
                     {param.type !== "bool" && param.type !== "boolean" && (
                         <div className="flex items-center gap-1.5 ml-0.5">
-                            <Label htmlFor={`field-${param.name}`} className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest">
+                            <Label htmlFor={`field-${param.name}`} className="text-[10px] font-bold uppercase text-muted-foreground/80 tracking-widest font-heading">
                                 {param.name} {param.required && <span className="text-destructive">*</span>}
                             </Label>
                             {param.description && (

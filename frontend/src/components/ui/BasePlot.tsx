@@ -11,7 +11,7 @@ const Plot = dynamic(() => import("react-plotly.js"), {
     loading: () => (
         <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-[1rem] animate-pulse py-20">
             <div className="h-10 w-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Initialising Component Canvas</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-heading">Initialising Component Canvas</span>
         </div>
     )
 });
@@ -66,13 +66,13 @@ export function BasePlot({
             gridcolor: '#f8fafc',
             zeroline: false,
             tickfont: { size: 14, color: '#94a3b8', weight: 500 },
-            title: { font: { size: 18, color: '#64748b', weight: 800 } }
+            title: { font: { size: 18, color: '#64748b', weight: 700 } }
         },
         yaxis: {
             gridcolor: '#f8fafc',
             zeroline: false,
             tickfont: { size: 14, color: '#94a3b8', weight: 500 },
-            title: { font: { size: 18, color: '#64748b', weight: 800 } }
+            title: { font: { size: 18, color: '#64748b', weight: 700 } }
         },
         paper_bgcolor: 'white',
         plot_bgcolor: 'white',
@@ -131,7 +131,7 @@ export function BasePlot({
     return (
         <Card className={cn("border-border flex flex-col transition-colors duration-300", className)} style={{ minHeight: minPlotHeight }}>
             <CardHeader className="bg-muted/30 py-3 border-b border-border px-6">
-                <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center justify-between">
+                <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between font-heading">
                     <div className="flex items-center gap-2">
                         {headerIcon}
                         {title}

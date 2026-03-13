@@ -53,7 +53,7 @@ export const Logo: React.FC<LogoProps> = ({ className, simple = false }) => {
             </svg>
             {!simple && (
                 <div className="flex flex-col leading-none">
-                    <span className="text-lg font-black tracking-tighter text-foreground uppercase italic">
+                    <span className="text-lg font-bold tracking-tighter text-foreground uppercase italic font-heading">
                         Trace<span className="text-indigo-600">.</span>
                     </span>
                     <span className="text-[8px] font-bold text-muted-foreground tracking-[0.2em] uppercase">

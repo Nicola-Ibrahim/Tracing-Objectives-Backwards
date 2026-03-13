@@ -53,7 +53,7 @@ export default function LandingPage() {
         className="relative z-50 container mx-auto px-6 py-8 flex items-center justify-between"
       >
         <Logo className="scale-110" />
-        <nav className="hidden md:flex items-center gap-8 text-sm font-bold text-muted-foreground uppercase tracking-widest">
+        <nav className="hidden md:flex items-center gap-8 text-sm font-bold text-muted-foreground uppercase tracking-widest font-heading">
           <Link href="#infrastructure" className="hover:text-indigo-500 transition-colors">Infrastructure</Link>
           <Link href="/datasets" className="hover:text-indigo-500 transition-colors">Data Hub</Link>
           <div className="flex items-center gap-4">
@@ -75,7 +75,7 @@ export default function LandingPage() {
                 {...fadeIn}
                 className="inline-block"
               >
-                <Badge variant="indigo" className="mb-8 px-5 py-2 font-bold tracking-tight">
+                <Badge variant="indigo" className="mb-8 px-5 py-2 font-bold tracking-tight font-heading">
                   <Sparkles className="h-3 w-3 mr-2 font-bold" />
                   Advanced Inverse Mapping Protocol v1.2.0
                 </Badge>
@@ -85,7 +85,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="text-6xl md:text-8xl xl:text-9xl font-black tracking-tighter text-foreground mb-10 leading-[0.85] text-balance"
+                className="text-6xl md:text-8xl xl:text-9xl font-bold tracking-tighter text-foreground mb-10 leading-[0.85] text-balance font-heading"
               >
                 Trace Your <br className="hidden md:block" />
                 Objectives <br />
@@ -108,13 +108,13 @@ export default function LandingPage() {
                 transition={{ delay: 0.4 }}
                 className="flex flex-wrap items-center justify-start gap-8"
               >
-                <Button size="lg" className="rounded-[1rem] h-20 px-12 text-2xl font-black transition-all hover:scale-105 active:scale-95 group" asChild>
+                <Button size="lg" className="rounded-[1rem] h-20 px-12 text-2xl font-bold transition-all hover:scale-105 active:scale-95 group font-heading" asChild>
                   <Link href="/inverse/generate">
                     Launch Explorer
                     <ArrowRight className="ml-3 h-8 w-8 group-hover:translate-x-2 transition-transform" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="secondary" className="rounded-[1rem] h-20 px-10 text-xl font-bold bg-background/50 backdrop-blur-sm border-border hover:bg-muted transition-all" asChild>
+                <Button size="lg" variant="secondary" className="rounded-[1rem] h-20 px-10 text-xl font-bold bg-background/50 backdrop-blur-sm border-border hover:bg-muted transition-all font-heading" asChild>
                   <Link href="/datasets">
                     Data Workbench
                   </Link>
@@ -144,7 +144,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-24"
           >
-            <h2 className="text-5xl md:text-6xl font-black tracking-tight mb-6 text-foreground">Built for Researchers</h2>
+            <h2 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-foreground font-heading">Built for Researchers</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
               Four specialized environments designed for high-fidelity multi-objective optimization and inverse mapping.
             </p>
@@ -165,11 +165,11 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-[1rem] bg-indigo-600 text-white flex items-center justify-center mb-8">
                 <Database className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Data Analytics Hub</h3>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight text-foreground font-heading">Data Analytics Hub</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-medium">
                 Manage high-dimensional reference populations. Profiling of X and Y spaces with automated distribution analysis.
               </p>
-              <Link href="/datasets" className="inline-flex items-center gap-2 font-black text-indigo-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all">
+              <Link href="/datasets" className="inline-flex items-center gap-2 font-bold text-indigo-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all font-heading">
                 Enter Hub <ArrowRight className="h-3 w-3" />
               </Link>
             </motion.div>
@@ -182,11 +182,11 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-[1rem] bg-blue-600 text-white flex items-center justify-center mb-8">
                 <Cpu className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Engine Construction</h3>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight text-foreground font-heading">Engine Construction</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-medium">
                 Construct and train specialized Inverse Solvers. Monitor loss convergence and architectural benchmarks.
               </p>
-              <Link href="/inverse/train" className="inline-flex items-center gap-2 font-black text-blue-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all">
+              <Link href="/inverse/train" className="inline-flex items-center gap-2 font-bold text-blue-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all font-heading">
                 Configure Solver <ArrowRight className="h-3 w-3" />
               </Link>
             </motion.div>
@@ -199,11 +199,11 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-[1rem] bg-purple-600 text-white flex items-center justify-center mb-8">
                 <Sparkles className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Inference Registry</h3>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight text-foreground font-heading">Inference Registry</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-medium">
                 Generate high-fidelity candidate solutions for target objectives using GBPI and Probabilistic solvers.
               </p>
-              <Link href="/inverse/generate" className="inline-flex items-center gap-2 font-black text-purple-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all">
+              <Link href="/inverse/generate" className="inline-flex items-center gap-2 font-bold text-purple-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all font-heading">
                 Generate Solutions <ArrowRight className="h-3 w-3" />
               </Link>
             </motion.div>
@@ -216,11 +216,11 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-[1rem] bg-emerald-600 text-white flex items-center justify-center mb-8">
                 <BarChart3 className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl font-black mb-4 tracking-tight text-foreground">Leaderboard Metrics</h3>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight text-foreground font-heading">Leaderboard Metrics</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-medium">
                 Verify performance with MACE, PIT, and ECDF calibration. Compare solver robustness across datasets.
               </p>
-              <Link href="/evaluation" className="inline-flex items-center gap-2 font-black text-emerald-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all">
+              <Link href="/evaluation" className="inline-flex items-center gap-2 font-bold text-emerald-500 tracking-widest uppercase text-[10px] hover:gap-4 transition-all font-heading">
                 View Benchmarks <ArrowRight className="h-3 w-3" />
               </Link>
             </motion.div>
@@ -240,12 +240,12 @@ export default function LandingPage() {
               className="relative z-10"
             >
               <Logo simple className="scale-150 mb-12 opacity-30 dark:opacity-20 transition-all duration-700 hover:opacity-50" />
-              <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-8 text-foreground">Ready to invert your models?</h2>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8 text-foreground font-heading text-balance">Ready to invert your models?</h2>
               <div className="flex flex-wrap justify-center gap-6">
-                <Button size="lg" className="rounded-[1rem] h-16 px-8 transition-all active:scale-95" asChild>
+                <Button size="lg" className="rounded-[1rem] h-16 px-8 transition-all active:scale-95 font-bold font-heading" asChild>
                   <Link href="/inverse/train">Initialize Training</Link>
                 </Button>
-                <Button size="lg" variant="secondary" className="rounded-[1rem] h-16 px-8 transition-all active:scale-95" asChild>
+                <Button size="lg" variant="secondary" className="rounded-[1rem] h-16 px-8 transition-all active:scale-95 font-bold font-heading" asChild>
                   <Link href="/datasets">Explore Datasets</Link>
                 </Button>
               </div>
@@ -266,19 +266,19 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="md:col-span-2">
-              <h4 className="font-black uppercase tracking-widest text-[10px] text-muted-foreground mb-8">Navigation</h4>
-              <ul className="space-y-4 font-bold text-muted-foreground text-sm">
-                <li><Link href="/datasets" className="hover:text-indigo-500 transition-all">Data Hub</Link></li>
-                <li><Link href="/inverse/generate" className="hover:text-indigo-500 transition-all">Explorer</Link></li>
-                <li><Link href="/evaluation" className="hover:text-indigo-500 transition-all">Leaderboard</Link></li>
+              <h4 className="font-bold uppercase tracking-widest text-[10px] text-muted-foreground mb-8 font-heading">Navigation</h4>
+              <ul className="space-y-4 font-bold text-muted-foreground text-sm font-heading">
+                <li><Link href="/datasets" className="hover:text-indigo-500 transition-all uppercase tracking-widest text-[11px]">Data Hub</Link></li>
+                <li><Link href="/inverse/generate" className="hover:text-indigo-500 transition-all uppercase tracking-widest text-[11px]">Explorer</Link></li>
+                <li><Link href="/evaluation" className="hover:text-indigo-500 transition-all uppercase tracking-widest text-[11px]">Leaderboard</Link></li>
               </ul>
             </div>
             <div className="md:col-span-5 flex flex-col items-end">
               <div className="bg-muted border border-border p-8 rounded-[1rem] w-full max-w-sm flex items-center justify-between group cursor-pointer transition-all overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-full h-full bg-indigo-500/5 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                <div className="flex flex-col relative z-10">
-                  <span className="font-black text-2xl tracking-tighter italic text-muted-foreground group-hover:text-indigo-500 transition-colors">Start Generating</span>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Target Objective v1.2</span>
+                <div className="flex flex-col relative z-10 font-heading">
+                  <span className="font-bold text-2xl tracking-tighter italic text-muted-foreground group-hover:text-indigo-500 transition-colors uppercase">Start Generating</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Target Objective v1.2</span>
                 </div>
                 <div className="w-12 h-12 rounded-[1rem] bg-foreground text-background flex items-center justify-center group-hover:scale-110 transition-transform relative z-10">
                   <ArrowRight />
@@ -288,10 +288,10 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-12 border-t border-border/50">
-            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em]">
+            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.3em] font-heading">
               © 2026 TRACING OBJECTIVES BACKWARDS
             </p>
-            <div className="flex items-center gap-8 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <div className="flex items-center gap-8 text-[10px] font-bold text-muted-foreground uppercase tracking-widest font-heading">
               <span className="hover:text-foreground cursor-pointer transition-colors">Security</span>
               <span className="hover:text-foreground cursor-pointer transition-colors">API</span>
               <span className="hover:text-foreground cursor-pointer transition-colors">Docs</span>

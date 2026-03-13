@@ -109,13 +109,13 @@ export function TrainEngineForm({
                         name="dataset_name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Source Dataset</FormLabel>
+                                <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest font-heading">Source Dataset</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="bg-background border-border text-foreground">
+                                        <SelectTrigger className="bg-background border-border text-foreground font-bold font-heading">
                                             <SelectValue placeholder="Select a dataset" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -137,13 +137,13 @@ export function TrainEngineForm({
                         name="solver_type"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Architecture Strategy</FormLabel>
+                                <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest font-heading">Architecture Strategy</FormLabel>
                                 <Select
                                     onValueChange={handleSolverChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="bg-background border-border text-foreground">
+                                        <SelectTrigger className="bg-background border-border text-foreground font-bold font-heading">
                                             <SelectValue placeholder="Select a solver" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -165,7 +165,7 @@ export function TrainEngineForm({
                     <div className="pt-6 border-t border-border">
                         <div className="flex items-center gap-2 mb-6">
                             <Sparkles className="h-4 w-4 text-amber-500" />
-                            <h3 className="text-xs font-black text-foreground uppercase tracking-[0.2em]">
+                            <h3 className="text-xs font-bold text-foreground uppercase tracking-[0.2em] font-heading">
                                 Hyperparameters for {selectedSolver.name}
                             </h3>
                         </div>
@@ -183,7 +183,7 @@ export function TrainEngineForm({
                 <Button
                     type="submit"
                     disabled={isLoading || !isDynamicValid}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 rounded-[1rem] transition-all active:scale-[0.98] mt-4"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold h-14 rounded-[1rem] transition-all active:scale-[0.98] mt-4 font-heading"
                 >
                     {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />

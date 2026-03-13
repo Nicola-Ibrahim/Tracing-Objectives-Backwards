@@ -48,7 +48,7 @@ export default function TrainEnginePage() {
                     <div className="p-2 bg-indigo-600 rounded-[1rem]">
                         <Cpu className="h-6 w-6 text-white" />
                     </div>
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-sans">
+                    <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground via-foreground/90 to-foreground/80 font-heading">
                         Engine Construction
                     </h1>
                 </div>
@@ -67,10 +67,10 @@ export default function TrainEnginePage() {
                     <Card className="border-border overflow-hidden rounded-[1rem] bg-card transition-all">
                         <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                             <div className="space-y-1">
-                                <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">
+                                <CardTitle className="text-xl font-bold text-foreground tracking-tight uppercase font-heading">
                                     Configuration
                                 </CardTitle>
-                                <CardDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
+                                <CardDescription className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 font-heading">
                                     Solver & Pipeline Setup
                                 </CardDescription>
                             </div>
@@ -96,10 +96,10 @@ export default function TrainEnginePage() {
                     <Card className="border-border overflow-hidden rounded-[1rem] bg-card transition-all h-full">
                         <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                             <div className="space-y-1">
-                                <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">
+                                <CardTitle className="text-xl font-bold text-foreground tracking-tight uppercase font-heading">
                                     Telemetry
                                 </CardTitle>
-                                <CardDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
+                                <CardDescription className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 font-heading">
                                     Results & Metrics
                                 </CardDescription>
                             </div>
@@ -113,7 +113,7 @@ export default function TrainEnginePage() {
                                     <div className="bg-background p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
                                         <Cpu className="h-8 w-8 text-muted-foreground/30" />
                                     </div>
-                                    <span className="text-muted-foreground/50 font-black uppercase tracking-[0.2em] text-[10px]">
+                                    <span className="text-muted-foreground/50 font-bold uppercase tracking-[0.2em] text-[10px] font-heading">
                                         No active training session
                                     </span>
                                 </div>
@@ -121,19 +121,19 @@ export default function TrainEnginePage() {
                                 <div className="space-y-6">
                                     <Alert className="bg-emerald-500/10 border-emerald-500/20 text-emerald-500 rounded-[1rem] border-l-4 border-l-emerald-500">
                                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                        <AlertTitle className="font-bold">Construction Complete</AlertTitle>
+                                        <AlertTitle className="font-bold font-heading">Construction Complete</AlertTitle>
                                         <AlertDescription className="font-medium">
-                                            Engine version <span className="font-black text-emerald-600 dark:text-emerald-400">{lastResult.data.engine_version}</span> ready for inference.
+                                            Engine version <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{lastResult.data.engine_version}</span> ready for inference.
                                         </AlertDescription>
                                     </Alert>
                                     <div className="grid grid-cols-2 gap-4 text-sm mt-6">
                                         <div className="p-4 bg-muted/30 rounded-[1rem] border border-border">
-                                            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-2">Duration</p>
-                                            <p className="text-xl font-black text-foreground">{lastResult.data.duration_seconds.toFixed(2)}<span className="text-xs text-muted-foreground ml-1">sec</span></p>
+                                            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-2 font-heading">Duration</p>
+                                            <p className="text-xl font-bold text-foreground font-mono">{(lastResult.data.duration_seconds || 0).toFixed(2)}<span className="text-xs text-muted-foreground ml-1">sec</span></p>
                                         </div>
                                         <div className="p-4 bg-muted/30 rounded-[1rem] border border-border">
-                                            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-2">Populated</p>
-                                            <p className="text-xl font-black text-foreground">{lastResult.data.n_train_samples}<span className="text-xs text-muted-foreground ml-1">obs</span></p>
+                                            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-2 font-heading">Populated</p>
+                                            <p className="text-xl font-bold text-foreground font-mono">{lastResult.data.n_train_samples}<span className="text-xs text-muted-foreground ml-1">obs</span></p>
                                         </div>
                                     </div>
 
@@ -148,7 +148,7 @@ export default function TrainEnginePage() {
                             ) : (
                                 <Alert variant="destructive" className="rounded-[1rem] border-rose-500/20 bg-rose-500/10 border-l-4 border-l-rose-500">
                                     <AlertCircle className="h-4 w-4 text-rose-500" />
-                                    <AlertTitle className="font-bold text-rose-500">Training Exception</AlertTitle>
+                                    <AlertTitle className="font-bold text-rose-500 font-heading">Training Exception</AlertTitle>
                                     <AlertDescription className="font-medium text-rose-800 dark:text-rose-400">{lastResult.error}</AlertDescription>
                                 </Alert>
                             )}
