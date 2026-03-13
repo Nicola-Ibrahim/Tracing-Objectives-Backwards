@@ -29,7 +29,7 @@ class INNProbabilisticInverseSolver(AbstractInverseMappingSolver):
         self.forward_estimator: RBFEstimator | None = None
 
     def type(self) -> str:
-        return "INN-Probabilistic"
+        return "INN"
 
     def _ensure_fitted(self) -> None:
         self.estimator._ensure_fitted()

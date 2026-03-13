@@ -86,3 +86,16 @@ class BulkDeleteEnginesRequest(BaseModel):
     engines: list[dict] = Field(
         ..., description="list of {dataset_name, solver_type, version}"
     )
+
+
+class EngineDetailResponse(BaseModel):
+    dataset_name: str
+    solver_type: str
+    version: int
+    created_at: datetime
+    n_train_samples: int
+    n_test_samples: int
+    split_ratio: float
+    training_history: dict[str, Any] = Field(default_factory=dict)
+    transform_summary: list[str] = Field(default_factory=list)
+    hyperparameters: dict[str, Any] = Field(default_factory=dict)

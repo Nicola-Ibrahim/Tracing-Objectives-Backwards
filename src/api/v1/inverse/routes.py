@@ -8,6 +8,7 @@ from ....modules.inverse.application.inverse_service import (
 )
 from .dependencies import get_inverse_service
 from .schemas import (
+    EngineDetailResponse,
     EngineListItem,
     GenerateRequest,
     GenerateResponse,
@@ -151,6 +152,29 @@ async def list_all_engines(
     )
 
 
-
-
-
+@router.get(
+    "/engines/{dataset_name}/{solver_type}/{version}",
+    # response_model=EngineDetailResponse,
+)
+async def get_engine_details(
+    dataset_name: str,
+    solver_type: str,
+    version: int,
+    service: InverseService = Depends(get_inverse_service),
+):
+    """
+    Retrieve full details for a specific engine version.
+    """
+    result = service.get_engine_details(dataset_name, solver_type, version)
+    if result.is_failure:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if result.error.code == "NOT_FOUND"
+            else status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": result.error.message,
+                "error_code": result.error.code,
+                "details": result.error.details,
+            },
+        )
+    return result.value

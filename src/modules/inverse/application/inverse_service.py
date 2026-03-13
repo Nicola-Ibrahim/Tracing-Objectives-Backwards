@@ -142,9 +142,9 @@ class InverseService:
                     "engine_version": version,
                     "status": "completed",
                     "duration_seconds": duration,
-                    "n_train_samples": len(dataset.train_indices),
-                    "n_test_samples": len(dataset.test_indices),
-                    "split_ratio": dataset.split_ratio,
+                    "n_train_samples": dataset.metadata.n_train,
+                    "n_test_samples": dataset.metadata.n_test,
+                    "split_ratio": dataset.metadata.split_ratio,
                     "transform_summary": transform_summary,
                     "training_history": solver.history(),
                 }
@@ -279,3 +279,52 @@ class InverseService:
                 "results": results,
             }
         )
+
+    def get_engine_details(
+        self, dataset_name: str, solver_type: str, version: int
+    ) -> Result[dict]:
+        """
+        Retrieves full details for a specific engine version.
+        """
+        try:
+            engine = self._inverse_mapping_engine_repository.load(
+                dataset_name, solver_type, version
+            )
+            dataset = self._dataset_repository.load(dataset_name)
+
+            transform_summary = [
+                f"{t.__class__.__name__}({label})"
+                for label, t in engine.transform_pipeline.transforms
+            ]
+
+            # In this architecture, solver hyperparameters are opaque but can be 
+            # extracted if the solver stores them. For now, we'll return what's in history 
+            # or an empty dict if not specifically tracked.
+            history = engine.solver.history()
+            
+            return Result.ok(
+                {
+                    "dataset_name": dataset_name,
+                    "solver_type": solver_type,
+                    "version": version,
+                    "created_at": engine.created_at,
+                    "n_train_samples": dataset.metadata.n_train,
+                    "n_test_samples": dataset.metadata.n_test,
+                    "split_ratio": dataset.metadata.split_ratio,
+                    "training_history": history,
+                    "transform_summary": transform_summary,
+                    "hyperparameters": {}, # Placeholder if we decide to expose fitted params
+                }
+            )
+        except FileNotFoundError as e:
+            return Result.fail(
+                message=f"Engine or dataset not found",
+                details=str(e),
+                code="NOT_FOUND",
+            )
+        except Exception as e:
+            return Result.fail(
+                message="Failed to retrieve engine details",
+                details=str(e),
+                code="INTERNAL_ERROR",
+            )

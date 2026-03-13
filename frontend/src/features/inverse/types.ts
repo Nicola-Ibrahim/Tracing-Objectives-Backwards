@@ -66,3 +66,16 @@ export interface EngineListItem {
   version: number;
   created_at: string;
 }
+
+export interface EngineDetailResponse {
+  dataset_name: string;
+  solver_type: string;
+  version: number;
+  created_at: string;
+  n_train_samples: number;
+  n_test_samples: number;
+  split_ratio: number;
+  training_history: Record<string, any>;
+  transform_summary: string[];
+  hyperparameters: Record<string, any>;
+}

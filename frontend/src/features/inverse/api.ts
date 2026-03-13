@@ -6,6 +6,7 @@ import {
   CandidateGenerationRequest,
   CandidateGenerationResponse,
   EngineListItem,
+  EngineDetailResponse,
   SolversDiscoveryResponse,
 } from "./types";
 
@@ -69,4 +70,11 @@ export const deleteEngines = async (engines: { dataset_name: string; solver_type
   );
   
   return results.flat();
+};
+
+/**
+ * Fetch full details for a specific engine version.
+ */
+export const getEngineDetails = async (datasetName: string, solverType: string, version: number): Promise<EngineDetailResponse> => {
+  return apiClient.get(`/api/v1/inverse/engines/${datasetName}/${solverType}/${version}`);
 };

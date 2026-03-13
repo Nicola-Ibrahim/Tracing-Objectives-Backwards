@@ -7,7 +7,9 @@ from .....modeling.infrastructure.estimators.deterministic.rbf import (
     RBFEstimator,
     RBFEstimatorParams,
 )
-from .....modeling.infrastructure.estimators.probabilistic.cvae import CVAEEstimatorParams
+from .....modeling.infrastructure.estimators.probabilistic.cvae import (
+    CVAEEstimatorParams,
+)
 from .....modeling.infrastructure.factories.estimator import (
     EstimatorFactory,
 )
@@ -29,7 +31,7 @@ class CVAEProbabilisticInverseSolver(AbstractInverseMappingSolver):
         self.forward_estimator: RBFEstimator | None = None
 
     def type(self) -> str:
-        return "CVAE-Probabilistic"
+        return "CVAE"
 
     def _ensure_fitted(self) -> None:
         self.estimator._ensure_fitted()

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { listAllEngines, deleteEngines, listEnginesForDataset } from "@/features/inverse/api";
+import { listAllEngines, deleteEngines, listEnginesForDataset, getEngineDetails } from "@/features/inverse/api";
 import { getDatasets } from "@/features/dataset/api";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +29,8 @@ import {
     Square,
     Zap,
     Box,
-    RefreshCcw
+    RefreshCcw,
+    Info
 } from "lucide-react";
 import {
     Dialog,
@@ -45,6 +46,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { EngineDetailsInspector } from "@/features/inverse/components/EngineDetailsInspector";
 
 export default function EnginesPage() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -54,6 +56,7 @@ export default function EnginesPage() {
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [expandedDatasets, setExpandedDatasets] = useState<Record<string, boolean>>({});
+    const [inspectingEngine, setInspectingEngine] = useState<any | null>(null);
 
     const queryClient = useQueryClient();
     const { showToast } = useToast();
@@ -501,7 +504,7 @@ export default function EnginesPage() {
                                                                                 ? 'border-l-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-500/5' 
                                                                                 : 'border-l-muted/20 hover:border-l-indigo-400/60'
                                                                         }`}
-                                                                        onClick={() => toggleSelection(engine)}
+                                                                        onClick={() => setInspectingEngine(engine)}
                                                                     >
                                                                         <div className="p-6 flex flex-col md:flex-row items-center gap-8">
                                                                             <div className="h-12 w-12 bg-muted rounded-[1rem] flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 border border-transparent transition-all shrink-0 transform group-hover:rotate-12">
@@ -541,6 +544,17 @@ export default function EnginesPage() {
 
                                                                                 <div className="flex justify-end gap-3 items-center">
                                                                                     <div className="flex items-center gap-4">
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-10 w-10 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-500/10 transition-all rounded-[1rem] border border-transparent hover:border-indigo-500/20"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                setInspectingEngine(engine);
+                                                                                            }}
+                                                                                        >
+                                                                                            <Info className="h-5 w-5" />
+                                                                                        </Button>
                                                                                         <Checkbox
                                                                                             checked={isEngineSelected}
                                                                                             onCheckedChange={() => toggleSelection(engine)}
@@ -586,6 +600,12 @@ export default function EnginesPage() {
                     )}
                 </div>
             )}
+
+            <EngineDetailsInspector 
+                engine={inspectingEngine}
+                open={!!inspectingEngine}
+                onOpenChange={(open) => !open && setInspectingEngine(null)}
+            />
         </div>
     );
 }

@@ -29,7 +29,7 @@ class MDNProbabilisticInverseSolver(AbstractInverseMappingSolver):
         self.forward_estimator: RBFEstimator | None = None
 
     def type(self) -> str:
-        return "MDN-Probabilistic"
+        return "MDN"
 
     def _ensure_fitted(self) -> None:
         self.estimator._ensure_fitted()

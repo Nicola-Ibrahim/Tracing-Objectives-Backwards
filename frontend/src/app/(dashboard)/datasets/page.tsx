@@ -37,11 +37,19 @@ export default function DatasetsPage() {
         queryFn: getDatasets,
     });
 
-    const { data: selectedDetails, isLoading: isLoadingDetails } = useQuery({
-        queryKey: ["dataset-details", selectedDatasetName, "all"],
-        queryFn: () => getDatasetDetails(selectedDatasetName!, "all"),
+    const { data: trainDetails, isLoading: isLoadingTrain } = useQuery({
+        queryKey: ["dataset-details", selectedDatasetName, "train"],
+        queryFn: () => getDatasetDetails(selectedDatasetName!, "train"),
         enabled: !!selectedDatasetName,
     });
+
+    const { data: testDetails, isLoading: isLoadingTest } = useQuery({
+        queryKey: ["dataset-details", selectedDatasetName, "test"],
+        queryFn: () => getDatasetDetails(selectedDatasetName!, "test"),
+        enabled: !!selectedDatasetName,
+    });
+
+    const isLoadingDetails = isLoadingTrain || isLoadingTest;
 
     const generateMutation = useMutation({
         mutationFn: generateDataset,
@@ -224,113 +232,199 @@ export default function DatasetsPage() {
             </Dialog>
 
             <Dialog open={!!selectedDatasetName} onOpenChange={(open) => !open && setSelectedDatasetName(null)}>
-                <DialogContent className="sm:max-w-[1000px] border-border bg-card p-0 overflow-hidden">
+                <DialogContent className="sm:max-w-[1400px] w-[95vw] border-border bg-card p-0 overflow-hidden">
                     {selectedDatasetName && (
-                        <div className="flex flex-col h-full max-h-[90vh]">
-                            <div className="bg-muted/30 border-b border-border p-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-12 w-12 bg-indigo-500/10 rounded-xl flex items-center justify-center shrink-0 border border-indigo-500/20">
-                                        <Activity className="h-6 w-6 text-indigo-500" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h2 className="text-2xl font-black text-foreground truncate tracking-tight uppercase">{selectedDatasetName}</h2>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <Badge variant="outline" className="bg-background text-indigo-500 border-indigo-500/20 text-[10px] font-mono">
-                                                ID: {selectedDatasetName.slice(0, 10)}
-                                            </Badge>
-                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Decision & Objective Space Visualization</p>
+                        <div className="flex flex-col h-[90vh]">
+                            <div className="bg-muted/30 border-b border-border p-6 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 bg-indigo-500/10 rounded-xl flex items-center justify-center shrink-0 border border-indigo-500/20">
+                                            <Activity className="h-6 w-6 text-indigo-500" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h2 className="text-2xl font-black text-foreground truncate tracking-tight uppercase">{selectedDatasetName}</h2>
+                                            <div className="flex items-center gap-3 mt-1">
+                                                <Badge variant="outline" className="bg-background text-indigo-500 border-indigo-500/20 text-[10px] font-mono">
+                                                    ID: {selectedDatasetName.slice(0, 10)}
+                                                </Badge>
+                                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Decision & Objective Space Visualization</p>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <div className="mt-12 pt-8 border-t border-border/60">
-                                        <div className="flex items-center gap-2 mb-6">
-                                            <Layers className="h-4 w-4 text-indigo-500" />
-                                            <h4 className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Synthesis Metadata</h4>
-                                        </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Test Split Ratio</p>
-                                                <p className="text-base font-black text-foreground tabular-nums">{(selectedDetails.metadata.split_ratio * 100).toFixed(0)}%</p>
-                                            </div>
-                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Random Seed</p>
-                                                <p className="text-base font-black text-foreground tabular-nums">{selectedDetails.metadata.random_state}</p>
-                                            </div>
-                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Aggregate Points</p>
-                                                <p className="text-base font-black text-foreground tabular-nums">{selectedDetails.metadata.n_samples.toLocaleString()}</p>
-                                            </div>
-                                            <div className="space-y-1.5 p-4 bg-muted/20 rounded-xl border border-border/50">
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Generation Date</p>
-                                                <p className="text-sm font-black text-foreground tabular-nums truncate">
-                                                    {new Date(selectedDetails.metadata.created_at).toLocaleDateString(undefined, {
-                                                        year: 'numeric',
-                                                        month: 'short',
-                                                        day: 'numeric'
-                                                    })}
-                                                </p>
-                                            </div>
-                                        </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setSelectedDatasetName(null)} className="font-bold border-border rounded-xl h-10 px-6">
+                                            Close Inspector
+                                        </Button>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex-1 overflow-y-auto p-8 bg-background/50 backdrop-blur-sm">
+                                    {((trainDetails || testDetails)?.metadata) && (
+                                        <div className="mt-8 pt-6 border-t border-border/60">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Layers className="h-4 w-4 text-indigo-500" />
+                                                <h4 className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Synthesis Metadata</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                                                <div className="space-y-1 p-3 bg-muted/20 rounded-xl border border-border/50 hover:border-indigo-500/30 transition-colors group">
+                                                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Aggregate</p>
+                                                    <p className="text-lg font-black text-foreground tabular-nums group-hover:text-indigo-500 transition-colors">
+                                                        {(trainDetails || testDetails)!.metadata.n_samples.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-1 p-3 bg-indigo-500/5 rounded-xl border border-indigo-500/10 hover:border-indigo-500/30 transition-colors group">
+                                                    <p className="text-[8px] font-black uppercase text-indigo-500 tracking-widest opacity-70">Training</p>
+                                                    <p className="text-lg font-black text-foreground tabular-nums group-hover:text-indigo-500 transition-colors">
+                                                        {(trainDetails || testDetails)!.metadata.n_train.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-1 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 hover:border-emerald-500/30 transition-colors group">
+                                                    <p className="text-[8px] font-black uppercase text-emerald-500 tracking-widest opacity-70">Testing</p>
+                                                    <p className="text-lg font-black text-foreground tabular-nums group-hover:text-emerald-500 transition-colors">
+                                                        {(trainDetails || testDetails)!.metadata.n_test.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-1 p-3 bg-muted/20 rounded-xl border border-border/50 hover:border-indigo-500/30 transition-colors group">
+                                                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Split Ratio</p>
+                                                    <p className="text-lg font-black text-foreground tabular-nums group-hover:text-indigo-500 transition-colors">
+                                                        {((trainDetails || testDetails)!.metadata.split_ratio * 100).toFixed(0)}%
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-1 p-3 bg-muted/20 rounded-xl border border-border/50 hover:border-indigo-500/30 transition-colors group">
+                                                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Random Seed</p>
+                                                    <p className="text-lg font-black text-foreground tabular-nums group-hover:text-indigo-500 transition-colors">
+                                                        {(trainDetails || testDetails)!.metadata.random_state}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-1 p-3 bg-muted/20 rounded-xl border border-border/50 hover:border-indigo-500/30 transition-colors group">
+                                                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-60">Generation</p>
+                                                    <p className="text-xs font-black text-foreground tabular-nums truncate group-hover:text-indigo-500 transition-colors">
+                                                        {new Date((trainDetails || testDetails)!.metadata.created_at).toLocaleDateString(undefined, {
+                                                            year: 'numeric',
+                                                            month: 'short',
+                                                            day: 'numeric'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-12 bg-background/50 backdrop-blur-sm scrollbar-thin scrollbar-thumb-indigo-500/10 scrollbar-track-transparent">
                                 {isLoadingDetails ? (
-                                    <div className="flex flex-col items-center justify-center h-[400px]">
-                                        <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-4" />
-                                        <span className="text-muted-foreground font-black uppercase tracking-widest text-xs">Fetching spatial matrices...</span>
+                                    <div className="flex flex-col items-center justify-center h-[500px]">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full scale-150 animate-pulse" />
+                                            <Loader2 className="h-12 w-12 animate-spin text-indigo-500 relative z-10" />
+                                        </div>
+                                        <span className="text-muted-foreground font-black uppercase tracking-[0.3em] text-[10px] mt-8 opacity-60">Decrypting Spatial Manifolds</span>
                                     </div>
-                                ) : selectedDetails ? (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <DatasetChart
-                                                title="Decision Space (X)"
-                                                data={selectedDetails.X}
-                                                labelX="X[0] (Feature 1)"
-                                                labelY="X[1] (Feature 2)"
-                                            />
-                                            <div className="grid grid-cols-2 gap-4 mt-4">
-                                                <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Dimensions</p>
-                                                    <p className="text-sm font-black text-foreground mt-1">{selectedDetails.decisions_dim}D Space</p>
+                                ) : (trainDetails || testDetails) ? (
+                                    <div className="max-w-7xl mx-auto space-y-24 pb-12">
+                                        {/* Training Section */}
+                                        {trainDetails && (
+                                            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                                                        <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-500">Training Manifold</h3>
+                                                    </div>
+                                                    <div className="h-px flex-1 bg-linear-to-r from-indigo-500/20 to-transparent" />
                                                 </div>
-                                                <div className="p-3 bg-indigo-500/5 rounded-lg border border-indigo-500/10">
-                                                    <p className="text-[9px] font-black uppercase text-indigo-500 tracking-widest truncate">Train Split</p>
-                                                    <p className="text-sm font-black text-foreground mt-1 tabular-nums">{selectedDetails.metadata.n_train.toLocaleString()}</p>
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-center justify-between px-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-indigo-500" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Decision Space (X)</span>
+                                                            </div>
+                                                            <Badge variant="outline" className="text-[9px] font-mono opacity-50 uppercase tracking-tighter">Latent Geometry</Badge>
+                                                        </div>
+                                                        <div className="bg-card/50 rounded-2xl border border-border/50 p-2 shadow-2xl shadow-indigo-500/5">
+                                                            <DatasetChart
+                                                                title=""
+                                                                data={trainDetails.X}
+                                                                labelX="Dimension 1"
+                                                                labelY="Dimension 2"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-center justify-between px-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Objective Space (y)</span>
+                                                            </div>
+                                                            <Badge variant="outline" className="text-[9px] font-mono opacity-50 uppercase tracking-tighter">Performance Pareto</Badge>
+                                                        </div>
+                                                        <div className="bg-card/50 rounded-2xl border border-border/50 p-2 shadow-2xl shadow-emerald-500/5">
+                                                            <DatasetChart
+                                                                title=""
+                                                                data={trainDetails.y}
+                                                                labelX="Objective 1"
+                                                                labelY="Objective 2"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <DatasetChart
-                                                title="Objective Space (y)"
-                                                data={selectedDetails.y}
-                                                labelX="y[0] (Objective 1)"
-                                                labelY="y[1] (Objective 2)"
-                                            />
-                                            <div className="grid grid-cols-2 gap-4 mt-4">
-                                                <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate">Objectives</p>
-                                                    <p className="text-sm font-black text-foreground mt-1">{selectedDetails.objectives_dim}D Target</p>
+                                        )}
+
+                                        {/* Testing Section */}
+                                        {testDetails && testDetails.y.length > 0 && (
+                                            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 ease-out">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                                        <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-emerald-500">Testing Manifold</h3>
+                                                    </div>
+                                                    <div className="h-px flex-1 bg-linear-to-r from-emerald-500/20 to-transparent" />
                                                 </div>
-                                                <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
-                                                    <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest truncate">Test Split</p>
-                                                    <p className="text-sm font-black text-foreground mt-1 tabular-nums">{selectedDetails.metadata.n_test.toLocaleString()}</p>
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-center justify-between px-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-indigo-400" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Decision Space (X - Test)</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-card/50 rounded-2xl border border-border/50 p-2 shadow-2xl shadow-indigo-500/5">
+                                                            <DatasetChart
+                                                                title=""
+                                                                data={testDetails.X}
+                                                                labelX="Dimension 1"
+                                                                labelY="Dimension 2"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-center justify-between px-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-emerald-400" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Objective Space (y - Test)</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-card/50 rounded-2xl border border-border/50 p-2 shadow-2xl shadow-emerald-500/5">
+                                                            <DatasetChart
+                                                                title=""
+                                                                data={testDetails.y}
+                                                                labelX="Objective 1"
+                                                                labelY="Objective 2"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div className="flex items-center justify-center h-[400px] text-muted-foreground/40 font-bold">
-                                        Failed to load dataset details.
+                                    <div className="flex flex-col items-center justify-center h-[500px] text-muted-foreground/40 space-y-4">
+                                        <AlertCircle className="h-12 w-12 opacity-20" />
+                                        <p className="font-black uppercase tracking-widest text-xs">Extraction Failed</p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="bg-muted/30 border-t border-border p-4 flex justify-end gap-3">
-                                <Button variant="outline" size="sm" onClick={() => setSelectedDatasetName(null)} className="font-bold border-border px-8 rounded-xl h-10">
-                                    Close Inspector
-                                </Button>
+                            <div className="bg-muted/10 border-t border-border/40 p-3 flex justify-center shrink-0">
+                                <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.4em]">Proprietary Manifold Inspection Interface v4.0</p>
                             </div>
                         </div>
                     )}

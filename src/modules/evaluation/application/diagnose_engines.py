@@ -168,8 +168,9 @@ class RunDiagnosticsService:
                     decision_space=decision_assessment,
                 )
 
+                print(report)
                 # Persist report
-                self._diag_repo.save(report)
+                # self._diag_repo.save(report)
                 reports.append(report)
 
             return Result.ok(reports)

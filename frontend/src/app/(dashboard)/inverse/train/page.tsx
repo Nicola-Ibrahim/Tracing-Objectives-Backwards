@@ -58,12 +58,13 @@ export default function TrainEnginePage() {
                 </div>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0, transition: { delay: 0.1 } }}
+                    className="md:col-span-5"
                 >
-                    <Card className="border-border overflow-hidden md:col-span-1 rounded-[1rem] bg-card transition-all">
+                    <Card className="border-border overflow-hidden rounded-[1rem] bg-card transition-all">
                         <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                             <div className="space-y-1">
                                 <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">
@@ -90,9 +91,9 @@ export default function TrainEnginePage() {
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0, transition: { delay: 0.2 } }}
-                    className="h-full"
+                    className="h-full md:col-span-7"
                 >
-                    <Card className="border-border overflow-hidden md:col-span-1 rounded-[1rem] bg-card transition-all h-full">
+                    <Card className="border-border overflow-hidden rounded-[1rem] bg-card transition-all h-full">
                         <CardHeader className="bg-muted/30 border-b border-border py-6 px-8 flex flex-row items-center justify-between space-y-0">
                             <div className="space-y-1">
                                 <CardTitle className="text-xl font-black text-foreground tracking-tight uppercase">
