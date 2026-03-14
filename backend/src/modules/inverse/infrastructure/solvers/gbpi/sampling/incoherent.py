@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.optimize import Bounds, minimize
+
 from ......modeling.domain.interfaces.base_estimator import BaseEstimator
+
 
 class IncoherentSampling:
     """
@@ -54,29 +56,29 @@ class IncoherentSampling:
         # Axis: base_anchor -> optimal_x
         direction = optimal_x - base_anchor
         dist = np.linalg.norm(direction)
-        
+
         results = []
         rng = np.random.default_rng()
-        
+
         # We always include the optimal_x as the first candidate
         results.append(optimal_x)
-        
+
         if n_samples > 1:
             # Beta distribution biased toward optimal_x (t=1.0)
             t_values = rng.beta(3.0, 1.5, size=n_samples - 1)
-            
+
             # Lateral noise scale (5% of the distance)
             lateral_scale = dist * 0.05 if dist > 0 else 0.01
-            
+
             for t in t_values:
                 # Primary axis interpolation
                 candidate = base_anchor + t * direction
-                
+
                 # Add small lateral noise for cloud thickness
                 if dist > 0:
                     noise = rng.normal(0, lateral_scale, size=base_anchor.shape)
                     candidate += noise
-                
+
                 # Ensure we stay within trust region
                 results.append(np.clip(candidate, lower_bound, upper_bound))
 

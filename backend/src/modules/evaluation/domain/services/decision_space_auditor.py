@@ -1,12 +1,13 @@
 import numpy as np
+
+from ..enums.engine_capability import EngineCapability
+from ..value_objects.calibration_curve import CalibrationCurve
 from ..value_objects.decision_assessment import (
     DecisionSpaceDistributionAssessment,
     DecisionSpaceIntervalAssessment,
 )
-from ..value_objects.calibration_curve import CalibrationCurve
-from ..value_objects.pit_profile import PITProfile
 from ..value_objects.ecdf_profile import ECDFProfile
-from ..enums.engine_capability import EngineCapability
+from ..value_objects.pit_profile import PITProfile
 
 
 class DecisionSpaceAuditor:
@@ -44,7 +45,7 @@ class DecisionSpaceAuditor:
 
         # 1. PIT Values (marginal PIT across all dimensions)
         pit_values = DecisionSpaceAuditor._compute_pit_values(samples, truth)
-        
+
         # 2. MACE (Mean Absolute Calibration Error)
         mace = DecisionSpaceAuditor._compute_mace(pit_values)
 
@@ -52,8 +53,10 @@ class DecisionSpaceAuditor:
         crps = DecisionSpaceAuditor._compute_crps(samples, truth)
 
         # 4. Diversity and Interval Width
-        diversity = np.mean(np.std(samples, axis=1)) # Average of std across K per sample
-        
+        diversity = np.mean(
+            np.std(samples, axis=1)
+        )  # Average of std across K per sample
+
         # 90% interval width
         q95 = np.percentile(samples, 95, axis=1)
         q05 = np.percentile(samples, 5, axis=1)
@@ -68,7 +71,7 @@ class DecisionSpaceAuditor:
         empirical_coverage = [np.mean(pit_values <= q) for q in nominal_coverage]
         calibration_curve = CalibrationCurve(
             nominal_coverage=nominal_coverage.tolist(),
-            empirical_coverage=empirical_coverage
+            empirical_coverage=empirical_coverage,
         )
 
         return DecisionSpaceDistributionAssessment(
@@ -86,10 +89,10 @@ class DecisionSpaceAuditor:
     ) -> DecisionSpaceIntervalAssessment:
         # For interval engines, we assume samples contain at least min and max
         n_test, k_samples, d_dims = samples.shape
-        
+
         lower = np.min(samples, axis=1)  # (N, D)
         upper = np.max(samples, axis=1)  # (N, D)
-        
+
         # 1. Empirical Coverage at specific levels
         # If we only have ONE interval (e.g. 95%), we can only check that level.
         # But ECDFProfile suggests we want a curve.
@@ -103,18 +106,17 @@ class DecisionSpaceAuditor:
             high_b = np.percentile(samples, q_high * 100, axis=1)
             inside = (truth >= low_b) & (truth <= high_b)
             emp_coverage.append(float(np.mean(inside)))
-            
+
         ecdf_profile = ECDFProfile(
-            x_values=nominal_levels.tolist(),
-            cumulative_probabilities=emp_coverage
+            x_values=nominal_levels.tolist(), cumulative_probabilities=emp_coverage
         )
-        
+
         # 2. Mean Coverage Error
         mean_coverage_error = float(np.mean(np.abs(nominal_levels - emp_coverage)))
-        
+
         # 3. Interval Width (using the outermost range provided)
         mean_interval_width = float(np.mean(upper - lower))
-        
+
         # 4. Winkler Score (at 90% nominal coverage)
         alpha = 0.1
         outside_low = np.maximum(lower - truth, 0)

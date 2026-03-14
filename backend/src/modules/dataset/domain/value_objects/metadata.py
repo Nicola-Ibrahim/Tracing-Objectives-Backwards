@@ -1,13 +1,17 @@
 from datetime import UTC, datetime
+
 from pydantic import BaseModel, Field
+
 
 def _iso_timestamp() -> str:
     return datetime.now(tz=UTC).isoformat()
+
 
 class DatasetMetadata(BaseModel):
     """
     Value object containing dataset summary statistics and configuration.
     """
+
     n_samples: int = Field(default=0, description="Total number of samples")
     n_train: int = Field(default=0, description="Number of training samples")
     n_test: int = Field(default=0, description="Number of testing samples")

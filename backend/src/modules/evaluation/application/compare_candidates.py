@@ -12,10 +12,8 @@ from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import 
 )
 from ...shared.domain.interfaces.base_logger import BaseLogger
 from ..domain.interfaces.base_visualizer import BaseVisualizer
-from .inverse_model_candidates_comparator import InverseModelsCandidatesComparator
-
-
 from .diagnose_engines import EngineCandidate
+from .inverse_model_candidates_comparator import InverseModelsCandidatesComparator
 
 
 class CompareInverseModelCandidatesParams(BaseModel):

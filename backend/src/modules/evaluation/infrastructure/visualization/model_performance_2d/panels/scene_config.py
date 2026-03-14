@@ -1,6 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 
+
 def configure_3d_scenes(
     fig: go.Figure,
     row: int,
@@ -15,7 +16,7 @@ def configure_3d_scenes(
     output_symbol: str,
 ):
     """Configures axis ranges, titles, and aspect ratios for the 3D scenes."""
-    
+
     def _sym(symbol: str, idx: int) -> str:
         subscripts = {1: "\u2081", 2: "\u2082"}
         return f"{symbol}{subscripts.get(idx, idx)}"

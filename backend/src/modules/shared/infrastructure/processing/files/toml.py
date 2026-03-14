@@ -1,8 +1,7 @@
 import datetime
+import tomllib
 from pathlib import Path
 from typing import Any
-
-import tomllib
 
 from .base import BaseFileHandler
 
@@ -77,5 +76,5 @@ def _format_value(value: Any) -> str:
 
 
 def _quote_string(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
-    return f"\"{escaped}\""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'

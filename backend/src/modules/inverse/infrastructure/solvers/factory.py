@@ -11,9 +11,9 @@ from ...domain.interfaces.base_inverse_mapping_solver import (
 from .gbpi.gbpi_solver import GBPIInverseSolver
 from .gbpi.hybrid_solver import HybridGBPIInverseSolver
 from .gbpi.tda_gbpi_solver import TDAGBPIInverseSolver
-from .prob.mdn_solver import MDNProbabilisticInverseSolver
-from .prob.inn_solver import INNProbabilisticInverseSolver
 from .prob.cvae_solver import CVAEProbabilisticInverseSolver
+from .prob.inn_solver import INNProbabilisticInverseSolver
+from .prob.mdn_solver import MDNProbabilisticInverseSolver
 
 
 class SolversFactory:

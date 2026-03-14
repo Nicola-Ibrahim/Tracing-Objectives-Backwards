@@ -1,6 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 
+
 def add_3d_overlay(
     fig: go.Figure,
     row: int,

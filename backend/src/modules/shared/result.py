@@ -11,7 +11,9 @@ class ErrorDetails(BaseModel):
     """
 
     message: str = Field(..., description="High-level human-readable error message")
-    details: str | dict[str, Any] | None = Field(None, description="Field-specific details")
+    details: str | dict[str, Any] | None = Field(
+        None, description="Field-specific details"
+    )
     code: str = Field("INTERNAL_ERROR", description="Machine-parsable error code")
 
 

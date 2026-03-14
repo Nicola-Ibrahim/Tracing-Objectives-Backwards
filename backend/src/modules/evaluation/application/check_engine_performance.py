@@ -10,8 +10,6 @@ from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import 
 )
 from ...shared.result import Result
 from ..domain.interfaces.base_visualizer import BaseVisualizer
-
-
 from .diagnose_engines import EngineCandidate
 
 

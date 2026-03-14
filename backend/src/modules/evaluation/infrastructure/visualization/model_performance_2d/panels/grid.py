@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def build_grid(X_train: np.ndarray, grid_res: int):
     """Create a meshgrid over the training domain."""
     x1_min, x1_max = float(np.min(X_train[:, 0])), float(np.max(X_train[:, 0]))

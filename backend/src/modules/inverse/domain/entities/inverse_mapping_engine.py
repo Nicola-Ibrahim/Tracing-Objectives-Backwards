@@ -23,7 +23,7 @@ class InverseMappingEngine(BaseModel):
         default_factory=TransformPipeline,
         description="Encapsulates fitted preprocessing transforms",
     )
- 
+
     created_at: datetime = Field(default_factory=datetime.now)
 
     @classmethod

@@ -297,11 +297,11 @@ class InverseService:
                 for label, t in engine.transform_pipeline.transforms
             ]
 
-            # In this architecture, solver hyperparameters are opaque but can be 
-            # extracted if the solver stores them. For now, we'll return what's in history 
+            # In this architecture, solver hyperparameters are opaque but can be
+            # extracted if the solver stores them. For now, we'll return what's in history
             # or an empty dict if not specifically tracked.
             history = engine.solver.history()
-            
+
             return Result.ok(
                 {
                     "dataset_name": dataset_name,
@@ -313,7 +313,7 @@ class InverseService:
                     "split_ratio": dataset.metadata.split_ratio,
                     "training_history": history,
                     "transform_summary": transform_summary,
-                    "hyperparameters": {}, # Placeholder if we decide to expose fitted params
+                    "hyperparameters": {},  # Placeholder if we decide to expose fitted params
                 }
             )
         except FileNotFoundError as e:

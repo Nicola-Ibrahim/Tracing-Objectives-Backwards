@@ -92,8 +92,6 @@ class BaseEstimator(ABC):
         self._X_dim = X.shape[1]
         self._y_dim = y.shape[1]
 
-
-
     def to_dict(self) -> dict:
         """
         Converts the estimator's initialization parameters to a dictionary.

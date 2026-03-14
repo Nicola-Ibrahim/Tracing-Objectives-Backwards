@@ -8,14 +8,6 @@ from .panels.pareto_plot import (
     create_pareto_front_figure,
     create_pareto_set_figure,
 )
-from .panels.raw_density_plot import (
-    create_raw_decision_density_figure,
-    create_raw_objective_density_figure,
-)
-from .panels.raw_distributions_plot import (
-    create_raw_decision_distributions_figure,
-    create_raw_objective_distributions_figure,
-)
 from .panels.raw_space_plot import (
     create_raw_decision_space_figure,
     create_raw_objective_space_figure,

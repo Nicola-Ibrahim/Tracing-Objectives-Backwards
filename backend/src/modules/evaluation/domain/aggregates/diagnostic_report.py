@@ -32,7 +32,9 @@ class DiagnosticReport(BaseModel):
 
     # --- Assessments ---
     objective_space: ObjectiveSpaceAssessment
-    decision_space: DecisionSpaceDistributionAssessment | DecisionSpaceIntervalAssessment
+    decision_space: (
+        DecisionSpaceDistributionAssessment | DecisionSpaceIntervalAssessment
+    )
 
     @classmethod
     def create(

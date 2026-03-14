@@ -1,4 +1,5 @@
-from typing import Any, List, Literal, Dict
+from typing import Any, Dict, List, Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -23,6 +24,7 @@ class DomainAssessmentData(BaseModel):
     """
     Structured data for a specific space (objective or decision).
     """
+
     ecdf: Dict[str, MetricSeries] = Field(default_factory=dict)
     calibration_curves: Dict[str, MetricSeries] = Field(default_factory=dict)
     # Metrics
@@ -33,12 +35,12 @@ class DiagnoseResponse(BaseModel):
     dataset_name: str
     engines: List[str]
     capabilities: Dict[str, str] = Field(
-        default_factory=dict, 
-        description="Mapping of engine name to capability (full_distribution | prediction_interval)"
+        default_factory=dict,
+        description="Mapping of engine name to capability (full_distribution | prediction_interval)",
     )
     objective_space: DomainAssessmentData
     decision_space: DomainAssessmentData
-    
+
     warnings: List[str] = Field(default_factory=list)
 
 

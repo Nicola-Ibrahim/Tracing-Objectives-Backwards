@@ -146,7 +146,7 @@ class TrainInverseModelGridSearchService:
             target = t_cfg.get("target")
             transform = self._transformer_factory.create(t_cfg)
             # Set target attribute for persistence/filtering
-            setattr(transform, "target", target)
+            transform.target = target
 
             if target in ("decisions", "both"):
                 decision_transforms.append(transform)

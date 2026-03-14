@@ -104,6 +104,7 @@ class FileSystemDatasetRepository(BaseDatasetRepository):
             # Reconstruct indices if missing
             import numpy as np
             from sklearn.model_selection import train_test_split
+
             n_samples = len(X)
             indices = np.arange(n_samples)
             if metadata.split_ratio > 0.0:

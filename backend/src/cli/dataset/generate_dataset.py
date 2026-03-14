@@ -7,10 +7,10 @@ from ...modules.dataset.application.dataset_service import (
 from ...modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
+from ...modules.dataset.infrastructure.sources.factory import DataGeneratorFactory
 from ...modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
     FileSystemInverseMappingEngineRepository,
 )
-from ...modules.dataset.infrastructure.sources.factory import DataGeneratorFactory
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
@@ -39,7 +39,7 @@ def generate_data(function_id: int, n_var: int):
             "population_size": 70,
         },
         split_ratio=0.2,
-        random_state=42
+        random_state=42,
     )
 
     logger = CMDLogger(name="DataCLI")

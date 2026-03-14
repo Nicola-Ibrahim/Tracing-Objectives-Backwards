@@ -40,9 +40,9 @@ def _coerce_payload(data: object) -> dict[str, object]:
         for attr in ["pareto_front", "target_objective", "generators"]
     ):
         return {
-            "pareto_front": getattr(data, "pareto_front"),
+            "pareto_front": data.pareto_front,
             "pareto_set": getattr(data, "pareto_set", None),
-            "target_objective": getattr(data, "target_objective"),
+            "target_objective": data.target_objective,
             "generators": [
                 {
                     "name": getattr(run, "name", None),
@@ -52,7 +52,7 @@ def _coerce_payload(data: object) -> dict[str, object]:
                     "best_decision": getattr(run, "best_decision", None),
                     "best_objective": getattr(run, "best_objective", None),
                 }
-                for run in getattr(data, "generators")
+                for run in data.generators
             ],
         }
 

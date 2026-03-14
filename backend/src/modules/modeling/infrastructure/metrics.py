@@ -1,9 +1,11 @@
 import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import multivariate_normal
-from sklearn.metrics import mean_absolute_error as sk_mean_absolute_error
-from sklearn.metrics import mean_squared_error as sk_mean_squared_error
-from sklearn.metrics import r2_score as sk_r2_score
+from sklearn.metrics import (
+    mean_absolute_error as sk_mean_absolute_error,
+    mean_squared_error as sk_mean_squared_error,
+    r2_score as sk_r2_score,
+)
 
 from ..domain.interfaces.base_validation_metric import (
     BaseValidationMetric,

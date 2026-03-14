@@ -45,7 +45,7 @@ class CandidateGeneration:
 
         # 3. Prepare Metadata
         metadata = generation_result.metadata.copy()
-        
+
         # 4. Rank candidates
         rank_result = CandidatesRanker.rank(
             candidates_y=generation_result.candidates_y,

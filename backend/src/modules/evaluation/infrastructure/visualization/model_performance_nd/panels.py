@@ -15,12 +15,12 @@ def add_fit_1d(
     order = np.argsort(X_red)
     fig.add_trace(
         go.Scatter(
-            x=X_red[order], 
-            y=center[order], 
-            mode="lines", 
+            x=X_red[order],
+            y=center[order],
+            mode="lines",
             name=name_center,
             line=dict(color="RoyalBlue", width=3),
-            hovertemplate="<b>%{y:.4f}</b><extra></extra>"
+            hovertemplate="<b>%{y:.4f}</b><extra></extra>",
         ),
         row=row,
         col=1,

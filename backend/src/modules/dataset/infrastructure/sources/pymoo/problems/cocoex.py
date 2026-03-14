@@ -85,9 +85,7 @@ class COCOBiObjectiveProblem(Problem):
                 f"`function_indices` must be between 1 and 55 for suite '{problem_name}', got {function_indices}."
             )
 
-        suite_options = (
-            f"dimensions:{dimensions} " f"function_indices:{function_indices}"
-        )
+        suite_options = f"dimensions:{dimensions} function_indices:{function_indices}"
 
         suite = cocoex.Suite(
             problem_name,

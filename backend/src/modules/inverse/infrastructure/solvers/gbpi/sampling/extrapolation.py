@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.optimize import Bounds, minimize
+
 from ......modeling.domain.interfaces.base_estimator import BaseEstimator
+
 
 class ExtrapolationSampling:
     """
@@ -55,28 +57,28 @@ class ExtrapolationSampling:
         # Axis: base_anchor -> optimal_x
         direction = optimal_x - base_anchor
         dist = np.linalg.norm(direction)
-        
+
         results = []
         rng = np.random.default_rng()
-        
+
         # Include optimal_x
         results.append(optimal_x)
-        
+
         if n_samples > 1:
             # Uniform(0.5, 1.5) allows overshooting past optimal_x toward target_y
             t_values = rng.uniform(0.5, 1.5, size=n_samples - 1)
-            
+
             # Larger lateral noise scale (10% of the distance) for wider exploration
             lateral_scale = dist * 0.10 if dist > 0 else 0.02
-            
+
             for t in t_values:
                 candidate = base_anchor + t * direction
-                
+
                 # Add lateral noise
                 if dist > 0:
                     noise = rng.normal(0, lateral_scale, size=base_anchor.shape)
                     candidate += noise
-                
+
                 # Clip only to trust region, not to vertex-anchor bounds
                 results.append(np.clip(candidate, lower_bound, upper_bound))
 

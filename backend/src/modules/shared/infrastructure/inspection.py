@@ -140,7 +140,10 @@ def build_constructor_kwargs(cls: type, config: dict[str, Any]) -> dict[str, Any
                     k: v
                     for k, v in config.items()
                     if k in model_fields
-                    and not (k == "type" and get_origin(model_fields[k].annotation) is Literal)
+                    and not (
+                        k == "type"
+                        and get_origin(model_fields[k].annotation) is Literal
+                    )
                 }
                 # If we found fields or if it's required, try to instantiate
                 if filtered or param.default is inspect.Parameter.empty:

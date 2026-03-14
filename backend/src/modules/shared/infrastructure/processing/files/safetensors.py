@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Any
 
-from .base import BaseFileHandler
-
 from safetensors.torch import load_file, save_file
+
+from .base import BaseFileHandler
 
 
 class SafeTensorsFileHandler(BaseFileHandler):

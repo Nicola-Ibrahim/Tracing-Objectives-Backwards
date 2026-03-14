@@ -55,21 +55,23 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
 
             # b. Decision Space
             ds = res.decision_space
-            if hasattr(ds, "mace"): # DecisionSpaceDistributionAssessment
+            if hasattr(ds, "mace"):  # DecisionSpaceDistributionAssessment
                 metric_data["mace"][model_name] = ds.mace
                 metric_data["crps"][model_name] = ds.mean_crps
                 metric_data["diversity"][model_name] = ds.mean_diversity
                 metric_data["sharpness"][model_name] = ds.mean_interval_width
-                
+
                 calibration_data[model_name] = {
                     "pit_values": ds.calibration_curve.nominal_coverage,
                     "cdf_y": ds.calibration_curve.empirical_coverage,
                 }
-            elif hasattr(ds, "mean_coverage_error"): # DecisionSpaceIntervalAssessment
-                metric_data["mace"][model_name] = ds.mean_coverage_error # Use error as a proxy
+            elif hasattr(ds, "mean_coverage_error"):  # DecisionSpaceIntervalAssessment
+                metric_data["mace"][model_name] = (
+                    ds.mean_coverage_error
+                )  # Use error as a proxy
                 metric_data["sharpness"][model_name] = ds.mean_interval_width
                 metric_data["winkler"][model_name] = ds.mean_winkler_score
-                
+
                 calibration_data[model_name] = {
                     "pit_values": ds.ecdf_profile.x_values,
                     "cdf_y": ds.ecdf_profile.cumulative_probabilities,
