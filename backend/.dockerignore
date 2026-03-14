@@ -1,0 +1,17 @@
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+.env
+.pytest_cache
+.ruff_cache
+.agent
+.git
+.DS_Store
+data/
+models/
+diagnostics/
+reports/
+tests/
+Dockerfile
+.dockerignore
