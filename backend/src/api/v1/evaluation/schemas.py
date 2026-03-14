@@ -36,7 +36,10 @@ class DiagnoseResponse(BaseModel):
     engines: List[str]
     capabilities: Dict[str, str] = Field(
         default_factory=dict,
-        description="Mapping of engine name to capability (full_distribution | prediction_interval)",
+        description=(
+            "Mapping of engine name to capability "
+            "(full_distribution | prediction_interval)"
+        ),
     )
     objective_space: DomainAssessmentData
     decision_space: DomainAssessmentData

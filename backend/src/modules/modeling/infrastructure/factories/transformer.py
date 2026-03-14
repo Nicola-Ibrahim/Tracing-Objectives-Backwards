@@ -15,7 +15,10 @@ from ...infrastructure.normalizers import (
 )
 
 
-class TransformerFactory:
+from ...domain.services.transformation_domain_service import ITransformerFactory
+
+
+class TransformerFactory(ITransformerFactory):
     """
     Concrete factory for creating BaseTransformer instances.
     """

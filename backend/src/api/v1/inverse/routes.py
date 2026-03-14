@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ....modules.inverse.application.inverse_service import (
@@ -6,7 +8,7 @@ from ....modules.inverse.application.inverse_service import (
     SolverConfig,
     TrainInverseMappingEngineParams,
 )
-from .dependencies import get_inverse_service
+from ....startup import ModulesContainer
 from .schemas import (
     EngineListItem,
     GenerateRequest,
@@ -16,12 +18,14 @@ from .schemas import (
     TrainEngineResponse,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/inverse", tags=["Inverse Mapping"])
 
 
 @router.get("/solvers", response_model=SolversDiscoveryResponse)
 async def list_available_solvers(
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     List all available inverse mapping solvers and their required parameters.
@@ -43,7 +47,9 @@ async def list_available_solvers(
 @router.post("/train", response_model=TrainEngineResponse, status_code=201)
 async def train_engine(
     request: TrainEngineRequest,
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     Train an inverse mapping engine for a dataset.
@@ -83,7 +89,9 @@ async def train_engine(
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_candidates(
     request: GenerateRequest,
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     Generate candidate designs for a target objective using a trained engine.
@@ -124,7 +132,9 @@ async def generate_candidates(
 
 @router.get("/engines", response_model=list[EngineListItem])
 async def list_all_engines(
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     List all trained engines across all datasets (Inference Hub).
@@ -159,7 +169,9 @@ async def get_engine_details(
     dataset_name: str,
     solver_type: str,
     version: int,
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     Retrieve full details for a specific engine version.

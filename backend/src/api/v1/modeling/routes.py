@@ -1,9 +1,11 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ....modules.modeling.application.transformation_service import (
     TransformationService,
 )
-from .dependencies import get_transformation_service
+from ....startup import ModulesContainer
 from .schemas import (
     DataPreviewPoints,
     TransformationPreviewRequest,
@@ -11,12 +13,15 @@ from .schemas import (
     TransformerRegistryResponse,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/modeling", tags=["Modeling"])
 
 
 @router.get("/transformers", response_model=TransformerRegistryResponse)
 async def list_transformers(
-    service: TransformationService = Depends(get_transformation_service),
+    service: Annotated[
+        TransformationService,
+        Depends(lambda: ModulesContainer.modeling.transformation_service()),
+    ],
 ):
     """
     Returns a registry of all available data transformers (normalizers, encoders, etc).
@@ -39,7 +44,10 @@ async def list_transformers(
 @router.post("/transform", response_model=TransformationPreviewResponse)
 async def preview_transformation(
     request: TransformationPreviewRequest,
-    service: TransformationService = Depends(get_transformation_service),
+    service: Annotated[
+        TransformationService,
+        Depends(lambda: ModulesContainer.modeling.transformation_service()),
+    ],
 ):
     """
     Applies a series of transformations to a small dataset sample and returns

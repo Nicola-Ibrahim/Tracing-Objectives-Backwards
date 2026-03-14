@@ -9,10 +9,7 @@ from ...domain.enums.metric_key import DefaultValidationMetricEnum
 from ...domain.interfaces.base_estimator import (
     BaseEstimator,
 )
-from ...domain.value_objects.estimator_params import (
-    EstimatorParamsBase,
-    ValidationMetricConfig,
-)
+from ...domain.value_objects.estimator_params import EstimatorParamsBase
 from ...infrastructure.estimators.deterministic import (
     GaussianProcessEstimator,
     NearestNDEstimator,
@@ -72,13 +69,6 @@ EstimatorParams = Annotated[
     ],
     Field(discriminator="type"),
 ]
-
-
-def default_metric_configs() -> list[ValidationMetricConfig]:
-    return [
-        ValidationMetricConfig(type=metric.value, params={})
-        for metric in DEFAULT_VALIDATION_METRICS
-    ]
 
 
 class EstimatorFactory:

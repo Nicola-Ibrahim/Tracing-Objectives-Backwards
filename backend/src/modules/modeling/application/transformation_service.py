@@ -3,9 +3,12 @@ from typing import Any, Dict, List
 import numpy as np
 
 from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ...shared.infrastructure.inspection import get_missing_arguments
 from ...shared.result import Result
-from ..infrastructure.factories.transformer import TransformerFactory
+from ..domain.services.transformation_domain_service import (
+    ITransformerFactory,
+    TransformationConfig,
+    TransformationDomainService,
+)
 
 
 class TransformationService:
@@ -15,10 +18,12 @@ class TransformationService:
 
     def __init__(
         self,
-        transformer_factory: TransformerFactory,
+        transformer_factory: ITransformerFactory,
+        transformation_domain_service: TransformationDomainService,
         repository: BaseDatasetRepository,
     ):
         self._transformer_factory = transformer_factory
+        self._transformation_domain_service = transformation_domain_service
         self._repository = repository
 
     def get_available_transformers(self) -> Result[List[Dict[str, Any]]]:
@@ -28,77 +33,6 @@ class TransformationService:
         except Exception as e:
             return Result.fail(
                 message="Failed to get available transformers",
-                details=str(e),
-                code="INTERNAL_ERROR",
-            )
-
-    def apply_chains(
-        self,
-        X: np.ndarray,
-        y: np.ndarray,
-        x_chain: List[Dict[str, Any]],
-        y_chain: List[Dict[str, Any]],
-    ) -> Result[tuple[np.ndarray, np.ndarray]]:
-        """
-        Applies independent transformation chains to X and y.
-        """
-        try:
-            X_curr = X.copy()
-            y_curr = y.copy()
-
-            # Apply X chain
-            for i, config in enumerate(x_chain):
-                step_cls = self._transformer_factory._registry.get(config.get("type"))
-                if step_cls:
-                    missing = get_missing_arguments(
-                        step_cls.__init__, config.get("params", {})
-                    )
-                    if missing:
-                        raise ValueError(
-                            f"Missing required parameters for X step {i} ({config.get('type')}): {', '.join(missing)}"
-                        )
-
-                transformer = self._transformer_factory.create(config)
-                columns = config.get("columns")
-                if columns:
-                    if any(c >= X_curr.shape[1] for c in columns):
-                        raise ValueError(
-                            f"Column index out of bounds for X space: {columns}"
-                        )
-                    # Hybrid approach: transform specific columns
-                    X_subset = X_curr[:, columns]
-                    X_transformed = transformer.fit_transform(X_subset)
-                    X_curr[:, columns] = X_transformed
-                else:
-                    # Default: transform whole space
-                    X_curr = transformer.fit_transform(X_curr)
-
-            # Apply y chain
-            for i, config in enumerate(y_chain):
-                step_cls = self._transformer_factory._registry.get(config.get("type"))
-                if step_cls:
-                    missing = get_missing_arguments(
-                        step_cls.__init__, config.get("params", {})
-                    )
-                    if missing:
-                        raise ValueError(
-                            f"Missing required parameters for y step {i} ({config.get('type')}): {', '.join(missing)}"
-                        )
-
-                transformer = self._transformer_factory.create(config)
-                # y is typically 1D or has fewer columns, but we support the same logic
-                y_curr = transformer.fit_transform(y_curr)
-
-            return Result.ok((X_curr, y_curr))
-        except ValueError as e:
-            return Result.fail(
-                message="Failed to apply transformation chains",
-                details=str(e),
-                code="VALIDATION_ERROR",
-            )
-        except Exception as e:
-            return Result.fail(
-                message="Failed to apply transformation chains",
                 details=str(e),
                 code="INTERNAL_ERROR",
             )
@@ -165,8 +99,14 @@ class TransformationService:
                 X = X[indices]
                 y = y[indices]
 
-            # 3. Apply transformations
-            X_trans, y_trans = self.apply_chains(X, y, x_chain, y_chain)
+            # 3. Apply transformations using Domain Service
+            x_configs = [TransformationConfig(**c) for c in x_chain]
+            y_configs = [TransformationConfig(**c) for c in y_chain]
+
+            transformed = self._transformation_domain_service.apply_chains(
+                X, y, x_configs, y_configs
+            )
+            X_trans, y_trans = transformed.X, transformed.y
 
             # 4. Calculate metrics
             metrics = self.calculate_preview_metrics(X, y, X_trans, y_trans)

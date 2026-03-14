@@ -1,13 +1,16 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ....modules.dataset.application.dataset_service import (
     DatasetConfiguration,
     DatasetService,
 )
-from ....modules.inverse.application.inverse_service import InverseService
-from ..inverse.dependencies import get_inverse_service
+from ....modules.inverse.application.inverse_service import (
+    InverseService,
+)
+from ....startup import ModulesContainer
 from ..inverse.schemas import BulkDeleteEnginesRequest, EngineListItem
-from .dependencies import get_dataset_service
 from .schemas import (
     BulkDeleteDatasetsRequest,
     DatasetDeleteResponse,
@@ -18,13 +21,15 @@ from .schemas import (
     GeneratorsDiscoveryResponse,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
 
 @router.get("/{dataset_name}/engines", response_model=list[EngineListItem])
 async def list_engines_for_dataset(
     dataset_name: str,
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     List all trained engines for a specific dataset.
@@ -55,7 +60,9 @@ async def list_engines_for_dataset(
 async def delete_engines_for_dataset(
     dataset_name: str,
     request: BulkDeleteEnginesRequest,
-    service: InverseService = Depends(get_inverse_service),
+    service: Annotated[
+        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
+    ],
 ):
     """
     Delete specific engines for a dataset.
@@ -81,7 +88,9 @@ async def delete_engines_for_dataset(
 
 @router.get("/generators", response_model=GeneratorsDiscoveryResponse)
 async def list_available_generators(
-    service: DatasetService = Depends(get_dataset_service),
+    service: Annotated[
+        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
+    ],
 ):
     """
     List all available dataset generators and their required parameters.
@@ -102,7 +111,9 @@ async def list_available_generators(
 
 @router.get("", response_model=list[DatasetSummary])
 async def list_datasets(
-    service: DatasetService = Depends(get_dataset_service),
+    service: Annotated[
+        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
+    ],
 ):
     """
     List all available datasets in the system with metadata.
@@ -135,11 +146,14 @@ async def list_datasets(
 @router.get("/{dataset_name}", response_model=DatasetDetailResponse)
 async def get_dataset_details(
     dataset_name: str,
+    service: Annotated[
+        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
+    ],
     split: str = "train",
-    service: DatasetService = Depends(get_dataset_service),
 ):
     """
-    Retrieve full details for a specific dataset including X, y, Pareto mask, and engines.
+    Retrieve full details for a specific dataset including X, y, Pareto mask,
+    and engines.
     Can be filtered by split (train, test, all).
     """
     result = service.get_dataset_details(dataset_name, split=split)
@@ -171,7 +185,9 @@ async def get_dataset_details(
 @router.post("", response_model=DatasetGenerationResponse, status_code=201)
 async def generate_dataset(
     request: DatasetGenerationRequest,
-    service: DatasetService = Depends(get_dataset_service),
+    service: Annotated[
+        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
+    ],
 ):
     """
     Consolidated endpoint to generate a new dataset.
@@ -206,10 +222,13 @@ async def generate_dataset(
 @router.delete("", response_model=list[DatasetDeleteResponse])
 async def delete_datasets(
     request: BulkDeleteDatasetsRequest,
-    service: DatasetService = Depends(get_dataset_service),
+    service: Annotated[
+        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
+    ],
 ):
     """
-    Consolidated endpoint to delete one or multiple datasets and all associated trained engines.
+    Consolidated endpoint to delete one or multiple datasets and all
+    associated trained engines.
     """
     result = service.delete_datasets(request.dataset_names)
     return result.match(

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ....modules.evaluation.application.check_engine_performance import (
@@ -8,7 +10,7 @@ from ....modules.evaluation.application.diagnose_engines import (
     RunDiagnosticsCommand,
     RunDiagnosticsService,
 )
-from .dependencies import get_diagnose_service, get_performance_service
+from ....startup import ModulesContainer
 from .schemas import (
     DiagnoseRequest,
     DiagnoseResponse,
@@ -18,13 +20,16 @@ from .schemas import (
     PerformanceResponse,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/evaluation", tags=["Evaluation"])
 
 
 @router.post("/diagnose", response_model=DiagnoseResponse)
 async def diagnose_engines(
     request: DiagnoseRequest,
-    service: RunDiagnosticsService = Depends(get_diagnose_service),
+    service: Annotated[
+        RunDiagnosticsService,
+        Depends(lambda: ModulesContainer.evaluation.run_diagnostics_service()),
+    ],
 ):
     params = RunDiagnosticsCommand(
         dataset_name=request.dataset_name,
@@ -41,7 +46,9 @@ async def diagnose_engines(
                 f"{report.engine.type} (v{report.engine.version})" for report in reports
             ],
             capabilities={
-                f"{report.engine.type} (v{report.engine.version})": report.engine.capability.value
+                f"{report.engine.type} (v{report.engine.version})": (
+                    report.engine.capability.value
+                )
                 for report in reports
             },
             objective_space=DomainAssessmentData(
@@ -115,7 +122,10 @@ async def diagnose_engines(
 @router.post("/performance", response_model=PerformanceResponse)
 async def check_engine_performance(
     request: PerformanceRequest,
-    service: CheckModelPerformanceService = Depends(get_performance_service),
+    service: Annotated[
+        CheckModelPerformanceService,
+        Depends(lambda: ModulesContainer.evaluation.performance_service()),
+    ],
 ):
     params = CheckModelPerformanceParams(
         dataset_name=request.dataset_name,
