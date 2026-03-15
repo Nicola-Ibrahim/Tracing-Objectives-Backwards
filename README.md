@@ -1,101 +1,71 @@
 # 🎯 Tracing Objectives Backwards
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![DDD](https://img.shields.io/badge/Architecture-DDD-green.svg)](docs/concepts/ddd-architecture-guide.md)
-[![Clean Architecture](https://img.shields.io/badge/Pattern-Clean%20Architecture-blue.svg)](#technical-architecture)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Docker](https://img.shields.io/badge/Infrastructure-Docker-blue.svg)](docker-compose.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Data-Driven Inverse Exploration for Multi-Objective Problems.**
+**Data-Driven Inverse Exploration for Multi-Objective Optimization.**
 
-`Tracing-Objectives-Backwards` is a modern, full-stack framework for solving inverse design problems in engineering and data science. By learning the mapping from **Objective Space (Y)** back to **Decision Space (X)**, the system allows users to interactively propose design candidates that match specific performance targets.
-
----
-
-## 🌟 Key Features
-
-- **🚀 Full-Stack Inverse Pipeline**: A cohesive ecosystem with a **FastAPI** backend and a **Next.js** frontend for seamless data exploration.
-- **🐳 Dockerized Deployment**: Fully containerized environment with `docker-compose` for easy setup across any infrastructure.
-- **🧠 Model Zoo**: Suite of generative estimators including **GPBI (Global Pareto-Based Inverse)**, MDNs, CVAEs, and INNs for handling one-to-many inverse mappings.
-- **🏗️ Enterprise-Grade Architecture**: Built on **Clean Architecture** and **Domain-Driven Design (DDD)** principles for long-term maintainability.
-- **📊 Real-time Visualization**: Interactive dashboards to visualize decision and objective spaces simultaneously.
+`Tracing-Objectives-Backwards` is a high-performance, full-stack framework designed to solve complex inverse design problems. By mapping **Objective Performance (Y)** back to **Optimal Decision Variables (X)**, this system empowers engineers and researchers to interactively discover design candidates that meet specific target results.
 
 ---
 
-## 🔬 Why This Project?
+## 🚀 Key Value Propositions
 
-Forward simulation answers: *"Given these design parameters X, what is the outcome Y?"*
-In reality, the problem is often reversed: *"Given this desired outcome Y, what parameters X should I use?"*
-
-### The Challenge
-Direct inverse mapping is difficult because:
-1. **Multi-modality**: Different designs (X) often yield identical outcomes (Y).
-2. **Feasibility Boundaries**: Many target outcomes are physically impossible.
-
-### Our Solution
-This framework leverages generative modeling to capture the distribution of valid designs and applies industrial-grade architectural patterns to ensure the resulting system is scalable and production-ready.
+- **⚡ Unified Inverse Strategy**: A cohesive ecosystem bridging high-fidelity AI models with interactive data exploration.
+- **🧬 Advanced Surrogate Modeling**: Suite of generative estimators tailored for complex, one-to-many physical mappings.
+- **🏗️ Structured Engineering**: Built on modular, stack-agnostic principles to ensure maximum stability and cross-team collaboration.
+- **🐳 Operational Portability**: Fully containerized orchestration for seamless deployment across any environment.
 
 ---
 
-## 🏗️ Technical Architecture
+## 🔬 The "Inverse" Challenge
 
-The system follows **Clean Architecture** and **Domain-Driven Design (DDD)** to separate business logic from technical infrastructure.
+Traditional optimization answers: *"Given these parameters X, what is the outcome Y?"*  
+**Industry reality is often the reverse**: *"I need outcome Y. What parameters X will get me there?"*
 
-### System Overview
-```mermaid
-graph LR
-    subgraph "Frontend (Next.js)"
-        UI["🎨 Dashboard UI"]
-        feat["📦 Features Layer"]
-    end
+The direct inverse is notoriously difficult due to:
+1. **Multi-modality**: Multiple distinct designs can yield identical performance.
+2. **Feasibility Boundaries**: Many target performance profiles are physically unreachable.
 
-    subgraph "Backend (FastAPI)"
-        api["🛣️ API Layer"]
-        dom["🧠 Domain Module"]
-        inf["🌐 Infrastructure"]
-    end
-
-    UI --> feat
-    feat --> api
-    api --> dom
-    inf -- "Implements" --> dom
-```
-
-### Architecture Patterns
-- **DDD (Domain-Driven Design)**: Business logic is encapsulated within isolated domain modules.
-- **Modular Monolith**: Each technical sector (optimization, data, visualization) is a distinct module.
-- **Dependency Inversion**: Outer layers (Infra, API) depend on Inner layers (Domain) through interfaces.
+**Our Solution**: This framework provides the scaffolding and model-agnostic workflows to capture the entire distribution of valid designs, prioritizing mathematical correctness and interactive exploration.
 
 ---
 
-## 🚦 Quick Start
+## 🏛️ System Architecture
 
-### 1. The Easy Way (Docker)
-Ensure you have [Docker](https://www.docker.com/) installed.
+`Tracing-Objectives-Backwards` is designed as a **decoupled multi-tier system**, separating the mathematical engine from the presentation layer.
+
+- **The Engine (Backend)**: High-concurrency AI orchestrator handling data simulation, model training, and generative diagnostics.
+- **The Dashboard (Frontend)**: Professional-grade visualization suite for real-time candidate exploration and manifold analysis.
+
+For detailed technical specs and implementation patterns, refer to the service-specific documentation:
+
+👉 **[Explore the Architecture Pipeline](backend/README.md#🏛️-system-architecture-c4-container-view)**
+
+---
+
+## 🚦 Getting Started
+
+### 1. Instant Setup (Recommended)
+Experience the full stack in seconds using Docker:
 ```bash
-git clone https://github.com/Nicola-Ibrahim/Pareto-Optimization-.git
-cd Pareto-Optimization-
+git clone https://github.com/Nicola-Ibrahim/Tracing-Objectives-Backwards.git
+cd Tracing-Objectives-Backwards
 docker-compose up --build
 ```
-Access the **Frontend** at `http://localhost:3000` and the **Backend API** at `http://localhost:8000`.
+- **Dashboard**: `http://localhost:3000`
+- **REST API**: `http://localhost:8000`
 
-### 2. Manual Setup
-Refer to the individual service READMEs for detailed local setup:
-- [Backend Setup](backend/README.md)
-- [Frontend Setup](frontend/README.md)
-
----
-
-## 📖 Documentation Portal
-
-For deep dives into the math, architecture, and API, visit our centralized developer portal:
-
-👉 **[Internal Developer Portal](backend/docs/README.md)**
-
-### Quick Links
-- 🏛️ **[DDD & Clean Architecture](backend/docs/concepts/ddd-architecture-guide.md)**: How we structure the codebase.
-- 🧬 **[Inverse Design Pipeline](backend/docs/processes/inverse-design-pipeline.md)**: The mathematical core of the project.
-- 🔄 **[Synthesis & Exploration Loop](backend/docs/concepts/synthesis-exploration-loop.md)**: The theoretical interaction model.
+### 2. Specialized Setup
+For deep local development, refer to:
+- 🐍 **[Backend & AI Engine](backend/README.md)**
+- ⚛️ **[Frontend & Visualization](frontend/README.md)**
 
 ---
 
