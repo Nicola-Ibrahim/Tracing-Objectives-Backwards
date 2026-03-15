@@ -101,6 +101,7 @@ For a deeper look into the patterns and math:
 - 🏛️ **[Central DDD Guide](../docs/concepts/ddd-architecture-guide.md)**
 - 🧬 **[Inverse Design Theory](../docs/processes/inverse-design-pipeline.md)**
 - 🧭 **[Developer Portal](../docs/README.md)**
+- 📖 **[Technical Glossary](docs/GLOSSARY.md)**
 
 ---
 Related: [Root README](../README.md) | [Frontend README](../frontend/README.md)

@@ -7,7 +7,9 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Docker](https://img.shields.io/badge/Infrastructure-Docker-blue.svg)](docker-compose.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Contributing](https://img.shields.io/badge/Contributing-Guidelines-orange.svg)](CONTRIBUTING.md)
+[![Security](https://img.shields.io/badge/Security-Policy-red.svg)](SECURITY.md)
 
 **Data-Driven Inverse Exploration for Multi-Objective Optimization.**
 
@@ -39,7 +41,7 @@ The direct inverse is notoriously difficult due to:
 
 ## 🏛️ System Architecture
 
-`Tracing-Objectives-Backwards` is designed as a **decoupled multi-tier system**, separating the mathematical engine from the presentation layer.
+`Tracing-Objectives-Backwards` is designed as a **decoupled multi-tier system**, separating the mathematical engine from the presentation layer. Key decisions are tracked via **[Architecture Decision Records (ADRs)](docs/adr/0001-record-architecture-decisions.md)**.
 
 - **The Engine (Backend)**: High-concurrency AI orchestrator handling data simulation, model training, and generative diagnostics.
 - **The Dashboard (Frontend)**: Professional-grade visualization suite for real-time candidate exploration and manifold analysis.
