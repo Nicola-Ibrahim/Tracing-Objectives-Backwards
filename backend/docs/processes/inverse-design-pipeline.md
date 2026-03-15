@@ -35,8 +35,8 @@ graph TD
         direction LR
         A["🎯 Define Target Objective Y*"]
         B["🔃 Normalize Y*"]
-        C["🧪 Soft Feasibility Check"]
-        D["🧠 Predict X* via Inverse Interpolator"]
+        C["🧪 Feasibility Check"]
+        D["🧠 Predict X* via GPBI or Generative Model"]
         E["📏 Denormalize X*"]
         F["🎲 Evaluate f(X*) using Original Problem"]
         G["📐 Compute Absolute & Relative Error"]
@@ -121,10 +121,9 @@ Interpolation techniques may include:
 
 ```mermaid
 flowchart TD
-  A["📡 Interpolation Model"] --> B["📌 RBF (Radial Basis Function)"]
-  A --> C["📈 Kriging"]
-  A --> D["🔗 Barycentric Coordinates"]
-  A --> E["🧠 Neural Regression (MLP)"]
+  A["📡 Inverse Estimators"] --> B["🧬 GPBI (Global Pareto-Based Inverse)"]
+  A --> C["🧠 Generative (MDN, CVAE, INN)"]
+  A --> D["📌 Local (RBF, Kriging)"]
 
 
 ```

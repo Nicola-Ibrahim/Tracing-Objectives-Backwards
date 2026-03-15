@@ -7,46 +7,14 @@
 
 The `evaluation` module is the most complex bounded context in the system. It contains three distinct sub-contexts: **core diagnostics** (accuracy and reliability of surrogates), **decision validation** (out-of-distribution detection), and **feasibility** (constraint satisfaction and Pareto proximity).
 
-## 🥞 DDD Architecture & Sub-Contexts
+## 🏗️ Architectural Pattern
 
-```mermaid
-flowchart LR
-    subgraph Core ["Core Diagnostics (Accuracy & Reliability)"]
-        direction TB
-        E[DiagnosticResult]
-        L[AccuracyLens<br/>ReliabilityLens]
-        S[GenerativeDistributionAuditor<br/>SpatialCandidateAuditor<br/>Scaling]
-    end
+This module follows the **Clean Architecture** patterns defined in our **[DDD Guide](../concepts/ddd-architecture-guide.md)**.
 
-    subgraph Validation ["decision_validation Sub-Context"]
-        direction TB
-        VE[DecisionValidationCalibration<br/>GeneratedDecisionValidationReport]
-        VV[Verdict, GateResult]
-        VI[BaseValidator<br/>BaseCalibratorRepository]
-    end
-
-    subgraph Feasibility ["feasibility Sub-Context"]
-        direction TB
-        FE[FeasibilityAssessment<br/>AssessmentFinding]
-        FV[ParetoFront, Score, Tolerance, Suggestions]
-        FS[ObjectiveFeasibilityService]
-        FI[Diversity, Scoring]
-    end
-    
-    subgraph Application ["Application Layer"]
-        direction TB
-        U[diagnose_models<br/>compare_candidates<br/>visualize_diagnostics<br/>check_performance]
-        X[train_grid_search*]
-    end
-    
-    Application --> Core
-    Application --> Validation
-    Application --> Feasibility
-    
-    style X fill:#ff7675,color:#2d3436,stroke:#d63031,stroke-width:2px;
-```
-
-> **\* Architectural Debt Alert**: `train_grid_search` physically resides in the `evaluation/application/use_cases/` directory but semantically belongs to the `modeling` context, as it trains and persists estimators. See [Integration Debt](integration.md#architectural-debt).
+### Sub-Context Mapping
+- **Core**: Surrogate accuracy and reliability diagnostics.
+- **Validation**: Out-of-distribution (OOD) decision detection.
+- **Feasibility**: Geometric Pareto proximity policies.
 
 ## 📦 Component Inventory
 

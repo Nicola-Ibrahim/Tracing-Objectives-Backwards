@@ -3,114 +3,102 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DDD](https://img.shields.io/badge/Architecture-DDD-green.svg)](docs/concepts/ddd-architecture-guide.md)
-[![Modular Monolith](https://img.shields.io/badge/Style-Modular%20Monolith-orange.svg)](docs/specs/design.md)
+[![Clean Architecture](https://img.shields.io/badge/Pattern-Clean%20Architecture-blue.svg)](#technical-architecture)
+[![Docker](https://img.shields.io/badge/Infrastructure-Docker-blue.svg)](docker-compose.yml)
 
 **Data-Driven Inverse Exploration for Multi-Objective Problems.**
 
-This project implements a sophisticated inverse design framework: learning a mapping from **Objective Space (Y)** back to **Decision Space (X)**. It enables engineers to propose candidate designs that precisely match user-specified performance targets without the cost of repeated full optimizations.
+`Tracing-Objectives-Backwards` is a modern, full-stack framework for solving inverse design problems in engineering and data science. By learning the mapping from **Objective Space (Y)** back to **Decision Space (X)**, the system allows users to interactively propose design candidates that match specific performance targets.
 
 ---
 
 ## 🌟 Key Features
 
-- **🚀 Inverse Exploration Workflow**: Formalized pipeline for multi-objective problems with offline training and online interactive querying.
-- **🧠 Model Zoo**: Suite of estimators including Deterministic Regressors, Mixture Density Networks (MDN), Conditional VAEs (CVAE), and Invertible Neural Networks (INN).
-- **🛡️ Feasibility & Validation**: Multi-layer validation (Pareto proximity, distance-based feasibility, and calibration gates) to ensure trustworthy design proposals.
-- **📊 Visualization Suite**: High-impact diagnostics for datasets, model performance, and Pareto analysis.
-- **🏗️ Industrial Grade Architecture**: Modular Monolith following Domain-Driven Design (DDD) principles for maximum maintainability and testability.
+- **🚀 Full-Stack Inverse Pipeline**: A cohesive ecosystem with a **FastAPI** backend and a **Next.js** frontend for seamless data exploration.
+- **🐳 Dockerized Deployment**: Fully containerized environment with `docker-compose` for easy setup across any infrastructure.
+- **🧠 Model Zoo**: Suite of generative estimators including **GPBI (Global Pareto-Based Inverse)**, MDNs, CVAEs, and INNs for handling one-to-many inverse mappings.
+- **🏗️ Enterprise-Grade Architecture**: Built on **Clean Architecture** and **Domain-Driven Design (DDD)** principles for long-term maintainability.
+- **📊 Real-time Visualization**: Interactive dashboards to visualize decision and objective spaces simultaneously.
 
 ---
 
 ## 🔬 Why This Project?
 
 Forward simulation answers: *"Given these design parameters X, what is the outcome Y?"*
-In reality, the problem is often reversed: *"Given this desired outcome Y*, what parameters X should I use?"*
+In reality, the problem is often reversed: *"Given this desired outcome Y, what parameters X should I use?"*
 
 ### The Challenge
-Direct inverse mapping is notoriously difficult because:
-1.  **Ill-posedness**: Multiple designs (X) can yield the same outcome (Y).
-2.  **Infeasibility**: Many target outcomes are physically or mathematically impossible.
-3.  **Stability**: Small changes in targets can lead to radical shifts in design.
+Direct inverse mapping is difficult because:
+1. **Multi-modality**: Different designs (X) often yield identical outcomes (Y).
+2. **Feasibility Boundaries**: Many target outcomes are physically impossible.
 
 ### Our Solution
-This framework addresses these by learning the **Inverse Decision Mapping** from historical Pareto-optimal data, utilizing generative modeling for one-to-many mappings, and applying strict feasibility filters.
+This framework leverages generative modeling to capture the distribution of valid designs and applies industrial-grade architectural patterns to ensure the resulting system is scalable and production-ready.
 
 ---
 
 ## 🏗️ Technical Architecture
 
-The system is built as a **Modular Monolith** with clear separation of concerns in a layered DDD structure.
+The system follows **Clean Architecture** and **Domain-Driven Design (DDD)** to separate business logic from technical infrastructure.
 
+### System Overview
 ```mermaid
-graph TD
-    subgraph "External Layers"
-        CLI["💻 CLI Entrypoints"]
-        NB["📓 Notebooks"]
+graph LR
+    subgraph "Frontend (Next.js)"
+        UI["🎨 Dashboard UI"]
+        feat["📦 Features Layer"]
     end
 
-    subgraph "Core Engine (src/modules/optimization_engine)"
-        APP["⚙️ Application Layer<br/>(Use Cases & Orchestration)"]
-        DOM["🧠 Domain Layer<br/>(Business Rules & Entities)"]
-        INF["🌐 Infrastructure Layer<br/>(ML Adapters, Repositories)"]
+    subgraph "Backend (FastAPI)"
+        api["🛣️ API Layer"]
+        dom["🧠 Domain Module"]
+        inf["🌐 Infrastructure"]
     end
 
-    CLI --> APP
-    NB --> APP
-    APP --> DOM
-    INF -- Implements Interfaces --> DOM
-    APP --> INF
+    UI --> feat
+    feat --> api
+    api --> dom
+    inf -- "Implements" --> dom
 ```
+
+### Architecture Patterns
+- **DDD (Domain-Driven Design)**: Business logic is encapsulated within isolated domain modules.
+- **Modular Monolith**: Each technical sector (optimization, data, visualization) is a distinct module.
+- **Dependency Inversion**: Outer layers (Infra, API) depend on Inner layers (Domain) through interfaces.
 
 ---
 
 ## 🚦 Quick Start
 
-### 1. Prerequisites
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (recommended)
-
-### 2. Setup
+### 1. The Easy Way (Docker)
+Ensure you have [Docker](https://www.docker.com/) installed.
 ```bash
-# Clone the repository
 git clone https://github.com/Nicola-Ibrahim/Pareto-Optimization-.git
 cd Pareto-Optimization-
-
-# Sync dependencies
-uv sync
+docker-compose up --build
 ```
+Access the **Frontend** at `http://localhost:3000` and the **Backend API** at `http://localhost:8000`.
 
-### 3. Basic Workflow
-```bash
-# Generate a Pareto-optimal dataset (e.g., COCO Function 5)
-make data-generate function-id=5
-
-# Train an inverse MDN model
-make model-train-inverse estimator=mdn dataset-name=cocoex_f5
-
-# Generate design candidates for a target
-make model-generate-decision target="[0.5, 0.5]"
-```
+### 2. Manual Setup
+Refer to the individual service READMEs for detailed local setup:
+- [Backend Setup](backend/README.md)
+- [Frontend Setup](frontend/README.md)
 
 ---
 
-## 📖 Documentation Index
+## 📖 Documentation Portal
 
-| Guide | Description |
-|-------|-------------|
-| 🧭 **[Developer Portal](docs/README.md)** | Start here for a full index of all project docs. |
-| 🛠️ **[Usage & Building](docs/guide/usage.md)** | Comprehensive setup and CLI execution guide. |
-| 🧬 **[Inverse Pipeline](docs/processes/inverse-design-pipeline.md)** | Deep dive into the mathematical and logical flow. |
-| 🏛️ **[DDD Architecture](docs/concepts/ddd-architecture-guide.md)** | Detailed explanation of the modular monolith design. |
-| 🔬 **[Model Specs](docs/modeling/mdn.md)** | Documentation for MDN, CVAE, and INN models. |
+For deep dives into the math, architecture, and API, visit our centralized developer portal:
 
----
+👉 **[Internal Developer Portal](backend/docs/README.md)**
 
-## 🎓 Thesis Context
-
-This repository supports the thesis: **"Tracing the Objectives Backwards: Data-Driven Inverse Exploration of Multi-Objective Problems."** It provides the reference implementation for the proposed model-agnostic inverse exploration workflow.
+### Quick Links
+- 🏛️ **[DDD & Clean Architecture](backend/docs/concepts/ddd-architecture-guide.md)**: How we structure the codebase.
+- 🧬 **[Inverse Design Pipeline](backend/docs/processes/inverse-design-pipeline.md)**: The mathematical core of the project.
+- 🔄 **[Synthesis & Exploration Loop](backend/docs/concepts/synthesis-exploration-loop.md)**: The theoretical interaction model.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE).

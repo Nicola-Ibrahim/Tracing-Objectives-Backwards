@@ -7,42 +7,16 @@
 
 The `modeling` module handles training, hyperparameter tuning, evaluation, and persistence of forward (decisions → objectives) and inverse (objectives → decisions) surrogate models. It supports both deterministic (e.g., GP, RBF, NN) and probabilistic (e.g., MDN, CVAE, INN) architectures.
 
-## 🥞 DDD Architecture
+## 🏗️ Architectural Pattern
 
-```mermaid
-flowchart LR
-    subgraph Domain ["Domain Layer (Core Logic)"]
-        direction TB
-        E[ModelArtifact] 
-        VO[EstimatorParamsBase<br/>Metrics]
-        I[BaseEstimator<br/>BaseNormalizer]
-        I2[BaseModelArtifactRepository]
-        S[CrossValidationTrainer<br/>DeterministicTrainer<br/>ProbabilisticTrainer]
-    end
+This module follows the **Clean Architecture** patterns defined in our **[DDD Guide](../concepts/ddd-architecture-guide.md)**.
 
-    subgraph Application ["Application Layer (Use Cases)"]
-        direction TB
-        F[EstimatorFactory<br/>MetricFactory<br/>NormalizerFactory]
-        R[EstimatorRegistry]
-        U[Train Forward/Inverse<br/>Generate Candidates]
-    end
+### Layer Mapping
+- **Domain**: Pure business rules for surrogates (`BaseEstimator`, `ModelArtifact`).
+- **Application**: Orchestration of training sequences (`CrossValidationTrainer`).
+- **Infrastructure**: Concrete implementations (PyTorch, scikit-learn).
 
-    subgraph Infrastructure ["Infrastructure Layer (Details)"]
-        direction TB
-        D[RBF, GP, NN, KNN]
-        P[MDN, CVAE, INN]
-        M[Concrete Metrics]
-        N[Standard, MinMax Normalizers]
-        Repo[FileSystemModelArtifactRepository]
-    end
-
-    Infrastructure -->|Implements Interfaces| Domain
-    Application -->|Coordinates| Domain
-    Infrastructure -->|Used by| Application
-
-    classDef env fill:#fff,stroke:#333,stroke-width:2px,color:#000;
-    class Domain,Application,Infrastructure env;
-```
+For a detailed breakdown of the mathematical models and loss functions, see the **[Estimators Reference](../concepts/estimators.md)**.
 
 ## 📦 Component Inventory
 

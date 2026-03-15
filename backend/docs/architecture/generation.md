@@ -7,37 +7,14 @@
 
 The `generation` module is a dedicated pipeline for producing physically valid decision variables given a target objective. Instead of relying solely on global Inverse Surrogates (which often struggle with non-uniqueness and strict physical constraints), this module uses a localized approach combining geometric meshing and surrogate-assisted optimization.
 
-## 🥞 DDD Architecture
+## 🏗️ Architectural Pattern
 
-```mermaid
-flowchart LR
-    subgraph Domain ["Domain Layer (Core Logic)"]
-        direction TB
-        E[CoherenceContext] 
-        VO[CoherenceParams<br/>GenerationResult]
-        S[BarycentricLocator<br/>CoherenceGate<br/>DirichletSampler<br/>CandidateRanker]
-        I[BaseContextRepository]
-    end
+This module follows the **Clean Architecture** patterns defined in our **[DDD Guide](../concepts/ddd-architecture-guide.md)**.
 
-    subgraph Application ["Application Layer (Use Cases)"]
-        direction TB
-        UP[PrepareContextService]
-        UG[GenerateCoherentCandidatesService]
-    end
-
-    subgraph Infrastructure ["Infrastructure Layer (Details)"]
-        direction TB
-        O[TrustRegionOptimizer]
-        R[FileSystemContextRepository]
-    end
-
-    Infrastructure -->|Implements Interfaces| Domain
-    Application -->|Coordinates| Domain
-    Infrastructure -->|Used by| Application
-
-    classDef env fill:#fff,stroke:#333,stroke-width:2px,color:#000;
-    class Domain,Application,Infrastructure env;
-```
+### Layer Mapping
+- **Domain**: Geometric localization and coherence rules (`CoherenceContext`, `BarycentricLocator`).
+- **Application**: Candidate synthesis use cases.
+- **Infrastructure**: Trust-region optimizers.
 
 ## 📦 Component Inventory
 

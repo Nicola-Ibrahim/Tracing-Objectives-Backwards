@@ -1,51 +1,46 @@
-# 🧭 Developer Portal
+# 🧭 Developer Knowledge Portal
 
-Welcome to the internal documentation for **Tracing Objectives Backwards**. This portal is designed to help you navigate the codebase, understand the underlying theory, and contribute effectively.
-
----
-
-## 🚀 Getting Started
-
-- **[Installation & Setup](guide/usage.md)**: How to get the project running locally using `uv`.
-- **[CLI Reference](guide/usage.md#direct-cli-entry-points)**: Common commands for training, evaluation, and visualization.
-- **[Building & Structure](guide/building.md)**: Deep dive into the project's build system and directory layout.
+This is the central entry point for all developers working on **Tracing Objectives Backwards**. Our documentation follows the [Diátaxis framework](guide/doc-as-code.md), separating theory from practice.
 
 ---
 
-## 🏛 Architecture & Design
+## 🏗️ 1. Architecture & Theory (Explanation)
+*Understanding the "Why" and the "How it fits together".*
 
-- **[Domain Architecture](architecture/README.md)**: System overview, module responsibilities, DDD layers, and internal documentation for all 5 bounded contexts.
-
----
-
-## 🧠 Conceptual Guides
-
-- **[Inverse Design Pipeline](processes/inverse-design-pipeline.md)**: The "Heart" of the project – how we map objectives back to decisions.
-- **[DDD & Architecture](concepts/ddd-architecture-guide.md)**: Understanding our layers (Domain, Application, Infrastructure).
-- **[Feasibility Methods](concepts/feasibility-methods.md)**: How we determine if a target objective is reachable.
-- **[Model Training & Validation](processes/model-training-validation.md)**: Standardized workflows for model evaluation.
+- **[DDD & Clean Architecture](concepts/ddd-architecture-guide.md)**: Our core structural principles across Python and React.
+- **[System Architecture Blueprint](architecture/README.md)**: High-level module topology and dependencies.
+- **[Synthesis & Exploration Loop](concepts/synthesis-exploration-loop.md)**: The theoretical loop between models and human designers.
 
 ---
 
-## 🔬 Modeling & Estimators
+## 🧬 2. Core Processes (How it flows)
+*Technical walkthroughs of the system's runtime.*
 
-Documentation for the specific models implemented in the zoo:
-
-- **[Mixture Density Networks (MDN)](modeling/mdn.md)**
-- **[Conditional VAE (CVAE)](modeling/conditional-vae.md)**
-- **[Invertible Neural Networks (INN)](modeling/inn.md)**
-- **[NSGA-II Optimization](modeling/nsga2-optimization.md)**
+- **[Inverse Design Pipeline](processes/inverse-design-pipeline.md)**: The end-to-end mathematical flow (Objective → Decision).
+- **[Model Training & Validation](processes/model-training-validation.md)**: Standardized fitting and evaluation metrics.
+- **[Feasibility Methods](concepts/feasibility-methods.md)**: How we detect reaching boundaries.
 
 ---
 
-## 📑 Specifications & Technical Docs
+## 🔬 3. Technical Reference (Reference)
+*Deep dives into specific components.*
 
-- **[System Design Overview](specs/design.md)**: High-level architectural decisions and rationale.
-- **[System Framework](processes/system-framework.md)**: Technical specifications of the processing framework.
-- **[Requirements](specs/requirements.md)**: Core project dependencies and constraints.
+- **[GPBI Algorithm Spec](modeling/gpbi.md)**: Global Pareto-Based Inverse methodology.
+- **[Estimator Reference](concepts/estimators.md)**: Mathematical formulations for MDN, CVAE, RBF, and more.
+- **[Building & Structure](guide/building.md)**: Build system and repo layout.
 
 ---
 
-## 🛠 Project Management
+## 🛠️ 4. Setup & Standards (Guides/Tutorials)
+*Getting things done.*
 
-- **[Active Tasks](specs/tasks.md)**: Current roadmap and outstanding items.
+- **[Installation & Usage](guide/usage.md)**: Setup via Docker or `uv`.
+- **[Doc-as-Code Guide](guide/doc-as-code.md)**: Principles for maintaining documentation quality.
+- **[Active Tasks & Roadmap](specs/tasks.md)**: Current roadmap and technical debt.
+
+---
+
+## 🚀 Programmer's Shortcut
+1.  **Understand** the structure with the [DDD Guide](concepts/ddd-architecture-guide.md).
+2.  **Spin up** the stack using the [Usage Guide](guide/usage.md).
+3.  **Trace** the math with the [Inverse Pipeline](processes/inverse-design-pipeline.md).

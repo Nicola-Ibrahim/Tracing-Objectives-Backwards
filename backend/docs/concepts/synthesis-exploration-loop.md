@@ -1,4 +1,6 @@
-# Framework
+# 🔄 Synthesis & Exploration Loop
+
+This document outlines the fundamental theoretical framework for our inverse design and interactive exploration process.
 
 ```mermaid
 %%{init: {

@@ -8,15 +8,15 @@ This guide explains how to interact with the project's systems, from environment
 
 We use `uv` for lightning-fast, reproducible dependency management.
 
-### Installation
-1.  Ensure you have `uv` installed ([Instruction](https://github.com/astral-sh/uv)).
-2.  Install dependencies and set up the virtual environment:
-    ```bash
-    uv sync
-    ```
+### 1. The Easy Way (Docker)
+The entire system is containerized for simple orchestration.
+```bash
+docker-compose up --build
+```
+Access the **Frontend** at `http://localhost:3000` and the **Backend API** at `http://localhost:8000`.
 
-> [!TIP]
-> Always run project commands via `uv run <command>` or activate the environment with `source .venv/bin/activate`.
+### 2. Development Setup (Manual)
+For local development, we use `uv` for lightning-fast, reproducible dependency management.
 
 ---
 

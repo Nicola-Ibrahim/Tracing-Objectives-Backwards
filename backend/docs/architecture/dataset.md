@@ -7,44 +7,14 @@
 
 The `dataset` module is responsible for defining mathematical optimization problems (like BiObj or Electric Vehicle), running evolutionary algorithms to solve them, generating the true Pareto front, and preparing datasets (split, normalized) for surrogate modeling.
 
-## 🥞 DDD Architecture
+## 🏗️ Architectural Pattern
 
-```mermaid
-flowchart LR
-    subgraph Domain ["Domain Layer (Core Logic)"]
-        direction TB
-        E[Dataset<br/>ProcessedData] 
-        VO[Pareto]
-        I[BaseDataSource]
-        I2[BaseRepository<br/>BaseResult<br/>BaseVisualizer]
-        S[DatasetGenerationService]
-    end
+This module follows the **Clean Architecture** patterns defined in our **[DDD Guide](../concepts/ddd-architecture-guide.md)**.
 
-    subgraph Application ["Application Layer (Use Cases)"]
-        direction TB
-        F[Factories<br/>Algorithm, Optimizer, Problem]
-        U1[generation]
-        U2[visualization]
-    end
-
-    subgraph Infrastructure ["Infrastructure Layer (Details)"]
-        direction TB
-        A[NSGA-II]
-        O[Minimizer]
-        P[BiObj, EV Problem]
-        DS[OptimizationDataSource]
-        OA[BaseAlgorithm<br/>BaseOptimizer<br/>BaseProblem]
-        R[FileSystemDatasetRepository]
-        V[Plotly Panels]
-    end
-
-    Infrastructure -->|Implements Interfaces| Domain
-    Application -->|Coordinates| Domain
-    Infrastructure -->|Used by| Application
-
-    classDef env fill:#fff,stroke:#333,stroke-width:2px,color:#000;
-    class Domain,Application,Infrastructure env;
-```
+### Layer Mapping
+- **Domain**: Core Pareto dominance rules and dataset entities (`Dataset`, `Pareto`).
+- **Application**: Context preparation and generation services.
+- **Infrastructure**: Pymoo adapters and filesystem repositories.
 
 ## 📦 Component Inventory
 

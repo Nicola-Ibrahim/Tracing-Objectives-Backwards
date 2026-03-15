@@ -1,87 +1,111 @@
-# 🧭 Domain-Driven Design Layering Guide
+# 🧭 Domain-Driven Design & Clean Architecture Guide
 
-This guide helps you apply **Domain-Driven Design (DDD)** and **Clean Architecture** in this project by clearly distinguishing **what goes where**.
-
----
-
-## 📚 Overview of Architectural Layers
-
-| Layer | Responsibility | Knows About | Doesn't Know About | Project Example |
-|-------|----------------|-------------|---------------------|-----------------|
-| **Domain** | Core mapping rules, business logic | Itself | I/O, CLI, ML Libs | `src/modules/optimization_engine/domain/services/inverse_validator.py` |
-| **Application**| Coordinating data & models | Domain | UI, DB internals | `src/modules/optimization_engine/application/use_cases/train_inverse_model.py` |
-| **Infrastructure**| External tools & I/O | Everything | (Lowest layer) | `src/modules/optimization_engine/infrastructure/modeling/adapters/mdn.py` |
+This guide details our application of **Domain-Driven Design (DDD)** and **Clean Architecture**. Our goal is to isolate the mathematical "Inverse Design" theory from the technical implementation details (FastAPI, React, PyTorch).
 
 ---
 
-## 🧠 1. Domain Layer – “The Heart”
+## 🏛️ The Layered Vision
 
-> "The heart of the system. It knows the inverse design theory, not the technology."
+We follow a strict unidirectional dependency rule: **Inner layers never know about outer layers.**
 
-### ✅ What belongs here
-- **Base Interfaces**: `BaseInverseEstimator`, `BaseRepository`.
-- **Domain Services**: `InverseModelValidator`, `FeasibilityChecker`.
-- **Entities & Value Objects**: `Point`, `Bounds`, `DatasetMetadata`.
-
-**Example:**
-The logic for checking if a target objective is "close enough" to the Pareto front is a domain rule. It shouldn't care if the data comes from a JSON file or a database.
+| Layer | Responsibility | Backend Example | Frontend Example |
+| :--- | :--- | :--- | :--- |
+| **Domain** | Core "Math" & Business Rules | `InverseValidator`, `ParetoFront` | `InverseTypes`, `ValidationLogic` |
+| **Application** | Orchestration & Use Cases | `TrainModelHandler` | `useGenerateCandidates` hook |
+| **Infrastructure** | Concrete Implementations | `MDNAdapter`, `NPZRepository` | `ApiClient`, `PlotlyChart` |
 
 ---
 
-## ⚙️ 2. Application Layer – “The Orchestrator”
+## 🧠 1. Domain Layer: "The Heart"
 
-> "The 'glue' that coordinates domain logic to serve a user's goal."
+> **"Code should scream the domain."** — Eric Evans
 
-### ✅ What belongs here
-- **Command Handlers**: `TrainInverseModelHandler`, `GenerateDecisionHandler`.
-- **Port Interfaces**: Definitions for how we log or plot.
+The domain layer is the most stable part of the system. It contains the logic that remains true regardless of whether we use a CLI, a Web API, or a mobile app.
 
-**Example:**
-A handler that pulls a dataset from a repository, feeds it to an estimator for training, and then logs the results to the dashboard.
-
----
-
-## 🧩 3. Infrastructure Layer – “The Implementation”
-
-> "Implements the technical details that change most often."
-
-### ✅ What belongs here
-- **Model Adapters**: `PytorchCVAEAdapter`, `SklearnRBFAdapter`.
-- **Repositories**: `NPZDatasetRepository`.
-- **Visualizers**: `PlotlyDiagnosticVisualizer`.
-
-**Example:**
-The actual code that calls `torch.nn.Module` or `sklearn.fit()` lives here. If we switch from PyTorch to JAX, we only change this layer.
+### Key Components
+- **Entities & Value Objects**: `Point`, `Bounds`, `ModelArtifact`.
+- **Domain Services**: Logic that doesn't naturally fit in an entity (e.g., `FeasibilityChecker`).
+- **Ports (Interfaces)**: Definitions like `BaseEstimator` that Infrastructure must implement.
 
 ---
 
-## 🧱 Project Directory Mapping
+## ⚙️ 2. Application Layer: "The Orchestrator"
 
-```plaintext
-src/modules/optimization_engine/
-├── domain/
-│   ├── services/    # e.g., inverse_validator.py
-│   └── entities/    # e.g., dataset_metadata.py
-├── application/
-│   ├── use_cases/   # e.g., train_inverse_model.py
-│   └── handlers/    # e.g., train_handler.py
-├── infrastructure/
-│   ├── modeling/    # e.g., mdn_adapter.py
-│   └── repositories/# e.g., npz_repository.py
-└── cli/             # e.g., train_command.py
+The glue of the system. It receives commands (from CLI or API) and coordinates domain entities and infrastructure services to satisfy a use case.
+
+### Key Components
+- **Use Cases**: `train_inverse_model`, `generate_candidates`.
+- **Factories**: Dynamically creating estimators or algorithms based on configuration.
+
+---
+
+## 🧩 3. Infrastructure Layer: "The Implementation"
+
+This layer contains the "dirty" details: database access, file I/O, and external ML libraries.
+
+### Key Components
+- **Adapters**: Implementations of Domain interfaces (e.g., `PytorchINNAdapter`).
+- **Repositories**: Handling persistence (`FileSystemDatasetRepository`).
+- **UI & API**: The entry points to the system.
+
+---
+
+## 🧱 Cross-Stack Mapping
+
+```mermaid
+graph TD
+    subgraph "Backend (src/modules/)"
+        direction TB
+        BD["🧠 Domain"] 
+        BA["⚙️ Application"]
+        BI["🌐 Infrastructure"]
+        BA --> BD
+        BI -- Implements --> BD
+        BA --> BI
+    end
+
+    subgraph "Frontend (src/features/)"
+        direction TB
+        FD["🧠 Types & Logic"]
+        FA["🎣 Service Hooks"]
+        FI["🎨 Components & API"]
+        FA --> FD
+        FI -- Uses --> FD
+        FA --> FI
+    end
+
+    FI -- "REST API" --> BI
 ```
 
 ---
 
-## ✅ Rule of Thumb
+## ✅ Dependency Rule Summary
 
-> 🟢 **If it expresses the 'Math' or 'Rules' of inverse design, it's Domain.**  
-> 🟡 **If it 'Coordinates' multiple steps to achieve a task, it's Application.**  
-> 🔴 **If it imports a 'Library' like Torch, Sklearn, or Plotly, it's Infrastructure.**
+1.  🟢 **Domain** is the center. It imports **NOTHING** from other layers.
+2.  🟡 **Application** imports from **Domain** and **Infrastructure (Interfaces)**.
+3.  🔴 **Infrastructure** imports from **Domain** (to implement interfaces) and **Application** (to trigger use cases).
 
 ---
 
-## 💡 Final Thought
+## 🚀 Research-to-Production Path
 
-> **"Code should scream the domain."** — Eric Evans  
-Structure your code so its intent is obvious. When you look at `src/`, you should see "Optimization Engine" and "Inverse Mapping", not just "Python scripts".
+One of the project's key strengths is its ability to handle different levels of stability:
+
+1.  **Notebooks (`/notebooks`)**: Used for "scratchpad" research, initial data exploration, and messy prototyping.
+2.  **Infrastructure Overrides**: Once a prototype works, it's moved into an Infrastructure adapter.
+3.  **Core Domain**: Only the most stable, mathematically verified logic resides in the Domain layer.
+
+---
+
+## 🏗️ Core Capabilities
+
+- **Hybrid Modeling**: Supports deterministic regressors, probabilistic generative models (MDN, CVAE), and the custom **GPBI** algorithm.
+- **Dockerized Foundation**: Guaranteed consistency between local development and containerized deployment.
+- **Verification-First**: Built-in mechanisms to forward-check proposed designs against ground truth simulations.
+
+---
+
+## 💡 Rationale: Why this complexity?
+1.  **Testability**: We can test the complex math of `InverseValidator` without needing a GPU or a Database.
+2.  **Flexibility**: Swapping PyTorch for another framework only requires changing an **Infrastructure** adapter.
+3.  **Clarity**: New developers can see exactly where the core logic lives versus the technical plumbing.

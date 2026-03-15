@@ -1,83 +1,52 @@
-# Domain Architecture: System Overview
+# 🏛️ System Architecture Blueprint
 
-Welcome to the domain architecture documentation for **Tracing Objectives Backwards**. This project follows a Modular Monolith architecture using Domain-Driven Design (DDD) principles.
-
-## Quick Links
-
-- [dataset](dataset.md): Optimization data generation and processing
-- [modeling](modeling.md): Surrogate model training and evaluation
-- [evaluation](evaluation.md): Diagnostic lenses and feasibility checks
-- [generation](generation.md): Coherent candidate generation pipeline
-- [shared](shared.md): Cross-cutting utilities
-- [integration](integration.md): Cross-module dependencies and known debt
+This document provides the high-level structural overview of **Tracing Objectives Backwards**. For the underlying theory of why we use this structure, see the **[DDD & Clean Architecture Guide](../concepts/ddd-architecture-guide.md)**.
 
 ---
 
-## 🏗 System Architecture & Module Dependencies
+## 🗺️ Module Topology
 
-The system is organized into five isolated bounded contexts (modules). The diagram below illustrates their high-level dependencies.
+The system is organized into isolated **Bounded Contexts**. Each module is self-contained and communicates through well-defined interfaces.
 
 ```mermaid
-flowchart TD
-    dataset[**dataset**<br/>Optimization Data]
-    modeling[**modeling**<br/>Surrogate Models]
-    evaluation[**evaluation**<br/>Diagnostics]
-    generation[**generation**<br/>Pipeline]
+graph TD
+    dataset[**dataset**<br/>Data Gen & Prep]
+    modeling[**modeling**<br/>Inverse & Forward Surrogates]
+    evaluation[**evaluation**<br/>Generative Diagnostics]
+    generation[**generation**<br/>Candidate Synthesis]
     shared[**shared**<br/>Utilities]
 
-    %% Dependencies
-    generation -->|Interfaces| modeling
-    generation -->|Interfaces| dataset
-    generation -->|Interfaces & Config| shared
-
-    evaluation -->|Deep Coupling| modeling
-    evaluation -->|Entities & Interfaces| dataset
-    evaluation -->|Config & Loggers| shared
-
-    modeling -->|Config & File Handlers| shared
-    
-    dataset -.->|"Circular Constraint (BaseNormalizer)"| modeling
-    dataset -->|Config & File Handlers| shared
-    
-    %% Styling
-    classDef module fill:#2d3436,stroke:#74b9ff,stroke-width:2px,color:#fff,rx:5,ry:5;
-    classDef generic fill:#2d3436,stroke:#636e72,stroke-width:1px,color:#fff,rx:5,ry:5;
-    
-    class dataset,modeling,evaluation,generation,shared module;
+    generation --> modeling
+    generation --> dataset
+    evaluation --> modeling
+    evaluation --> dataset
+    modeling --> shared
+    dataset --> shared
 ```
 
 ---
 
-## 🗂 Module Responsibilities
+## 🗂️ Core Modules
 
-| Module | Bounded Context | Aggregate Root(s) | Domain Language | Key Responsibility |
-|--------|-----------------|-------------------|-----------------|--------------------|
-| [**dataset**](dataset.md) | Data Generation & Preparation | `Dataset` | Objective, Decision, Pareto Front, Algorithm, Problem | Generates ground-truth optimization data, normalizes it, and splits it into training/testing sets. |
-| [**modeling**](modeling.md) | Surrogate Function Approximation | `ModelArtifact` | Estimator, Metrics, Cross-Validation, Artifact | Trains, tunes, evaluates, and persists machine learning models capable of predicting objectives from decisions (forward) or vice versa (inverse). |
-| [**evaluation**](evaluation.md) | Generative Diagnostics | `DiagnosticResult` | Accuracy, Reliability, Feasibility, Calibration, Pareto Proximity | Audits the quality of generated candidates and models using spatial discrepancy, distribution divergence, and domain constraints. |
-| [**generation**](generation.md) | Coherent Candidate Synthesis | `CoherenceContext` | Mesh, Anchor, Barycentric Weight, Trust-Region | Generates physically coherent design candidates for specified target objectives using geometric meshing and surrogate-assisted optimization. |
-| [**shared**](shared.md) | Cross-Cutting Concerns | N/A | Logger, Config, File Handler | Provides horizontal services like logging, path resolution, and generalized serialization that all modules consume. |
-
----
-
-## 🔄 End-to-End Data Flow
-
-The lifecycle of an optimization task flows through the modules sequentially:
-
-1. **Problem Definition (`dataset`)**: A mathematical objective function (e.g., BiObj, Electric Vehicle) is defined.
-2. **Data Generation (`dataset`)**: An evolutionary algorithm (e.g., NSGA-II) runs to generate a representative `Dataset` with raw decisions, objectives, and a Pareto front.
-3. **Model Training (`modeling`)**: The dataset is used to train surrogates (Forward/Inverse models). The models and their metrics are serialized as `ModelArtifact`s.
-4. **Model Diagnosis (`evaluation`)**: The trained inverse models are rigorously audited for spatial accuracy and generative reliability. 
-5. **Candidate Generation (`generation`)**: For a new target objective, the `generation` pipeline locates an interpolation region on the objective-space mesh and samples coherent variations, or falls back to trust-region optimization to suggest entirely novel configurations.
+| Module | Responsibility | Key Aggregate |
+| :--- | :--- | :--- |
+| **[dataset](dataset.md)** | Generates and normalizes Pareto-optimal data. | `Dataset` |
+| **[modeling](modeling.md)** | Trains agents (MDN, GPBI, etc.) to learn mappings. | `ModelArtifact` |
+| **[evaluation](evaluation.md)** | Audits accuracy and reliability of surrogates. | `DiagnosticResult` |
+| **[generation](generation.md)** | Proposes coherent designs using local localization. | `CoherenceContext` |
+| **[shared](shared.md)** | Foundational utilities (Loggers, File Handlers). | N/A |
 
 ---
 
-## 🥞 DDD Layer Legend
+## 🔄 The Reference Workflow
 
-Each module strictly follows a three-tier DDD architecture internally:
+1.  **Define**: Pick a problem (BiObj, EV) in `dataset`.
+2.  **Simulate**: Generate ground truth Pareto data.
+3.  **Learn**: Train an inverse model (e.g., **GPBI**) in `modeling`.
+4.  **Audit**: Verify the model's reliability in `evaluation`.
+5.  **Propose**: Generate design candidates in `generation`.
 
-| Layer | Files | Description |
-|-------|-------|-------------|
-| **Domain** | `/domain` | Pure business logic. Entities, value objects, domain services, interfaces (ports). No external dependencies. |
-| **Application** | `/application` | Orchestrates use cases. Factories, use case services. Depends only on the domain layer. |
-| **Infrastructure** | `/infrastructure` | Concrete implementations. Repositories (adapters), specific ML algorithms, file I/O operations. |
+---
+
+## 🕸️ Integration Standards
+We maintain strict boundaries to prevent "Spaghetti Code". For a list of known technical debt and integration rules, see **[Integration & Dependencies](integration.md)**.
