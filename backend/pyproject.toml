@@ -1,0 +1,212 @@
+[project]
+name = "pareto-optimization"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.2.1",
+    "coco-experiment>=2.8.1",
+    "cocopp>=2.7.3",
+    "h5py>=3.15.1",
+    "hdbscan>=0.8.40",
+    "ipykernel>=6.29.5",
+    "jupyter>=1.1.1",
+    "kaleido>=1.2.0",
+    "matplotlib>=3.10.1",
+    "nbformat>=5.10.4",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "pip>=25.1.1",
+    "plotly[express]>=6.0.1",
+    "fastapi[standard]>=0.115.0",
+    "uvicorn>=0.30.0",
+    "pydantic>=2.11.5",
+    "pykrige>=1.7.2",
+    "pymoo>=0.6.1.3",
+    "requests>=2.32.3",
+    "safetensors>=0.7.0",
+    "scikit-learn>=1.6.1",
+    "seaborn>=0.13.2",
+    "sklearn-som>=1.1.0",
+    "torch>=2.7.0",
+    "tqdm>=4.67.1",
+    "umap-learn>=0.5.9.post2",
+    "wandb>=0.20.1",
+    "dependency-injector>=4.48.3",
+]
+
+
+[dependency-groups]
+dev = [
+    "poethepoet>=0.40.0",
+    "pytest-playwright>=0.5.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-xdist>=3.5.0",
+    "ruff>=0.3.0",
+]
+
+
+
+[tool.poe.tasks]
+
+# ====================================================================================
+# 1. Data Pipeline
+# ====================================================================================
+
+[tool.poe.tasks.data-gen]
+shell = "python -m src.cli.dataset.generate_dataset --function-id $fid --n-var $nvar"
+help = "GENERATE: Create synthetic Pareto data. Usage: --fid 5 --nvar 10"
+  [[tool.poe.tasks.data-gen.args]]
+  name = "fid"
+  options = ["--fid"]
+  default = "5"
+  [[tool.poe.tasks.data-gen.args]]
+  name = "nvar"
+  options = ["--n-var"]
+  default = "2"
+
+[tool.poe.tasks.data-viz]
+shell = "python -m src.cli.visualizing.visualize_dataset --dataset-name $data"
+help = "DATA VIZ: View generated data space. Usage: --data cocoex_f5"
+  [[tool.poe.tasks.data-viz.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+# ====================================================================================
+# 2. Training Pipeline
+# ====================================================================================
+
+[tool.poe.tasks.train-inv]
+shell = "python -m src.cli.training.train_inverse_model_standard --estimator $est --dataset-name $data"
+help = "TRAIN INVERSE: Usage: uv run poe train-inv --est mdn --data cocoex_f5"
+  [[tool.poe.tasks.train-inv.args]]
+  name = "est"
+  options = ["--est"]
+  default = "mdn"
+  choices = ["mdn", "cvae", "inn", "gan"]
+  [[tool.poe.tasks.train-inv.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+[tool.poe.tasks.train-fwd]
+shell = "python -m src.cli.training.train_forward_model standard --estimator $est --dataset-name $data"
+help = "TRAIN FORWARD: Usage: uv run poe train-fwd --est mdn --data cocoex_f5"
+  [[tool.poe.tasks.train-fwd.args]]
+  name = "est"
+  options = ["--est"]
+  default = "mdn"
+  choices = ["mdn", "mlp", "rf"]
+  [[tool.poe.tasks.train-fwd.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+
+# ====================================================================================
+# 3. Generation & Candidates
+# ====================================================================================
+
+[tool.poe.tasks.gen-context]
+shell = "python -m src.cli.generating.train_context --dataset-name $data"
+help = "GEN CONTEXT: Prepare offline generation context. Usage: uv run poe gen-context"
+  [[tool.poe.tasks.gen-context.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+[tool.poe.tasks.gen-context-candidates]
+shell = "python -m src.cli.generating.generate_context_candidates --dataset-name $data"
+help = "GEN CONTEXT CANDIDATES: Generate physically coherent candidates for a target. Usage: poe gen-context-candidates --data cocoex_f5"
+  [[tool.poe.tasks.gen-context-candidates.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+[tool.poe.tasks.gen-context-visualize]
+cmd = "python -m src.cli.generating.generate_and_visualize --dataset-name $data"
+help = "GEN CONTEXT VISUALIZE: Visualize the generation context. Usage: poe gen-context-visualize --data cocoex_f5"
+  [[tool.poe.tasks.gen-context-visualize.args]]
+  name = "data"
+  options = ["--data"]
+  default = "cocoex_f5"
+
+[tool.poe.tasks.gen-candidates]
+cmd = "python -m src.cli.generating.generate_candidates"
+help = "CANDIDATES: Generate decisions for target objectives."
+
+[tool.poe.tasks.compare-candidates]
+cmd = "python -m src.cli.evaluating.compare_inverse_models_candidates_generation"
+help = "COMPARE: Benchmarks candidate generation across models."
+
+# ====================================================================================
+# 4. Evaluation (The Auditor)
+# ====================================================================================
+
+[tool.poe.tasks.diagnose]
+cmd = "python -m src.cli.evaluating.diagnose_inverse_models"
+help = "DIAGNOSE: Run model diagnostics (PIT, MACE, Diversity) and save JSON."
+
+[tool.poe.tasks.viz-diagnostics]
+cmd = "python -m src.cli.evaluating.visualize_diagnostics"
+help = "REPORT: Visualize historical diagnostics from the auditor."
+
+
+# ====================================================================================
+# 5. Performance Visualization (Specific Lenses)
+# ====================================================================================
+
+[tool.poe.tasks.serve]
+shell = "fastapi dev src/api/main.py"
+help = "SERVE: Run the FastAPI web server. Usage: poe serve"
+
+[tool.poe.tasks.test]
+cmd = "pytest"
+help = "TEST: Run the test suite with best-practice flags. Usage: poe test"
+
+[tool.poe.tasks.test-cov]
+cmd = "pytest --cov=src --cov-report=term-missing --cov-report=html"
+help = "TEST COV: Run tests with coverage reporting. Usage: poe test-cov"
+
+[tool.poe.tasks.lint]
+cmd = "ruff check ."
+help = "LINT: Check for linting issues using ruff. Usage: poe lint"
+
+[tool.poe.tasks.lint-fix]
+cmd = "ruff check . --fix"
+help = "LINT FIX: Automatically fix linting issues. Usage: poe lint-fix"
+
+[tool.poe.tasks.format]
+cmd = "ruff format ."
+help = "FORMAT: Automatically format code using ruff. Usage: poe format"
+
+[tool.poe.tasks.check]
+sequence = ["lint", "format"]
+ignore_fail = false
+help = "CHECK: Run linting and formatting checks. Usage: poe check"
+
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+ignore = []
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short --strict-markers"
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pydantic.PydanticDeprecatedSince20",
+    "ignore::DeprecationWarning:starlette.*",
+]

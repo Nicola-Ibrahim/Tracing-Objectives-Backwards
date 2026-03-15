@@ -1,116 +1,76 @@
 # 🎯 Tracing Objectives Backwards
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![DDD](https://img.shields.io/badge/Architecture-DDD-green.svg)](docs/concepts/ddd-architecture-guide.md)
-[![Modular Monolith](https://img.shields.io/badge/Style-Modular%20Monolith-orange.svg)](docs/specs/design.md)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Infrastructure-Docker-blue.svg)](docker-compose.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Contributing](https://img.shields.io/badge/Contributing-Guidelines-orange.svg)](CONTRIBUTING.md)
+[![Security](https://img.shields.io/badge/Security-Policy-red.svg)](SECURITY.md)
 
-**Data-Driven Inverse Exploration for Multi-Objective Problems.**
+**Data-Driven Inverse Exploration for Multi-Objective Optimization.**
 
-This project implements a sophisticated inverse design framework: learning a mapping from **Objective Space (Y)** back to **Decision Space (X)**. It enables engineers to propose candidate designs that precisely match user-specified performance targets without the cost of repeated full optimizations.
-
----
-
-## 🌟 Key Features
-
-- **🚀 Inverse Exploration Workflow**: Formalized pipeline for multi-objective problems with offline training and online interactive querying.
-- **🧠 Model Zoo**: Suite of estimators including Deterministic Regressors, Mixture Density Networks (MDN), Conditional VAEs (CVAE), and Invertible Neural Networks (INN).
-- **🛡️ Feasibility & Validation**: Multi-layer validation (Pareto proximity, distance-based feasibility, and calibration gates) to ensure trustworthy design proposals.
-- **📊 Visualization Suite**: High-impact diagnostics for datasets, model performance, and Pareto analysis.
-- **🏗️ Industrial Grade Architecture**: Modular Monolith following Domain-Driven Design (DDD) principles for maximum maintainability and testability.
+`Tracing-Objectives-Backwards` is a high-performance, full-stack framework designed to solve complex inverse design problems. By mapping **Objective Performance (Y)** back to **Optimal Decision Variables (X)**, this system empowers engineers and researchers to interactively discover design candidates that meet specific target results.
 
 ---
 
-## 🔬 Why This Project?
+## 🚀 Key Value Propositions
 
-Forward simulation answers: *"Given these design parameters X, what is the outcome Y?"*
-In reality, the problem is often reversed: *"Given this desired outcome Y*, what parameters X should I use?"*
-
-### The Challenge
-Direct inverse mapping is notoriously difficult because:
-1.  **Ill-posedness**: Multiple designs (X) can yield the same outcome (Y).
-2.  **Infeasibility**: Many target outcomes are physically or mathematically impossible.
-3.  **Stability**: Small changes in targets can lead to radical shifts in design.
-
-### Our Solution
-This framework addresses these by learning the **Inverse Decision Mapping** from historical Pareto-optimal data, utilizing generative modeling for one-to-many mappings, and applying strict feasibility filters.
+- **⚡ Unified Inverse Strategy**: A cohesive ecosystem bridging high-fidelity AI models with interactive data exploration.
+- **🧬 Advanced Surrogate Modeling**: Suite of generative estimators tailored for complex, one-to-many physical mappings.
+- **🏗️ Structured Engineering**: Built on modular, stack-agnostic principles to ensure maximum stability and cross-team collaboration.
+- **🐳 Operational Portability**: Fully containerized orchestration for seamless deployment across any environment.
 
 ---
 
-## 🏗️ Technical Architecture
+## 🔬 The "Inverse" Challenge
 
-The system is built as a **Modular Monolith** with clear separation of concerns in a layered DDD structure.
+Traditional optimization answers: *"Given these parameters X, what is the outcome Y?"*  
+**Industry reality is often the reverse**: *"I need outcome Y. What parameters X will get me there?"*
 
-```mermaid
-graph TD
-    subgraph "External Layers"
-        CLI["💻 CLI Entrypoints"]
-        NB["📓 Notebooks"]
-    end
+The direct inverse is notoriously difficult due to:
+1. **Multi-modality**: Multiple distinct designs can yield identical performance.
+2. **Feasibility Boundaries**: Many target performance profiles are physically unreachable.
 
-    subgraph "Core Engine (src/modules/optimization_engine)"
-        APP["⚙️ Application Layer<br/>(Use Cases & Orchestration)"]
-        DOM["🧠 Domain Layer<br/>(Business Rules & Entities)"]
-        INF["🌐 Infrastructure Layer<br/>(ML Adapters, Repositories)"]
-    end
-
-    CLI --> APP
-    NB --> APP
-    APP --> DOM
-    INF -- Implements Interfaces --> DOM
-    APP --> INF
-```
+**Our Solution**: This framework provides the scaffolding and model-agnostic workflows to capture the entire distribution of valid designs, prioritizing mathematical correctness and interactive exploration.
 
 ---
 
-## 🚦 Quick Start
+## 🏛️ System Architecture
 
-### 1. Prerequisites
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (recommended)
+`Tracing-Objectives-Backwards` is designed as a **decoupled multi-tier system**, separating the mathematical engine from the presentation layer. Key decisions are tracked via **[Architecture Decision Records (ADRs)](docs/adr/0001-record-architecture-decisions.md)**.
 
-### 2. Setup
+- **The Engine (Backend)**: High-concurrency AI orchestrator handling data simulation, model training, and generative diagnostics.
+- **The Dashboard (Frontend)**: Professional-grade visualization suite for real-time candidate exploration and manifold analysis.
+
+For detailed technical specs and implementation patterns, refer to the service-specific documentation:
+
+👉 **[Explore the Architecture Pipeline](backend/README.md#🏛️-system-architecture-c4-container-view)**
+
+---
+
+## 🚦 Getting Started
+
+### 1. Instant Setup (Recommended)
+Experience the full stack in seconds using Docker:
 ```bash
-# Clone the repository
-git clone https://github.com/Nicola-Ibrahim/Pareto-Optimization-.git
-cd Pareto-Optimization-
-
-# Sync dependencies
-uv sync
+git clone https://github.com/Nicola-Ibrahim/Tracing-Objectives-Backwards.git
+cd Tracing-Objectives-Backwards
+docker-compose up --build
 ```
+- **Dashboard**: `http://localhost:3000`
+- **REST API**: `http://localhost:8000`
 
-### 3. Basic Workflow
-```bash
-# Generate a Pareto-optimal dataset (e.g., COCO Function 5)
-make data-generate function-id=5
-
-# Train an inverse MDN model
-make model-train-inverse estimator=mdn dataset-name=cocoex_f5
-
-# Generate design candidates for a target
-make model-generate-decision target="[0.5, 0.5]"
-```
-
----
-
-## 📖 Documentation Index
-
-| Guide | Description |
-|-------|-------------|
-| 🧭 **[Developer Portal](docs/README.md)** | Start here for a full index of all project docs. |
-| 🛠️ **[Usage & Building](docs/guide/usage.md)** | Comprehensive setup and CLI execution guide. |
-| 🧬 **[Inverse Pipeline](docs/processes/inverse-design-pipeline.md)** | Deep dive into the mathematical and logical flow. |
-| 🏛️ **[DDD Architecture](docs/concepts/ddd-architecture-guide.md)** | Detailed explanation of the modular monolith design. |
-| 🔬 **[Model Specs](docs/modeling/mdn.md)** | Documentation for MDN, CVAE, and INN models. |
-
----
-
-## 🎓 Thesis Context
-
-This repository supports the thesis: **"Tracing the Objectives Backwards: Data-Driven Inverse Exploration of Multi-Objective Problems."** It provides the reference implementation for the proposed model-agnostic inverse exploration workflow.
+### 2. Specialized Setup
+For deep local development, refer to:
+- 🐍 **[Backend & AI Engine](backend/README.md)**
+- ⚛️ **[Frontend & Visualization](frontend/README.md)**
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE).

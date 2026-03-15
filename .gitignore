@@ -34,6 +34,9 @@ share/python-wheels/
 MANIFEST
 data/
 models/ 
+contexts/
+diagnostics/
+reports/
 
 # Dependency Management Lock Files
 # It is generally recommended to include these in version control for reproducibility.
@@ -114,3 +117,85 @@ profile_default/ # IPython
 ipython_config.py # IPython
 .pypirc # PyPI configuration file
 # .idea/ # PyCharm (Uncomment for a nuclear option, generally not recommended)
+
+
+
+# Spec Kit-specific files
+.genreleases/
+*.zip
+sdd-*/
+docs/dev
+
+# Extension system
+.specify/
+specs/
+
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+# Testing
+coverage/
+.pytest_cache/
+
+
+# Misc
+.DS_Store
+*.pem*.pyc
+.venv/
+.vscode/
+
+# Misc
+.pycache_tmp/
+.ruff_cache/

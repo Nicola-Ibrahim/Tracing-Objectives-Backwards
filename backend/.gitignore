@@ -1,0 +1,153 @@
+# Environments and Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version # pyenv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so # C extensions
+
+# Build, Distribution, and Packaging Artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+data/
+models/ 
+contexts/
+diagnostics/
+reports/
+
+# Dependency Management Lock Files
+# It is generally recommended to include these in version control for reproducibility.
+# However, for libraries, they might be ignored.
+# Pipfile.lock # pipenv
+# uv.lock # UV
+# poetry.lock # poetry
+# pdm.lock # pdm
+
+# PDM Specifics (beyond lock file)
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582 (pyflow, pdm)
+__pypackages__/
+
+# Installer Logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Cache and Temporary Files
+.cache
+htmlcov/ # Unit test / coverage reports cache
+.tox/ # Unit test / coverage reports cache
+.nox/ # Unit test / coverage reports cache
+.coverage # Unit test / coverage reports cache
+.coverage.* # Unit test / coverage reports cache
+nosetests.xml # Unit test / coverage reports cache
+coverage.xml # Unit test / coverage reports cache
+*.cover # Unit test / coverage reports cache
+*.py,cover # Unit test / coverage reports cache
+.hypothesis/ # Unit test / coverage reports cache
+.pytest_cache/ # Unit test / coverage reports cache
+cover/ # Unit test / coverage reports cache
+.webassets-cache # Flask stuff cache
+.scrapy # Scrapy stuff cache
+docs/_build/ # Sphinx documentation build cache
+.pybuilder/ # PyBuilder cache
+target/ # PyBuilder target cache
+.ipynb_checkpoints # Jupyter Notebook cache
+.mypy_cache/ # mypy cache
+.dmypy.json # mypy cache
+dmypy.json # mypy cache
+.pyre/ # Pyre type checker cache
+.pytype/ # pytype static type analyzer cache
+.ruff_cache/ # Ruff stuff cache
+
+# Django Specifics
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask Specifics
+instance/
+
+# Celery Specifics
+celerybeat-schedule
+celerybeat.pid
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Translations
+*.mo
+*.pot
+
+# SageMath
+*.sage.py
+
+# IDE and Editor Specifics
+.spyderproject # Spyder project settings
+.spyproject # Spyder project settings
+.ropeproject # Rope project settings
+profile_default/ # IPython
+ipython_config.py # IPython
+.pypirc # PyPI configuration file
+# .idea/ # PyCharm (Uncomment for a nuclear option, generally not recommended)
+
+
+
+# Spec Kit-specific files
+.genreleases/
+*.zip
+sdd-*/
+docs/dev
+
+# Extension system
+.specify/
+specs/
+
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+
+# Testing
+coverage/
+
+# Misc
+.DS_Store
+*.pem*.pyc
+.venv/
+.vscode/
