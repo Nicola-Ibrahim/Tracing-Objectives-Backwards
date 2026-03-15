@@ -1,78 +1,84 @@
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
 from src.modules.dataset.domain.entities.dataset import Dataset
 from src.modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from src.modules.generation.application.train_context import (
-    TrainContextParams,
-    TrainContextService,
+from src.modules.inverse.domain.entities.inverse_mapping_engine import (
+    InverseMappingEngine,
 )
-from src.modules.generation.infrastructure.repositories.context_repo import (
-    FileSystemContextRepository,
+from src.modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
+    FileSystemInverseMappingEngineRepository,
+)
+from src.modules.inverse.infrastructure.solvers.gbpi.gbpi_solver import (
+    GBPIInverseSolver,
+)
+from src.modules.inverse.domain.value_objects.transform_pipeline import (
+    TransformPipeline,
 )
 
 
-class MockLogger:
-    def log_info(self, msg):
-        pass
-
-    def log_error(self, msg):
-        pass
-
-
-def test_context_training_and_persistence_integration(tmp_path):
-    """Verify end-to-end training and persistence of GenerationContext with KNN."""
+def test_inverse_engine_training_and_persistence_integration(tmp_path):
+    """Verify end-to-end training and persistence of InverseMappingEngine."""
     # Setup paths and repositories
     dataset_name = "integration_test_ds"
 
     # Mock repositories or use tmp_path
     dataset_repo = FileSystemDatasetRepository()
-    context_repo = FileSystemContextRepository()
+    engine_repo = FileSystemInverseMappingEngineRepository()
     # Override base path for testing
-    context_repo._base_storage_path = tmp_path
+    engine_repo._base_storage_path = tmp_path
 
     # Create a dummy dataset
     objectives = np.random.rand(10, 2)
     decisions = np.random.rand(10, 3)
-    # We use a dummy dataset here, but we need to mock the repo load
     dataset = Dataset.create(
         name=dataset_name, objectives=objectives, decisions=decisions
     )
 
     dataset_repo.load = MagicMock(return_value=dataset)
 
-    service = TrainContextService(
-        dataset_repository=dataset_repo,
-        context_repository=context_repo,
-        logger=MockLogger(),
-    )
+    # 1. Setup Solver and Train
+    solver = GBPIInverseSolver()
+    X_train, y_train = dataset.get_train_data()
+    solver.train(X_train, y_train)
 
-    params = TrainContextParams(
+    # 2. Create Engine
+    engine = InverseMappingEngine.create(
         dataset_name=dataset_name,
-        k_neighbors=3,
-        transforms=[],  # Keep it simple for integration test
+        solver=solver,
+        transform_pipeline=TransformPipeline(transforms=[]),
     )
 
-    # Execute training
-    context = service.execute(params)
-
-    # Verify in-memory
-    assert context.objective_knn is not None
-    assert context.is_trained is True
+    # 3. Persist Engine
+    version = engine_repo.save(engine)
+    assert version == 1
 
     # Verify persistence files exist
-    context_dir = tmp_path / dataset_name
-    assert (context_dir / "objective_knn.pkl").exists()
-    assert (context_dir / "mesh.pkl").exists()
-    assert (context_dir / "metadata.toml").exists()
+    # contexts/<dataset>/GBPI/v1-<timestamp>/
+    solver_dir = tmp_path / dataset_name / "GBPI"
+    assert solver_dir.exists()
 
-    # Verify loading
-    loaded_context = context_repo.load(dataset_name)
-    assert loaded_context.objective_knn is not None
-    # Test a simple query on the loaded KNN
-    dist, ind = loaded_context.objective_knn.kneighbors(context.space_points[:1])
-    assert dist[0][0] < 1e-10
+    # Find the version directory
+    version_dirs = list(solver_dir.glob("v1-*"))
+    assert len(version_dirs) == 1
+    engine_dir = version_dirs[0]
+
+    assert (engine_dir / "solver.pkl").exists()
+    assert (engine_dir / "metadata.toml").exists()
+    assert (engine_dir / "transforms").exists()
+
+    # 4. Verify Loading
+    loaded_engine = engine_repo.load(dataset_name, "GBPI", version=version)
+    assert loaded_engine.dataset_name == dataset_name
+    assert loaded_engine.solver.type() == "GBPI"
+    assert loaded_engine.solver.tau == solver.tau
+
+    # Test a simple query on the loaded solver
+    target = np.array([[0.5, 0.5]])
+    res = loaded_engine.solver.generate(target, n_samples=5)
+    assert res.candidates_X.shape == (5, 3)
+    assert res.metadata["pathway"] in ["coherent", "incoherent", "extrapolation"]
