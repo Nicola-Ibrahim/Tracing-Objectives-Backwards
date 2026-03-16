@@ -163,6 +163,22 @@ help = "REPORT: Visualize historical diagnostics from the auditor."
 shell = "fastapi dev src/api/main.py"
 help = "SERVE: Run the FastAPI web server. Usage: poe serve"
 
+[tool.poe.tasks.docker-build-dev]
+shell = "docker build --target dev -t tob-backend-dev ."
+help = "DOCKER BUILD DEV: Build the backend development image. Usage: uv run poe docker-build-dev"
+
+[tool.poe.tasks.docker-build-prod]
+shell = "docker build --target runner -t tob-backend ."
+help = "DOCKER BUILD PROD: Build the backend production image (default). Usage: uv run poe docker-build-prod"
+
+[tool.poe.tasks.docker-build]
+sequence = ["docker-build-prod"]
+help = "DOCKER BUILD: Alias for docker-build-prod"
+
+[tool.poe.tasks.docker-run]
+shell = "docker run -p 8000:8000 tob-backend"
+help = "DOCKER RUN: Run the backend Docker container (standalone). Usage: uv run poe docker-run"
+
 [tool.poe.tasks.test]
 cmd = "pytest"
 help = "TEST: Run the test suite with best-practice flags. Usage: poe test"

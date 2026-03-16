@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "docker:build": "npm run docker:build:prod",
+    "docker:build:dev": "docker build --target dev -t tob-frontend-dev .",
+    "docker:build:prod": "docker build --target runner -t tob-frontend .",
+    "docker:run": "docker run -p 3000:3000 tob-frontend"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -25,6 +29,7 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
     "react-plotly.js": "^2.6.0",
+    "sharp": "^0.34.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },

@@ -3,31 +3,85 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      # Defaults to the last stage 'runner'
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
-    # No volume mounts or dev command overrides
+    volumes:
+      - backend_data:/app/data
+      - backend_models:/app/models
+      - backend_diagnostics:/app/diagnostics
+      - backend_reports:/app/reports
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    networks:
+      - backend-net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      # Defaults to the last stage 'runner'
     restart: unless-stopped
     environment:
       - NODE_ENV=production
     depends_on:
-      - backend
-    # No volume mounts or dev command overrides
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - frontend-net
+      - backend-net
 
   nginx:
     image: nginx:alpine
     restart: unless-stopped
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/default.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/ssl:/etc/nginx/ssl:ro
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
-      - backend
-      - frontend
+      frontend:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - frontend-net
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+    internal: true
+
+volumes:
+  backend_data:
+  backend_models:
+  backend_diagnostics:
+  backend_reports:
