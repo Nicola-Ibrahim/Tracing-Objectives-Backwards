@@ -22,8 +22,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "Tracing Objectives Backwards",
-  description: "Advanced Inverse Mapping & Optimization Workbench",
+  title: process.env.NEXT_PUBLIC_APP_NAME || "Tracing Objectives Backwards",
+  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Advanced Inverse Mapping & Optimization Workbench",
 };
 
 import { ThemeProvider } from "@/providers/theme-provider";

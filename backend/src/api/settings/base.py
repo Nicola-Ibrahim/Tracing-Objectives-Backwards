@@ -11,7 +11,19 @@ class BaseSettings(BaseModel):
 
     PROJECT_NAME: str = "Tracing Objectives Backwards API"
     VERSION: str = "1.0.0"
-    API_V1_STR: str = "/api/v1"
+    
+    # API Versioning
+    API_VERSION: str = Field(default_factory=lambda: os.getenv("API_VERSION", "v1"))
+    
+    @property
+    def API_V1_STR(self) -> str:
+        return f"/api/{self.API_VERSION}"
+
+    # Security
+    SECRET_KEY: str = Field(
+        default_factory=lambda: os.getenv("SECRET_KEY", "temporary-secret-key-for-dev")
+    )
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
     # Environment
     ENV: str = Field(default_factory=lambda: os.getenv("ENV", "development"))
@@ -35,6 +47,9 @@ class BaseSettings(BaseModel):
     DATA_STORAGE_PATH: str = Field(
         default_factory=lambda: os.getenv("DATA_STORAGE_PATH", "./storage")
     )
+
+    # Operations
+    LOG_LEVEL: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
 
     @property
     def is_production(self) -> bool:

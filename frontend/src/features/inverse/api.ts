@@ -14,42 +14,42 @@ import {
  * Fetch all available solvers and their parameters.
  */
 export const getSolvers = async (): Promise<SolversDiscoveryResponse> => {
-  return apiClient.get("/api/v1/inverse/solvers");
+  return apiClient.get("/inverse/solvers");
 };
 
 /**
  * Fetch all available datasets.
  */
 export const getDatasets = async (): Promise<DatasetInfo[]> => {
-  return apiClient.get("/api/v1/datasets"); 
+  return apiClient.get("/datasets"); 
 };
 
 /**
  * Trigger training for a new inverse mapping engine.
  */
 export const trainEngine = async (params: TrainEngineRequest): Promise<TrainEngineResponse> => {
-  return apiClient.post("/api/v1/inverse/train", params);
+  return apiClient.post("/inverse/train", params);
 };
 
 /**
  * List existing trained engines for a dataset using the RESTful dataset-relative path.
  */
 export const listEnginesForDataset = async (datasetName: string): Promise<EngineListItem[]> => {
-  return apiClient.get(`/api/v1/datasets/${datasetName}/engines`);
+  return apiClient.get(`/datasets/${datasetName}/engines`);
 };
 
 /**
  * Generate candidate solutions for a target objective.
  */
 export const generateCandidates = async (params: CandidateGenerationRequest): Promise<CandidateGenerationResponse> => {
-  return apiClient.post("/api/v1/inverse/generate", params);
+  return apiClient.post("/inverse/generate", params);
 };
 
 /**
  * List all trained engines across all datasets (Inference Hub).
  */
 export const listAllEngines = async (): Promise<EngineListItem[]> => {
-  return apiClient.get("/api/v1/inverse/engines");
+  return apiClient.get("/inverse/engines");
 };
 
 /**
@@ -65,7 +65,7 @@ export const deleteEngines = async (engines: { dataset_name: string; solver_type
 
   const results = await Promise.all(
     Object.entries(grouped).map(([datasetName, datasetEngines]) =>
-      apiClient.delete(`/api/v1/datasets/${datasetName}/engines`, { data: { engines: datasetEngines } })
+      apiClient.delete(`/datasets/${datasetName}/engines`, { data: { engines: datasetEngines } })
     )
   );
   
@@ -76,5 +76,5 @@ export const deleteEngines = async (engines: { dataset_name: string; solver_type
  * Fetch full details for a specific engine version.
  */
 export const getEngineDetails = async (datasetName: string, solverType: string, version: number): Promise<EngineDetailResponse> => {
-  return apiClient.get(`/api/v1/inverse/engines/${datasetName}/${solverType}/${version}`);
+  return apiClient.get(`/inverse/engines/${datasetName}/${solverType}/${version}`);
 };

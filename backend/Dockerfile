@@ -1,77 +1,85 @@
 # ============================================================
-#  Stage 1 — deps: install uv and system build dependencies
+#  Stage 0 — base: Shared OS setup and security
 # ============================================================
-FROM python:3.12-slim AS deps
+FROM python:3.12-slim AS base
 
-# UV optimizations
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+# Python best practices & virtualenv path
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    VIRTUAL_ENV="/opt/venv" \
+    UV_PROJECT_ENVIRONMENT="/opt/venv"
+
+WORKDIR /app
+
+# Security: Shared non-root user setup
+RUN adduser --disabled-password --gecos "" appuser && \
+    chown -R appuser /app
+
+# ============================================================
+#  Stage 1 — deps: install uv and build dependencies
+# ============================================================
+FROM base AS deps
+
+# UV optimizations & CPU-only torch index
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu" \
+    PATH="/root/.local/bin:${PATH}" \
+    UV_PROJECT_ENVIRONMENT="/opt/venv"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential libpq-dev \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ENV PATH="/root/.local/bin:${PATH}"
-WORKDIR /app
 COPY uv.lock pyproject.toml ./
 
 # ============================================================
 #  Stage 2 — dev: full deps + hot-reload
-#  Usage:  target: dev
 # ============================================================
 FROM deps AS dev
 
-# Security: Non-root user for dev (optional but good for consistency)
-# We create it here to ensure it exists in the dev image
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+# Install ALL dependencies with cache mount and strip
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project && \
+    find /opt/venv -type f -name "*.a" -delete && \
+    rm -rf /opt/venv/include
 
-# Install ALL dependencies (including dev, test, lint groups)
-RUN uv sync --frozen --no-install-project
+# Source code is bind-mounted in dev, but copied for standalone use
 COPY . .
 
-# Put the virtualenv on the PATH so 'fastapi' is available natively
-ENV PATH="/app/.venv/bin:$PATH"
-
 USER appuser
-
 EXPOSE 8000
-CMD ["uv", "run", "fastapi", "dev", "src/api/main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["fastapi", "dev", "src/api/main.py", "--host", "0.0.0.0", "--port", "8000"]
 
 # ============================================================
 #  Stage 3 — builder: production deps only
 # ============================================================
 FROM deps AS builder
-RUN uv sync --frozen --no-install-project --no-dev
+
+# Install production dependencies and strip virtualenv
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev && \
+    find /opt/venv -type f -name "*.a" -delete && \
+    rm -rf /opt/venv/include
 
 # ============================================================
 #  Stage 4 — runner: minimal production image
-#  Usage:  target: runner  (default)
 # ============================================================
-FROM python:3.12-slim AS runner
+FROM base AS runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq5 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
-# Python best practices
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-COPY --from=builder /app/.venv /app/.venv
+# Copy only the virtualenv and source code
+COPY --from=builder /opt/venv /opt/venv
 COPY . /app
 
-# Put the virtualenv on the PATH so 'python' refers to the one with our deps
-ENV PATH="/app/.venv/bin:$PATH"
+# Final cleanup of non-runtime files
+RUN find . -type d -name "__pycache__" -exec rm -rf {} + && \
+    rm -rf tests/ .pytest_cache/ .ruff_cache/
 
-# Copy entrypoint script and make it executable
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# Security: Non-root user
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
-
 EXPOSE 8000
-ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["fastapi", "run", "src/api/main.py", "--port", "8000"]

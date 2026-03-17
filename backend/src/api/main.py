@@ -29,6 +29,9 @@ class ApiApplication:
             ),
             version=settings.VERSION,
             debug=settings.DEBUG,
+            docs_url="/api/docs" if settings.DEBUG else None,
+            redoc_url="/api/redoc" if settings.DEBUG else None,
+            openapi_url="/api/openapi.json" if settings.DEBUG else None,
             lifespan=self._lifespan,
         )
         self._configure_middleware()
@@ -72,8 +75,8 @@ class ApiApplication:
         )
 
     def _configure_routes(self):
-        # Health check
-        @self.app.get("/health", tags=["Health"])
+        # Health check (Native /api/health)
+        @self.app.get("/api/health", tags=["Health"])
         async def health_check():
             return {
                 "status": "healthy",

@@ -25,7 +25,7 @@ The frontend follows a **Feature-Based Module** structure, isolating domain-spec
 
 - **`features/`**: Contains self-contained modules like `TrainEngine`, `DatasetExplorer`, and `CandidateGeneration`.
 - **`components/`**: Atomic UI library (cards, buttons, charts) used project-wide.
-- **`hooks/lib/`**: Interaction layer for API communication and global state management, optimized for real-time AI status updates.
+- **`hooks/lib/`**: Interaction layer for API communication and global state management.
 
 ---
 
@@ -33,7 +33,7 @@ The frontend follows a **Feature-Based Module** structure, isolating domain-spec
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18+)
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- [npm](https://www.npmjs.com/)
 
 ### Installation
 ```bash
@@ -46,27 +46,18 @@ npm run dev
 ```
 Access the dashboard at `http://localhost:3000`.
 
-### 🐳 Dockerization
+---
 
-To run the frontend as a standalone container:
+## 🚢 Deployment (Cloudflare)
 
-**1. Build the image:**
-```bash
-docker build -t tob-frontend .
-```
-
-**2. Run the container:**
-```bash
-docker run -p 3000:3000 tob-frontend
-```
+This repository is optimized for deployment on **Cloudflare Pages**. 
+1. Connect your GitHub repository to Cloudflare.
+2. Set the build command to `npm run build`.
+3. Set the output directory to `.next`.
+4. Configure environment variables like `NEXT_PUBLIC_API_URL` to point to your VPS-hosted backend.
 
 ---
 
 ## 📖 Extended Knowledge
 
-For a deeper look into the frontend patterns and architectural vision:
-- 🏛️ **[Central Architecture Blueprint](../docs/architecture/README.md)**
-- 🧭 **[Developer Knowledge Portal](../docs/README.md)**
-
----
-Related: [Root README](../README.md) | [Backend README](../backend/README.md)
+For a deeper look into the frontend patterns and architectural vision, refer to the internal documentation and feature modules.

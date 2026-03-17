@@ -67,7 +67,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2 font-bold text-foreground overflow-hidden font-heading">
                         <BrainCircuit className="h-6 w-6 text-indigo-500 shrink-0" />
-                        <span className="truncate group-data-[collapsible=icon]:hidden">Tracing Objectives</span>
+                        <span className="truncate group-data-[collapsible=icon]:hidden">
+                            {process.env.NEXT_PUBLIC_APP_NAME || "Tracing Objectives"}
+                        </span>
                     </div>
                     <Link
                         href="/"
@@ -92,9 +94,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Transformation" isActive={pathname?.startsWith("/modeling/transformation-preview")}>
-                                    <Link href="/modeling/transformation-preview" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/modeling/transformation-preview") ? "text-indigo-500 font-bold font-heading" : "text-muted-foreground hover:text-foreground")}>
-                                        <Layers className={cn("h-4 w-4", pathname?.startsWith("/modeling/transformation-preview") && "text-indigo-500")} />
+                                <SidebarMenuButton asChild tooltip="Transformation" isActive={pathname?.startsWith("/modeling/transformation")}>
+                                    <Link href="/modeling/transformation" className={cn("transition-colors duration-200 flex items-center gap-2", pathname?.startsWith("/modeling/transformation") ? "text-indigo-500 font-bold font-heading" : "text-muted-foreground hover:text-foreground")}>
+                                        <Layers className={cn("h-4 w-4", pathname?.startsWith("/modeling/transformation") && "text-indigo-500")} />
                                         <span>Transformation</span>
                                     </Link>
                                 </SidebarMenuButton>
