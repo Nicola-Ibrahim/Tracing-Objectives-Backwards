@@ -5,7 +5,7 @@ import { DiagnoseRequest, DiagnoseResponse, PerformanceRequest, PerformanceRespo
  * Trigger diagnostic comparison across multiple engines.
  */
 export const diagnoseEngines = async (params: DiagnoseRequest): Promise<DiagnoseResponse> => {
-  return apiClient.post("/api/v1/evaluation/diagnose", params);
+  return apiClient.post("/evaluation/diagnose", params);
 };
 
 
@@ -13,5 +13,5 @@ export const diagnoseEngines = async (params: DiagnoseRequest): Promise<Diagnose
  * Check performance for a single engine.
  */
 export const checkPerformance = async (params: PerformanceRequest): Promise<PerformanceResponse> => {
-  return apiClient.post("/api/v1/evaluation/performance", params);
+  return apiClient.post("/evaluation/performance", params);
 };

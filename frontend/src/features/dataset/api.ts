@@ -5,7 +5,7 @@ import { DatasetInfo, DatasetDetails, GeneratorsDiscoveryResponse, DatasetGenera
  * Fetch available dataset generators and their parameters.
  */
 export const getGenerators = async (): Promise<GeneratorsDiscoveryResponse> => {
-  return apiClient.get("/api/v1/datasets/generators");
+  return apiClient.get("/datasets/generators");
 };
 
 /**
@@ -15,26 +15,26 @@ export const getDatasetDetails = async (
   datasetName: string,
   split: "train" | "test" | "all" = "train"
 ): Promise<DatasetDetails> => {
-  return apiClient.get(`/api/v1/datasets/${datasetName}`, { params: { split } });
+  return apiClient.get(`/datasets/${datasetName}`, { params: { split } });
 };
 
 /**
  * Fetch all available datasets.
  */
 export const getDatasets = async (): Promise<DatasetInfo[]> => {
-  return apiClient.get("/api/v1/datasets");
+  return apiClient.get("/datasets");
 };
 
 /**
  * Trigger generation of a new synthetic dataset.
  */
 export const generateDataset = async (params: DatasetGenerationRequest): Promise<any> => {
-  return apiClient.post("/api/v1/datasets", params);
+  return apiClient.post("/datasets", params);
 };
 
 /**
  * Delete one or multiple datasets.
  */
 export const deleteDatasets = async (datasetNames: string[]): Promise<any> => {
-  return apiClient.delete("/api/v1/datasets", { data: { dataset_names: datasetNames } });
+  return apiClient.delete("/datasets", { data: { dataset_names: datasetNames } });
 };
