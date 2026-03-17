@@ -10,7 +10,7 @@ import { CandidateManifoldChart } from "@/features/inverse/components/CandidateM
 import { DatasetDetails } from "@/features/dataset/types";
 import { CandidateGenerationRequest, CandidateGenerationResponse } from "@/features/inverse/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings2, BarChart3, Loader2, Sparkles, AlertCircle, Target, Database, Blocks } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
