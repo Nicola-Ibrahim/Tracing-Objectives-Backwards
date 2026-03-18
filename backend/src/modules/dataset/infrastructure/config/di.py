@@ -1,8 +1,8 @@
 from dependency_injector import containers, providers
 
-from ..application.dataset_service import DatasetService
-from .repositories.dataset_repository import FileSystemDatasetRepository
-from .sources.factory import DataGeneratorFactory
+from ...application.dataset_service import DatasetService
+from ..repositories.dataset_repository import FileSystemDatasetRepository
+from ..sources.factory import DataGeneratorFactory
 
 
 class DatasetContainer(containers.DeclarativeContainer):

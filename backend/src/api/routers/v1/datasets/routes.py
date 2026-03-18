@@ -2,14 +2,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ....modules.dataset.application.dataset_service import (
+from src.modules.dataset.application.dataset_service import (
     DatasetConfiguration,
     DatasetService,
 )
-from ....modules.inverse.application.inverse_service import (
+from src.modules.inverse.application.inverse_service import (
     InverseService,
 )
-from ....startup import ModulesContainer
+from dependency_injector.wiring import Provide, inject
+
+from src.modules.dataset.infrastructure.config.di import DatasetContainer
+from src.modules.inverse.infrastructure.config.di import InverseContainer
+
 from ..inverse.schemas import BulkDeleteEnginesRequest, EngineListItem
 from .schemas import (
     BulkDeleteDatasetsRequest,
@@ -25,11 +29,10 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
 
 @router.get("/{dataset_name}/engines", response_model=list[EngineListItem])
+@inject
 async def list_engines_for_dataset(
     dataset_name: str,
-    service: Annotated[
-        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
-    ],
+    service: Annotated[InverseService, Depends(Provide[InverseContainer.inverse_service])],
 ):
     """
     List all trained engines for a specific dataset.
@@ -57,12 +60,11 @@ async def list_engines_for_dataset(
 
 
 @router.delete("/{dataset_name}/engines")
+@inject
 async def delete_engines_for_dataset(
     dataset_name: str,
     request: BulkDeleteEnginesRequest,
-    service: Annotated[
-        InverseService, Depends(lambda: ModulesContainer.inverse.inverse_service())
-    ],
+    service: Annotated[InverseService, Depends(Provide[InverseContainer.inverse_service])],
 ):
     """
     Delete specific engines for a dataset.
@@ -87,10 +89,9 @@ async def delete_engines_for_dataset(
 
 
 @router.get("/generators", response_model=GeneratorsDiscoveryResponse)
+@inject
 async def list_available_generators(
-    service: Annotated[
-        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
-    ],
+    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
 ):
     """
     List all available dataset generators and their required parameters.
@@ -110,10 +111,9 @@ async def list_available_generators(
 
 
 @router.get("", response_model=list[DatasetSummary])
+@inject
 async def list_datasets(
-    service: Annotated[
-        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
-    ],
+    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
 ):
     """
     List all available datasets in the system with metadata.
@@ -144,11 +144,10 @@ async def list_datasets(
 
 
 @router.get("/{dataset_name}", response_model=DatasetDetailResponse)
+@inject
 async def get_dataset_details(
     dataset_name: str,
-    service: Annotated[
-        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
-    ],
+    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
     split: str = "train",
 ):
     """
@@ -183,11 +182,10 @@ async def get_dataset_details(
 
 
 @router.post("", response_model=DatasetGenerationResponse, status_code=201)
+@inject
 async def generate_dataset(
     request: DatasetGenerationRequest,
-    service: Annotated[
-        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
-    ],
+    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
 ):
     """
     Consolidated endpoint to generate a new dataset.
@@ -220,11 +218,10 @@ async def generate_dataset(
 
 
 @router.delete("", response_model=list[DatasetDeleteResponse])
+@inject
 async def delete_datasets(
     request: BulkDeleteDatasetsRequest,
-    service: Annotated[
-        DatasetService, Depends(lambda: ModulesContainer.dataset.dataset_service())
-    ],
+    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
 ):
     """
     Consolidated endpoint to delete one or multiple datasets and all

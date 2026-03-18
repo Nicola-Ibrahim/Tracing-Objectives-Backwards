@@ -11,13 +11,6 @@ class BaseSettings(BaseModel):
 
     PROJECT_NAME: str = "Tracing Objectives Backwards API"
     VERSION: str = "1.0.0"
-    
-    # API Versioning
-    API_VERSION: str = Field(default_factory=lambda: os.getenv("API_VERSION", "v1"))
-    
-    @property
-    def API_V1_STR(self) -> str:
-        return f"/api/{self.API_VERSION}"
 
     # Security
     SECRET_KEY: str = Field(

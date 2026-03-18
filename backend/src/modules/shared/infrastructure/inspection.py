@@ -1,4 +1,6 @@
+import importlib
 import inspect
+import pkgutil
 from enum import Enum
 from typing import Any, Literal, Optional, Type, get_args, get_origin
 
@@ -225,3 +227,25 @@ def get_missing_arguments(func, provided_args: dict[str, Any]) -> list[str]:
         if param.default is inspect.Parameter.empty and name not in provided_args:
             missing.append(name)
     return missing
+
+
+def discover_modules(package_name: str) -> list[str]:
+    """
+    Recursively discovers all dot-separated module paths within a package.
+
+    Args:
+        package_name (str): The dot-separated package path (e.g., 'src.api.routers.v1').
+
+    Returns:
+        list[str]: A list of dot-separated module paths.
+    """
+    package = importlib.import_module(package_name)
+    package_path = package.__path__
+
+    modules = []
+    # Walk through all submodules in the package recursively
+    for _, name, is_pkg in pkgutil.walk_packages(package_path, f"{package_name}."):
+        # We target non-package modules for wiring (e.g., actual Python files)
+        if not is_pkg:
+            modules.append(name)
+    return modules

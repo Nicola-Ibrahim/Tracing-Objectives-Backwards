@@ -1,8 +1,8 @@
 from dependency_injector import containers, providers
 
-from ..application.transformation_service import TransformationService
-from ..domain.services.transformation_domain_service import TransformationDomainService
-from .factories.transformer import TransformerFactory
+from ...application.transformation_service import TransformationService
+from ...domain.services.transformation_domain_service import TransformationDomainService
+from ..factories.transformer import TransformerFactory
 
 
 class ModelingContainer(containers.DeclarativeContainer):
@@ -11,6 +11,7 @@ class ModelingContainer(containers.DeclarativeContainer):
     Using dependency-injector library.
     """
 
+    logger = providers.Dependency()
     dataset_repository = providers.Dependency()
 
     transformer_factory = providers.Singleton(TransformerFactory)

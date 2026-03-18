@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ....modules.modeling.domain.enums.transform_type import TransformTypeEnum
+from src.modules.modeling.domain.enums.transform_type import TransformTypeEnum
 
 
 class TransformationStepSchema(BaseModel):

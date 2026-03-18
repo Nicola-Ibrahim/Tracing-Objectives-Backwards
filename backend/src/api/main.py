@@ -5,13 +5,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
-from ..startup import ModulesContainer, start_backend, stop_backend
-from .middleware import (
-    pydantic_validation_exception_handler,
-    validation_exception_handler,
-)
-from .settings import settings
-from .v1.api import api_v1_router
+from ..startup import backend_startup
+from .core.middlewares.pydantic import pydantic_validation_exception_handler
+from .core.middlewares.validation import validation_exception_handler
+from .core.settings import settings
+from .routers.v1 import router as api_v1_router
 
 
 class ApiApplication:
@@ -29,9 +27,9 @@ class ApiApplication:
             ),
             version=settings.VERSION,
             debug=settings.DEBUG,
-            docs_url="/api/docs" if settings.DEBUG else None,
-            redoc_url="/api/redoc" if settings.DEBUG else None,
-            openapi_url="/api/openapi.json" if settings.DEBUG else None,
+            docs_url="/docs" if settings.DEBUG else None,
+            redoc_url="/redoc" if settings.DEBUG else None,
+            openapi_url="/openapi.json" if settings.DEBUG else None,
             lifespan=self._lifespan,
         )
         self._configure_middleware()
@@ -40,22 +38,12 @@ class ApiApplication:
 
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
-        # Explicitly wire the container to the application modules
-        # We target specific route modules to avoid issues with broken package imports
-        ModulesContainer.wire(
-            modules=[
-                "src.api.v1.datasets.routes",
-                "src.api.v1.inverse.routes",
-                "src.api.v1.modeling.routes",
-                "src.api.v1.evaluation.routes",
-            ]
-        )
-
         # Startup
-        await start_backend(ModulesContainer)
+        backend_startup.initialize_modules()
+        await backend_startup.start()
         yield
         # Shutdown
-        await stop_backend(ModulesContainer)
+        await backend_startup.stop()
 
     def _configure_middleware(self):
         self.app.add_middleware(
@@ -75,8 +63,8 @@ class ApiApplication:
         )
 
     def _configure_routes(self):
-        # Health check (Native /api/health)
-        @self.app.get("/api/health", tags=["Health"])
+        # Health check (Native /health)
+        @self.app.get("/health", tags=["Health"])
         async def health_check():
             return {
                 "status": "healthy",
@@ -85,7 +73,7 @@ class ApiApplication:
             }
 
         # Include aggregated routers for each version
-        self.app.include_router(api_v1_router, prefix=settings.API_V1_STR)
+        self.app.include_router(api_v1_router)
 
     def get_app(self) -> FastAPI:
         return self.app

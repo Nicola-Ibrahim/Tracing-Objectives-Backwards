@@ -6,6 +6,7 @@ from ....shared.infrastructure.inspection import (
 )
 from ...domain.enums.transform_type import TransformTypeEnum
 from ...domain.interfaces.base_transform import BaseTransformer
+from ...domain.services.transformation_domain_service import ITransformerFactory
 from ...infrastructure.normalizers import (
     HypercubeNormalizer,
     LogNormalizer,
@@ -13,9 +14,6 @@ from ...infrastructure.normalizers import (
     StandardNormalizer,
     UnitVectorNormalizer,
 )
-
-
-from ...domain.services.transformation_domain_service import ITransformerFactory
 
 
 class TransformerFactory(ITransformerFactory):

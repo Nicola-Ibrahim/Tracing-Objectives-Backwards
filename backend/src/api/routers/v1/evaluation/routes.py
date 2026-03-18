@@ -2,15 +2,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ....modules.evaluation.application.check_engine_performance import (
+from src.modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceParams,
     CheckModelPerformanceService,
 )
-from ....modules.evaluation.application.diagnose_engines import (
+from src.modules.evaluation.application.diagnose_engines import (
     RunDiagnosticsCommand,
     RunDiagnosticsService,
 )
-from ....startup import ModulesContainer
+from dependency_injector.wiring import Provide, inject
+
+from src.modules.evaluation.infrastructure.config.di import EvaluationContainer
+
 from .schemas import (
     DiagnoseRequest,
     DiagnoseResponse,
@@ -24,12 +27,10 @@ router = APIRouter(prefix="/evaluation", tags=["Evaluation"])
 
 
 @router.post("/diagnose", response_model=DiagnoseResponse)
+@inject
 async def diagnose_engines(
     request: DiagnoseRequest,
-    service: Annotated[
-        RunDiagnosticsService,
-        Depends(lambda: ModulesContainer.evaluation.run_diagnostics_service()),
-    ],
+    service: Annotated[RunDiagnosticsService, Depends(Provide[EvaluationContainer.run_diagnostics_service])],
 ):
     params = RunDiagnosticsCommand(
         dataset_name=request.dataset_name,
@@ -120,12 +121,10 @@ async def diagnose_engines(
 
 
 @router.post("/performance", response_model=PerformanceResponse)
+@inject
 async def check_engine_performance(
     request: PerformanceRequest,
-    service: Annotated[
-        CheckModelPerformanceService,
-        Depends(lambda: ModulesContainer.evaluation.performance_service()),
-    ],
+    service: Annotated[CheckModelPerformanceService, Depends(Provide[EvaluationContainer.performance_service])],
 ):
     params = CheckModelPerformanceParams(
         dataset_name=request.dataset_name,

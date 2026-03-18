@@ -11,21 +11,10 @@ const rawBaseURL = isServer
 const cleanBase = rawBaseURL.replace(/\/+$/, "");
 
 // Construct the full versioned path
-// If rawBaseURL is "http://localhost", we want "http://localhost/api/v1"
-// If rawBaseURL is "/api", we want "/api/v1"
-// If rawBaseURL is empty, we want "/api/v1"
-let fullBaseURL: string;
-
-if (cleanBase.includes("/api/")) {
-    fullBaseURL = cleanBase;
-} else if (cleanBase.endsWith("/api")) {
-    fullBaseURL = `${cleanBase}/${apiVersion}`;
-} else {
-    // Covers empty string, "http://localhost", or custom domain roots
-    fullBaseURL = `${cleanBase}/api/${apiVersion}`;
-}
-
-fullBaseURL = fullBaseURL.replace(/\/+$/, "");
+// If rawBaseURL is "http://localhost", we want "http://localhost/v1"
+// If rawBaseURL is "", we want "/v1"
+// If rawBaseURL is "https://api.xyz.com", we want "https://api.xyz.com/v1"
+const fullBaseURL = `${cleanBase}/${apiVersion}`.replace(/\/+$/, "");
 
 export const apiClient = axios.create({
   baseURL: fullBaseURL,

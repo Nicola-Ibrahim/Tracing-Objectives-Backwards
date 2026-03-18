@@ -1,11 +1,11 @@
 from dependency_injector import containers, providers
 
-from ...modeling.infrastructure.factories.transformer import TransformerFactory
-from ..application.inverse_service import InverseService
-from .repositories.inverse_mapping_engine_repo import (
+from ....modeling.infrastructure.factories.transformer import TransformerFactory
+from ...application.inverse_service import InverseService
+from ..repositories.inverse_mapping_engine_repo import (
     FileSystemInverseMappingEngineRepository,
 )
-from .solvers.factory import SolversFactory
+from ..solvers.factory import SolversFactory
 
 
 class InverseContainer(containers.DeclarativeContainer):
@@ -14,8 +14,8 @@ class InverseContainer(containers.DeclarativeContainer):
     Using dependency-injector library.
     """
 
-    dataset_repository = providers.Dependency()
     logger = providers.Dependency()
+    dataset_repository = providers.Dependency()
 
     transformer_factory = providers.Singleton(TransformerFactory)
 

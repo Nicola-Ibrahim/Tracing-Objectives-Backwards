@@ -1,82 +1,83 @@
-from dependency_injector import containers, providers
+import logging
 
-from .modules.dataset.infrastructure.di import DatasetContainer
-from .modules.evaluation.infrastructure.di import EvaluationContainer
-from .modules.inverse.infrastructure.di import InverseContainer
-from .modules.modeling.infrastructure.di import ModelingContainer
-from .modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
-
-
-class ModulesContainer(containers.DeclarativeContainer):
-    """
-    Global Dependency Injection container that aggregates all module-level containers.
-    Using dependency-injector library.
-    """
-
-    # Shared resources
-    logger = providers.Singleton(CMDLogger, name="TracingObjectivesBackwards")
-
-    # Module Containers
-    modeling = providers.Container(
-        ModelingContainer,
-        # modeling needs dataset_repository (interface only, wired later)
-    )
-
-    inverse = providers.Container(
-        InverseContainer,
-        logger=logger,
-        # inverse needs dataset_repository (interface only, wired later)
-    )
-
-    dataset = providers.Container(
-        DatasetContainer,
-        logger=logger,
-        # dataset needs engine_repository (interface only, wired later)
-    )
-
-    evaluation = providers.Container(
-        EvaluationContainer,
-        logger=logger,
-        # evaluation needs engine_repository and data_repository
-        # (interfaces only, wired later)
-    )
+from .modules.dataset.infrastructure.config.startup import (
+    DatasetStartUp,
+)
+from .modules.evaluation.infrastructure.config.startup import (
+    EvaluationStartUp,
+)
+from .modules.inverse.infrastructure.config.startup import (
+    InverseStartUp,
+)
+from .modules.modeling.infrastructure.config.startup import (
+    ModelingStartUp,
+)
+from .modules.shared.infrastructure.inspection import discover_modules
 
 
-async def start_backend(container: ModulesContainer):
-    """Starts any resources that require async initialization."""
-    # Note: dependency-injector doesn't have a built-in async start,
-    # but we can implement it here.
-    # container.logger().log_info("Backend Services Starting...")
-    pass
+class BackendStartUp:
+    def __init__(self):
+        self.logger = logging.getLogger("backend")
+        self.dataset_startup = DatasetStartUp()
+        self.evaluation_startup = EvaluationStartUp()
+        self.inverse_startup = InverseStartUp()
+        self.modeling_startup = ModelingStartUp()
+
+    def initialize_modules(self):
+        """
+        Initializes all modules and wires cross-module dependencies.
+        """
+        # Discover all API routers to ensure cross-module injection works in every endpoint
+        all_routers = discover_modules("src.api.routers.v1")
+
+        # 1. Initialize all sub-containers with the complete set of routers
+        self.dataset_startup.initialize(wires=all_routers)
+        self.evaluation_startup.initialize(wires=all_routers)
+        self.inverse_startup.initialize(wires=all_routers)
+        self.modeling_startup.initialize(wires=all_routers)
+
+        # 2. Provide global dependencies
+        self.dataset_startup.container.logger.override(self.logger)
+        self.evaluation_startup.container.logger.override(self.logger)
+        self.inverse_startup.container.logger.override(self.logger)
+        self.modeling_startup.container.logger.override(self.logger)
+
+        # 3. Composition (Cross-Wiring)
+        # Modeling needs Dataset repository
+        self.modeling_startup.container.dataset_repository.override(
+            self.dataset_startup.container.repository
+        )
+
+        # Inverse needs Dataset repository
+        self.inverse_startup.container.dataset_repository.override(
+            self.dataset_startup.container.repository
+        )
+
+        # Dataset needs Inverse (for engine repository)
+        self.dataset_startup.container.engine_repository.override(
+            self.inverse_startup.container.repository
+        )
+
+        # Evaluation needs both repositories
+        self.evaluation_startup.container.engine_repository.override(
+            self.inverse_startup.container.repository
+        )
+        self.evaluation_startup.container.data_repository.override(
+            self.dataset_startup.container.repository
+        )
+        return self
+
+    async def start(self):
+        """Async startup logic (if any module-level async resources are added)."""
+        pass
+
+    async def stop(self):
+        """Gracefully shuts down all module-level resources."""
+        self.dataset_startup.shutdown()
+        self.evaluation_startup.shutdown()
+        self.inverse_startup.shutdown()
+        self.modeling_startup.shutdown()
 
 
-async def stop_backend(container: ModulesContainer):
-    """Gracefully shuts down resources."""
-    # container.logger().log_info("Backend Services Shutting Down...")
-    pass
-
-
-def initialize_modules():
-    """
-    Wires cross-module dependencies using dependency-injector wiring features.
-    """
-    container = ModulesContainer()
-
-    # Wire Modeling dependencies
-    container.modeling.dataset_repository.override(container.dataset.repository)
-
-    # Wire Inverse dependencies
-    container.inverse.dataset_repository.override(container.dataset.repository)
-
-    # Wire Dataset dependencies
-    container.dataset.engine_repository.override(container.inverse.repository)
-
-    # Wire Evaluation dependencies
-    container.evaluation.engine_repository.override(container.inverse.repository)
-    container.evaluation.data_repository.override(container.dataset.repository)
-
-    return container
-
-
-# Global container instance
-ModulesContainer = initialize_modules()
+# Exported singleton instance
+backend_startup = BackendStartUp()

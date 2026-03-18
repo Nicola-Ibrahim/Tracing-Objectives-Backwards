@@ -1,13 +1,13 @@
 from dependency_injector import containers, providers
 
-from ..application.check_engine_performance import CheckModelPerformanceService
-from ..application.compare_candidates import CompareInverseModelCandidatesService
-from ..application.diagnose_engines import RunDiagnosticsService
-from ..application.visualize_diagnostics import (
+from ...application.check_engine_performance import CheckModelPerformanceService
+from ...application.compare_candidates import CompareInverseModelCandidatesService
+from ...application.diagnose_engines import RunDiagnosticsService
+from ...application.visualize_diagnostics import (
     VisualizeInverseEstimatorDiagnosticService,
 )
-from .repositories.diagnostic_repository import FileSystemDiagnosticRepository
-from .visualization.inverse_models_comparison.visualizer import (
+from ..repositories.diagnostic_repository import FileSystemDiagnosticRepository
+from ..visualization.inverse_models_comparison.visualizer import (
     InverseModelsComparisonVisualizer,
 )
 
