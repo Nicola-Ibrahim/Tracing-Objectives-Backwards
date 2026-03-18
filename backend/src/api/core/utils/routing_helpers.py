@@ -29,6 +29,8 @@ def collect_routers(router_type=APIRouter):
     """
     routers = []
     for package_path in PACKAGE_PATHS:
-        package_routers = extract_members_from_package(package_path, member_type=router_type)
+        package_routers = extract_members_from_package(
+            package_path, member_type=router_type
+        )
         routers.extend(package_routers)
     return routers

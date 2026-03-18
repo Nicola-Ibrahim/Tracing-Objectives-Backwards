@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.modules.evaluation.application.check_engine_performance import (
@@ -10,8 +11,6 @@ from src.modules.evaluation.application.diagnose_engines import (
     RunDiagnosticsCommand,
     RunDiagnosticsService,
 )
-from dependency_injector.wiring import Provide, inject
-
 from src.modules.evaluation.infrastructure.config.di import EvaluationContainer
 
 from .schemas import (
@@ -30,7 +29,10 @@ router = APIRouter(prefix="/evaluation", tags=["Evaluation"])
 @inject
 async def diagnose_engines(
     request: DiagnoseRequest,
-    service: Annotated[RunDiagnosticsService, Depends(Provide[EvaluationContainer.run_diagnostics_service])],
+    service: Annotated[
+        RunDiagnosticsService,
+        Depends(Provide[EvaluationContainer.run_diagnostics_service]),
+    ],
 ):
     params = RunDiagnosticsCommand(
         dataset_name=request.dataset_name,
@@ -124,7 +126,10 @@ async def diagnose_engines(
 @inject
 async def check_engine_performance(
     request: PerformanceRequest,
-    service: Annotated[CheckModelPerformanceService, Depends(Provide[EvaluationContainer.performance_service])],
+    service: Annotated[
+        CheckModelPerformanceService,
+        Depends(Provide[EvaluationContainer.performance_service]),
+    ],
 ):
     params = CheckModelPerformanceParams(
         dataset_name=request.dataset_name,

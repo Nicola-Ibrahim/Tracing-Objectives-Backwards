@@ -1,12 +1,11 @@
 from typing import Annotated
 
+from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.modules.modeling.application.transformation_service import (
     TransformationService,
 )
-from dependency_injector.wiring import Provide, inject
-
 from src.modules.modeling.infrastructure.config.di import ModelingContainer
 
 from .schemas import (
@@ -22,7 +21,10 @@ router = APIRouter(prefix="/modeling", tags=["Modeling"])
 @router.get("/transformers", response_model=TransformerRegistryResponse)
 @inject
 async def list_transformers(
-    service: Annotated[TransformationService, Depends(Provide[ModelingContainer.transformation_service])],
+    service: Annotated[
+        TransformationService,
+        Depends(Provide[ModelingContainer.transformation_service]),
+    ],
 ):
     """
     Returns a registry of all available data transformers (normalizers, encoders, etc).
@@ -46,7 +48,10 @@ async def list_transformers(
 @inject
 async def preview_transformation(
     request: TransformationPreviewRequest,
-    service: Annotated[TransformationService, Depends(Provide[ModelingContainer.transformation_service])],
+    service: Annotated[
+        TransformationService,
+        Depends(Provide[ModelingContainer.transformation_service]),
+    ],
 ):
     """
     Applies a series of transformations to a small dataset sample and returns

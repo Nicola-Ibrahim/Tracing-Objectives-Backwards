@@ -1,17 +1,16 @@
 from typing import Annotated
 
+from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.modules.dataset.application.dataset_service import (
     DatasetConfiguration,
     DatasetService,
 )
+from src.modules.dataset.infrastructure.config.di import DatasetContainer
 from src.modules.inverse.application.inverse_service import (
     InverseService,
 )
-from dependency_injector.wiring import Provide, inject
-
-from src.modules.dataset.infrastructure.config.di import DatasetContainer
 from src.modules.inverse.infrastructure.config.di import InverseContainer
 
 from ..inverse.schemas import BulkDeleteEnginesRequest, EngineListItem
@@ -32,7 +31,9 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
 @inject
 async def list_engines_for_dataset(
     dataset_name: str,
-    service: Annotated[InverseService, Depends(Provide[InverseContainer.inverse_service])],
+    service: Annotated[
+        InverseService, Depends(Provide[InverseContainer.inverse_service])
+    ],
 ):
     """
     List all trained engines for a specific dataset.
@@ -64,7 +65,9 @@ async def list_engines_for_dataset(
 async def delete_engines_for_dataset(
     dataset_name: str,
     request: BulkDeleteEnginesRequest,
-    service: Annotated[InverseService, Depends(Provide[InverseContainer.inverse_service])],
+    service: Annotated[
+        InverseService, Depends(Provide[InverseContainer.inverse_service])
+    ],
 ):
     """
     Delete specific engines for a dataset.
@@ -91,7 +94,9 @@ async def delete_engines_for_dataset(
 @router.get("/generators", response_model=GeneratorsDiscoveryResponse)
 @inject
 async def list_available_generators(
-    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
+    service: Annotated[
+        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+    ],
 ):
     """
     List all available dataset generators and their required parameters.
@@ -113,7 +118,9 @@ async def list_available_generators(
 @router.get("", response_model=list[DatasetSummary])
 @inject
 async def list_datasets(
-    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
+    service: Annotated[
+        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+    ],
 ):
     """
     List all available datasets in the system with metadata.
@@ -147,7 +154,9 @@ async def list_datasets(
 @inject
 async def get_dataset_details(
     dataset_name: str,
-    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
+    service: Annotated[
+        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+    ],
     split: str = "train",
 ):
     """
@@ -185,7 +194,9 @@ async def get_dataset_details(
 @inject
 async def generate_dataset(
     request: DatasetGenerationRequest,
-    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
+    service: Annotated[
+        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+    ],
 ):
     """
     Consolidated endpoint to generate a new dataset.
@@ -221,7 +232,9 @@ async def generate_dataset(
 @inject
 async def delete_datasets(
     request: BulkDeleteDatasetsRequest,
-    service: Annotated[DatasetService, Depends(Provide[DatasetContainer.dataset_service])],
+    service: Annotated[
+        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+    ],
 ):
     """
     Consolidated endpoint to delete one or multiple datasets and all

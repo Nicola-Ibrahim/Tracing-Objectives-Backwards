@@ -48,7 +48,9 @@ def extract_members_from_module(
 
 
 def extract_members_from_package(
-    package_name: str, member_type: Type[T] | None = None, member_name: str | None = None
+    package_name: str,
+    member_type: Type[T] | None = None,
+    member_name: str | None = None,
 ) -> Generator[T, None, None]:
     """
     Imports all modules from a package and retrieves specified members from them.

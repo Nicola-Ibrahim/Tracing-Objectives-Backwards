@@ -1,5 +1,3 @@
-import logging
-
 from .modules.dataset.infrastructure.config.startup import (
     DatasetStartUp,
 )
@@ -13,11 +11,12 @@ from .modules.modeling.infrastructure.config.startup import (
     ModelingStartUp,
 )
 from .modules.shared.infrastructure.inspection import discover_modules
+from .modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 
 
 class BackendStartUp:
     def __init__(self):
-        self.logger = logging.getLogger("backend")
+        self.logger = CMDLogger(name="backend")
         self.dataset_startup = DatasetStartUp()
         self.evaluation_startup = EvaluationStartUp()
         self.inverse_startup = InverseStartUp()
