@@ -1,82 +1,63 @@
-from .modules.dataset.infrastructure.config.startup import (
-    DatasetStartUp,
+import os
+
+from pydantic import BaseModel, Field
+
+from .containers import RootContainer
+from .modules.shared.infrastructure.discovery import (
+    discover_modules,
 )
-from .modules.evaluation.infrastructure.config.startup import (
-    EvaluationStartUp,
-)
-from .modules.inverse.infrastructure.config.startup import (
-    InverseStartUp,
-)
-from .modules.modeling.infrastructure.config.startup import (
-    ModelingStartUp,
-)
-from .modules.shared.infrastructure.inspection import discover_modules
-from .modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+
+
+class BackendConfig(BaseModel):
+    """
+    Centralized configuration for backend infrastructure.
+    """
+
+    redis_url: str = Field(
+        default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    )
+    data_storage_path: str = Field(
+        default_factory=lambda: os.getenv("DATA_STORAGE_PATH", "/app/storage")
+    )
+    debug: bool = Field(
+        default_factory=lambda: os.getenv("DEBUG", "true").lower() == "true"
+    )
 
 
 class BackendStartUp:
-    def __init__(self):
-        self.logger = CMDLogger(name="backend")
-        self.dataset_startup = DatasetStartUp()
-        self.evaluation_startup = EvaluationStartUp()
-        self.inverse_startup = InverseStartUp()
-        self.modeling_startup = ModelingStartUp()
+    """
+    Handles backend-wide initialization, module discovery, and DI wiring.
+    Dependency Inversion: The caller (API or Worker) provides the BackendConfig.
+    """
 
-    def initialize_modules(self):
-        """
-        Initializes all modules and wires cross-module dependencies.
-        """
-        # Discover all API routers to ensure cross-module injection works in every endpoint
+    def __init__(self, config: BackendConfig):
+        self.container = RootContainer()
+        self.container.config.from_dict(config.model_dump())
+
+        # Discover all API routers and tasks for recursive wiring
         all_routers = discover_modules("src.api.routers.v1")
+        all_tasks = discover_modules("src.modules.evaluation.infrastructure")
+        all_wires = all_routers + [m for m in all_tasks if m.endswith(".tasks")]
 
-        # 1. Initialize all sub-containers with the complete set of routers
-        self.dataset_startup.initialize(wires=all_routers)
-        self.evaluation_startup.initialize(wires=all_routers)
-        self.inverse_startup.initialize(wires=all_routers)
-        self.modeling_startup.initialize(wires=all_routers)
-
-        # 2. Provide global dependencies
-        self.dataset_startup.container.logger.override(self.logger)
-        self.evaluation_startup.container.logger.override(self.logger)
-        self.inverse_startup.container.logger.override(self.logger)
-        self.modeling_startup.container.logger.override(self.logger)
-
-        # 3. Composition (Cross-Wiring)
-        # Modeling needs Dataset repository
-        self.modeling_startup.container.dataset_repository.override(
-            self.dataset_startup.container.repository
-        )
-
-        # Inverse needs Dataset repository
-        self.inverse_startup.container.dataset_repository.override(
-            self.dataset_startup.container.repository
-        )
-
-        # Dataset needs Inverse (for engine repository)
-        self.dataset_startup.container.engine_repository.override(
-            self.inverse_startup.container.repository
-        )
-
-        # Evaluation needs both repositories
-        self.evaluation_startup.container.engine_repository.override(
-            self.inverse_startup.container.repository
-        )
-        self.evaluation_startup.container.data_repository.override(
-            self.dataset_startup.container.repository
-        )
-        return self
+        # Wire the RootContainer and all its composed containers
+        self.container.wire(modules=all_wires)
 
     async def start(self):
-        """Async startup logic (if any module-level async resources are added)."""
-        pass
+        """Async infrastructure startup (e.g. connections)."""
+        redis_conn = self.container.redis_connection()
+        await redis_conn.connect()
 
     async def stop(self):
         """Gracefully shuts down all module-level resources."""
-        self.dataset_startup.shutdown()
-        self.evaluation_startup.shutdown()
-        self.inverse_startup.shutdown()
-        self.modeling_startup.shutdown()
+        redis_conn = self.container.redis_connection()
+        await redis_conn.close()
+        self.container.shutdown_resources()
 
-
-# Exported singleton instance
-backend_startup = BackendStartUp()
+    def wire_worker(self, ctx: dict):
+        """
+        Maps worker task identifiers to their required handlers in ARQ context.
+        """
+        ctx["run_diagnostics_service"] = (
+            self.container.evaluation.run_diagnostics_service()
+        )
+        ctx["task_manager"] = self.container.task_manager()

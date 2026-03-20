@@ -1,12 +1,18 @@
 from dependency_injector import containers, providers
 
-from ...application.check_engine_performance import CheckModelPerformanceService
-from ...application.compare_candidates import CompareInverseModelCandidatesService
+from ...application.check_engine_performance import (
+    CheckModelPerformanceService,
+)
+from ...application.compare_candidates import (
+    CompareInverseModelCandidatesService,
+)
 from ...application.diagnose_engines import RunDiagnosticsService
 from ...application.visualize_diagnostics import (
     VisualizeInverseEstimatorDiagnosticService,
 )
-from ..repositories.diagnostic_repository import FileSystemDiagnosticRepository
+from ..repositories.diagnostic_repository import (
+    FileSystemDiagnosticRepository,
+)
 from ..visualization.inverse_models_comparison.visualizer import (
     InverseModelsComparisonVisualizer,
 )
@@ -21,8 +27,9 @@ class EvaluationContainer(containers.DeclarativeContainer):
     engine_repository = providers.Dependency()
     data_repository = providers.Dependency()
     logger = providers.Dependency()
-
     diagnostic_repository = providers.Singleton(FileSystemDiagnosticRepository)
+
+    task_manager = providers.Dependency()
 
     # Default visualizer for general comparison
     comparison_visualizer = providers.Singleton(InverseModelsComparisonVisualizer)
@@ -32,6 +39,7 @@ class EvaluationContainer(containers.DeclarativeContainer):
         engine_repository=engine_repository,
         data_repository=data_repository,
         diagnostic_repository=diagnostic_repository,
+        task_manager=task_manager,
         logger=logger,
     )
 

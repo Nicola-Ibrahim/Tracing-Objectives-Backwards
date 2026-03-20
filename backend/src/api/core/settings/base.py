@@ -44,6 +44,11 @@ class BaseSettings(BaseModel):
     # Operations
     LOG_LEVEL: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
 
+    # Redis
+    REDIS_URL: str = Field(
+        default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    )
+
     @property
     def is_production(self) -> bool:
         return self.ENV.lower() == "production"

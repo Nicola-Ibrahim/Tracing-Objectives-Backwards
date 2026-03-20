@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
-from ..startup import backend_startup
+from ..startup import BackendConfig, BackendStartUp
 from .core.middlewares.pydantic import pydantic_validation_exception_handler
 from .core.middlewares.validation import validation_exception_handler
 from .core.settings import settings
@@ -39,7 +39,10 @@ class ApiApplication:
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
         # Startup
-        backend_startup.initialize_modules()
+        config = BackendConfig(
+            redis_url=settings.REDIS_URL, data_storage_path=settings.DATA_STORAGE_PATH
+        )
+        backend_startup = BackendStartUp(config=config)
         await backend_startup.start()
         yield
         # Shutdown

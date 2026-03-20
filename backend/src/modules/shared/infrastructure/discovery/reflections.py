@@ -15,6 +15,13 @@ def is_enum(cls: Any) -> bool:
     return inspect.isclass(cls) and issubclass(cls, Enum)
 
 
+def _is_discriminator(name: str, annotation: Any) -> bool:
+    """
+    Checks if a field is a Pydantic discriminator (Literal 'type').
+    """
+    return name == "type" and get_origin(annotation) is Literal
+
+
 def get_type_name(typ: Any) -> str:
     if typ == inspect.Parameter.empty:
         return "any"
@@ -51,10 +58,7 @@ def _inspect_single_param(
     if is_pydantic_model(annotation):
         parameters = []
         for field_name, field in annotation.model_fields.items():
-            # Skip discriminator fields (usually named 'type' and typed as Literal)
-            # These are internal implementation details for Pydantic and shouldn't be
-            # exposed as user-tunable hyperparameters in the frontend.
-            if field_name == "type" and get_origin(field.annotation) is Literal:
+            if _is_discriminator(field_name, field.annotation):
                 continue
 
             # Recursive call could be done here if nested flattening is desired
@@ -142,10 +146,7 @@ def build_constructor_kwargs(cls: type, config: dict[str, Any]) -> dict[str, Any
                     k: v
                     for k, v in config.items()
                     if k in model_fields
-                    and not (
-                        k == "type"
-                        and get_origin(model_fields[k].annotation) is Literal
-                    )
+                    and not _is_discriminator(k, model_fields[k].annotation)
                 }
                 # If we found fields or if it's required, try to instantiate
                 if filtered or param.default is inspect.Parameter.empty:
@@ -156,16 +157,6 @@ def build_constructor_kwargs(cls: type, config: dict[str, Any]) -> dict[str, Any
             elif param.default is not inspect.Parameter.empty:
                 kwargs[name] = param.default
     return kwargs
-
-
-def inspect_parameter(
-    name: str,
-    annotation: Any,
-    default: Any = inspect.Parameter.empty,
-    description: str | None = None,
-) -> list[dict[str, Any]]:
-    """Deprecated: Use extract_constructor_schema instead for whole classes."""
-    return _inspect_single_param(name, annotation, default, description)
 
 
 def normalize_value(value: Any, annotation: Any) -> Any:

@@ -3,15 +3,11 @@ from typing import Annotated
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.containers import RootContainer
 from src.modules.dataset.application.dataset_service import (
     DatasetConfiguration,
     DatasetService,
 )
-from src.modules.dataset.infrastructure.config.di import DatasetContainer
-from src.modules.inverse.application.inverse_service import (
-    InverseService,
-)
-from src.modules.inverse.infrastructure.config.di import InverseContainer
 
 from ..inverse.schemas import BulkDeleteEnginesRequest, EngineListItem
 from .schemas import (
@@ -32,7 +28,8 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
 async def list_engines_for_dataset(
     dataset_name: str,
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        RootContainer.inverse.inverse_service,
+        Depends(Provide[RootContainer.inverse.inverse_service]),
     ],
 ):
     """
@@ -66,7 +63,8 @@ async def delete_engines_for_dataset(
     dataset_name: str,
     request: BulkDeleteEnginesRequest,
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        RootContainer.inverse.inverse_service,
+        Depends(Provide[RootContainer.inverse.inverse_service]),
     ],
 ):
     """
@@ -95,7 +93,7 @@ async def delete_engines_for_dataset(
 @inject
 async def list_available_generators(
     service: Annotated[
-        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+        DatasetService, Depends(Provide[RootContainer.dataset.dataset_service])
     ],
 ):
     """
@@ -119,7 +117,7 @@ async def list_available_generators(
 @inject
 async def list_datasets(
     service: Annotated[
-        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+        DatasetService, Depends(Provide[RootContainer.dataset.dataset_service])
     ],
 ):
     """
@@ -155,7 +153,7 @@ async def list_datasets(
 async def get_dataset_details(
     dataset_name: str,
     service: Annotated[
-        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+        DatasetService, Depends(Provide[RootContainer.dataset.dataset_service])
     ],
     split: str = "train",
 ):
@@ -195,7 +193,7 @@ async def get_dataset_details(
 async def generate_dataset(
     request: DatasetGenerationRequest,
     service: Annotated[
-        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+        DatasetService, Depends(Provide[RootContainer.dataset.dataset_service])
     ],
 ):
     """
@@ -233,7 +231,7 @@ async def generate_dataset(
 async def delete_datasets(
     request: BulkDeleteDatasetsRequest,
     service: Annotated[
-        DatasetService, Depends(Provide[DatasetContainer.dataset_service])
+        DatasetService, Depends(Provide[RootContainer.dataset.dataset_service])
     ],
 ):
     """

@@ -3,13 +3,13 @@ from typing import Annotated
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.containers import RootContainer
 from src.modules.inverse.application.inverse_service import (
     GenerationConfig,
     InverseService,
     SolverConfig,
     TrainInverseMappingEngineParams,
 )
-from src.modules.inverse.infrastructure.config.di import InverseContainer
 
 from .schemas import (
     EngineListItem,
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/inverse", tags=["Inverse Mapping"])
 @inject
 async def list_available_solvers(
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        InverseService, Depends(Provide[RootContainer.inverse.inverse_service])
     ],
 ):
     """
@@ -52,7 +52,7 @@ async def list_available_solvers(
 async def train_engine(
     request: TrainEngineRequest,
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        InverseService, Depends(Provide[RootContainer.inverse.inverse_service])
     ],
 ):
     """
@@ -95,7 +95,7 @@ async def train_engine(
 async def generate_candidates(
     request: GenerateRequest,
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        InverseService, Depends(Provide[RootContainer.inverse.inverse_service])
     ],
 ):
     """
@@ -139,7 +139,7 @@ async def generate_candidates(
 @inject
 async def list_all_engines(
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        InverseService, Depends(Provide[RootContainer.inverse.inverse_service])
     ],
 ):
     """
@@ -177,7 +177,7 @@ async def get_engine_details(
     solver_type: str,
     version: int,
     service: Annotated[
-        InverseService, Depends(Provide[InverseContainer.inverse_service])
+        InverseService, Depends(Provide[RootContainer.inverse.inverse_service])
     ],
 ):
     """

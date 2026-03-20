@@ -3,10 +3,10 @@ from typing import Annotated
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.containers import RootContainer
 from src.modules.modeling.application.transformation_service import (
     TransformationService,
 )
-from src.modules.modeling.infrastructure.config.di import ModelingContainer
 
 from .schemas import (
     DataPreviewPoints,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/modeling", tags=["Modeling"])
 async def list_transformers(
     service: Annotated[
         TransformationService,
-        Depends(Provide[ModelingContainer.transformation_service]),
+        Depends(Provide[RootContainer.modeling.transformation_service]),
     ],
 ):
     """
@@ -50,7 +50,7 @@ async def preview_transformation(
     request: TransformationPreviewRequest,
     service: Annotated[
         TransformationService,
-        Depends(Provide[ModelingContainer.transformation_service]),
+        Depends(Provide[RootContainer.modeling.transformation_service]),
     ],
 ):
     """

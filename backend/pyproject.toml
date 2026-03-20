@@ -34,6 +34,8 @@ dependencies = [
     "umap-learn>=0.5.9.post2",
     "wandb>=0.20.1",
     "dependency-injector>=4.48.3",
+    "redis>=5.0.0",
+    "arq>=0.25.0",
 ]
 
 

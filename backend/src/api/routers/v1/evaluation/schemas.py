@@ -30,21 +30,12 @@ class DomainAssessmentData(BaseModel):
     # Metrics
     metrics: Dict[str, Dict[str, float]] = Field(default_factory=dict)
 
-
-class DiagnoseResponse(BaseModel):
-    dataset_name: str
-    engines: List[str]
-    capabilities: Dict[str, str] = Field(
-        default_factory=dict,
-        description=(
-            "Mapping of engine name to capability "
-            "(full_distribution | prediction_interval)"
-        ),
-    )
-    objective_space: DomainAssessmentData
-    decision_space: DomainAssessmentData
-
     warnings: List[str] = Field(default_factory=list)
+
+
+class DiagnoseAsyncResponse(BaseModel):
+    task_id: str
+    status: str = "processing"
 
 
 class PerformanceRequest(BaseModel):

@@ -1,6 +1,6 @@
 from typing import Any, Type
 
-from ....shared.infrastructure.inspection import (
+from ....shared.infrastructure.discovery import (
     build_constructor_kwargs,
     extract_constructor_schema,
 )
