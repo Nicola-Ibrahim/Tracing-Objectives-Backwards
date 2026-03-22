@@ -30,6 +30,13 @@ class ApiApplication:
             docs_url="/docs" if settings.DEBUG else None,
             redoc_url="/redoc" if settings.DEBUG else None,
             openapi_url="/openapi.json" if settings.DEBUG else None,
+            swagger_ui_parameters={
+                "displayRequestDuration": True,
+                "defaultModelsExpandDepth": -1,
+                "persistAuthorization": True,
+                "filter": True,
+                "tagsSorter": "alpha",
+            },
             lifespan=self._lifespan,
         )
         self._configure_middleware()

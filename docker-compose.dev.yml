@@ -11,14 +11,15 @@ services:
       - ./backend:/app:cached
     env_file:
       - ./backend/.env
-    command: uv run fastapi dev src/api/main.py --host 0.0.0.0 --port 8000
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
-    networks:
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: 
       - backend-net
 
   nginx:
@@ -29,9 +30,22 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - backend-net
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend-net
+
 
 networks:
   backend-net:

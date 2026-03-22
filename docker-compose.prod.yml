@@ -50,6 +50,12 @@ services:
     networks:
       - backend-net
 
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    networks:
+      - backend-net
+
 networks:
   backend-net:
     driver: bridge
