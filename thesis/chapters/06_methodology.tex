@@ -107,12 +107,12 @@ The adoption of these distinct inverse mapping paradigms is fundamentally motiva
 
 However, the choice between the Global Parametric paradigm (Deep Learning) and the Local Geometric paradigm (GBPI) introduces distinct rationales and structural trade-offs:
 
-\subsection{Trade-Offs in Global Parametric Models (CVAEs, INNs)}
+\subsection{Trade-Offs in Global Parametric Model}
 The primary rationale for utilizing a global parametric distribution $q_\theta(\vect{x}\mid\vect{y})$ is to support \textit{amortized inference}. The immense computational burden of learning the inverse mapping is entirely front-loaded into the offline training phase. Once the network is trained, the cost of answering new queries is reduced to simple, instantaneous sampling, aligning with established practices in simulation-based inference \cite{Papamakarios2021}.
 
 \textbf{The Trade-Off:} This approach is extremely data-hungry. Performance depends heavily on the diversity and volume of the training data. If the dataset is highly sparse ($N \le 100$), the global $q_\theta$ distribution tends to over-smooth the objective space. When a target $\vect{y}^\star$ falls outside heavily sampled regions or between distinct physical archetypes, these models will confidently hallucinate candidates that appear mathematically plausible under $q_\theta$, but fail catastrophically when checked against the true physical evaluator $\mathcal{E}$. 
 
-\subsection{Trade-Offs in Local Geometric Inversion (GBPI)}
+\subsection{Trade-Offs in Local Geometric Inversion}
 The GBPI framework is motivated explicitly by the failure of deep learning models in data-sparse environments. By abandoning a global learned parameter ($\theta$) in favor of exact topological meshing (Delaunay triangulation) and strict mathematical boundaries ($D_{max}$), GBPI guarantees that generated candidates remain physically coherent. Furthermore, when faced with out-of-distribution (OOD) targets where parametric models hallucinate, GBPI proactively halts interpolation and defaults to mathematically bounded surrogate optimization. 
 
 \textbf{The Trade-Off:} The geometric approach trades the smooth, global generalization of deep learning for strict, localized physical safety. Its primary limitation is its reliance on the offline pre-computation of the topological mesh, which scales poorly if the objective space dimensionality ($m$) becomes excessively high. Furthermore, its generative capability relies heavily on the fidelity of the lightweight forward surrogate to act as an accurate filter against Pareto Sag. 

@@ -27,7 +27,8 @@
         \draw[axis] (0,0) -- (2.3,0) node[right, labelStyle] {$z$};
         \draw[axis] (0,0) -- (0,2.3) node[above, labelStyle] {$F(z)$};
         \draw[cdfline, blue] (0,0) .. controls (0.1, 1.8) and (1.9, 0.2) .. (2,2);
-        \node[regime, blue, anchor=north west] at (0,1.9) {Sigmoid};
+        % FIXED: Changed "Sigmoid" to "Inv-Sigmoid"
+        \node[regime, blue, anchor=north west] at (0,1.9) {Inv-Sigmoid};
     \end{scope}
     \node[text width=4.5cm, align=center, font=\scriptsize, black!70] at (2,-0.8) {Under-dispersed: variance too low;\\truth falls in tails.};
 \end{scope}
@@ -49,7 +50,8 @@
         \draw[axis] (0,0) -- (2.3,0) node[right, labelStyle] {$z$};
         \draw[axis] (0,0) -- (0,2.3) node[above, labelStyle] {$F(z)$};
         \draw[cdfline, orange!80!black] (0,0) .. controls (1.2, 0.1) and (0.8, 1.9) .. (2,2);
-        \node[regime, orange!80!black, anchor=south east] at (2,0.1) {Inv-Sigmoid};
+        % FIXED: Changed "Inv-Sigmoid" to "Sigmoid"
+        \node[regime, orange!80!black, anchor=south east] at (2,0.1) {Sigmoid};
     \end{scope}
     \node[text width=4.5cm, align=center, font=\scriptsize, black!70] at (2,-0.8) {Over-dispersed: variance too high;\\truth falls in center.};
 \end{scope}
