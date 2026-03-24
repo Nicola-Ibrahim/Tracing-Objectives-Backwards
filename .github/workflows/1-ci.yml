@@ -1,0 +1,89 @@
+name: 1. CI (Backend Test)
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/1-ci.yml'
+  push:
+    branches-ignore: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - run: uv run poe lint
+      - run: uv run poe test
+
+  integration-smoke:
+    if: github.event_name == 'pull_request'
+    needs: [backend-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Generate Environment File
+        env:
+          PROJECT_NAME: "Tracing Objectives Backwards API"
+          API_VERSION: "v1"
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ENV: "testing"
+          DEBUG: "true"
+          BACKEND_CORS_ORIGINS: "*"
+          BACKEND_IMAGE: "my-local-backend:latest"
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          DATA_STORAGE_PATH: "/app/storage"
+          LOG_LEVEL: "DEBUG"
+        run: |
+          cat << EOF > ./backend/.env
+          PROJECT_NAME="${PROJECT_NAME}"
+          API_VERSION="${API_VERSION}"
+          SECRET_KEY="${SECRET_KEY:-ci-secret-key}"
+          ENV="${ENV}"
+          DEBUG="${DEBUG}"
+          BACKEND_CORS_ORIGINS="${BACKEND_CORS_ORIGINS}"
+          BACKEND_IMAGE="${BACKEND_IMAGE}"
+          REDIS_URL="${REDIS_URL:-redis://redis:6379/0}"
+          DATA_STORAGE_PATH="${DATA_STORAGE_PATH}"
+          LOG_LEVEL="${LOG_LEVEL}"
+          EOF
+          
+      - name: Start Services & Verify Health
+        run: |
+          # Spin up the stack
+          docker compose -f docker-compose.dev.yml up --build -d
+          
+          # Wait for services (Nginx depends on Backend which depends on Redis)
+          # Using a loop with health verify is better than a fixed sleep
+          for i in {1..10}; do
+            if curl -f http://localhost/health; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "waiting for services... ($i/10)"
+            sleep 3
+          done
+          echo "❌ Health check failed!"
+          exit 1
+          
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.dev.yml logs
+          
+      - name: Shutdown
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down
