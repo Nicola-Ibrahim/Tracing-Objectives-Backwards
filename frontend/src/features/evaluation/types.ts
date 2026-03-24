@@ -38,6 +38,11 @@ export interface DiagnoseResponse {
   warnings: string[];
 }
 
+export interface DiagnoseAsyncResponse {
+  task_id: string;
+  status: string;
+}
+
 export interface PerformanceRequest {
   dataset_name: string;
   engine: EngineCandidate;
