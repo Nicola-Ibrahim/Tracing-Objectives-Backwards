@@ -10,9 +10,9 @@
   \rarray{1.3}
   \begin{longtable}{L{4.0cm}L{10.0cm}}
     \multicolumn{2}{l}{\textbf{Spaces and Dimensions}} \\
-    $\calX$ & Decision space (feasible region of decision variables)\\
+    $\calX$ & Decision space (feasible region of design variables)\\
     $\calY$ & Objective space\\
-    $\R^n$ & $n$-dimensional Euclidean space (decision space scope)\\
+    $\R^n$ & $n$-dimensional Euclidean space\\
     $n, D$ & Dimension of the decision space\\
     $m$ & Number of objectives\\
     \addlinespace[10pt]
@@ -22,11 +22,8 @@
     $\vect{y}$ & Objective vector $\vect{f}(\vect{x})$ in the objective space $\calY$\\
     $\vect{y}^{\star}$ & User‑specified target objective vector\\
     $\vect{f}(\vect{x})$ & Vector of objective functions evaluated at $\vect{x}$\\
-    $\mathcal{E}$ & Outcome evaluator (true operator, simulator, or surrogate)\\
-    $\calF(\vect{x})$ & Feasibility predicate (1 if $\vect{x}$ is feasible, 0 otherwise)\\
+    $\mathcal{E}$ & Outcome evaluator (true operator or physical simulator)\\
     $g_j(\vect{x}), h_k(\vect{x})$ & Inequality and equality constraint functions\\
-    $\text{PS}$ & Pareto set of non‑dominated decision vectors\\
-    $\text{PF}$ & Pareto front (image of $\text{PS}$ in objective space)\\
     $\preceq$ & Pareto dominance operator\\
     \addlinespace[10pt]
 
@@ -38,12 +35,14 @@
     $d_z$ & Latent dimensionality\\
     $p(\vect{z})$ & Prior distribution over latent variables\\
     $\pi_k, \boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k$ & Parameters of the $k$-th mixture component (MDN)\\
-    $g, \hat{g}$ & True and learned inverse mappings\\
-    $\hat{f}$ & Surrogate forward model\\
+    $\alpha$ & Dirichlet concentration parameter or PIT rank threshold\\
     $\theta, \phi$ & Parameters of the proposal and inference models\\
     $\lambda, \beta$ & Regularization and KL-weighting coefficients\\
-    $\Omega(\cdot)$ & Regularization functional\\
-    $T, T_x, T_y$ & Bijective transformations or normalization maps\\
+    $\eta$ & Learning rate for parametric models\\
+    $\tau$ & Dynamic Coherence Threshold (safety limit for interpolation)\\
+    $\delta$ & Trust-region radius for bounded optimization\\
+    $\Omega$ & Robust search boundary or regularization functional\\
+    $T, T_x, T_y$ & Normalization maps and bijective transformations\\
     \addlinespace[10pt]
 
     \multicolumn{2}{l}{\textbf{Evaluation and Assessment}} \\
@@ -58,10 +57,7 @@
     $z_{i,d}$ & Probability Integral Transform (PIT) value\\
     $\mathrm{MACE}$ & Mean Absolute Calibration Error (reliability diagnostic)\\
     $\mathrm{CRPS}$ & Continuous Ranked Probability Score (probabilistic accuracy)\\
-    $\mathrm{MAE}$ & Mean Absolute Error (accuracy component of CRPS)\\
-    $\mathrm{MD}$ & Mean Difference (dispersion component of CRPS)\\
-    $\mathrm{Succ}_\epsilon$ & Tolerance success indicator at threshold $\epsilon$\\
-    $\mathrm{GD}, \mathrm{IGD}, \mathrm{HV}$ & Performance indicators for Pareto front approximations\\
-    $\sigma, \tau$ & Model-specific parameters (bandwidth, threshold)\\
+    $\mathrm{MAE}, \mathrm{MD}$ & Accuracy and dispersion components of CRPS\\
+    $\sigma$ & Standard deviation or model-specific bandwidth\\
   \end{longtable}
 \end{flushleft}

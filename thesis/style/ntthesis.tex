@@ -129,15 +129,13 @@
 
 % % % % Links and references setup
 %% URL handling
-\PassOptionsToPackage{hyphens}{url}
 % Allow URLs and other links to be clickable
 % Removes borders according to: texdoc hyperref page 4
-\usepackage[colorlinks=false, pdfborder={0 0 0}]{hyperref}
+\hypersetup{colorlinks=false, pdfborder={0 0 0}}
 
 % Allow URLs to break at hyphens
-\usepackage[hyphens]{url}
-
-% Change style to the style of the normal text instead of ttfamily style.
+% (url package is handled via PassOptionsToPackage in thesis.tex)
+\usepackage{url}
 \urlstyle{same}
 
 % Command for breaking urls into two parts
