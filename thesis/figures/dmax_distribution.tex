@@ -31,15 +31,15 @@
     \draw[->, thick] (0,0) -- (0,6) node[above] {Frequency / Density};
 
     % ==========================================
-    % 4. D_MAX THRESHOLD LINE & MARKERS
+    % 4. TAU THRESHOLD LINE & MARKERS
     % ==========================================
-    % D_max dashed line (Raised to y=5 to avoid curve overlap)
+    % \tau dashed line (Raised to y=5 to avoid curve overlap)
     \draw[dashed, very thick, red!80!black] (6.5,0) -- (6.5,5) 
         node[above, draw=red!80!black, fill=white, rounded corners, thick, inner sep=5pt] 
-        {\textbf{95th Percentile Threshold ($D_{max}$)}};
+        {\textbf{95th Percentile Threshold ($\tau$)}};
 
     % Value ticks on X-axis
-    \draw[thick] (6.5,0.1) -- (6.5,-0.1) node[below left, text=red!80!black] {\textbf{$D_{max}$}};
+    \draw[thick] (6.5,0.1) -- (6.5,-0.1) node[below left, text=red!80!black] {\textbf{$\tau$}};
     \draw[thick] (0,0.1) -- (0,-0.1) node[below] {\textbf{0}};
 
     % ==========================================

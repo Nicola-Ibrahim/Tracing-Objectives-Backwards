@@ -81,7 +81,7 @@ Figure~\ref{fig:framework} summarizes the universal workflow utilized throughout
   \label{fig:framework}
 \end{figure}
 
-The workflow strictly separates offline model synthesis from online interactive exploration. In the \textit{model synthesis phase}, the specific algorithmic engine is prepared. For global parametric models (e.g., CVAEs, INNs), this involves fitting the generative proposal model from paired data using the conditional likelihood objective formalized in \eqref{eq:prob_mle}. For the novel geometric GBPI framework, this phase involves pre-computing the exact Delaunay mesh, training the internal RBF forward surrogate, and establishing the geometric coherence threshold ($D_{max}$). 
+The workflow strictly separates offline model synthesis from online interactive exploration. In the \textit{model synthesis phase}, the specific algorithmic engine is prepared. For global parametric models (e.g., CVAEs, INNs), this involves fitting the generative proposal model from paired data using the conditional likelihood objective formalized in \eqref{eq:prob_mle}. For the novel geometric GBPI framework, this phase involves pre-computing the exact Delaunay mesh, training the internal RBF forward surrogate, and establishing the geometric coherence threshold ($\tau$). 
 
 In the \textit{interactive exploration phase}, a query $\vect{y}^{\star}$ is answered by generating exactly $K$ candidates—either by sampling from the learned parametric conditional model $q_{\widehat{\theta}}(\vect{x}\mid\vect{y}^\star)$ as defined in \eqref{eq:prob_sampling}, or by routing the query through GBPI's dynamically bounded generative pathways. Treating the proposal budget $K$ as rigidly fixed is a critical component of the experimental interface, as it keeps the evaluation format consistent regardless of the underlying model family. 
 
@@ -98,7 +98,7 @@ The choice of explicit min-max normalization over alternative methods (such as Z
 \begin{itemize}
     \item Metric Fairness and Attainment Scoring: Because the evaluation contract relies on a Euclidean discrepancy $d$, it is essential that all objective dimensions span an identical numerical range. Min-max scaling ensures that a 10\% error in one objective is mathematically equivalent to a 10\% error in another, preventing the distance metric from being dominated by variables with naturally larger absolute magnitudes.
     \item Parametric Generative Stability: Deep generative architectures, such as CVAEs and INNs, frequently utilize bounded activation functions (e.g., Sigmoid or Tanh). Mapping the decision space $\mathcal{X}$ to a unit hypercube aligns the target data with these activation ranges, improving gradient flow and preventing numerical instability during backpropagation \cite{Sola1997, Sarle1997}. It also defines a clear, bounded feasible region for initializing Mixture Density Networks (MDNs).
-    \item Geometric and Topological Unbiasedness: For the proposed GBPI framework, normalization is the bedrock of physical safety. Because GBPI relies heavily on K-Nearest Neighbors (KNN) to calculate the geometric Coherence Threshold ($D_{max}$), the decision space must be perfectly isotropic. Without strict min-max normalization, physical parameters with massive scales (e.g., thousands of RPMs) would completely dominate fractional parameters (e.g., geometric ratios), rendering local neighborhood calculations and spatial topologies mathematically meaningless.
+    \item Geometric and Topological Unbiasedness: For the proposed GBPI framework, normalization is the bedrock of physical safety. Because GBPI relies heavily on K-Nearest Neighbors (KNN) to calculate the geometric Coherence Threshold ($\tau$), the decision space must be perfectly isotropic. Without strict min-max normalization, physical parameters with massive scales (e.g., thousands of RPMs) would completely dominate fractional parameters (e.g., geometric ratios), rendering local neighborhood calculations and spatial topologies mathematically meaningless.
 \end{itemize}
 
 We denote the resulting fitted normalization maps by $T_x$ for decisions and $T_y$ for outcomes. Applying these maps yields the normalized pairs:
@@ -212,7 +212,7 @@ Before any real-time user interaction occurs, the system executes two critical o
 
     \item \textbf{Surrogate Model Training:} A highly lightweight micro-surrogate model—specifically a Radial Basis Function (RBF) network \cite{buhmann2003radial}—is trained to act as a forward predictor mapping the decision space to the objective space ($f_{RBF}: X \to Y$). Due to the extreme sparsity of the data ($N \le 100$), this training completes in milliseconds. Unlike deep neural networks, the RBF requires minimal data to construct a smooth interpolation surface, serving as an instant, real-time physical validator for the generative phases.
     
-    \item \textbf{Coherence Threshold Calibration ($D_{max}$):} The most critical offline step is establishing a rigorous mathematical definition of a ``safe'' physical neighborhood. This prevents the generative algorithm from hallucinating impossible designs. In inverse problems, a phenomenon known as multi-modality frequently occurs: two designs might achieve nearly identical performance (extreme proximity in the $Y$-space) while utilizing entirely different underlying physical strategies (massive separation in the $X$-space). 
+    \item \textbf{Coherence Threshold Calibration ($\tau$):} The most critical offline step is establishing a rigorous mathematical definition of a ``safe'' physical neighborhood. This prevents the generative algorithm from hallucinating impossible designs. In inverse problems, a phenomenon known as multi-modality frequently occurs: two designs might achieve nearly identical performance (extreme proximity in the $Y$-space) while utilizing entirely different underlying physical strategies (massive separation in the $X$-space). 
     
     To safely interpolate, the system must quantify ``coherence''—the assumption that small, continuous variations in performance correspond to safe, continuous variations in physical parameters. To measure this baseline spatial density, the system employs a K-Nearest Neighbors (KNN) distance metric \cite{cover1967nearest} on the normalized decision space $\mathcal{X} = \{\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_N\}$.
     
@@ -225,18 +225,18 @@ Before any real-time user interaction occurs, the system executes two critical o
         \mathcal{D}_{KNN} = \Big\{ d(\mathbf{x}_i, \mathbf{x}_j) \mid i \in \{1, \dots, N\}, \mathbf{x}_j \in \mathcal{N}_k(\mathbf{x}_i) \Big\}
     \end{equation}
     
-    To establish the absolute boundary of a single physical archetype, the system calculates the Dynamic Coherence Threshold ($D_{max}$) by extracting the \textbf{95th percentile} of the distribution $\mathcal{D}_{KNN}$:
+    To establish the absolute boundary of a single physical archetype, the system calculates the Dynamic Coherence Threshold ($\tau$) by extracting the \textbf{95th percentile} of the distribution $\mathcal{D}_{KNN}$:
     \begin{equation}
-        D_{max} = P_{95}(\mathcal{D}_{KNN})
+        \tau = P_{95}(\mathcal{D}_{KNN})
     \end{equation}
     
     As visualized in Figure \ref{fig:dmax_distribution}, the statistical and physical justification for selecting the 95th percentile threshold is twofold:
     \begin{itemize}
-        \item \textbf{Capturing Intra-modal Variation ($\le D_{max}$):} The vast majority (the lower 95\%) of local distances represent standard, continuous engineering adjustments within a single physical archetype (e.g., slightly altering the wingspan of a specific drone chassis without changing its fundamental topology). $D_{max}$ perfectly bounds this continuous, safe region.
-        \item \textbf{Isolating Inter-modal Voids ($> D_{max}$):} In highly sparse datasets, the top 5\% of nearest-neighbor distances represent statistical outliers. Physically, these outliers correspond to massive, discontinuous leaps across the decision space—bridging the empty topological voids between fundamentally distinct engineering archetypes (e.g., jumping from a quadcopter topology to a fixed-wing topology). 
+        \item \textbf{Capturing Intra-modal Variation ($\le \tau$):} The vast majority (the lower 95\%) of local distances represent standard, continuous engineering adjustments within a single physical archetype (e.g., slightly altering the wingspan of a specific drone chassis without changing its fundamental topology). $\tau$ perfectly bounds this continuous, safe region.
+        \item \textbf{Isolating Inter-modal Voids ($> \tau$):} In highly sparse datasets, the top 5\% of nearest-neighbor distances represent statistical outliers. Physically, these outliers correspond to massive, discontinuous leaps across the decision space—bridging the empty topological voids between fundamentally distinct engineering archetypes (e.g., jumping from a quadcopter topology to a fixed-wing topology). 
     \end{itemize}
 
-    By formally establishing $D_{max}$ at this percentile, the GBPI framework creates a definitive mathematical ``speed limit.'' It grants the algorithm maximum freedom to interpolate within known physical families while proactively hard-coding a boundary that prevents it from blindly averaging across unmanufacturable voids.
+    By formally establishing $\tau$ at this percentile, the GBPI framework creates a definitive mathematical ``speed limit.'' It grants the algorithm maximum freedom to interpolate within known physical families while proactively hard-coding a boundary that prevents it from blindly averaging across unmanufacturable voids.
 \end{enumerate}
 
 \begin{figure}[!htbp]
@@ -244,7 +244,7 @@ Before any real-time user interaction occurs, the system executes two critical o
   \begin{adjustbox}{width=0.8\linewidth}
       \input{figures/dmax_distribution}
   \end{adjustbox}
-    \caption[Distribution of Local Distances for $D_{max}$]{Distribution of local distances ($\mathcal{D}_{KNN}$) in the decision space. The 95th percentile establishes $D_{max}$, mathematically separating safe intra-modal continuous regions from dangerous inter-modal topological voids.}
+    \caption[Distribution of Local Distances for $\tau$]{Distribution of local distances ($\mathcal{D}_{KNN}$) in the decision space. The 95th percentile establishes $\tau$, mathematically separating safe intra-modal continuous regions from dangerous inter-modal topological voids.}
     \label{fig:dmax_distribution}
 \end{figure}
 
@@ -272,41 +272,58 @@ Once the offline mathematical environment is established, the GBPI framework tra
     
     If a bounding simplex is found in Step 1, the system retrieves the decision configurations ($x_A, x_B, x_C$) corresponding to the anchors and calculates their pairwise Euclidean distances. The region is evaluated against the Coherence Gate:
     \begin{itemize}
-        \item \textit{Coherent Region:} If all pairwise distances are $\le D_{max}$, the anchors share the same physical strategy. The region is deemed safe for geometric interpolation.
-        \item \textit{Incoherent Region:} If any distance is $> D_{max}$, the anchors represent fundamentally different engineering strategies. To avoid non-linear topological voids—which can be further mapped and rigorously detected using tools like Topological Data Analysis (TDA) and the Vietoris-Rips complex \cite{carlsson2009topology}—the system refuses interpolation to guarantee physical safety.
+        \item \textit{Coherent Region:} If all pairwise distances are $\le \tau$, the anchors share the same physical strategy. The region is deemed safe for geometric interpolation.
+        \item \textit{Incoherent Region:} If any distance is $> \tau$, the anchors represent fundamentally different engineering strategies. To avoid non-linear topological voids—which can be further mapped and rigorously detected using tools like Topological Data Analysis (TDA) and the Vietoris-Rips complex \cite{carlsson2009topology}—the system refuses interpolation to guarantee physical safety.
     \end{itemize}
 
     \item \textbf{Step 3: Algorithmic Routing:} 
     Based on the localization and coherence evaluation, the system dynamically routes the user's query into one of two distinct mathematical pathways:
     \begin{itemize}
-        \item \textbf{Pathway A: Probabilistic Generative Mapping.} Triggered exclusively when the bounding region is mathematically verified as coherent. Instead of yielding a single deterministic output, the Barycentric weights are utilized as the mean vector for a Dirichlet Distribution \cite{bishop2006pattern}. The system samples a cloud of $K$ new weight vectors distributed tightly around the exact user request. These sampled weights are linearly inverted back into the decision space via matrix multiplication ($X_{candidates} = W_{sampled} \times X_{anchors}$). As depicted in Figure \ref{fig:dirichlet_sampling}, the system invents $K$ novel, diverse configurations that are bounded strictly within the safe, locally coherent manifold. 
-
-        \begin{figure}[htbp]
-            \centering
-            \begin{adjustbox}{width=0.8\linewidth}
-              \input{figures/dirichlet_sampling}
-          \end{adjustbox}
-            \caption[Pathway A: Probabilistic Generative Mapping]{Visualization of Pathway A: Probabilistic Generative Mapping. Once a simplex is verified as physically coherent, the exact deterministic target is utilized as the mean for a Dirichlet distribution. The algorithm samples $K$ probabilistic weight vectors, generating a dense, diverse cloud of novel configurations ($X_{candidates}$) bounded entirely within the safe, established physical manifold.}
-            \label{fig:dirichlet_sampling}
-        \end{figure}
+        \item \textbf{Pathway A: Probabilistic Generative Mapping.} Triggered exclusively when the bounding simplex is mathematically verified as physically coherent (e.g., maximum edge length $\le \tau$). Rather than yielding a single deterministic interpolation, the algorithm utilizes the exact barycentric coordinates of the target, denoted as the weight vector $\mathbf{w}^{\star} = [w_1^{\star}, w_2^{\star}, \dots, w_{V}^{\star}]^T$, to parameterize a Dirichlet distribution \cite{bishop2006pattern}. 
+    
+        By scaling $\mathbf{w}^{\star}$ with a concentration scalar, the system samples a diverse cloud of $K$ novel weight vectors, $\mathbf{w}^{(k)} \sim \mathrm{Dir}(\alpha \mathbf{w}^{\star})$. Each sampled vector tightly surrounds the exact user request while strictly maintaining the geometric convexity constraints ($\sum w_j^{(k)} = 1$ and $w_j^{(k)} \ge 0$). These probabilistic weights are then projected back into the physical decision space via linear combination with the simplex anchor points. For the complete generated batch, this is formulated as the matrix multiplication:
+        \begin{equation}
+            \mathbf{X}_{candidates} \;=\; \mathbf{W}_{sampled} \, \mathbf{X}_{anchors}
+            \label{eq:pathway_a_matrix}
+        \end{equation}
+        where $\mathbf{W}_{sampled} \in \mathbb{R}^{K \times V}$ is a matrix containing the $K$ sampled weight vectors as its rows, and $\mathbf{X}_{anchors}$ contains the physical decision coordinates of the $V$ simplex vertices. 
+        
+        As depicted in Figure \ref{fig:dirichlet_sampling}, this mechanism synthesizes a dense cloud of $K$ novel configurations bounded strictly within the safe, locally coherent physical manifold. This formally bypasses the centroid trap by providing generative diversity while guaranteeing that all proposed designs remain physically viable.
+    
+            \begin{figure}[htbp]
+                \centering
+                \begin{adjustbox}{width=0.8\linewidth}
+                  \input{figures/dirichlet_sampling}
+              \end{adjustbox}
+                \caption[Pathway A: Probabilistic Generative Mapping]{Visualization of Pathway A: Probabilistic Generative Mapping. Once a simplex is verified as physically coherent, the exact deterministic target is utilized as the mean for a Dirichlet distribution. The algorithm samples $K$ probabilistic weight vectors, generating a dense, diverse cloud of novel configurations ($\mathbf{X}_{candidates}$) bounded entirely within the safe, established physical manifold.}
+                \label{fig:dirichlet_sampling}
+            \end{figure}
         
         \item \textbf{Pathway B: Surrogate-Assisted Trust-Region Optimization.} Triggered when the targeted region crosses distinct physical modes (incoherent) or requires extrapolation beyond the known mesh (no simplex found). Proactively abandoning interpolation, the system designates the single closest known anchor to the user target as the \textit{Base Design}. To prevent the optimizer from wandering into invalid topological voids, a strict Trust Region Boundary (e.g., a $5\%$ maximum deviation limit) is enforced around the Base Design. Utilizing the pre-trained RBF surrogate from the offline phase, the system executes a rapid gradient descent to progressively optimize the base design toward $y^*$, subject to the strict constraint that it remains within the established bounds. Figure \ref{fig:trust_region_opt} visually outlines this bounded optimization process.
         
     \end{itemize}
 
-    \item \textbf{Step 4: Surrogate Filtering and Ranking:} 
-    Due to the non-linear nature of real-world physical laws, linear interpolation from Pathway A may occasionally suffer from ``Pareto Sag'' (where predictions slightly deviate from the true front). Therefore, a final quality assurance filter is necessary. 
+    \item \textbf{Pathway B: Surrogate-Assisted Trust-Region Optimization.} This pathway is activated exclusively when a query necessitates extrapolation beyond the established Delaunay convex hull, or when the bounding simplex is mathematically classified as incoherent (e.g., its spatial spanning exceeds the $D_{max}$ threshold). 
     
-    All generated candidate configurations ($X_{candidates}$), regardless of their originating pathway, are passed through the RBF micro-surrogate for instant validation. The surrogate-predicted performances ($\hat{y}$) are compared directly against the user's exact requested target ($y^*$), calculating the residual error. Candidates exhibiting high residual errors are immediately discarded, and the framework rigorously ranks the remaining physically coherent and mathematically accurate configurations for presentation to the end-user.
+    Recognizing that interpolation across disconnected physical modes yields invalid configurations, the framework proactively abandons generative sampling. Instead, the system identifies the single closest valid observation in the dataset to the target $\mathbf{y}^\star$, designating its physical coordinates as the \textit{Base Design}, $\mathbf{x}_{base}$. To prevent the subsequent optimization from diverging into mathematically plausible but physically unmanufacturable topological voids, a strict Trust-Region boundary, $\Omega$, is enforced. This boundary is defined by a maximum permissible perturbation radius $\delta$ (e.g., a $5\%$ maximum deviation limit per parameter) centered around the Base Design.
+    
+    Utilizing the high-speed Radial Basis Function (RBF) forward surrogate $\tilde{\mathbf{f}}$ pre-trained during the offline phase, the system executes a bounded gradient-descent optimization. The objective is to progressively step the base design toward the target performance while strictly adhering to the spatial constraints:
+    \begin{equation}
+        \mathbf{x}_{opt} \;=\; \arg\min_{\mathbf{x} \in \Omega} \big\| \tilde{\mathbf{f}}(\mathbf{x}) - \mathbf{y}^\star \big\|_2^2, \quad \text{subject to} \quad \|\mathbf{x} - \mathbf{x}_{base}\|_\infty \le \delta.
+        \label{eq:pathway_b_opt}
+    \end{equation}
+    
+    
+    This mechanism explicitly trades global exploratory freedom for guaranteed local feasibility, safely bridging the gap between known physical archetypes and ambitious out-of-distribution performance targets. As visually outlined in Figure \ref{fig:trust_region_opt}, the resulting bounded configuration $\mathbf{x}_{opt}$ is returned to the user, successfully resolving queries that would otherwise trigger catastrophic hallucinations in unconstrained parametric models.
 
-    \begin{figure}[htbp]
-        \centering
-        \begin{adjustbox}{width=0.8\linewidth}
-          \input{figures/trust_region_opt}
-      \end{adjustbox}
-        \caption[Pathway B: Surrogate-Assisted Trust-Region Optimization]{Visualization of Pathway B: Surrogate-Assisted Trust-Region Optimization. When the user's target ($y^*$) requires extrapolation into an unknown topological void, the framework proactively abandons interpolation. The closest known anchor is designated as the Base Design ($x_{base}$). An L-BFGS-B gradient descent optimizes new configurations towards the target, but is mathematically blocked from hallucinating impossible physics by a strict Trust Region Boundary.}
-        \label{fig:trust_region_opt}
-    \end{figure}
+        \begin{figure}[htbp]
+            \centering
+            \begin{adjustbox}{width=0.8\linewidth}
+              \input{figures/trust_region_opt}
+          \end{adjustbox}
+            \caption[Pathway B: Surrogate-Assisted Trust-Region Optimization]{Visualization of Pathway B. When a query falls into an incoherent region or requires extrapolation, interpolation is halted. The algorithm selects the closest known valid configuration ($\mathbf{x}_{base}$) and performs a fast surrogate-guided gradient descent, strictly bounded by a local Trust-Region ($\Omega$) to ensure physical manufacturability.}
+            \label{fig:trust_region_opt}
+        \end{figure}
 
 \end{enumerate}
 

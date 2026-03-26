@@ -20,20 +20,20 @@
     % ==========================================
     % 2. AXES
     % ==========================================
-    \draw[->, very thick] (-0.5, 0) -- (10.5, 0) node[right, align=center] {$y_1$};
-    \draw[->, very thick] (0, -0.5) -- (0, 7.5) node[above, align=center] {$y_2$};
+    \draw[->, very thick] (-0.5, 0) -- (10.5, 0) node[right, align=center] {$x_1$};
+    \draw[->, very thick] (0, -0.5) -- (0, 7.5) node[above, align=center] {$x_2$};
 
     % ==========================================
     % 3. COORDINATES DEFINITION
     % ==========================================
     % Background Mesh Points
-    \coordinate (p1) at (1.0, 4.0);
-    \coordinate (p2) at (1.5, 1.5);
-    \coordinate (p3) at (3.5, 5.5);
+    \coordinate (p1) at (0.5, 4.0);
+    \coordinate (p2) at (1.0, 1.5);
+    \coordinate (p3) at (2.5, 6.0);
     
-    % Anchors
-    \coordinate (yA) at (3.0, 2.5);
-    \coordinate (yB) at (5.0, 6.0);
+    % Anchors (Moved further apart to increase distance between xA and xB)
+    \coordinate (yA) at (2.5, 1.5);
+    \coordinate (yB) at (4.0, 6.8);
     
     % Base Design (Closest Anchor to Target)
     \coordinate (Base) at (6.0, 3.5);
@@ -54,7 +54,7 @@
     % ==========================================
     % 5. TRUST REGION BOUNDARY
     % ==========================================
-    % Draw the strict 5% mathematical boundary around the Base Design
+    % Draw the strict mathematical boundary around the Base Design
     \node[trust_region, minimum size=4.5cm] (TR) at (Base) {};
     
     % Radius indicator
@@ -90,40 +90,27 @@
     % ==========================================
     \foreach \p in {p1, p2, p3} { \node[bg_point] at (\p) {}; }
     
-    \node[anchor_node, label={[text=blue!80!black]below:$y_A$}] at (yA) {};
-    \node[anchor_node, label={[text=blue!80!black]left:$y_B$}] at (yB) {};
+    \node[anchor_node, label={[text=blue!80!black]below:$x_A$}] at (yA) {};
+    \node[anchor_node, label={[text=blue!80!black]left:$x_B$}] at (yB) {};
     
     % Base Design
     \node[base_node, label={[text=orange!90!black, font=\bfseries]below left: ($x_{base}$)}] at (Base) {};
     
     % Target Point
     \draw[red!60, thick] (Target) circle (6pt);
-    \node[target_node, label={[text=red!80!black, font=\bfseries]above:Unreachable Target ($y^*$)}] at (Target) {};
+    \node[target_node, label={[text=red!80!black, font=\bfseries]above:Unreachable Target ($x^*$)}] at (Target) {};
     
     % Ideal trajectory (Dashed line showing intent)
-    \draw[thick, red!50, dashed, -{Stealth[scale=1.2]}] (7.65, 5.15) -- (Target) 
+    \draw[thick, red!50, dashed, -{Stealth[scale=1.2]}] (7.65, 5.15) -- (Target);
 
     % ==========================================
     % 8. ANNOTATIONS & ZONES
     % ==========================================
     % Zone Labels
-    % \node[text=gray!80!black, font=\bfseries, align=center] at (2.5, 4.5) {Known Physics\\(Delaunay Mesh)};
-    \node[text=red!70!black, font=\bfseries, align=center] at (8.5, 2.5) {Extrapolation Zone\\(Topological Void)};
+    % \node[text=red!70!black, font=\bfseries, align=center] at (8.5, 2.5) {Extrapolation Zone\\(Topological Void)};
 
     % ==========================================
-    % 9. MATH BOX (Top Left)
-    % ==========================================
-    \node[draw=gray!50, fill=white, rounded corners, text width=5.5cm, align=center, anchor=north west] 
-        at (1.0, 9.2) {
-        \textbf{Trust-Region Optimization}\\
-        \vspace{3pt}
-        $\min \| f_{RBF}(X_{cand}) - y^* \|^2$ \\
-        \vspace{2pt}
-        s.t. $\|X_{cand} - x_{base}\| \le \text{Radius}$
-    };
-
-    % ==========================================
-    % 10. LEGEND (Bottom Right)
+    % 9. LEGEND (Bottom Right)
     % ==========================================
     \node[draw=gray!50, fill=white, rounded corners, text width=4.5cm, align=left, anchor=south east] 
         at (16.2, 1.2) {
@@ -133,7 +120,7 @@
         \textcolor{orange!90!black}{$\bullet$} Base Anchor\\
         \textcolor{purple!70}{$\rightarrow$} Gradient Descent Steps\\
         \textcolor{purple!80}{$\bullet$} Constrained Candidates\\
-        \textcolor{red!80!black}{$\bullet$} User Target ($y^*$)
+        \textcolor{red!80!black}{$\bullet$} User Target ($x^*$)
     };
 
 \end{tikzpicture}

@@ -18,11 +18,11 @@
     % =========================================================
     % 1. BACKGROUND BOXES (Drawn first to stay behind nodes)
     % =========================================================
-    % Phase 0 Background (Offline)
-    \draw[fill=gray!10, rounded corners=3mm, draw=gray!30, thick] (-9, 6.5) rectangle (9, -1.5);
+    % Phase 0 Background (Offline) - Widened to bounds [-10, 10]
+    \draw[fill=gray!10, rounded corners=3mm, draw=gray!30, thick] (-10, 6.5) rectangle (10, -1.5);
     
-    % Generation Background (Online)
-    \draw[fill=cyan!5, rounded corners=3mm, draw=cyan!30, thick] (-9, -1.8) rectangle (9, -23.5);
+    % Generation Background (Online) - Widened to bounds [-10, 10]
+    \draw[fill=cyan!5, rounded corners=3mm, draw=cyan!30, thick] (-10, -1.8) rectangle (10, -23.5);
 
 
     % =========================================================
@@ -35,16 +35,27 @@
     \node (calc_tau) at (-6, 2) [process] {\textbf{KNN Density Analysis}\\Calculate threshold};
     \node (tau_val) at (-6, 0) [artifact] {\textbf{Artifact:}\\Geometric Threshold ($\tau$)};
 
-    % Right Column: Surrogate Model
-    \node (in_XY) at (6, 4) [data_in] {\textbf{Dataset $X$ \& $Y$}\\(Full Mapping Data)};
-    \node (build_s) at (6, 2) [process] {\textbf{Train Forward Model}\\Build RBF \& Mesh};
-    \node (surf_mod) at (6, 0) [artifact] {\textbf{Artifact:}\\RBF Surrogate \& Mesh};
+    % Right Side: Split into Mesh and Surrogate Model
+    \node (in_XY) at (5.5, 4) [data_in, text width=5.5cm] {\textbf{Dataset $X$ \& $Y$}\\(Full Mapping Data)};
+    
+    % Right Side - Left Fork: Mesh Building
+    \node (build_mesh) at (3.5, 2) [process, text width=3.5cm] {\textbf{Build Mesh}\\Delaunay Triangulation};
+    \node (mesh_art) at (3.5, 0) [artifact, text width=3.2cm] {\textbf{Artifact:}\\Simplicial Mesh};
+
+    % Right Side - Right Fork: RBF Training
+    \node (train_rbf) at (7.5, 2) [process, text width=3.5cm] {\textbf{Train Forward Model}\\RBF Surrogate};
+    \node (rbf_art) at (7.5, 0) [artifact, text width=3.2cm] {\textbf{Artifact:}\\RBF Model};
 
     % Phase 0 Flow Arrows
     \draw [arrow] (in_X) -- (calc_tau);
     \draw [arrow] (calc_tau) -- (tau_val);
-    \draw [arrow] (in_XY) -- (build_s);
-    \draw [arrow] (build_s) -- (surf_mod);
+    
+    % Dataset flowing into both Mesh and RBF
+    \draw [arrow] (in_XY) -- (build_mesh);
+    \draw [arrow] (in_XY) -- (train_rbf);
+    
+    \draw [arrow] (build_mesh) -- (mesh_art);
+    \draw [arrow] (train_rbf) -- (rbf_art);
 
 
     % =========================================================
@@ -56,7 +67,7 @@
 
     \node (localization) at (0, -6.5) [process] {\textbf{1. Target Localization}\\Find Delaunay simplex\\or nearest neighbor};
 
-    % The New Out-of-Bounds Check
+    % The Out-of-Bounds Check
     \node (mesh_check) at (0, -9.5) [decision] {\textbf{In Mesh?}\\(Simplex Found)};
 
     \node (gate) at (0, -13) [decision] {\textbf{2. Coherence Gate}\\Are anchors $\le \tau$?};
@@ -100,9 +111,11 @@
     \draw [artifact_flow] (tau_val.south) -- (-6, -1.2) -| (-7.5, -12) -- (gate.north west);
     \draw [artifact_flow] (-7.5, -12) |- (path3a.west);
 
-    % Right Data Bus (Surrogate & Mesh Data)
-    \draw [artifact_flow] (surf_mod.south) -- (6, -1.2) -| (7.5, -6.5) -- (localization.east);
-    \draw [artifact_flow] (7.5, -6.5) |- (path3b.east);
+    % Right Data Bus 1 (Simplicial Mesh -> Localization)
+    \draw [artifact_flow] (mesh_art.south) -- (3.5, -1.2) -| (2.5, -6.5) -- (localization.east);
+
+    % Right Data Bus 2 (RBF Model -> Path 3B & Surrogate Filtering)
+    \draw [artifact_flow] (rbf_art.south) -- (7.5, -1.2) -- (7.5, -17) -- (path3b.east);
     \draw [artifact_flow] (7.5, -17) |- (merge.east);
 
 \end{tikzpicture}
