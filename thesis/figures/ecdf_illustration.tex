@@ -1,53 +1,81 @@
 \begin{tikzpicture}
     \begin{axis}[
-        width=12cm,  % Expanded width for clarity
-        height=8cm,  % Expanded height for clarity
-        title={\Large \textbf{Empirical Cumulative Distribution Function (ECDF)}},
-        title style={yshift=2ex}, % Pushes title up slightly
-        xlabel={\large Data Value ($x$)},
-        ylabel={\large Cumulative Proportion $F_n(x)$},
-        xmin=0, xmax=6.5, % Adjusted x-axis to fit annotations
+        width=10.5cm,
+        height=7cm,
+        xlabel={Data Value ($x$)},
+        ylabel={Cumulative Proportion $F_n(x)$},
+        xmin=0, xmax=7,
         ymin=-0.05, ymax=1.15,
-        xtick={0,1,2,3,4,5,6},
+        xtick={0,1,2,3,4,5,6,7},
         ytick={0, 0.2, 0.4, 0.6, 0.8, 1.0},
         grid=major,
-        legend pos=south east, % Moved legend away from the curve
+        grid style={dashed, gray!30},
         axis lines=left,
-        legend style={font=\normalsize, cells={anchor=west}},
+        % Legend placed outside the plot to the right
+        legend pos=outer north east,
+        legend style={font=\small, cells={anchor=west}, draw=gray!30, rounded corners=2pt},
+        clip=false % Allows labels outside the axis bounds to be visible
     ]
 
-    % Theoretical CDF (Smooth line)
-    \addplot[blue, smooth, thick, domain=0:6] { min((x/5)^2, 1) };
-    \addlegendentry{Theoretical CDF (e.g., Beta)};
+    % ==============================================
+    % DISTRIBUTION A (Base)
+    % ==============================================
+    % True CDF A
+    \addplot[blue!50, smooth, thick, domain=0:7, samples=50] { 1 / (1 + exp(-2*(x-2.2))) };
+    \addlegendentry{True CDF A};
 
-    % ECDF Step Function (Choppy line)
-    \addplot[red, ultra thick, const plot, mark=*, mark options={solid, scale=1.2}, jump mark left] coordinates {
-        (1.2, 0)
-        (1.2, 0.2)
-        (2.5, 0.4)
-        (3.1, 0.6)
-        (4.0, 0.8)
-        (4.8, 1.0)
-        (6.2, 1.0) 
+    % ECDF A
+    \addplot[blue, thick, const plot, mark=*, mark options={solid, scale=0.9}, jump mark left] coordinates {
+        (0.5, 0)
+        (1.1, 0.2)
+        (1.8, 0.4)
+        (2.2, 0.6)
+        (2.6, 0.8)
+        (3.3, 1.0)
+        (7.0, 1.0)
     };
-    \addlegendentry{ECDF ($n=5$)};
+    \addlegendentry{ECDF A ($n=5$)};
 
-    % --- ANNOTATIONS ---
+    % ==============================================
+    % DISTRIBUTION B (Shifted)
+    % ==============================================
+    % True CDF B
+    \addplot[orange!50, smooth, thick, domain=0:7, samples=50] { 1 / (1 + exp(-2*(x-4.2))) };
+    \addlegendentry{True CDF B};
 
-    % 1. Jump height explanation
-    \draw[<-, darkgray, thick] (axis cs:3.15, 0.5) -- (axis cs:4.2, 0.5) 
-        node[right, text=black] {Jump height = $\frac{1}{n} = 0.2$};
+    % ECDF B
+    \addplot[orange!90!black, thick, const plot, mark=square*, mark options={solid, scale=0.9}, jump mark left] coordinates {
+        (2.5, 0)
+        (3.1, 0.2)
+        (3.8, 0.4)
+        (4.2, 0.6)
+        (4.6, 0.8)
+        (5.3, 1.0)
+        (7.0, 1.0)
+    };
+    \addlegendentry{ECDF B ($n=5$)};
 
-    % 2. Start and End points
-    \node[anchor=south west, red] at (axis cs: 1.25, 0.02) {Starts at $0$};
-    \node[anchor=south, red] at (axis cs: 5.5, 1.02) {$F_n(x) \to 1.0$};
+    % ==============================================
+    % THRESHOLDS & ANNOTATIONS (\tau)
+    % ==============================================
+    
+    % Threshold: Tau = 0.5 (Median)
+    \draw[dashed, black!60, thick] (axis cs:0, 0.5) -- (axis cs: 6.5, 0.5) 
+        node[right, font=\small, text=black] {$\tau_{0.5}$ (Median)};
+    
+    % Dropdown markers showing where Tau=0.5 intersects the ECDFs
+    \draw[dotted, blue, thick, ->] (axis cs:2.2, 0.5) -- (axis cs:2.2, 0) 
+        node[below, font=\small] {$x_A$};
+    \draw[dotted, orange!90!black, thick, ->] (axis cs:4.2, 0.5) -- (axis cs:4.2, 0) 
+        node[below, font=\small] {$x_B$};
 
-    % 3. Highlighting Percentile Calculation (e.g., 50th percentile)
-    \draw[dashed, thick, darkgray] (axis cs: 0, 0.5) -- (axis cs: 2.8, 0.5);
-    \draw[dashed, thick, darkgray, ->] (axis cs: 2.8, 0.5) -- (axis cs: 2.8, 0);
+    % Threshold: Tau = 0.8
+    \draw[dashed, black!60, thick] (axis cs:0, 0.8) -- (axis cs: 6.5, 0.8) 
+        node[right, font=\small, text=black] {$\tau_{0.8}$};
 
-    \node[anchor=south west] at (axis cs: 0.1, 0.5) {$p=0.50$ (Median)};
-    \node[anchor=south west] at (axis cs: 2.8, 0.05) {Median Est. $\approx 2.8$};
+    % Jump height explanation (moved to a clear spot on curve B)
+    \draw[<-, darkgray] (axis cs:4.65, 0.7) -- (axis cs:5.3, 0.7) 
+        node[right, font=\small, text=black, align=left] {Jump \\ $= \frac{1}{n} = 0.2$};
 
     \end{axis}
 \end{tikzpicture}
