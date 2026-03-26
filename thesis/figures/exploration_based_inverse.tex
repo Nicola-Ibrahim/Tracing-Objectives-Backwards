@@ -1,6 +1,6 @@
 \begin{tikzpicture}[
     % --- Global Configuration via tikzset ---
-    node distance=2.0cm and 2.5cm,
+    node distance=2.2cm and 2.8cm, % Slightly increased for better breathing room
     font=\sffamily,
     >=Stealth,
 ]
@@ -8,33 +8,36 @@
 \tikzset{
     % Node Base Styles
     base/.style={
-        rectangle, rounded corners=6pt, align=center,
-        line width=0.8pt, drop shadow={opacity=0.1, shadow xshift=1pt, shadow yshift=-1pt}
+        rectangle, rounded corners=8pt, align=center,
+        line width=1pt, % Slightly thicker for a bolder, modern look
+        drop shadow={opacity=0.15, shadow xshift=1.5pt, shadow yshift=-1.5pt}
     },
-    % Specific Component Styles (No Bold)
+    % Specific Component Styles
     goalNode/.style={
-        base, draw=blue!40, top color=white, bottom color=blue!5, 
-        text=blue!70!black, minimum width=2.6cm, minimum height=1.3cm, font=\sffamily\small
+        base, draw=blue!50!black, top color=white, bottom color=blue!10, 
+        text=black, minimum width=2.8cm, minimum height=1.4cm, font=\sffamily\small
     },
     engineNode/.style={
-        base, draw=orange!50, top color=white, bottom color=orange!5, 
-        text=orange!70!black, rounded corners=12pt, minimum width=3.4cm, minimum height=1.6cm, font=\sffamily\small
+        base, draw=orange!60!black, top color=white, bottom color=orange!10, 
+        text=black, rounded corners=14pt, minimum width=3.6cm, minimum height=1.8cm, font=\sffamily\small
     },
     envNode/.style={
-        draw=black!40, ellipse, fill=gray!5, text=black!70,
-        minimum width=3.4cm, minimum height=1.6cm, align=center, font=\sffamily\small, line width=0.8pt,
-        drop shadow={opacity=0.05, shadow xshift=1pt, shadow yshift=-1pt}
+        draw=gray!60!black, ellipse, top color=white, bottom color=gray!15, text=black,
+        minimum width=3.6cm, minimum height=1.8cm, align=center, font=\sffamily\small, line width=1pt,
+        drop shadow={opacity=0.15, shadow xshift=1.5pt, shadow yshift=-1.5pt}
     },
     candidateNode/.style={
-        base, draw=green!40!black!50, top color=white, bottom color=green!5, 
-        text=green!50!black, minimum width=2.6cm, minimum height=1.3cm, font=\sffamily\small
+        base, draw=green!50!black, top color=white, bottom color=green!10, 
+        text=black, minimum width=2.8cm, minimum height=1.4cm, font=\sffamily\small
     },
     % Connection Styles
     connector/.style={
-        ->, color=gray!60, line width=1.1pt, shorten >=2pt, shorten <=2pt
+        ->, color=gray!70, line width=1.2pt, shorten >=3pt, shorten <=3pt
     },
     loopLabel/.style={
-        font=\sffamily\tiny\itshape, text=gray!80, align=center
+        font=\sffamily\tiny\itshape, text=black!80, align=center,
+        fill=white!90!orange!10, % Subtle background so dashed lines don't ruin text
+        inner sep=2pt, rounded corners=3pt
     },
     callout/.style={
         font=\sffamily\tiny, text=#1, inner sep=2pt
@@ -50,46 +53,49 @@
 \node[engineNode, right=of goals] (engine) {Exploration Engine\\(RL Agent, MCTS,\\or Heuristic PSO)};
 
 % Environment/Simulator (Below)
-\node[envNode, below=1.8cm of engine] (simulator) {Environment /\\Physics Simulator};
+\node[envNode, below=2.0cm of engine] (simulator) {Environment /\\Physics Simulator};
 
 % Output/Candidates
 \node[candidateNode, right=of engine] (output) {Diverse High-Scoring\\Candidate Designs};
 
-% ================= 2. Connections & Loops =================
+% ================= 2. Annotations & Background =================
+
+% Drawn before connections so the loop box stays neatly in the back
+\begin{scope}[on background layer]
+    % Increased inner ysep to explicitly stretch the height of the block
+    \node[fill=orange!4, rounded corners=24pt, draw=orange!35, 
+          line width=1.2pt, dashed, fit=(engine) (simulator), 
+          inner xsep=25pt, inner ysep=45pt] (loop_bg) {};
+    
+    \node[anchor=south, font=\sffamily\scriptsize\bfseries, text=orange!80!black, yshift=6pt] 
+          at (loop_bg.south) {Active Exploration Loop};
+\end{scope}
+
+% ================= 3. Connections & Loops =================
 
 % Trigger Flow
 \draw[connector] (goals) -- (engine);
 
 % Active Exploration Loop
 \draw[connector, bend left=45] (engine.east) to 
-    node[right, loopLabel, xshift=3pt] {Action\\(Design Selection)} (simulator.east);
+    node[right, loopLabel, xshift=2pt] {Action\\(Design Selection)} (simulator.east);
 
 \draw[connector, bend left=45] (simulator.west) to 
-    node[left, loopLabel, xshift=-3pt] {Observation / Reward\\(Property)} (engine.west);
+    node[left, loopLabel, xshift=-2pt] {Observation / Reward\\(Property)} (engine.west);
 
 % Discovery Path
-\draw[connector] (engine) -- node[above, loopLabel, yshift=2pt] {Discovery} (output);
+\draw[connector] (engine) -- node[above, loopLabel, fill=white, yshift=2pt] {Discovery} (output);
 
-% ================= 3. Annotations & Background =================
+% ================= 4. Method Sub-descriptions & Callouts =================
 
-% Background Highlight for the Loop
-\begin{scope}[on background layer]
-    \node[fill=orange!2, rounded corners=18pt, draw=orange!15, 
-          line width=1pt, densely dashed, fit=(engine) (simulator), inner sep=20pt] (loop_bg) {};
-    
-    \node[anchor=south, callout=orange!80, yshift=2pt] 
-          at (loop_bg.south) {Active Exploration Loop};
-\end{scope}
-
-% Method Sub-descriptions
-\node[below=0.1cm of engine, callout=gray!80, text width=3cm] 
+\node[below=0.1cm of engine, callout=gray!80!black, text width=3cm] 
     {Iteratively optimizes\\sequences of decisions};
 
-\node[below=0.1cm of simulator, callout=gray!80, text width=3.5cm] 
+\node[below=0.1cm of simulator, callout=gray!80!black, text width=3.5cm] 
     {Provides feedback where\\gradients may be unavailable};
 
 % Strength Callouts
-\node[above=0.2cm of engine, callout=blue!60] {High Exploration Efficiency};
-\node[above=0.2cm of output, callout=green!50!black] {Population Diversity};
+\node[above=0.2cm of engine, callout=blue!70!black] {High Exploration Efficiency};
+\node[above=0.2cm of output, callout=green!60!black] {Population Diversity};
 
 \end{tikzpicture}
