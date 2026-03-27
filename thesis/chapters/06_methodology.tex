@@ -583,57 +583,35 @@ be well calibrated yet uninformative (too wide), or sharp yet unreliable (overco
 
 \subsubsection{Reliability via PIT}\label{sec:eval_pit}
 
-Reliability evaluates the uncertainty behaviour of the conditional candidate distribution
-under repeated queries. The central question is whether the candidate set provides
-meaningful percentiles: across many test cases, do values labelled as ``10th percentile''
-actually contain the ground truth about 10\% of the time, ``50th percentile'' about 50\% of
-the time, and so on. This is a distribution-level check, not a best-candidate accuracy
-check. \cite{Diebold1998}
+The central challenge in evaluating probabilistic generative models is a fundamental geometric mismatch: the model predicts a full continuous probability distribution (or a dense ensemble of candidates) for a given query, but the physical world only provides a single ground-truth observation to test against. Traditional deterministic error metrics are insufficient because one cannot simply measure the Euclidean distance between a probability curve and a single scalar point. 
 
+Reliability resolves this by evaluating the uncertainty behavior of the conditional candidate distribution under repeated queries. Instead of measuring spatial distance, it asks a probabilistic question: According to the model's predicted distribution, in what percentile did the real truth actually fall? Across many test cases, values labeled as the ``10th percentile'' should actually contain the ground truth about 10\% of the time, the ``50th percentile'' about 50\% of the time, and so on. This is a distribution-level diagnostic of statistical honesty, not a best-candidate accuracy check \cite{Diebold1998}.
 
-
-To assess this reliability, we employ the Probability Integral Transform (PIT) applied component-wise to the empirical conditional distribution. For each test case $i$ and each decision dimension $d \in \{1, \dots, D\}$, let
-\[
+To quantify this reliability, we employ the Probability Integral Transform (PIT) applied component-wise to the empirical conditional distribution. For each test case $i$ and each decision dimension $d \in \{1, \dots, D\}$, let
+$$
   \widehat{x}^{(1)}_{i,d}, \dots, \widehat{x}^{(K)}_{i,d}
-\]
+$$
 denote the $K$ sampled values of component $d$, and let $x_{i,d}$ denote the corresponding ground-truth component. The PIT value is computed as the empirical percentile rank of the ground-truth component among the sampled candidates:
 \begin{equation}
   z_{i,d} = \underbrace{\frac{1}{K}\sum_{k=1}^{K}\mathbb{I}\!\left(\widehat{x}^{(k)}_{i,d}\le x_{i,d}\right)}_{\text{percentile rank of }x_{i,d}\text{ among }K\text{ samples}},
   \label{eq:pit_empirical}
 \end{equation}
+where $\mathbb{I}(\cdot)$ is the indicator function. The quantity $z_{i,d}\in[0,1]$ is the empirical CDF of the $K$ sampled candidates evaluated at the ground-truth value $x_{i,d}$. For example, a PIT value of $z_{i,d}=0.1$ indicates that exactly 10\% of the model's sampled candidates lie below the actual physical ground-truth value $x_{i,d}$. 
 
-where $\mathbb{I}(\cdot)$ is the indicator function. The quantity $z_{i,d}\in[0,1]$ is the empirical CDF of the $K$ sampled candidates evaluated at
-the ground-truth value $x_{i,d}$. Equivalently, it is the percentile rank of $x_{i,d}$ among the
-samples: for example, $z_{i,d}=0.1$ indicates that 10\% of the sampled candidates lie below the actual ground-truth value $x_{i,d}$.
-If the conditional sampler is calibrated for component $d$, then these ranks aggregated over
-test cases are approximately uniform on $[0,1]$. Systematic departures from uniformity therefore
-diagnose distorted uncertainty under repeated conditioning. 
+If the conditional sampler is perfectly calibrated, these percentile ranks, when aggregated over thousands of test cases, will be uniformly distributed on $[0,1]$. PIT is intentionally based on these relative ranks rather than absolute distances. It can therefore appear highly reliable even when the model's predictive variance is very wide, provided the truth lands at the correct proportional ranks across many test cases. For this reason, we treat PIT strictly as a reliability diagnostic, not a measure of how sharp or informative the candidate distribution is.
 
+Calibration is visualized using a PIT calibration curve (or P-P plot) constructed from the empirical CDF of the aggregated PIT values. Let $\{z_{\ell}\}_{\ell=1}^{L}$ denote the pooled PIT values aggregated over test cases and selected dimensions, where $L$ is the total number of PIT values included. Plotting the empirical CDF of $\{z_{(\ell)}\}$ against the ideal theoretical diagonal $u\mapsto u$ provides a direct visual baseline for perfect calibration \cite{dawid1984statistical}. 
 
-PIT is intentionally based on ranks rather than distances. It can therefore look acceptable
-even when the samples are very wide, provided the truth lands at the right ranks often
-enough across many test cases. For this reason we treat PIT as a reliability diagnostic,
-not a measure of how informative the candidate distribution is.
-
-Calibration is visualized using a PIT calibration curve constructed from the empirical CDF
-of the aggregated PIT values. Let $\{z_{\ell}\}_{\ell=1}^{L}$ denote the pooled PIT values aggregated over test cases and
-selected dimensions, where $L$ is the total number of PIT values included. Plotting the empirical CDF of $\{z_{(\ell)}\}$ against the diagonal
-$u\mapsto u$ provides a direct baseline for perfect calibration. This view is convenient in
-practice because it summarizes miscalibration without relying on histogram bin choices and
-it supports direct visual comparison across inverse models and sampling schemes. \cite{dawid1984statistical}
-
-
-Systematic departures from the diagonal have interpretable signatures, as summarized in Table~\ref{tab:pit_signatures} and Figure~\ref{fig:pit_signatures}. These signatures are fundamentally driven by the relationship between the PIT histogram's density and the slope of the calibration curve (the CDF). Because the calibration curve is the cumulative integral of the PIT values, its slope at any point is directly proportional to the height of the histogram at that specific percentile:
+Systematic departures from this diagonal have highly interpretable mathematical signatures, as summarized in Table~\ref{tab:pit_signatures} and Figure~\ref{fig:pit_signatures}. These signatures are fundamentally driven by the relationship between the PIT histogram's density and the slope of the calibration curve. Because the calibration curve is the cumulative running total of the PIT values, its slope at any point is directly proportional to the height of the histogram at that specific percentile:
 
 \begin{itemize}
-    \item High Histogram Density (Peaks): When many ground truth observations fall within a specific percentile range, the calibration curve "sprints" or rises rapidly. For instance, a peak at $PIT \approx 0$ causes the curve to shoot above the diagonal immediately.
-    \item Low Histogram Density (Valleys): When few observations fall within a range, the calibration curve "crawls" or flattens out. If the histogram is empty near $PIT \approx 0$, the curve lags, falling below the diagonal.
+    \item \textbf{High Histogram Density (Peaks):} When a disproportionate number of ground truth observations fall within a specific percentile range, the calibration curve "sprints" or rises rapidly. For instance, a peak at $PIT \approx 0$ causes the curve to shoot above the ideal diagonal immediately.
+    \item \textbf{Low Histogram Density (Valleys):} When very few observations fall within a range, the calibration curve "crawls" or flattens out. If the histogram is empty near the center, the running total lags, causing the curve to fall below the diagonal.
 \end{itemize}
 
 \begin{table}[!htbp]
 \centering
 \small
-% Adjust the thickness of top/bottom (heavy) and middle (light) rules
 \setlength{\heavyrulewidth}{0.12em} 
 \setlength{\lightrulewidth}{0.05em}
 \renewcommand{\arraystretch}{1.6}
@@ -642,13 +620,13 @@ Systematic departures from the diagonal have interpretable signatures, as summar
 \toprule
 \textbf{Signature} & \textbf{PIT Distribution} & \textbf{Interpretation} \\
 \midrule
-Overconfident & U-shaped (peaks at 0 and 1) & Under-dispersed: Variance is too low; ground truth falls in tails more often than predicted. Visualized by a sigmoid CDF. \\
+Overconfident & U-shaped (peaks at 0 and 1) & Under-dispersed: Variance is too low; the ground truth falls in the extreme tails far more often than predicted. Visualized by an inverse-sigmoid CDF. \\
 
-Underconfident & Hump-shaped (peak at 0.5) & Over-dispersed: Variance is too high; ground truth falls in the center too often. Visualized by an inverse-sigmoid CDF. \\
+Underconfident & Hump-shaped (peak at 0.5) & Over-dispersed: Variance is too high; the ground truth falls safely in the center too often. Visualized by a sigmoid CDF. \\
 
-Biased / Skewed & Skewed (peak at 0 or 1) & Systematic Shift: The model over-predicts (concave CDF, peak at 0) or under-predicts (convex CDF, peak at 1). \\
+Biased / Skewed & Skewed (peak at 0 or 1) & Systematic Shift: The model consistently over-predicts (concave CDF, peak at 0) or under-predicts (convex CDF, peak at 1). \\
 
-Well-Calibrated & Flat / Uniform & Ideal Sampler: The sampler perfectly matches the true distribution; ground truth percentiles are uniformly distributed. \\
+Well-Calibrated & Flat / Uniform & Ideal Sampler: The sampler perfectly matches the true distribution; ground truth percentiles are uniformly distributed across all tests. \\
 \bottomrule
 \end{tabularx}
 \caption{Interpretive signatures of systematic departures from the diagonal in PIT calibration curves.}
@@ -660,16 +638,11 @@ Well-Calibrated & Flat / Uniform & Ideal Sampler: The sampler perfectly matches 
   \begin{adjustbox}{width=0.85\linewidth}
       \input{figures/pit_signatures}
   \end{adjustbox}
-  \caption[Interpretive Signatures of PIT Calibration Curves]{Visualizing systematic departures from the diagonal in PIT calibration. (Top-Left) Overconfidence shows a U-shaped PIT and sigmoid CDF; (Top-Right) Underconfidence shows a humped PIT and inverse-sigmoid CDF; (Bottom-Left) Bias shows a skewed PIT and concave/convex CDF; (Bottom-Right) Well-calibrated results show a uniform PIT and diagonal CDF.}
+  \caption[Interpretive Signatures of PIT Calibration Curves]{Visualizing systematic departures from the diagonal in PIT calibration. (Top-Left) Overconfidence shows a U-shaped PIT and inverse-sigmoid CDF; (Top-Right) Underconfidence shows a humped PIT and sigmoid CDF; (Bottom-Left) Bias shows a skewed PIT and concave/convex CDF; (Bottom-Right) Well-calibrated results show a uniform PIT and diagonal CDF.}
   \label{fig:pit_signatures}
 \end{figure}
 
-
-
-For compact reporting, we summarize deviation from the diagonal using the mean absolute
-calibration error (MACE). Let $\{z_\ell\}_{\ell=1}^{L}$ denote the pooled PIT values aggregated
-over the selected test cases and decision dimensions. Define the empirical CDF of the aggregated
-PIT values as
+For compact numerical reporting, we summarize the total deviation from the ideal diagonal using the Mean Absolute Calibration Error (MACE). Let $\{z_\ell\}_{\ell=1}^{L}$ denote the pooled PIT values. We define the empirical CDF of these aggregated values as:
 \begin{equation}
   \widehat{G}(\alpha)
   \;=\;
@@ -677,18 +650,14 @@ PIT values as
   \qquad \alpha\in[0,1].
   \label{eq:pit_ecdf}
 \end{equation}
-We then compute MACE as the average absolute deviation of this curve from the uniform reference
-CDF over a fixed grid:
+We then compute MACE as the average absolute deviation of this curve from the uniform reference CDF over a fixed grid: 
 \begin{equation}
   \mathrm{MACE}
   \;=\;
   \frac{1}{J}\sum_{j=1}^{J}\big|\widehat{G}(\alpha_j)-\alpha_j\big|,
   \label{eq:mace}
 \end{equation}
-where $\{\alpha_j\}_{j=1}^{J}\subset[0,1]$ is a fixed grid (e.g., equally spaced). This quantity measures the
-average absolute deviation between the empirical PIT CDF and the uniform reference CDF across
-quantile levels. Lower values indicate more reliable uncertainty representation, which matters
-when candidate dispersion is used to guide downstream exploration or decision-making.
+where $\{\alpha_j\}_{j=1}^{J}\subset[0,1]$ is a fixed, equally spaced grid. Geometrically, this quantity measures the physical area between the model's empirical calibration curve and the perfect diagonal reference. Lower MACE values indicate a more statistically honest uncertainty representation, which is paramount when candidate dispersion is used to guide downstream physical exploration or strict safety constraints.
 
 
 
