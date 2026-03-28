@@ -124,11 +124,11 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             # We want to insert it. But changing the layout is invasive.
             # Let's see if we can fit it.
             # Actually, the user said "add this new scatter plot".
-            # If I use add_surfaces_2d, it expects to plot into (row, col=1) 
+            # If I use add_surfaces_2d, it expects to plot into (row, col=1)
             # and (row, col=2).
             # Row 2 is a spacer. Row 3 is Loss.
             # I should probably expand the figure to 6 rows?
-            # Or just overwrite Row 1 if it's 2D? No, Row 1 is the 1D reduction 
+            # Or just overwrite Row 1 if it's 2D? No, Row 1 is the 1D reduction
             # which is useful.
 
             # Let's add it as a new row. But I need to change the make_subplots spec.
@@ -141,9 +141,9 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             pass  # Placeholder, I will do this in a separate edit to `plot` method.
 
         # Row 3 (was 2) -> Now Row 3 or 5 depending on is_2d_input
-        # Row indices in make_subplots are 1-based and count spacers if they 
+        # Row indices in make_subplots are 1-based and count spacers if they
         # are in 'specs' list?
-        # No, make_subplots rows count the rows in the grid, including 
+        # No, make_subplots rows count the rows in the grid, including
         # spacers if they are rows.
         # My specs list has spacers as rows.
 

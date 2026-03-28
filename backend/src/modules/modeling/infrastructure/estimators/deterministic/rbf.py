@@ -101,9 +101,7 @@ class RBFEstimator(DeterministicEstimator):
         super().fit(X, y)
 
         if len(X) < 1:
-            raise ValueError(
-                "RBF Mapper requires at least 1 data point for fitting."
-            )
+            raise ValueError("RBF Mapper requires at least 1 data point for fitting.")
 
         # Combine X and y to find unique rows
         combined_data = np.hstack((X, y))

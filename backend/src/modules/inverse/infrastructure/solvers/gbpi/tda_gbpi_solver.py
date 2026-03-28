@@ -37,12 +37,12 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
         Initializes the TDA-GBPISolver.
 
         Args:
-            coherence_n_neighbors: How many local X-space neighbors to use when 
+            coherence_n_neighbors: How many local X-space neighbors to use when
                                    determining the TDA linking radius (epsilon).
             trust_radius: Trust-region radius for gradient descent optimization.
             concentration_factor: Concentration factor for the Dirichlet distribution.
-            hole_penalty_factor: The multiplier threshold. If the shortest 
-                                 topological path is this many times longer than 
+            hole_penalty_factor: The multiplier threshold. If the shortest
+                                 topological path is this many times longer than
                                  the straight line, a hole is detected.
         """
         self.coherence_n_neighbors = coherence_n_neighbors
@@ -96,8 +96,8 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
     ) -> tuple[bool, list[float]]:
         """
         Enforces TDA Coherence.
-        Checks if the straight Euclidean interpolation line cuts across a topological 
-        hole by comparing it to the shortest geodesic path traveling safely on 
+        Checks if the straight Euclidean interpolation line cuts across a topological
+        hole by comparing it to the shortest geodesic path traveling safely on
         the Vietoris-Rips graph.
         """
         triangle_vertices = self.X[vertices_indices]
@@ -162,7 +162,7 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
 
     def _get_nearest_neighbor(self, target: np.ndarray) -> tuple[list[int], np.ndarray]:
         """
-        Uses the global Y-space KNN to find the single absolute closest point 
+        Uses the global Y-space KNN to find the single absolute closest point
         for extrapolation.
         """
         _, indices = self.objective_knn.kneighbors(target)

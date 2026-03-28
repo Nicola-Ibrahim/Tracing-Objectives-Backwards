@@ -9,7 +9,7 @@ def create_3d_decision_context_figure(
     X_raw: np.ndarray, y_raw: np.ndarray
 ) -> go.Figure:
     """
-    Creates 3D plots showing Decision Space (x1, x2) vs Objective 
+    Creates 3D plots showing Decision Space (x1, x2) vs Objective
     components (y1, y2).
     """
 
@@ -85,7 +85,7 @@ def create_3d_objective_context_figure(
     X_raw: np.ndarray, y_raw: np.ndarray
 ) -> go.Figure:
     """
-    Creates 3D plots showing Objective Space (y1, y2) vs Decision 
+    Creates 3D plots showing Objective Space (y1, y2) vs Decision
     components (x1, x2).
     """
 

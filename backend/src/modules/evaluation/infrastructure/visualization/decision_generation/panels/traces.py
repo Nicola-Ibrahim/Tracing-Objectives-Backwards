@@ -137,7 +137,7 @@ def add_objective_connection_trace(
     fig: go.Figure, run: dict, target: np.ndarray, row: int, col: int, color: str
 ) -> None:
     """
-    Draw a connection line between the target objective and the best 
+    Draw a connection line between the target objective and the best
     generator objective.
     """
     best_obj = run.get("best_objective")

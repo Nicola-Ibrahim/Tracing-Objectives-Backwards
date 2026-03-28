@@ -113,7 +113,7 @@ class BaseTrainedPipelineRepository(ABC):
 
         Args:
             mapping_direction: "inverse" or "forward".
-            requested: List of (type, version) pairs. If version is None, 
+            requested: List of (type, version) pairs. If version is None,
                        latest is used.
             on_missing: "skip" (default) skips missing; "raise" raises on first.
 

@@ -12,7 +12,7 @@ def import_modules_from_package(package_name: str) -> Generator[Any, None, None]
     Import all modules within the specified package.
 
     Args:
-        package_name (str): The dot-separated package path 
+        package_name (str): The dot-separated package path
                      (e.g., 'src.api.routers.v1.endpoints').
 
     Yields:
@@ -35,9 +35,9 @@ def extract_members_from_module(
 
     Args:
         module (Any): The imported module.
-        member_type (Type[T], optional): The type of member to filter 
+        member_type (Type[T], optional): The type of member to filter
                      (e.g., APIRouter). Defaults to None.
-        member_name (str, optional): The specific name of the member 
+        member_name (str, optional): The specific name of the member
                      to retrieve. Defaults to None.
 
     Yields:
@@ -59,15 +59,15 @@ def extract_members_from_package(
     Imports all modules from a package and retrieves specified members from them.
 
     Args:
-        package_name (str): The package path 
+        package_name (str): The package path
                      (e.g., 'src.api.routers.v1.endpoints').
-        member_type (Type[T], optional): The type of member to filter. 
+        member_type (Type[T], optional): The type of member to filter.
                      Defaults to None.
-        member_name (str, optional): The specific name of the member 
+        member_name (str, optional): The specific name of the member
                      to retrieve. Defaults to None.
 
     Yields:
-        Iterable[T]: An iterable of members imported from the modules 
+        Iterable[T]: An iterable of members imported from the modules
                      in the specified package.
     """
     # First, import all modules from the package

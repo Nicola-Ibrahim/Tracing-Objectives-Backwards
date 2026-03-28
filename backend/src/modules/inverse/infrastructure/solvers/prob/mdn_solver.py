@@ -52,7 +52,7 @@ class MDNProbabilisticInverseSolver(AbstractInverseMappingSolver):
 
     def generate(self, target_y: np.ndarray, n_samples: int) -> InverseSolverResult:
         """
-        Samples candidate decision vectors from the inverse distribution 
+        Samples candidate decision vectors from the inverse distribution
         learned by the estimator.
         """
         self._ensure_fitted()

@@ -13,8 +13,8 @@ class BaseEstimator(ABC):
     Base class for Inverse Decision Mappers (and general interpolators in this context).
     It defines the common interface for fitting the mapper and making predictions.
 
-    This class now enforces a clean abstraction by providing shared logic 
-    in concrete methods and requiring subclasses to implement core 
+    This class now enforces a clean abstraction by providing shared logic
+    in concrete methods and requiring subclasses to implement core
     functionality.
     """
 

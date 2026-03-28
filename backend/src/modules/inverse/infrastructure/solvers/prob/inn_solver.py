@@ -21,7 +21,7 @@ from ....domain.interfaces.base_inverse_mapping_solver import (
 
 class INNProbabilisticInverseSolver(AbstractInverseMappingSolver):
     """
-    Adapter that executes inverse mapping by sampling from an 
+    Adapter that executes inverse mapping by sampling from an
     Invertible Neural Network (INN) estimator.
     """
 
@@ -53,7 +53,7 @@ class INNProbabilisticInverseSolver(AbstractInverseMappingSolver):
 
     def generate(self, target_y: np.ndarray, n_samples: int) -> InverseSolverResult:
         """
-        Samples candidate decision vectors from the inverse distribution 
+        Samples candidate decision vectors from the inverse distribution
         learned by the estimator.
         """
         self._ensure_fitted()

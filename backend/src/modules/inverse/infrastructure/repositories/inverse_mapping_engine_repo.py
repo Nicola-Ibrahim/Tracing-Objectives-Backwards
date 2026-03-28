@@ -39,7 +39,7 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
     """
     File system implementation of BaseInverseMappingEngineRepository.
     Persists InverseMappingEngine as an opaque solver blob + structured transforms.
-    Supports human-readable versioning: 
+    Supports human-readable versioning:
     contexts/<dataset>/<solver_type>/v<N>-<timestamp>/
     """
 

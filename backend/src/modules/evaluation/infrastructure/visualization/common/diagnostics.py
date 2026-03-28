@@ -76,8 +76,7 @@ def add_residuals_vs_fitted(
                 line=dict(width=0.5, color="DarkSlateGrey"),
             ),
             hovertemplate=(
-                "<b>Fitted</b>: %{x:.4f}<br>"
-                "<b>Resid</b>: %{y:.4f}<extra></extra>"
+                "<b>Fitted</b>: %{x:.4f}<br><b>Resid</b>: %{y:.4f}<extra></extra>"
             ),
         ),
         row=row,
@@ -146,8 +145,7 @@ def add_residual_hist(
             opacity=0.6,
             marker=dict(color=color, line=dict(width=0.5, color="white")),
             hovertemplate=(
-                "<b>Resid</b>: %{x:.4f}<br>"
-                "<b>Density</b>: %{y:.4f}<extra></extra>"
+                "<b>Resid</b>: %{x:.4f}<br><b>Density</b>: %{y:.4f}<extra></extra>"
             ),
         ),
         row=row,
@@ -438,8 +436,7 @@ def add_qq_plot(
             name=f"Q-Q ({label})",
             marker=dict(size=5, opacity=0.6, color=color),
             hovertemplate=(
-                "<b>Theoretical</b>: %{x:.4f}<br>"
-                "<b>Sample</b>: %{y:.4f}<extra></extra>"
+                "<b>Theoretical</b>: %{x:.4f}<br><b>Sample</b>: %{y:.4f}<extra></extra>"
             ),
         ),
         row=row,
