@@ -58,7 +58,7 @@ class InverseModelsCandidatesComparator:
 
             # 4. Select (Sort all candidates by distance in normalized objective space)
             if len(candidates_raw_X) > 0:
-                selection = self._select(
+                selection = InverseModelsCandidatesComparator._select(
                     candidates_X_raw=candidates_raw_X,
                     target_y_norm=target_norm,
                     candidates_y_norm=res.candidates_y,
@@ -91,8 +91,8 @@ class InverseModelsCandidatesComparator:
             "generator_runs": generator_runs,
         }
 
+    @staticmethod
     def _select(
-        self,
         candidates_X_raw: np.ndarray,
         target_y_norm: np.ndarray,
         candidates_y_norm: np.ndarray,

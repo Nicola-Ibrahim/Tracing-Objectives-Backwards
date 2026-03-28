@@ -61,8 +61,9 @@ def _inspect_single_param(
             if _is_discriminator(field_name, field.annotation):
                 continue
 
-            # Recursive call could be done here if nested flattening is desired
-            # For now, let's just do one level as requested ("the arg is just a namespace")
+            # Recursive call could be done here if nested flattening is desired.
+            # For now, let's just do one level as requested.
+            # ("the arg is just a namespace")
             parameters.extend(
                 _inspect_single_param(
                     name=field_name,

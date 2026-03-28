@@ -100,21 +100,21 @@ class EstimatorFactory:
         self, type: EstimatorTypeEnum | str, params: EstimatorParamsBase | dict
     ) -> BaseEstimator:
         """
-        Creates and returns an instance of an interpolator based on the specified type.
-        Supports both direct Enum usage or string (case-insensitive value lookup).
-        Handles both Pydantic models and raw dicts as params.
+        Creates and returns an interpolator based on the specified type.
+        Supports Enum usage or string lookup (case-insensitive).
+        Handles Pydantic models and raw dicts as params.
         """
         # 1. Normalize type to Enum
         if isinstance(type, str):
             try:
-                # Try case-insensitive matching against values (e.g., "mdn" or "MDN" -> MDN)
+                # Try case-insensitive matching against values
                 type_enum = EstimatorTypeEnum(type.lower())
             except ValueError:
-                # Fallback: check if the string matches the member name (case-insensitive)
+                # Fallback: check if the string matches the member name
                 try:
                     type_enum = EstimatorTypeEnum[type.upper()]
                 except KeyError:
-                    raise ValueError(f"Unknown estimator type: {type}")
+                    raise ValueError(f"Unknown estimator type: {type}") from None
         else:
             type_enum = type
 
@@ -141,7 +141,7 @@ class EstimatorFactory:
             mapper_ctor = self._registry[type_enum]
         except KeyError as e:
             raise ValueError(
-                f"Estimator type {type_enum} is not implemented in factory registry"
+                f"Estimator {type_enum} is not implemented in registry"
             ) from e
 
         return mapper_ctor(params=estimator_params)

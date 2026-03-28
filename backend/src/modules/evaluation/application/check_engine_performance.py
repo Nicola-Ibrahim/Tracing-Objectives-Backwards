@@ -71,7 +71,8 @@ class CheckModelPerformanceService:
                 ],
                 "non_linear": False,
                 "n_samples": params.n_samples,
-                "title": f"Fitted {engine.solver.type()} (v{params.engine.version or 'latest'})",
+                "title": f"Fitted {engine.solver.type()} "
+                f"(v{params.engine.version or 'latest'})",
                 "training_history": {},
                 "dataset_name": dataset.name,
             }

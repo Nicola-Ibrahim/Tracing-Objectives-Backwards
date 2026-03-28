@@ -168,7 +168,8 @@ class InverseService:
         """
         try:
             self._logger.log_info(
-                f"Starting generation for '{config.dataset_name}' with target {config.target_objective}"
+                f"Starting generation for '{config.dataset_name}' "
+                f"with target {config.target_objective}"
             )
 
             engine = self._inverse_mapping_engine_repository.load(
@@ -185,7 +186,8 @@ class InverseService:
 
             self._logger.log_info(
                 f"Generated {result.candidate_objectives.shape[0]} candidates. "
-                f"Winner @{result.best_index}: {result.best_candidate_objective.flatten()}"
+                "Winner @"
+                f"{result.best_index}: {result.best_candidate_objective.flatten()}"
             )
 
             return Result.ok(
@@ -197,8 +199,12 @@ class InverseService:
                         tuple(obj) for obj in result.candidate_objectives.tolist()
                     ],
                     "best_index": result.best_index,
-                    "best_candidate_objective": result.best_candidate_objective.flatten().tolist(),
-                    "best_candidate_decision": result.best_candidate_decision.flatten().tolist(),
+                    "best_candidate_objective": (
+                        result.best_candidate_objective.flatten().tolist()
+                    ),
+                    "best_candidate_decision": (
+                        result.best_candidate_decision.flatten().tolist()
+                    ),
                     "best_candidate_residual": result.best_candidate_residual,
                     "metadata": result.metadata,
                 }
@@ -256,7 +262,9 @@ class InverseService:
             )
 
     def delete_engines(self, engine_specs: list[dict]) -> Result[dict[str, Any]]:
-        """Deletes multiple engines. engine_specs: list of {'dataset_name', 'solver_type', 'version'}"""
+        """Deletes multiple engines.
+        engine_specs: list of {'dataset_name', 'solver_type', 'version'}
+        """
         results = []
         for spec in engine_specs:
             try:
@@ -297,9 +305,8 @@ class InverseService:
                 for label, t in engine.transform_pipeline.transforms
             ]
 
-            # In this architecture, solver hyperparameters are opaque but can be
-            # extracted if the solver stores them. For now, we'll return what's in history
-            # or an empty dict if not specifically tracked.
+            # Solver hyperparameters can be extracted if the solver stores them.
+            # For now, return what's in history or an empty dict.
             history = engine.solver.history()
 
             return Result.ok(
@@ -313,7 +320,7 @@ class InverseService:
                     "split_ratio": dataset.metadata.split_ratio,
                     "training_history": history,
                     "transform_summary": transform_summary,
-                    "hyperparameters": {},  # Placeholder if we decide to expose fitted params
+                    "hyperparameters": {},  # Placeholder for fitted params
                 }
             )
         except FileNotFoundError as e:

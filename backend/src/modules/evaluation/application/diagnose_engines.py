@@ -4,15 +4,6 @@ from typing import Any, AsyncGenerator
 import numpy as np
 
 from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
-from ..domain.aggregates.diagnostic_report import DiagnosticReport
-from ..domain.enums.engine_capability import EngineCapability
-from ..domain.enums.mapping_direction import MappingDirection
-from ..domain.interfaces.base_diagnostic_repository import (
-    BaseDiagnosticRepository,
-)
-from ..domain.services.decision_space_auditor import DecisionSpaceAuditor
-from ..domain.services.objective_space_auditor import ObjectiveSpaceAuditor
-from ..domain.value_objects.engine import Engine as EngineVO
 from ...inverse.domain.entities.inverse_mapping_engine import (
     InverseMappingEngine,
 )
@@ -24,7 +15,15 @@ from ...shared.domain.interfaces.base_task_manager import (
     BaseTaskManager,
 )
 from ...shared.result import Result
-
+from ..domain.aggregates.diagnostic_report import DiagnosticReport
+from ..domain.enums.engine_capability import EngineCapability
+from ..domain.enums.mapping_direction import MappingDirection
+from ..domain.interfaces.base_diagnostic_repository import (
+    BaseDiagnosticRepository,
+)
+from ..domain.services.decision_space_auditor import DecisionSpaceAuditor
+from ..domain.services.objective_space_auditor import ObjectiveSpaceAuditor
+from ..domain.value_objects.engine import Engine as EngineVO
 from .diagnose_engines_command import (
     EngineCandidate,
     RunDiagnosticsCommand,
@@ -105,7 +104,7 @@ class RunDiagnosticsService:
 
         try:
             self._logger.log_info(
-                f"Starting Diagnostic Compute for engines on dataset '{command.dataset_name}'"
+                f"Starting Diagnostic Compute for engines on '{command.dataset_name}'"
             )
 
             dataset = self._data_repo.load(command.dataset_name)

@@ -13,7 +13,7 @@ class BaseTrainedPipelineRepository(ABC):
     @abstractmethod
     def save(self, pipeline: TrainedPipeline) -> None:
         """
-        Saves a new TrainedPipeline entity (representing a specific training run/version).
+        Saves a new TrainedPipeline entity representing a training run.
         Each version is saved in a unique directory identified by its ID.
 
         Args:
@@ -58,7 +58,7 @@ class BaseTrainedPipelineRepository(ABC):
         Retrieves all trained versions of a model based on its type.
 
         Args:
-             estimator_type: The type of interpolation model (e.g., 'gaussian_process_nd')
+             estimator_type: Interpolation model (e.g., 'gaussian_process_nd')
 
         Returns:
             A list of TrainedPipeline entities, sorted by version (highest first)
@@ -113,8 +113,9 @@ class BaseTrainedPipelineRepository(ABC):
 
         Args:
             mapping_direction: "inverse" or "forward".
-            requested: List of (estimator_type, version) pairs. If version is None, latest is used.
-            on_missing: "skip" (default) skips missing requests; "raise" raises on first missing request.
+            requested: List of (type, version) pairs. If version is None, 
+                       latest is used.
+            on_missing: "skip" (default) skips missing; "raise" raises on first.
 
         Returns:
             List of (display_name, estimator) pairs in the same order as requested.

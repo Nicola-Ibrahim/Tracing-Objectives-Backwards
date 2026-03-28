@@ -9,7 +9,7 @@ from .connection import RedisConnection
 class RedisTaskManager(BaseTaskManager):
     """
     Unified Redis adapter for all task lifecycle operations.
-    Handles enqueuing (via ARQ), status storage (via Redis keys), 
+    Handles enqueuing (via ARQ), status storage (via Redis keys),
     and progress publishing/streaming (via Redis Pub/Sub).
     """
 
@@ -77,7 +77,7 @@ class RedisTaskManager(BaseTaskManager):
                     # Format for SSE
                     yield f"data: {data_str}\n\n"
 
-                    # Termination logic: if event is 'done' or 'error', stop the generator
+                    # Termination logic: if 'done' or 'error', stop the generator
                     try:
                         data = json.loads(data_str)
                         if data.get("event") in ["done", "error"]:

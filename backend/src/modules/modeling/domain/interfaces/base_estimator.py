@@ -13,8 +13,9 @@ class BaseEstimator(ABC):
     Base class for Inverse Decision Mappers (and general interpolators in this context).
     It defines the common interface for fitting the mapper and making predictions.
 
-    This class now enforces a clean abstraction by providing shared logic in concrete methods
-    and requiring subclasses to implement core functionality.
+    This class now enforces a clean abstraction by providing shared logic 
+    in concrete methods and requiring subclasses to implement core 
+    functionality.
     """
 
     def __init__(self, **kwargs) -> None:
@@ -72,7 +73,7 @@ class BaseEstimator(ABC):
 
         Args:
             X (NDArray[np.float64]): Known points in the 'independent' space (features).
-            y (NDArray[np.float64]): Corresponding points in the 'dependent' space (targets).
+            y (NDArray[np.float64]): Points in 'dependent' space (targets).
         """
 
         X = np.asarray(X, dtype=np.float64)

@@ -21,7 +21,8 @@ class MinimizerConfig(BaseModel):
     seed: int = Field(
         42, ge=0, description="Random seed must be non-negative", example=42
     )
-    # Note: In pymoo, `pf` usually expects a numpy array of the true Pareto front, not a boolean.
+    # Note: In pymoo, `pf` usually expects a numpy array of the true Pareto
+    # front, not a boolean.
     pf: bool = Field(True, description="Flag to save Pareto front", example=False)
 
     @field_validator("generations")
@@ -91,7 +92,10 @@ class OptimizationResult(BaseModel):
 
     @cached_property
     def last_generation_data(self) -> dict[str, np.ndarray] | None:
-        """Extracts feasible points (both dominated and non-dominated) from the final generation."""
+        """
+        Extracts feasible points (both dominated and non-dominated) from the
+        final generation.
+        """
         if not self.history:
             return None
 

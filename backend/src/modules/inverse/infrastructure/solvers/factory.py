@@ -30,14 +30,14 @@ class SolversFactory:
         self, solver_type: InverseSolverRegistry | str, config: dict
     ) -> AbstractInverseMappingSolver:
         """
-        Creates and returns an instance of an InverseSolver based on the specified type.
-        Validates and normalizes incoming params (supports flat namespaces for Pydantic args).
+        Creates and returns an InverseSolver based on the specified type.
+        Validates incoming params (supports flat namespaces for Pydantic args).
         """
         if isinstance(solver_type, str):
             try:
                 solver_type = InverseSolverRegistry(solver_type)
             except ValueError:
-                raise ValueError(f"Unknown solver type: {solver_type}")
+                raise ValueError(f"Unknown solver type: {solver_type}") from None
 
         solver_class = self._registry.get(solver_type)
         if not solver_class:

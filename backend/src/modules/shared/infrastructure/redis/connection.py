@@ -19,7 +19,7 @@ class RedisConnection:
 
     async def connect(self) -> None:
         """
-        Initializes connection pools. 
+        Initializes connection pools.
         Should be called during application or worker startup.
         """
         if not self._client:

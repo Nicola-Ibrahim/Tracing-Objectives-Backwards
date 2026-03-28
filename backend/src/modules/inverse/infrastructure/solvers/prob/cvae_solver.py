@@ -21,7 +21,8 @@ from ....domain.interfaces.base_inverse_mapping_solver import (
 
 class CVAEProbabilisticInverseSolver(AbstractInverseMappingSolver):
     """
-    Adapter that executes inverse mapping by sampling from a Conditional Variational Autoencoder (CVAE).
+    Adapter that executes inverse mapping by sampling from a 
+    Conditional Variational Autoencoder (CVAE).
     """
 
     def __init__(self, params: CVAEEstimatorParams):
@@ -52,7 +53,8 @@ class CVAEProbabilisticInverseSolver(AbstractInverseMappingSolver):
 
     def generate(self, target_y: np.ndarray, n_samples: int) -> InverseSolverResult:
         """
-        Samples candidate decision vectors from the inverse distribution learned by the CVAE.
+        Samples candidate decision vectors from the inverse distribution 
+        learned by the CVAE.
         """
         self._ensure_fitted()
 

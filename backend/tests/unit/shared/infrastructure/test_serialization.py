@@ -1,9 +1,10 @@
 import json
-import numpy as np
 from datetime import datetime
+
+import numpy as np
+
 from src.modules.shared.infrastructure.serialization import (
     serialize_diagnostics,
-    DiagnosticsJsonEncoder,
 )
 
 

@@ -11,7 +11,7 @@ class DecisionSpaceDistributionAssessment(BaseModel):
     Calibration via PIT uniformity.
 
     mace:               Mean Absolute Calibration Error — deviation from uniform PIT.
-    mean_crps:          Continuous Ranked Probability Score — sharpness + calibration jointly.
+    mean_crps:          Continuous Ranked Probability Score — sharpness/calibration.
     mean_interval_width: average width of the predictive intervals.
     mean_diversity:     average pairwise distance between generated samples.
     """

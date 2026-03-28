@@ -64,9 +64,7 @@ def test_diagnose_scale_methods(client):
         assert engine_key in data["objective_space"]["metrics"]
 
 
-@pytest.mark.xfail(
-    reason="API returns HTTPException instead of raising, causing ResponseValidationError on error paths"
-)
+@pytest.mark.xfail(reason="API uses HTTPException directly, bypassing validation")
 def test_diagnose_non_existent_dataset(client):
     payload = {"dataset_name": "ghost_ds", "candidates": [{"solver_type": "GBPI"}]}
     resp = client.post("/api/v1/evaluation/diagnose", json=payload)

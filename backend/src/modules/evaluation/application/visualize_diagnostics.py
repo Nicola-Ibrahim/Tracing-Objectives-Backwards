@@ -51,7 +51,7 @@ class VisualizeInverseEstimatorDiagnosticService:
 
     def execute(self, params: VisualizeInverseEstimatorDiagnosticParams) -> None:
         self._logger.log_info(
-            f"Loading diagnostic results for visualization on '{params.dataset_name}'..."
+            f"Loading diagnostic results for '{params.dataset_name}'..."
         )
 
         # 1. Fetch requested runs using repository batch logic

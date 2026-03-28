@@ -22,16 +22,18 @@ class BaseInverseMappingEngineRepository(ABC):
         self, dataset_name: str, solver_type: str, version: int | None = None
     ) -> InverseMappingEngine:
         """
-        Loads an InverseMappingEngine entity by dataset name, solver type and optional version.
-        If version is None, the most recently created version is returned.
+        Loads an InverseMappingEngine entity by dataset name, solver type 
+        and optional version. If version is None, the most recently 
+        created version is returned.
         """
         pass
 
     @abstractmethod
     def list_all(self, dataset_name: str, solver_type: str | None = None) -> list[dict]:
         """
-        Lists summaries of persisted engines for a given dataset and optional solver type.
-        Returns a list of dictionaries with metadata (version, solver_type, created_at, etc.).
+        Lists summaries of persisted engines for a given dataset and 
+        optional solver type. Returns a list of dictionaries with 
+        metadata (version, solver_type, created_at, etc.).
         """
         pass
 

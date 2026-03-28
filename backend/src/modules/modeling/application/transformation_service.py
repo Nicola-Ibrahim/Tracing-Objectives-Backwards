@@ -13,7 +13,7 @@ from ..domain.services.transformation_domain_service import (
 
 class TransformationService:
     """
-    Application service that manages the application of transformation chains to datasets.
+    Application service that manages transformation chains for datasets.
     """
 
     def __init__(

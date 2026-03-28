@@ -39,12 +39,12 @@ class TransformerFactory(ITransformerFactory):
             try:
                 transform_type = TransformTypeEnum(transform_type)
             except ValueError:
-                raise ValueError(f"Unknown transform type: {transform_type}")
+                raise ValueError(f"Unknown transform type: {transform_type}") from None
 
         step_cls = cls._registry.get(transform_type)
         if not step_cls:
             raise NotImplementedError(
-                f"Instantiation for transform type '{transform_type}' is not yet supported."
+                f"Transform type '{transform_type}' is not yet supported."
             )
 
         params = config.get("params", {})
@@ -60,12 +60,12 @@ class TransformerFactory(ITransformerFactory):
             try:
                 transform_type = TransformTypeEnum(transform_type)
             except ValueError:
-                raise ValueError(f"Unknown transform type: {transform_type}")
+                raise ValueError(f"Unknown transform type: {transform_type}") from None
 
         step_cls = cls._registry.get(transform_type)
         if not step_cls:
             raise NotImplementedError(
-                f"Instantiation for transform type '{transform_type}' is not yet supported."
+                f"Transform type '{transform_type}' is not yet supported."
             )
 
         return step_cls.from_checkpoint(config, state)

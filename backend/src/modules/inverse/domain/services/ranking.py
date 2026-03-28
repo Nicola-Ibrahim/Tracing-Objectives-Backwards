@@ -26,7 +26,8 @@ class RankingResult(BaseModel):
 
 class CandidatesRanker:
     """
-    Domain service for comparing predicted objectives against a target and ranking candidates.
+    Domain service for comparing predicted objectives against a target 
+    and ranking candidates.
     """
 
     @staticmethod

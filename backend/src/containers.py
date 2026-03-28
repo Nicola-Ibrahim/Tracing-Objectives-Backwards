@@ -37,8 +37,8 @@ class RootContainer(containers.DeclarativeContainer):
         engine_repository=inverse.repository,
     )
 
-    # ! Fix Inverse recursive dependency
-    # TODO: we need to move the depency on inverse repo in datase and create two request in api level
+    # TODO: we need to move the dependency on inverse repo in dataset and
+    # create two separate requests at the API level.
     inverse.dataset_repository.override(dataset.repository)
 
     evaluation = providers.Container(

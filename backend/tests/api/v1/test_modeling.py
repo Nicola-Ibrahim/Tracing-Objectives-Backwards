@@ -53,9 +53,7 @@ def test_modeling_sampling_limit_strictness(client):
         assert len(resp.json()["transformed"]["X"]) == limit
 
 
-@pytest.mark.xfail(
-    reason="API returns HTTPException instead of raising, causing ResponseValidationError on error paths"
-)
+@pytest.mark.xfail(reason="API uses HTTPException directly, bypassing validation")
 def test_preview_invalid_transformer(client):
     client.post("/api/v1/datasets", json={"dataset_name": "error_ds"})
     payload = {

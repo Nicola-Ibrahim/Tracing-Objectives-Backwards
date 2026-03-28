@@ -18,7 +18,8 @@ from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
 )
 def main(dataset_name: str, solver_type: str, version: int | None):
     """
-    Real-time step: Generate physically coherent design candidates for a specific target objective.
+    Real-time step: Generate physically coherent design candidates for a
+    specific target objective.
     """
     logger = CMDLogger(name="GenerateCoherentCandidatesLogger")
 

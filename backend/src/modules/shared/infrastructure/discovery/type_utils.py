@@ -21,7 +21,7 @@ def _is_discriminator(name: str, annotation: Any) -> bool:
 
 
 def get_type_name(typ: Any) -> str:
-    """Returns a human-readable type name, handling Pydantic models, Lists, and Dicts."""
+    """Returns name for Pydantic models, Lists, and Dicts."""
     if typ == inspect.Parameter.empty:
         return "any"
 

@@ -7,7 +7,9 @@ from .....modeling.infrastructure.estimators.deterministic.rbf import (
     RBFEstimator,
     RBFEstimatorParams,
 )
-from .....modeling.infrastructure.estimators.probabilistic.mdn import MDNEstimatorParams
+from .....modeling.infrastructure.estimators.probabilistic.mdn import (
+    MDNEstimatorParams,
+)
 from .....modeling.infrastructure.factories.estimator import (
     EstimatorFactory,
 )
@@ -50,7 +52,8 @@ class MDNProbabilisticInverseSolver(AbstractInverseMappingSolver):
 
     def generate(self, target_y: np.ndarray, n_samples: int) -> InverseSolverResult:
         """
-        Samples candidate decision vectors from the inverse distribution learned by the estimator.
+        Samples candidate decision vectors from the inverse distribution 
+        learned by the estimator.
         """
         self._ensure_fitted()
 

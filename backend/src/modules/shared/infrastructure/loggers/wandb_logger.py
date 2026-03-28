@@ -35,7 +35,8 @@ class WandbLogger(BaseLogger):
     def log_warning(self, message: str) -> None:
         """Log a warning message to W&B."""
         # W&B does not have a direct 'warning' log type like standard loggers.
-        # We can log it as a custom event or as part of the system logs if W&B captures stderr.
+        # We can log it as a custom event or as part of the system logs
+        # if W&B captures stderr.
         self.run.log({"warning_message": message})
         print(
             f"Wandb Warning: {message}"
@@ -96,7 +97,7 @@ class WandbLogger(BaseLogger):
         self.run.log_artifact(artifact)
 
         if collection_name:
-            # For linking to a registry, the name should typically be `project/collection_name`
+            # For linking to a registry, use `project/collection_name`
             # or `entity/project/collection_name`.
             # A common pattern for linking an artifact to a Model Registry entry is:
             # self.run.link_artifact(artifact, f"{self.run.project}/{collection_name}")

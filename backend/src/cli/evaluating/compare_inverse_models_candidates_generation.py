@@ -11,8 +11,8 @@ from ...modules.evaluation.application.diagnose_engines import EngineCandidate
 from ...modules.evaluation.application.inverse_model_candidates_comparator import (
     InverseModelsCandidatesComparator,
 )
-from ...modules.evaluation.infrastructure.visualization.decision_generation.visualizer import (
-    DecisionGenerationComparisonVisualizer,
+from ...modules.evaluation.infrastructure.visualization import (
+    decision_generation as dg,
 )
 from ...modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
     FileSystemInverseMappingEngineRepository,
@@ -41,7 +41,7 @@ def main():
         engine_repository=FileSystemInverseMappingEngineRepository(),
         data_repository=FileSystemDatasetRepository(),
         logger=CMDLogger(name="InterpolationCMDLogger"),
-        visualizer=DecisionGenerationComparisonVisualizer(),
+        visualizer=dg.visualizer.DecisionGenerationComparisonVisualizer(),
     )
 
     service.execute(params)

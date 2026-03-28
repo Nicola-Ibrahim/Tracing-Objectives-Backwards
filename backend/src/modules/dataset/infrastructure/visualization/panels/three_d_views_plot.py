@@ -8,7 +8,10 @@ from ..helpers.scatter_3d import add_3d_overlay
 def create_3d_decision_context_figure(
     X_raw: np.ndarray, y_raw: np.ndarray
 ) -> go.Figure:
-    """Creates 3D plots showing Decision Space (x1, x2) vs Objective components (y1, y2)."""
+    """
+    Creates 3D plots showing Decision Space (x1, x2) vs Objective 
+    components (y1, y2).
+    """
 
     fig = make_subplots(
         rows=1,
@@ -81,7 +84,10 @@ def create_3d_decision_context_figure(
 def create_3d_objective_context_figure(
     X_raw: np.ndarray, y_raw: np.ndarray
 ) -> go.Figure:
-    """Creates 3D plots showing Objective Space (y1, y2) vs Decision components (x1, x2)."""
+    """
+    Creates 3D plots showing Objective Space (y1, y2) vs Decision 
+    components (x1, x2).
+    """
 
     fig = make_subplots(
         rows=1,

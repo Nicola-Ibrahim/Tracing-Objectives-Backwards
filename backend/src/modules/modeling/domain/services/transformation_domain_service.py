@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
+
 from ..enums.transform_type import TransformTypeEnum
 from ..interfaces.base_transform import BaseTransformer
 
@@ -38,7 +40,7 @@ class TransformationConfig(BaseModel):
     )
     columns: Optional[list[int]] = Field(
         None,
-        description="Indices of columns to transform. If None, all columns are transformed.",
+        description="Columns to transform. If None, all columns are transformed.",
     )
 
 
@@ -84,7 +86,7 @@ class TransformationDomainService:
         y_curr = y.copy()
 
         # Apply X chain
-        for i, config in enumerate(x_chain):
+        for config in x_chain:
             transformer = self._transformer_factory.create(config.model_dump())
 
             if config.columns:
@@ -103,7 +105,7 @@ class TransformationDomainService:
                 X_curr = transformer.transform(X_curr)
 
         # Apply y chain
-        for i, config in enumerate(y_chain):
+        for config in y_chain:
             transformer = self._transformer_factory.create(config.model_dump())
             # y is typically 1D or has fewer columns
             transformer.fit(y_curr)

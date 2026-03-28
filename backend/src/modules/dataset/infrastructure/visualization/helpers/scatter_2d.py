@@ -23,26 +23,29 @@ def add_scatter_base(
             mode="markers",
             name=name,
             marker=dict(size=size, opacity=0.85, color=color, symbol=symbol),
-            hovertemplate=f"{x_label}: %{{x:.4f}}<br>{y_label}: %{{y:.4f}}<extra></extra>",
+            hovertemplate=(
+                f"{x_label}: %{{x:.4f}}<br>"
+                f"{y_label}: %{{y:.4f}}<extra></extra>"
+            ),
         ),
         row=row,
         col=col,
     )
-    # We can't easily set limits here without passing the visualizer instance or helper
-    # But the original code called self._set_xy_limits.
-    # For now, we'll assume limits are handled by the caller or we might need to move that helper too.
+    # We can't easily set limits here without passing the visualizer 
+    # instance or helper. But the original code called self._set_xy_limits.
+    # We'll assume limits are handled by the caller or move that helper.
     # Actually, _set_xy_limits is likely a helper in the visualizer.
-    # Let's check if we can move it or if we should just omit it for now and let the caller handle it.
-    # The caller (dataset.py) iterates and calls these.
-    # Let's keep it simple: just add the trace. The caller can set limits if needed,
-    # OR we can export set_xy_limits as a utility.
+    # Let's check if we can move it or if we should just omit it for now 
+    # and let the caller handle it. The caller (dataset.py) iterates and 
+    # calls these. Let's keep it simple: just add the trace. The caller 
+    # can set limits if needed, OR we can export set_xy_limits as a utility.
 
     # Wait, looking at the original code:
     # self._set_xy_limits(fig, row, col, x, y)
     # This seems important for consistent scaling.
     # I should probably include a utility for this or pass it in.
-    # For now, I'll omit the limit setting here and let the caller handle it if possible,
-    # or I'll duplicate the logic if it's simple.
+    # For now, I'll omit the limit setting here and let the caller 
+    # handle it if possible, or I'll duplicate the logic if it's simple.
     # _set_xy_limits likely just updates axes ranges.
     set_xy_limits(fig, row, col, x, y)
 

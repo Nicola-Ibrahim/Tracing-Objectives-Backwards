@@ -33,7 +33,8 @@ class DatasetConfiguration(BaseModel):
 
 class DatasetService:
     """
-    Consolidated application service for dataset management, generation, and visualization.
+    Consolidated application service for dataset management, generation,
+    and visualization.
     """
 
     def __init__(
@@ -166,7 +167,8 @@ class DatasetService:
 
         try:
             self._logger.log_info(
-                f"Starting dataset generation with {config.generator_type} for dataset {config.dataset_name}"
+                f"Starting dataset generation with {config.generator_type} "
+                f"for dataset {config.dataset_name}"
             )
 
             data_source = self._generator_factory.create(

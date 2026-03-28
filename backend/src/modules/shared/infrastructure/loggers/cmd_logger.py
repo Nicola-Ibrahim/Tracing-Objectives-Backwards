@@ -39,7 +39,7 @@ class ColoredFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     LOG_COLORS = {
-        logging.DEBUG: LogColors.BRIGHT_BLACK,  # Or LogColors.CYAN, this is already defined
+        logging.DEBUG: LogColors.BRIGHT_BLACK,  # Or LogColors.CYAN
         logging.INFO: LogColors.GREEN,
         logging.WARNING: LogColors.YELLOW,
         logging.ERROR: LogColors.RED,
