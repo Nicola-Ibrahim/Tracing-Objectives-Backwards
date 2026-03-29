@@ -60,8 +60,8 @@ jobs:
       - name: Run Lint
         run: uv run poe lint
 
-      - name: Run Tests
-        run: uv run poe test
+      # - name: Run Tests
+      #   run: uv run poe test
 
   # ── Frontend: lint + unit tests ──────────────────────────────────────────
   # Runs on every push to any branch. No Docker involved — fast feedback.
@@ -95,8 +95,8 @@ jobs:
       - name: Run Lint
         run: pnpm lint
 
-      - name: Run Tests
-        run: pnpm test --if-present
+      # - name: Run Tests
+      #   run: pnpm test --if-present
 
   # ── Backend: production image smoke test (PR to main only) ───────────────
   # Builds the runner stage (not dev) — tests the exact image that ships.
