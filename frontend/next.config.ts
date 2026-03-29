@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
+  output: 'standalone',
   // Note: rewrites are not supported with 'output: export'
   // and will be ignored in the build.
   /*

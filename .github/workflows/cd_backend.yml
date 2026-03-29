@@ -1,0 +1,74 @@
+name: 2. CD (Backend)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/2-cd-backend.yml'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}-backend
+
+jobs:
+  # ── Build the runner image and push to GHCR ──────────────────────────────
+  # Smoke already passed in CI before this merge — safe to build and ship.
+  # Three tags: immutable sha (rollback), latest (Render pulls), human-readable audit trail.
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      # Pass the immutable sha tag to deploy — never pass :latest to
+      # the server so you always know exactly what's running.
+      image-tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-                                  # sha-a1b2c3d         — immutable, rollback anchor
+            type=raw,value=latest,enable={{is_default_branch}}    # latest              — what Render polls
+            type=raw,value=main-{{date 'YYYYMMDD'}}-{{sha}}      # main-20260329-abc12 — human-readable audit trail
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: runner            # always the production stage
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Tell Render to pull the new :latest and redeploy ─────────────────────
+  # Render does not watch GHCR — the deploy hook is the trigger.
+  # Get the hook URL from: Render dashboard → service → Settings → Deploy Hook.
+  # Store it in GitHub Secrets as RENDER_BACKEND_DEPLOY_HOOK.
+  deploy:
+    needs: [ build-and-push ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Backend Deploy
+        run: |
+          curl -fsSL "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
+            -o response.json
+          cat response.json
+          echo "✅ Render backend deploy triggered — image: ${{ needs.build-and-push.outputs.image-tag }}"

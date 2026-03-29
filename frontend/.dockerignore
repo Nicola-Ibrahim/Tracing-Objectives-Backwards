@@ -1,0 +1,28 @@
+# frontend/.dockerignore
+
+# Dependencies — reinstalled inside the image
+node_modules/
+
+# Next.js build output — rebuilt inside the image
+.next/
+out/
+
+# Secrets
+.env*
+.env.local
+.env.*.local
+
+# Dev tooling
+.git/
+.github/
+*.md
+.dockerignore
+.eslintcache
+
+# Editor
+.vscode/
+.idea/
+
+# Test artifacts
+coverage/
+.nyc_output/
