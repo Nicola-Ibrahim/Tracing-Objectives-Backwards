@@ -25,7 +25,8 @@ jobs:
       # the server so you always know exactly what's running.
       image-tag: ${{ steps.meta.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
