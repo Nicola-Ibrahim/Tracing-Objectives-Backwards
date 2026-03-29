@@ -5,7 +5,8 @@ FROM node:20-alpine AS base
 
 # libc6-compat is required on Alpine for certain Node.js binaries.
 # See: github.com/nodejs/docker-node#nodealpine
-RUN apk add --no-cache libc6-compat wget
+RUN apk add --no-cache libc6-compat wget && \
+    npm install -g pnpm
 
 WORKDIR /app
 
@@ -19,8 +20,8 @@ FROM base AS deps
 
 # Copy manifests first — node_modules is only rebuilt when
 # package.json or lockfile actually changes.
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # ============================================================
 #  Stage 2 — dev: all deps, hot-reload entrypoint
@@ -34,7 +35,7 @@ COPY --chown=nextjs:nodejs . .
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME="0.0.0.0"
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "run", "dev"]
 
 # ============================================================
 #  Stage 3 — builder: production Next.js build
@@ -54,7 +55,7 @@ ENV NODE_ENV=production
 # Requires next.config.js to have: output: 'standalone'
 # Standalone mode bundles only what's needed — ~5x smaller than
 # copying the full node_modules into the production image.
-RUN npm run build
+RUN pnpm run build
 
 # ============================================================
 #  Stage 4 — runner: minimal production image

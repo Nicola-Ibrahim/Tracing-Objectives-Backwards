@@ -4,9 +4,8 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Note: rewrites are not supported with 'output: export'
   // and will be ignored in the build.
-  /*
   async rewrites() {
-    const backendUrl = process.env.INTERNAL_API_URL || "http://localhost";
+    const backendUrl = process.env.INTERNAL_API_URL || "http://backend:8000";
     return [
       {
         source: "/v1/:path*",
@@ -14,7 +13,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  */
 };
 
 export default nextConfig;

@@ -45,7 +45,7 @@ services:
       - /app/node_modules           # prevents host node_modules from
                                     # shadowing the container's node_modules
     env_file:
-      - ./frontend/.env.local
+      - ./frontend/.env
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s
