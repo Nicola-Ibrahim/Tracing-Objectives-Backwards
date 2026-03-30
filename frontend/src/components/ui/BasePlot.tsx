@@ -16,10 +16,17 @@ const Plot = dynamic(() => import("react-plotly.js"), {
     )
 });
 
+interface PlotlyData extends Record<string, unknown> {
+    showlegend?: boolean;
+    name?: string;
+    margin?: { b?: number };
+    toImageButtonOptions?: Record<string, unknown>;
+}
+
 interface BasePlotProps {
-    data: any[];
-    layout: any;
-    config?: any;
+    data: PlotlyData[];
+    layout: PlotlyData;
+    config?: PlotlyData;
     title?: string;
     description?: string;
     className?: string;

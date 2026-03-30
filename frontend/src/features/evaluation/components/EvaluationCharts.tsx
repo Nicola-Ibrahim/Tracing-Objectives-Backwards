@@ -42,7 +42,7 @@ export function PerformanceChart({
 
 
     const traces = useMemo(() => {
-        const plotTraces = Object.keys(data).map((label, index) => ({
+        const plotTraces: Array<Record<string, unknown>> = Object.keys(data).map((label, index) => ({
             x: data[label].x,
             y: data[label].y,
             name: label,
@@ -76,8 +76,13 @@ export function PerformanceChart({
                 },
                 fill: 'none' as const,
                 fillcolor: 'transparent',
-                hovertemplate: "Ideal Baseline<extra></extra>"
-            } as any);
+                hovertemplate: "Ideal Baseline<extra></extra>",
+                hoverlabel: {
+                    bgcolor: 'transparent',
+                    bordercolor: 'transparent',
+                    font: { family: 'Inter, sans-serif', size: 1, color: 'transparent' }
+                }
+            });
         }
         return plotTraces;
     }, [data, showIdeal, xAxisLabel, yAxisLabel]);

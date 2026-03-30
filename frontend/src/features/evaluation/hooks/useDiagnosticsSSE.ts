@@ -80,9 +80,10 @@ export const useDiagnosticsSSE = () => {
         setIsEvaluating(false);
       };
 
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Failed to initiate diagnostics:", err);
-      setError(err.message || "Failed to start diagnostics.");
+      setError(errorMessage || "Failed to start diagnostics.");
       setIsEvaluating(false);
     }
   }, [cleanup]);

@@ -18,7 +18,7 @@ import { InfoIcon, Brackets } from "lucide-react";
 
 interface DynamicConfigFormProps {
     parameters: ParameterDefinition[];
-    onChange: (values: Record<string, any>, isValid: boolean) => void;
+    onChange: (values: Record<string, unknown>, isValid: boolean) => void;
     className?: string;
 }
 
@@ -27,32 +27,27 @@ export function DynamicConfigForm({
     onChange,
     className = "",
 }: DynamicConfigFormProps) {
-    const [values, setValues] = useState<Record<string, any>>({});
-
-    // Initialize values from defaults
-    useEffect(() => {
-        const initialValues: Record<string, any> = {};
+    const [values, setValues] = useState<Record<string, unknown>>(() => {
+        const initialValues: Record<string, unknown> = {};
         parameters.forEach((param) => {
-            // Use nullish coalescing to handle undefined/null defaults
             const defaultValue = param.default ?? "";
-            
-            // Special handling for booleans
             if (param.type === "bool" || param.type === "boolean") {
                 initialValues[param.name] = param.default === true;
             } else {
                 initialValues[param.name] = defaultValue;
             }
         });
-        setValues(initialValues);
+        return initialValues;
+    });
 
-        // Initial validity check
+    useEffect(() => {
         const isValid = parameters.every(p => 
-            !p.required || (initialValues[p.name] !== "" && initialValues[p.name] !== null && initialValues[p.name] !== undefined)
+            !p.required || (values[p.name] !== "" && values[p.name] !== null && values[p.name] !== undefined)
         );
-        onChange(initialValues, isValid);
-    }, [parameters]);
+        onChange(values, isValid);
+    }, [parameters, onChange, values]);
 
-    const checkValidity = (currentValues: Record<string, any>) => {
+    const checkValidity = (currentValues: Record<string, unknown>) => {
         return parameters.every(p => {
             if (!p.required) return true;
             const val = currentValues[p.name];
@@ -60,7 +55,7 @@ export function DynamicConfigForm({
         });
     };
 
-    const handleValueChange = (name: string, value: any) => {
+    const handleValueChange = (name: string, value: unknown) => {
         const newValues = { ...values, [name]: value };
         setValues(newValues);
         const isValid = checkValidity(newValues);
@@ -116,7 +111,7 @@ export function DynamicConfigForm({
                     type="number"
                     step={type.toLowerCase() === "float" ? "any" : "1"}
                     placeholder={`Enter ${name}`}
-                    value={value}
+                    value={value as string | number | undefined}
                     className="bg-background border-border text-foreground transition-all focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500/50 rounded-[1rem]"
                     onChange={(e) => {
                         const val = type.toLowerCase() === "float" ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
@@ -133,7 +128,7 @@ export function DynamicConfigForm({
                 <div className="relative group">
                     <Textarea
                         placeholder={`Enter JSON for ${name}`}
-                        value={typeof value === 'object' ? JSON.stringify(value) : (value || "")}
+                        value={typeof value === 'object' ? JSON.stringify(value) : ((value as string) || "")}
                         className="font-mono text-xs bg-muted/20 border-border text-foreground min-h-[100px] focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 rounded-[1rem] transition-all"
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                             const raw = e.target.value;
@@ -144,7 +139,7 @@ export function DynamicConfigForm({
                                     const parsed = JSON.parse(raw);
                                     handleValueChange(name, parsed);
                                 }
-                            } catch (err) {
+                            } catch {
                                 handleValueChange(name, raw);
                             }
                         }}
@@ -160,7 +155,7 @@ export function DynamicConfigForm({
             <Input
                 type="text"
                 placeholder={`Enter ${name}`}
-                value={value || ""}
+                value={(value as string) || ""}
                 className="bg-background border-border text-foreground transition-all focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500/50 rounded-[1rem]"
                 onChange={(e) => handleValueChange(name, e.target.value)}
                 required={required}

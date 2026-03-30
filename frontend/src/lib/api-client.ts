@@ -32,7 +32,7 @@ apiClient.interceptors.response.use(
     if (error.response?.data?.detail) {
       const detail = error.response.data.detail;
       if (typeof detail === 'object' && detail !== null && 'message' in detail) {
-        message = (detail as any).message;
+        message = (detail as Record<string, string>).message;
       } else if (typeof detail === 'string') {
         message = detail;
       }

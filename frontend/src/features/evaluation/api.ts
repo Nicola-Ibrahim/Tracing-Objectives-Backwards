@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import { DiagnoseRequest, DiagnoseResponse, DiagnoseAsyncResponse, PerformanceRequest, PerformanceResponse } from "./types";
+import { DiagnoseRequest, DiagnoseResponse, DiagnoseAsyncResponse, PerformanceRequest, PerformanceResponse, DomainAssessmentData, MetricSeries } from "./types";
 
 /**
  * Trigger diagnostic comparison across multiple engines.
@@ -14,11 +14,27 @@ export const checkPerformance = async (params: PerformanceRequest): Promise<Perf
 };
 
 
+interface SingleDomainAssessment {
+    ecdf: MetricSeries;
+    calibration_curves: MetricSeries;
+    metrics: { [metricName: string]: number };
+}
+
+interface DiagnosticReport {
+    dataset_name: string;
+    engine: {
+        type: string;
+        capability: string;
+    };
+    objective_space: SingleDomainAssessment;
+    decision_space: SingleDomainAssessment;
+}
+
 /**
  * Helper to map individual diagnostic reports into the monolithic DiagnoseResponse
  * structure expected by the UI.
  */
-export const mapReportsToDiagnoseResponse = (reports: any[]): DiagnoseResponse => {
+export const mapReportsToDiagnoseResponse = (reports: DiagnosticReport[]): DiagnoseResponse => {
     if (!reports.length) throw new Error("No reports to map");
     
     const first = reports[0];
@@ -27,8 +43,8 @@ export const mapReportsToDiagnoseResponse = (reports: any[]): DiagnoseResponse =
         reports.map(r => [r.engine.type, r.engine.capability])
     );
 
-    const objective_space: any = { ecdf: {}, calibration_curves: {}, metrics: {} };
-    const decision_space: any = { ecdf: {}, calibration_curves: {}, metrics: {} };
+    const objective_space: DomainAssessmentData = { ecdf: {}, calibration_curves: {}, metrics: {} };
+    const decision_space: DomainAssessmentData = { ecdf: {}, calibration_curves: {}, metrics: {} };
 
     reports.forEach(r => {
         const engineLabel = r.engine.type;

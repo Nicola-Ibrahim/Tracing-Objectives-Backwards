@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import React, { useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { generateCandidatesSchema, GenerateCandidatesFormValues } from "./generate-schema";
@@ -22,10 +22,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { CandidateGenerationRequest, EngineListItem } from "../types";
+import { CandidateGenerationRequest } from "../types";
 import { Play, Loader2 } from "lucide-react";
 import { listEnginesForDataset } from "../api";
 import { Badge } from "@/components/ui/badge";
+import { Resolver } from "react-hook-form";
 
 interface GenerateCandidatesFormProps {
     datasets: string[];
@@ -40,10 +41,8 @@ export function GenerateCandidatesForm({
     isLoading = false,
     onDatasetChange,
 }: GenerateCandidatesFormProps) {
-    const [engines, setEngines] = useState<EngineListItem[]>([]);
-    const [fetchingEngines, setFetchingEngines] = useState(false);
     const form = useForm<GenerateCandidatesFormValues>({
-        resolver: zodResolver(generateCandidatesSchema) as any,
+        resolver: zodResolver(generateCandidatesSchema) as Resolver<GenerateCandidatesFormValues>,
         defaultValues: {
             dataset_name: "",
             engine_id: "",
@@ -53,26 +52,31 @@ export function GenerateCandidatesForm({
         },
     });
 
-    const datasetName = form.watch("dataset_name");
-    const engineId = form.watch("engine_id");
+    const datasetName = useWatch({
+        control: form.control,
+        name: "dataset_name",
+        defaultValue: ""
+    });
+
+    const engineId = useWatch({
+        control: form.control,
+        name: "engine_id",
+        defaultValue: ""
+    });
+
+    const { data: engines = [], isFetching: fetchingEngines } = useQuery({
+        queryKey: ["engines", datasetName],
+        queryFn: () => listEnginesForDataset(datasetName),
+        enabled: !!datasetName,
+    });
 
     useEffect(() => {
         if (datasetName) {
-            setFetchingEngines(true);
-            listEnginesForDataset(datasetName)
-                .then(setEngines)
-                .catch((err) => {
-                    console.error("Failed to fetch engines", err);
-                    setEngines([]);
-                })
-                .finally(() => setFetchingEngines(false));
-
             onDatasetChange?.(datasetName);
             form.setValue("engine_id", "");
         } else {
-            setEngines([]);
-            form.setValue("engine_id", "");
             onDatasetChange?.("");
+            form.setValue("engine_id", "");
         }
     }, [datasetName, form, onDatasetChange]);
 
@@ -93,14 +97,14 @@ export function GenerateCandidatesForm({
     };
 
     return (
-        <Form {...(form as any)}>
+        <Form {...form}>
             <form
-                onSubmit={form.handleSubmit(handleInternalSubmit as any)}
+                onSubmit={form.handleSubmit(handleInternalSubmit)}
                 className="space-y-6"
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
-                        control={form.control as any}
+                        control={form.control}
                         name="dataset_name"
                         render={({ field }) => (
                             <FormItem>
@@ -128,7 +132,7 @@ export function GenerateCandidatesForm({
                     />
 
                     <FormField
-                        control={form.control as any}
+                        control={form.control}
                         name="engine_id"
                         render={({ field }) => (
                             <FormItem>
@@ -164,7 +168,7 @@ export function GenerateCandidatesForm({
 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
-                        control={form.control as any}
+                        control={form.control}
                         name="objective1"
                         render={({ field }) => (
                             <FormItem>
@@ -177,7 +181,7 @@ export function GenerateCandidatesForm({
                         )}
                     />
                     <FormField
-                        control={form.control as any}
+                        control={form.control}
                         name="objective2"
                         render={({ field }) => (
                             <FormItem>
@@ -193,7 +197,7 @@ export function GenerateCandidatesForm({
 
                 <div className="pt-4 border-t border-border flex items-center justify-between">
                     <FormField
-                        control={form.control as any}
+                        control={form.control}
                         name="n_samples"
                         render={({ field }) => (
                             <FormItem className="max-w-[200px]">
@@ -209,7 +213,7 @@ export function GenerateCandidatesForm({
 
                 <Button
                     type="submit"
-                    disabled={isLoading || !form.watch("engine_id")}
+                    disabled={isLoading || !engineId}
                     className="w-full bg-foreground text-background hover:opacity-90 font-bold h-12 transition-all active:scale-[0.98] group"
                 >
                     {isLoading ? (

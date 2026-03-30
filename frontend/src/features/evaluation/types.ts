@@ -53,5 +53,5 @@ export interface PerformanceResponse {
   dataset_name: string;
   solver_type: string;
   version: number;
-  insights: Record<string, any>;
+  insights: Record<string, unknown>;
 }

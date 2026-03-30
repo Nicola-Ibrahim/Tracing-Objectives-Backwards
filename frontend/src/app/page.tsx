@@ -8,8 +8,7 @@ import {
   Database,
   Sparkles,
   BarChart3,
-  Cpu,
-  LayoutDashboard
+  Cpu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/index";

@@ -1,6 +1,6 @@
 export interface TransformationStep {
   type: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   columns?: number[];
 }
 
@@ -22,16 +22,16 @@ export interface PreviewResponse {
     X: number[][];
     y: number[][];
   };
-  metrics: Record<string, any>;
+  metrics: Record<string, unknown>;
 }
 
 export interface TransformerParameter {
   name: string;
   type: string;
   required: boolean;
-  default: any;
+  default: unknown;
   description?: string;
-  options?: any[];
+  options?: unknown[];
 }
 
 export interface TransformerMetadata {

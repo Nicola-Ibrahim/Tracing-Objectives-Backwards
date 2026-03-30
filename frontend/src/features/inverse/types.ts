@@ -12,7 +12,7 @@ export interface SolversDiscoveryResponse {
 
 export interface SolverConfig {
   type: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
 }
 
 export interface TransformConfig {
@@ -26,6 +26,13 @@ export interface TrainEngineRequest {
   transforms: TransformConfig[];
 }
 
+export interface TrainingHistoryData {
+    epochs: number[];
+    train_loss: number[];
+    val_loss: number[];
+    [key: string]: unknown;
+}
+
 export interface TrainEngineResponse {
   dataset_name: string;
   solver_type: string;
@@ -35,7 +42,7 @@ export interface TrainEngineResponse {
   n_train_samples: number;
   n_test_samples: number;
   split_ratio: number;
-  training_history: Record<string, any>;
+  training_history: TrainingHistoryData;
   transform_summary: string[];
 }
 
@@ -45,7 +52,7 @@ export interface CandidateGenerationRequest {
   n_samples: number;
   solver_type?: string;
   version?: number;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 export interface CandidateGenerationResponse {
@@ -57,11 +64,17 @@ export interface CandidateGenerationResponse {
   best_candidate_decision: number[];
   best_candidate_objective: number[];
   best_candidate_residual: number;
-  metadata: Record<string, any>;
+  metadata: {
+    vertices_indices?: number[];
+    pathway?: string;
+    is_simplex_found?: boolean;
+    log_likelihood?: number[];
+    [key: string]: unknown;
+  };
 }
 
 export interface EngineListItem {
-  dataset_name?: string;
+  dataset_name: string;
   solver_type: string;
   version: number;
   created_at: string;
@@ -75,7 +88,7 @@ export interface EngineDetailResponse {
   n_train_samples: number;
   n_test_samples: number;
   split_ratio: number;
-  training_history: Record<string, any>;
+  training_history: TrainingHistoryData;
   transform_summary: string[];
-  hyperparameters: Record<string, any>;
+  hyperparameters: Record<string, unknown>;
 }

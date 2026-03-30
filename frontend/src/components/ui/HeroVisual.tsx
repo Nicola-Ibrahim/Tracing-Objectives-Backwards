@@ -3,6 +3,18 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export const HeroVisual: React.FC<{ className?: string }> = ({ className }) => {
+  const [particles, setParticles] = React.useState<{ id: number; duration: number; left: string; top: string; delay: number }[]>([]);
+
+  React.useEffect(() => {
+    setParticles([...Array(6)].map((_, i) => ({
+      id: i,
+      duration: 3 + Math.random() * 2,
+      left: `${20 + Math.random() * 60}%`,
+      top: `${20 + Math.random() * 60}%`,
+      delay: i * 0.5
+    })));
+  }, []);
+
   return (
     <div className={cn("relative w-full aspect-square flex items-center justify-center overflow-visible", className)}>
       {/* Background Ambient Glow */}
@@ -200,9 +212,9 @@ export const HeroVisual: React.FC<{ className?: string }> = ({ className }) => {
       </svg>
 
       {/* Floating Sparkles */}
-      {[...Array(6)].map((_, i) => (
+      {particles.map((p) => (
         <motion.div
-           key={i}
+           key={p.id}
            className="absolute w-1.5 h-1.5 bg-indigo-400/50 rounded-full"
            animate={{
              y: [0, -40, 0],
@@ -210,13 +222,13 @@ export const HeroVisual: React.FC<{ className?: string }> = ({ className }) => {
              scale: [0.5, 1, 0.5]
            }}
            transition={{
-             duration: 3 + Math.random() * 2,
+             duration: p.duration,
              repeat: Infinity,
-             delay: i * 0.5
+             delay: p.delay
            }}
            style={{
-             left: `${20 + Math.random() * 60}%`,
-             top: `${20 + Math.random() * 60}%`
+             left: p.left,
+             top: p.top
            }}
         />
       ))}

@@ -2,16 +2,15 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { getDatasets, generateCandidates } from "@/features/inverse/api";
 import { getDatasetDetails } from "@/features/dataset/api";
 import { GenerateCandidatesForm } from "@/features/inverse/components/GenerateCandidatesForm";
 import { CandidateManifoldChart } from "@/features/inverse/components/CandidateManifoldChart";
-import { DatasetDetails } from "@/features/dataset/types";
 import { CandidateGenerationRequest, CandidateGenerationResponse } from "@/features/inverse/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings2, BarChart3, Loader2, Sparkles, AlertCircle, Target, Database, Blocks } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings2, BarChart3, Loader2, Sparkles, AlertCircle, Target, Blocks } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function GeneratePage() {
@@ -26,7 +25,7 @@ export default function GeneratePage() {
     const [selectedDataset, setSelectedDataset] = useState<string>("");
     const [activeTab, setActiveTab] = useState<string>("generation");
 
-    const { data: datasetDetails, isLoading: loadingDetails } = useQuery({
+    const { data: datasetDetails } = useQuery({
         queryKey: ["dataset-details", selectedDataset],
         queryFn: () => getDatasetDetails(selectedDataset),
         enabled: !!selectedDataset,
@@ -116,7 +115,7 @@ export default function GeneratePage() {
                                         <AlertCircle className="h-4 w-4 text-destructive" />
                                         <AlertTitle className="font-bold text-destructive font-heading">Generation Stopped</AlertTitle>
                                         <AlertDescription className="font-medium text-destructive/80">
-                                            {(mutation.error as any)?.response?.data?.detail || "An unexpected error occurred while generating candidates."}
+                                            {mutation.error instanceof Error ? mutation.error.message : "An unexpected error occurred while generating candidates."}
                                         </AlertDescription>
                                     </Alert>
                                 )}

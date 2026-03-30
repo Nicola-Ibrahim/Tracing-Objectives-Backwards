@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { getSolvers } from "../api";
@@ -23,8 +23,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { TrainEngineRequest, SolverSchema } from "../types";
-import { BrainCircuit, Loader2, Settings2, Sparkles } from "lucide-react";
+import { TrainEngineRequest } from "../types";
+import { BrainCircuit, Loader2, Sparkles } from "lucide-react";
 
 interface TrainEngineFormProps {
     datasets: string[];
@@ -37,9 +37,8 @@ export function TrainEngineForm({
     onSubmit,
     isLoading = false,
 }: TrainEngineFormProps) {
-    const [dynamicParams, setDynamicParams] = useState<Record<string, any>>({});
+    const [dynamicParams, setDynamicParams] = useState<Record<string, unknown>>({});
     const [isDynamicValid, setIsDynamicValid] = useState(true);
-    const [selectedSolver, setSelectedSolver] = useState<SolverSchema | null>(null);
 
     const { data: discovery, isLoading: isLoadingDiscovery } = useQuery({
         queryKey: ["solvers-discovery"],
@@ -47,29 +46,33 @@ export function TrainEngineForm({
     });
 
     const form = useForm<TrainEngineFormValues>({
-        resolver: zodResolver(trainEngineSchema) as any,
+        resolver: zodResolver(trainEngineSchema),
         defaultValues: {
             dataset_name: "",
             solver_type: "GBPI",
         },
     });
 
-    const solvers = discovery?.solvers || [];
+    const solvers = React.useMemo(() => discovery?.solvers || [], [discovery?.solvers]);
+    const solverType = useWatch({
+        control: form.control,
+        name: "solver_type",
+        defaultValue: "GBPI"
+    });
+
+    const selectedSolver = React.useMemo(() => 
+        solvers.find(s => s.type === solverType) || null,
+    [solvers, solverType]);
 
     useEffect(() => {
-        if (solvers.length > 0 && !selectedSolver) {
+        if (solvers.length > 0 && !solverType) {
             const defaultSolver = solvers.find(s => s.type === "GBPI") || solvers[0];
-            setSelectedSolver(defaultSolver);
             form.setValue("solver_type", defaultSolver.type);
         }
-    }, [solvers, form]);
+    }, [solvers, form, solverType]);
 
     const handleSolverChange = (solverId: string) => {
-        const solver = solvers.find(s => s.type === solverId);
-        if (solver) {
-            setSelectedSolver(solver);
-            form.setValue("solver_type", solverId);
-        }
+        form.setValue("solver_type", solverId);
     };
 
     const handleInternalSubmit = async (values: TrainEngineFormValues) => {
@@ -171,6 +174,7 @@ export function TrainEngineForm({
                         </div>
 
                         <DynamicConfigForm
+                            key={selectedSolver.type}
                             parameters={selectedSolver.parameters}
                             onChange={(vals, valid) => {
                                 setDynamicParams(vals);

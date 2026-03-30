@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Resolver, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
@@ -26,8 +25,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, PlusCircle, Wand2 } from "lucide-react";
-import { GeneratorSchema } from "../types";
+import { Loader2, Wand2 } from "lucide-react";
+import { DatasetGenerationRequest } from "../types";
 
 const generateDatasetSchema = z.object({
     dataset_name: z.string().min(3, "Name must be at least 3 characters"),
@@ -39,14 +38,13 @@ const generateDatasetSchema = z.object({
 type GenerateDatasetFormValues = z.infer<typeof generateDatasetSchema>;
 
 interface GenerateDatasetFormProps {
-    onSubmit: (values: any) => void;
+    onSubmit: (values: DatasetGenerationRequest) => void;
     isLoading?: boolean;
 }
 
 export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDatasetFormProps) {
-    const [dynamicParams, setDynamicParams] = useState<Record<string, any>>({});
+    const [dynamicParams, setDynamicParams] = useState<Record<string, unknown>>({});
     const [isDynamicValid, setIsDynamicValid] = useState(true);
-    const [selectedGenerator, setSelectedGenerator] = useState<GeneratorSchema | null>(null);
 
     const { data: discovery, isLoading: isLoadingDiscovery } = useQuery({
         queryKey: ["generators-discovery"],
@@ -54,7 +52,7 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
     });
 
     const form = useForm<GenerateDatasetFormValues>({
-        resolver: zodResolver(generateDatasetSchema) as any,
+        resolver: zodResolver(generateDatasetSchema) as Resolver<GenerateDatasetFormValues>,
         defaultValues: {
             dataset_name: "",
             generator_type: "coco_pymoo",
@@ -63,29 +61,33 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
         },
     });
 
-    const generators = discovery?.generators || [];
+    const generators = React.useMemo(() => discovery?.generators || [], [discovery?.generators]);
+    const generatorType = useWatch({
+        control: form.control,
+        name: "generator_type",
+        defaultValue: "coco_pymoo"
+    });
+
+    const selectedGenerator = React.useMemo(() => 
+        generators.find(g => g.type === generatorType) || null,
+    [generators, generatorType]);
 
     useEffect(() => {
-        if (generators.length > 0) {
+        if (generators.length > 0 && !generatorType) {
             const defaultGen = generators.find(g => g.type === "coco_pymoo") || generators[0];
-            setSelectedGenerator(defaultGen);
             form.setValue("generator_type", defaultGen.type);
         }
-    }, [generators, form]);
+    }, [generators, form, generatorType]);
 
     const handleGeneratorChange = (genId: string) => {
-        const gen = generators.find(g => g.type === genId);
-        if (gen) {
-            setSelectedGenerator(gen);
-            form.setValue("generator_type", genId);
-        }
+        form.setValue("generator_type", genId);
     };
 
     const handleFormSubmit = (values: GenerateDatasetFormValues) => {
         onSubmit({
             ...values,
             params: dynamicParams,
-        });
+        } as DatasetGenerationRequest);
     };
 
     if (isLoadingDiscovery) {
@@ -154,6 +156,7 @@ export function GenerateDatasetForm({ onSubmit, isLoading = false }: GenerateDat
                                 </h4>
                             </div>
                             <DynamicConfigForm
+                                key={selectedGenerator.type}
                                 parameters={selectedGenerator.parameters}
                                 onChange={(vals, valid) => {
                                     setDynamicParams(vals);

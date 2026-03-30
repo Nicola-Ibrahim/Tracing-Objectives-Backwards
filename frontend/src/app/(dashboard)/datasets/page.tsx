@@ -7,7 +7,7 @@ import { DatasetChart } from "@/features/dataset/components/DatasetChart";
 import { GenerateDatasetForm } from "@/features/dataset/components/GenerateDatasetForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, FileText, Activity, Layers, Loader2, Search, X, Wand2, Trash2, AlertCircle, Sparkles, TrendingUp } from "lucide-react";
+import { Database, FileText, Activity, Layers, Loader2, Search, Wand2, Trash2, AlertCircle, Sparkles, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -67,7 +67,7 @@ export default function DatasetsPage() {
             setDatasetToDelete(null);
             showToast("Dataset deleted successfully", "success");
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             showToast(`Deletion failed: ${err.message}`, "error");
         }
     });
@@ -80,7 +80,7 @@ export default function DatasetsPage() {
             setIsBulkDeleting(false);
             showToast("Datasets deleted successfully", "success");
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             showToast(`Bulk deletion failed: ${err.message}`, "error");
         }
     });
@@ -162,7 +162,7 @@ export default function DatasetsPage() {
                             Confirm Deletion
                         </DialogTitle>
                         <DialogDescription className="py-2 text-muted-foreground font-medium">
-                            Are you sure you want to delete <span className="font-bold text-foreground">"{datasetToDelete}"</span>?
+                            Are you sure you want to delete <span className="font-bold text-foreground">&ldquo;{datasetToDelete}&rdquo;</span>?
                             This will also remove all its associated trained engines.
                             This action cannot be undone.
                         </DialogDescription>
@@ -448,7 +448,7 @@ export default function DatasetsPage() {
                             </div>
                              <h3 className="text-2xl font-bold text-foreground tracking-tight uppercase font-heading">No datasets found</h3>
                             <p className="text-muted-foreground max-w-sm mx-auto mt-4 font-medium italic leading-relaxed">
-                                Generate your first dataset in the "Generator" section or upload a CSV to start training inverse models.
+                                Generate your first dataset in the &ldquo;Generator&rdquo; section or upload a CSV to start training inverse models.
                             </p>
                             <Button
                                 onClick={() => setShowGenerator(true)}
@@ -570,7 +570,7 @@ export default function DatasetsPage() {
                                 <Search className="h-10 w-10 text-muted-foreground/30" />
                             </div>
                             <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs font-heading">
-                                No datasets match "<span className="text-indigo-500">{searchQuery}</span>"
+                                No datasets match &ldquo;<span className="text-indigo-500">{searchQuery}</span>&rdquo;
                             </p>
                         </div>
                     )}
