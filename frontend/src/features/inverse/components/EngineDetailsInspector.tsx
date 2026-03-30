@@ -167,8 +167,8 @@ export function EngineDetailsInspector({
                                         <div className="h-px bg-border flex-1" />
                                     </div>
                                     <div className="bg-muted/5 border border-border rounded-[1.5rem] p-6">
-                                        {details.training_history?.loss ? (
-                                            <TrainingHistoryChart history={details.training_history.loss} />
+                                        {details.training_history && details.training_history.epochs && details.training_history.epochs.length > 0 ? (
+                                            <TrainingHistoryChart history={details.training_history} />
                                         ) : (
                                             <div className="h-[300px] flex items-center justify-center text-muted-foreground/30 font-bold uppercase tracking-widest text-xs italic">
                                                 No historical data available

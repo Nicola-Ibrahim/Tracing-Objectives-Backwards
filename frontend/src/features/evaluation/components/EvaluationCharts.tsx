@@ -24,10 +24,11 @@ interface PerformanceChartProps {
     title: string;
     description: string;
     data: MetricPlotData;
-    xAxisLabel: string;
-    yAxisLabel: string;
+    xAxisLabel?: string;
+    yAxisLabel?: string;
     showIdeal?: boolean;
     xAxisType?: "linear" | "log";
+    type?: "ecdf" | "calibration";
 }
 
 export function PerformanceChart({
@@ -36,10 +37,17 @@ export function PerformanceChart({
     data,
     xAxisLabel,
     yAxisLabel,
-    showIdeal = false,
-    xAxisType = "linear"
+    showIdeal,
+    xAxisType = "linear",
+    type
 }: PerformanceChartProps) {
 
+    const xLabel = xAxisLabel || "Predicted Probability";
+    let yLabel = yAxisLabel || "Value";
+    if (type === "ecdf") yLabel = "Empirical Coverage";
+    if (type === "calibration") yLabel = "Calibration Error";
+
+    const isShowIdeal = showIdeal ?? (type === "ecdf");
 
     const traces = useMemo(() => {
         const plotTraces: Array<Record<string, unknown>> = Object.keys(data).map((label, index) => ({
@@ -54,7 +62,7 @@ export function PerformanceChart({
                 shape: 'spline' as const,
                 smoothing: 1.3
             },
-            hovertemplate: `<b>${label}</b><br>${yAxisLabel}: %{y:.4f}<br>${xAxisLabel}: %{x:.4f}<extra></extra>`,
+            hovertemplate: `<b>${label}</b><br>${yLabel}: %{y:.4f}<br>${xLabel}: %{x:.4f}<extra></extra>`,
             hoverlabel: {
                 bgcolor: 'white',
                 bordercolor: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
@@ -62,7 +70,7 @@ export function PerformanceChart({
             }
         }));
 
-        if (showIdeal) {
+        if (isShowIdeal) {
             plotTraces.push({
                 x: [0, 1],
                 y: [0, 1],
@@ -85,18 +93,18 @@ export function PerformanceChart({
             });
         }
         return plotTraces;
-    }, [data, showIdeal, xAxisLabel, yAxisLabel]);
+    }, [data, isShowIdeal, xLabel, yLabel]);
 
     const layout = {
         xaxis: {
-            title: { text: xAxisLabel },
+            title: { text: xLabel },
             type: xAxisType,
             gridcolor: '#f1f5f9', // Muted slate grid
             zeroline: false,
             tickfont: { family: 'Inter, sans-serif', color: '#64748b', size: 14 }
         },
         yaxis: {
-            title: { text: yAxisLabel },
+            title: { text: yLabel },
             range: [0, 1.05],
             gridcolor: '#f1f5f9',
             tickfont: { family: 'Inter, sans-serif', color: '#64748b', size: 14 }
@@ -121,37 +129,54 @@ export function PerformanceChart({
 }
 
 interface MetricBarChartProps {
-    title: string;
-    description: string;
-    data: Record<string, number>;
-    yAxisLabel: string;
+    title?: string;
+    description?: string;
+    data: Record<string, Record<string, number>>;
+    yAxisLabel?: string;
 }
 
 export function MetricBarChart({
-    title,
-    description,
+    title = "Performance Metrics",
+    description = "Comparison of standardized performance metrics across engines.",
     data,
-    yAxisLabel
+    yAxisLabel = "Score"
 }: MetricBarChartProps) {
-    const traces = Object.entries(data).map(([label, value], index) => ({
-        x: [label],
-        y: [value],
-        name: label,
-        type: 'bar' as const,
-        marker: {
-            color: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
-            line: { width: 0 }
-        },
-        hovertemplate: `<b>${label}</b><br>${yAxisLabel}: %{y:.4f}<extra></extra>`,
-        hoverlabel: {
-            bgcolor: 'white',
-            bordercolor: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
-            font: { family: 'Inter, sans-serif', size: 12, color: '#1e293b' }
+    const engineNames = Object.keys(data);
+    
+    // Collect all unique metrics
+    const allMetrics = new Set<string>();
+    for (const metrics of Object.values(data)) {
+        for (const metric of Object.keys(metrics || {})) {
+            allMetrics.add(metric);
         }
-    }));
+    }
+    const metricsNames = Array.from(allMetrics);
+
+    const traces = engineNames.map((engine, index) => {
+        const engineMetrics = data[engine] || {};
+        const values = metricsNames.map(metric => engineMetrics[metric] || 0);
+
+        return {
+            x: metricsNames,
+            y: values,
+            name: engine,
+            type: 'bar' as const,
+            marker: {
+                color: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
+                line: { width: 0 }
+            },
+            hovertemplate: `<b>${engine}</b><br>%{x}: %{y:.4f}<extra></extra>`,
+            hoverlabel: {
+                bgcolor: 'white',
+                bordercolor: EVALUATION_COLORS[index % EVALUATION_COLORS.length],
+                font: { family: 'Inter, sans-serif', size: 12, color: '#1e293b' }
+            }
+        };
+    });
 
     const layout = {
         showlegend: true,
+        barmode: 'group' as const,
         xaxis: {
             gridcolor: 'transparent',
             tickfont: { size: 14, weight: 700, color: '#64748b' },
@@ -164,7 +189,7 @@ export function MetricBarChart({
             zeroline: false,
             tickfont: { family: 'Inter, sans-serif', color: '#64748b', size: 14 }
         },
-        margin: { b: 150, t: 40, l: 60, r: 20 },
+        margin: { b: 80, t: 40, l: 60, r: 20 },
     };
 
     return (
