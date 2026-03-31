@@ -2,23 +2,32 @@
 \markboth{Disclosure of AI Usage}{Disclosure of AI Usage}
 \addcontentsline{toc}{chapter}{Disclosure of AI Usage}
 
-In accordance with the University of Paderborn's guidelines, this section documents the use of generative AI tools in the preparation of this thesis. These tools were used as supporting aids; however, the author maintains full responsibility for the scientific content, critical analysis, and final conclusions.
+In accordance with the Institution's guidelines, this section documents the use of generative AI tools in the preparation of this thesis. These tools were used as supporting aids; however, the author maintains full responsibility for the scientific content, critical analysis, and final conclusions.
 
 \section*{Systematic Documentation of Tools}
 
-\begin{table}[h]
+\begingroup
 \centering
 \small
 \renewcommand{\arraystretch}{1.5}
-\begin{tabular}{|p{3cm}|p{3.5cm}|p{7.5cm}|}
+% xltabular combines tabularx (auto-sizing columns) with longtable (page breaking)
+\begin{xltabular}{\textwidth}{|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
-\textbf{Work Phase} & \textbf{Tool Used} & \textbf{Nature of Assistance} \\ \hline
-\textbf{Brainstorming} & ChatGPT (OpenAI) & Assisting in narrowing the research scope and developing the initial structural outline for the inverse exploration chapters. \\ \hline
-\textbf{Text Drafting} & ChatGPT (OpenAI) & Drafting descriptions of technical concepts and refining the academic tone of the manuscript. \\ \hline
-\textbf{Implementation} & Claude (Anthropic) & Assisting in writing and optimizing Python scripts for data-driven modeling and inverse problem solvers. \\ \hline
-% \textbf{Code Debugging} & Gemini (Google) & Troubleshooting LaTeX compilation errors and debugging complex algorithmic logic within the source code. \\ \hline
-\end{tabular}
-\end{table}
+\textbf{Work Phase} & \textbf{Tool} & \textbf{Usage} & \textbf{Comment on Result} & \textbf{Reflection} \\ \hline
+\endfirsthead
+
+% This tells LaTeX to reprint the headers if the table breaks onto page 2!
+\hline
+\textbf{Work Phase} & \textbf{Tool} & \textbf{Usage} & \textbf{Comment on Result} & \textbf{Reflection} \\ \hline
+\endhead
+
+\textbf{Brainstorming \& Outlining} & ChatGPT (OpenAI) & Discussing high-level organizational concepts and brainstorming general structural outlines for the document. & The generated outlines were highly generic, but served as a basic orientation for the initial structural setup. & The tool was helpful for initial structural planning, but the final chapter organization and logical flow were developed independently. \\ \hline
+
+\textbf{Proofreading \& Editing} & ChatGPT (OpenAI) & Proofreading the author's original text, refining the academic tone, and checking for grammatical accuracy. & Most of the grammatical and stylistic suggestions were adopted to improve sentence structure. & The tool successfully improved readability and formatting without altering the underlying scientific arguments or technical accuracy. \\ \hline
+
+\textbf{Implementation Assistance} & Claude (Anthropic) & Suggesting Python syntax, generating standard boilerplate code for data processing, and assisting in identifying syntax errors. & The tool helped resolve coding errors and syntax formatting faster, though it occasionally misunderstood the specific mathematical constraints of the project. & The AI acted purely as a syntax and debugging assistant. All core algorithmic logic, experimental design, and mathematical validation were developed manually and independently. \\ \hline
+\end{xltabular}
+\endgroup
 
 \section*{Statement of Responsibility}
-The author confirms that all AI-generated outputs were critically reviewed, verified for technical accuracy, and integrated into the work through independent intellectual effort. All mathematical derivations and the interpretation of the results are the work of the author.
+The author confirms that all AI-assisted drafting and code suggestions were critically reviewed, verified for technical accuracy, and integrated into the manuscript through independent intellectual effort. The core conceptualization, experimental design, algorithmic architecture, mathematical derivations, and the final interpretation of the results are entirely the original work of the author.

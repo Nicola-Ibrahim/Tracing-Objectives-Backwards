@@ -327,6 +327,53 @@ Once the offline mathematical environment is established, the GBPI framework tra
 
 \end{enumerate}
 
+
+
+\begin{algorithm}[!htbp]
+\caption{Geometrically Bounded Probabilistic Inversion (GBPI)}
+\label{alg:gbpi}
+\begin{algorithmic}[1]
+\Require Sparse dataset $\mathcal{D} = \{(\mathbf{x}_i, \mathbf{y}_i)\}_{i=1}^N$, Target $\mathbf{y}^\star$, KNN parameter $k$, Dirichlet scalar $\alpha$, Number of candidates $K$, Trust-Region radius $\delta$
+
+\Statex \textbf{Phase 1: Offline System Initialization}
+\State $\mathcal{M} \gets \text{DelaunayTriangulation}(\mathcal{Y})$ \Comment{Construct objective space mesh}
+\State $\tilde{\mathbf{f}} \gets \text{TrainRBF}(\mathcal{X}, \mathcal{Y})$ \Comment{Train lightweight surrogate}
+\State $\mathcal{D}_{KNN} \gets \emptyset$
+\For{each $\mathbf{x}_i \in \mathcal{X}$}
+    \State Find $k$-nearest neighbors $\mathcal{N}_k(\mathbf{x}_i)$
+    \State $\mathcal{D}_{KNN} \gets \mathcal{D}_{KNN} \cup \{ \|\mathbf{x}_i - \mathbf{x}_j\|_2 \mid \mathbf{x}_j \in \mathcal{N}_k(\mathbf{x}_i) \}$
+\EndFor
+\State $\tau \gets \text{Percentile}(\mathcal{D}_{KNN}, 95)$ \Comment{Set Dynamic Coherence Threshold}
+
+\Statex
+\Statex \textbf{Phase 2: Online Real-Time Generation}
+\Function{GenerateCandidates}{$\mathbf{y}^\star$}
+    \State $S, \mathbf{w}^\star \gets \text{LocateSimplex}(\mathcal{M}, \mathbf{y}^\star)$ \Comment{Find enclosing triangle and barycentric weights}
+    
+    \If{$S$ is not \text{NULL}} \Comment{Target is within the Convex Hull}
+        \State $\mathbf{X}_{anchors} \gets \text{GetDecisionCoordinates}(S)$
+        \State $d_{max} \gets \max \left( \text{PairwiseDistances}(\mathbf{X}_{anchors}) \right)$
+        
+        \If{$d_{max} \le \tau$} \Comment{\textbf{Pathway A: Coherent Interpolation}}
+            \For{$k = 1$ to $K$}
+                \State $\mathbf{w}^{(k)} \sim \mathrm{Dir}(\alpha \mathbf{w}^\star)$ \Comment{Sample probabilistic weights}
+            \EndFor
+            \State $\mathbf{W}_{sampled} \gets [\mathbf{w}^{(1)}, \mathbf{w}^{(2)}, \dots, \mathbf{w}^{(K)}]^T$
+            \State $\mathbf{X}_{candidates} \gets \mathbf{W}_{sampled} \mathbf{X}_{anchors}$
+            \State \Return $\mathbf{X}_{candidates}$
+        \EndIf
+    \EndIf
+    
+    \Statex \ \ \ \ \Comment{\textbf{Pathway B: Incoherent or Extrapolation}}
+    \State $\mathbf{x}_{base} \gets \text{FindClosestObservation}(\mathcal{X}, \mathbf{y}^\star)$
+    \State $\Omega \gets \{ \mathbf{x} \mid \|\mathbf{x} - \mathbf{x}_{base}\|_\infty \le \delta \}$ \Comment{Define strict Trust-Region}
+    \State $\mathbf{x}_{opt} \gets \arg\min_{\mathbf{x} \in \Omega} \| \tilde{\mathbf{f}}(\mathbf{x}) - \mathbf{y}^\star \|_2^2$ \Comment{Execute bounded gradient descent}
+    
+    \State \Return $\mathbf{x}_{opt}$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
 %-------------------------------------------------------------------------------
 \section{Evaluation plan}\label{sec:evaluation}
 %-------------------------------------------------------------------------------
