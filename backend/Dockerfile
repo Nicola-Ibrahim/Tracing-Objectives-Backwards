@@ -71,7 +71,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libpq5 \
 
 COPY --from=builder /opt/venv /opt/venv
 
-# --chown ensures appuser can write to DATA_STORAGE_PATH (/app/storage)
+# --chown ensures appuser can write to /app/storage
 # at runtime without permission errors.
 COPY --chown=appuser:appuser . /app
 

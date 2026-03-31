@@ -46,9 +46,7 @@ class ApiApplication:
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
         # Startup
-        config = BackendConfig(
-            redis_url=settings.REDIS_URL, data_storage_path=settings.DATA_STORAGE_PATH
-        )
+        config = BackendConfig(redis_url=settings.REDIS_URL)
         backend_startup = BackendStartUp(config=config)
         await backend_startup.start()
         yield

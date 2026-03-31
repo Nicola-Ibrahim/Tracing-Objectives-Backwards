@@ -16,9 +16,6 @@ class BackendConfig(BaseModel):
     redis_url: str = Field(
         default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0")
     )
-    data_storage_path: str = Field(
-        default_factory=lambda: os.getenv("DATA_STORAGE_PATH", "/app/storage")
-    )
     debug: bool = Field(
         default_factory=lambda: os.getenv("DEBUG", "true").lower() == "true"
     )

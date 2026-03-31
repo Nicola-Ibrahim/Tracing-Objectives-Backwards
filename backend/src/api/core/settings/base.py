@@ -37,9 +37,6 @@ class BaseSettings(BaseModel):
     ROOT_DIR: str = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
-    DATA_STORAGE_PATH: str = Field(
-        default_factory=lambda: os.getenv("DATA_STORAGE_PATH", "./storage")
-    )
 
     # Operations
     LOG_LEVEL: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
