@@ -11,7 +11,7 @@
 %───────────────────────────────────────────────────────────────────────────────
 % Title page (restructured order):
 % 1) Logo  →  2) Title  →  3) Author(s)  →  4) Degree statement
-%  →  5) Department → University  →  6) Filing date
+%  →  5) Faculty, Department & University  →  6) Filing date
 %───────────────────────────────────────────────────────────────────────────────
 \begin{titlepage}
 \begin{center}
@@ -53,32 +53,36 @@
   \IfLanguageName{ngerman}{
     \textit{Diese Arbeit wird vorgelegt zur Erlangung des akademischen Grades}\\
     \textbf{Master of Science (M.\,Sc.) \,–\, Computer Engineering}\\[0.1cm]
-    \textit{Schwerpunkt: Signal-, Bild- und Sprachverarbeitung}
+    \textit{Schwerpunkt: Signalverarbeitung}
   }{
     \textit{A thesis presented in partial fulfillment of the requirements for the degree of}\\
     \textbf{Master of Science (M.Sc.) \,–\, Computer Engineering}\\[0.1cm]
-    \textit{Specialisation: Signal, Image and Speech Processing}
+    \textit{Specialisation: Signal Processing}
   }
 
-  % 5) Department & University
+  % 5) Faculty, Department & University
   \vspace{1.0cm}
   \normalsize
-  {\IfLanguageName{ngerman}
-    {Institut für Elektrotechnik und Informationstechnik}
-    {Department of Electrical Engineering and Information Technology}}\\
+  \IfLanguageName{ngerman}{
+    Fakultät für Elektrotechnik, Informatik und Mathematik\\[0.1cm]
+    Institut für Elektrotechnik und Informationstechnik
+  }{
+    Faculty of Electrical Engineering, Computer Science and Mathematics\\[0.1cm]
+    Department of Electrical Engineering and Information Technology
+  }\\
   \IfLanguageName{ngerman}{Universität Paderborn}{Paderborn University}
 
   % Pushes content to the bottom
   \vfill 
 
-  % 5.1) Supervisors - Corrected Syntax
+  % 5.1) Supervisors
   \normalsize
   \begin{tabular}{c}
     \IfLanguageName{ngerman}{Gutachter}{Supervisors}: \\[0.1cm]
     \begin{tabular}{>{\bfseries}c} \Supervisor \end{tabular}
   \end{tabular}
 
-  % 6) Filing date - Fixed gap to prevent crowding
+  % 6) Filing date
   \vspace{2.0cm} 
 
   \begin{flushleft}
