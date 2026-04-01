@@ -50,13 +50,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             BACKEND_URL=${{ secrets.BACKEND_URL }}
 
   deploy:
     needs: [ build-and-push ]
     runs-on: ubuntu-latest
-    environment: ${{ vars.ENV }}
+    environment: production
     steps:
       - name: Trigger Render Deploy
         run: |

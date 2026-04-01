@@ -53,7 +53,7 @@ jobs:
   deploy:
     needs: [ build-and-push ]
     runs-on: ubuntu-latest
-    environment: ${{ vars.ENV }}
+    environment: production
     steps:
       - name: Trigger Render Deploy
         run: |

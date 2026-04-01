@@ -46,9 +46,8 @@ COPY . .
 
 # NEXT_PUBLIC_ vars are baked into the static bundle at build time.
 # They must be passed as build args — runtime env vars have no effect.
-# In CD workflow: --build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG BACKEND_URL
+ENV BACKEND_URL=$BACKEND_URL
 
 ENV NODE_ENV=production
 

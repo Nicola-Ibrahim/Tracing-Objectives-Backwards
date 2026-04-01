@@ -103,6 +103,7 @@ jobs:
     needs: [ backend-test ]
     if: github.event_name == 'pull_request' && needs.backend-test.result == 'success'
     runs-on: ubuntu-latest
+    environment: development
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -165,6 +166,7 @@ jobs:
     needs: [ frontend-test ]
     if: github.event_name == 'pull_request' && needs.frontend-test.result == 'success'
     runs-on: ubuntu-latest
+    environment: development
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -183,7 +185,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
             BACKEND_URL=${{ secrets.BACKEND_URL || 'http://localhost:8000' }}
 
       - name: Run & Verify Health
