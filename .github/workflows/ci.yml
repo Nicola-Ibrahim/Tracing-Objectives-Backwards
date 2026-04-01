@@ -104,6 +104,17 @@ jobs:
     if: github.event_name == 'pull_request' && needs.backend-test.result == 'success'
     runs-on: ubuntu-latest
     environment: development
+    env:
+      BACKEND_CORS_ORIGINS: ${{ secrets.BACKEND_CORS_ORIGINS }}
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+      DEBUG: ${{ secrets.DEBUG }}
+      ENV: ${{ secrets.ENV }}
+      LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+      PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+      PYTHONASYNCIODEBUG: ${{ secrets.PYTHONASYNCIODEBUG }}
+      PYTHONPATH: ${{ secrets.PYTHONPATH }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -120,21 +131,17 @@ jobs:
           load: true
           tags: backend-ci:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=min
+          cache-to: type=gha,mode=max
 
-      - name: Create .env file from GitHub Secrets
+      - name: Create .env file for backend
         run: |
-          cat << EOF > .env
-          BACKEND_CORS_ORIGINS=${{ secrets.BACKEND_CORS_ORIGINS }}
-          DEBUG=${{ secrets.DEBUG }}
-          ENV=${{ secrets.ENV }}
-          LOG_LEVEL=${{ secrets.LOG_LEVEL}}
-          PROJECT_NAME=${{ secrets.PROJECT_NAME }}
-          PYTHONASYNCIODEBUG=${{ secrets.PYTHONASYNCIODEBUG}}
-          PYTHONPATH=${{ secrets.PYTHONPATH }}
-          REDIS_URL=${{ secrets.REDIS_URL }}
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          EOF
+          env | grep -E '^(BACKEND_|ENV|DEBUG|LOG_LEVEL|PROJECT_NAME|PYTHON|REDIS_|SECRET_)' > .env
+          echo "✅ .env file created"
+          
+          if ! grep -q "ENV=" .env; then
+            echo "❌ CRITICAL: 'ENV' is missing in the generated .env file!"
+            exit 1
+          fi
 
       - name: Run & Verify Health
         run: |
@@ -182,7 +189,7 @@ jobs:
           load: true
           tags: frontend-ci:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=min
+          cache-to: type=gha,mode=max
           build-args: |
             BACKEND_URL=${{ secrets.BACKEND_URL }}
 

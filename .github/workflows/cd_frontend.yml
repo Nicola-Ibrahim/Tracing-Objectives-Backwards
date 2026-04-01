@@ -48,7 +48,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=min
+          cache-to: type=gha,mode=max
           build-args: |
             BACKEND_URL=${{ secrets.BACKEND_URL }}
 
@@ -56,9 +56,11 @@ jobs:
     needs: [ build-and-push ]
     runs-on: ubuntu-latest
     environment: production
+    env:
+      DEPLOY_HOOK: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}
     steps:
       - name: Trigger Render Deploy
         run: |
           echo "🚀 Releasing ${{ github.ref_name }}..."
-          curl -fsSL "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}"
+          curl -fsSL "$DEPLOY_HOOK"
           echo "✅ Done"
