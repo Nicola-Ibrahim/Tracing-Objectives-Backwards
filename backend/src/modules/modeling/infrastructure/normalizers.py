@@ -164,8 +164,9 @@ class HypercubeNormalizer(BaseTransformer):
 
 class StandardNormalizer(BaseTransformer):
     """
-    Standard normalization (z-score) that transforms features to have zero mean and unit variance.
-    This is particularly useful for algorithms that assume features are centered and scaled.
+    Standard normalization (z-score) transforms features to have zero mean
+    and unit variance. This is useful for algorithms that assume features
+    are centered and scaled.
 
     Args:
         with_mean: Whether to center the data (subtract mean)

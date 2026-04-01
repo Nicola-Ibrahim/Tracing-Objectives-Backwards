@@ -35,8 +35,8 @@ export interface ParameterDefinition {
   name: string;
   type: string;
   required: boolean;
-  default: any | null;
-  options?: any[] | null;
+  default: unknown;
+  options?: unknown[] | null;
   description?: string | null;
 }
 
@@ -53,7 +53,7 @@ export interface GeneratorsDiscoveryResponse {
 export interface DatasetGenerationRequest {
   dataset_name: string;
   generator_type: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   split_ratio?: number;
   random_state?: number;
 }

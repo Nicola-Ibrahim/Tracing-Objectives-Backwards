@@ -1,7 +1,7 @@
 """
 Invertible Neural Network (INN) / Normalizing Flow Estimator for Inverse Problems.
 
-This module implements a conditional normalizing flow using RealNVP-style affine coupling
+This module implements a conditional normalizing flow using RealNVP-style coupling
 layers to model posterior distributions p(x|y) where multiple solutions x can explain
 the same observation y.
 

@@ -1,82 +1,60 @@
-from dependency_injector import containers, providers
+import os
 
-from .modules.dataset.infrastructure.di import DatasetContainer
-from .modules.evaluation.infrastructure.di import EvaluationContainer
-from .modules.inverse.infrastructure.di import InverseContainer
-from .modules.modeling.infrastructure.di import ModelingContainer
-from .modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
+from pydantic import BaseModel, Field
+
+from .containers import RootContainer
+from .modules.shared.infrastructure.discovery import (
+    discover_modules,
+)
 
 
-class ModulesContainer(containers.DeclarativeContainer):
+class BackendConfig(BaseModel):
     """
-    Global Dependency Injection container that aggregates all module-level containers.
-    Using dependency-injector library.
+    Centralized configuration for backend infrastructure.
     """
 
-    # Shared resources
-    logger = providers.Singleton(CMDLogger, name="TracingObjectivesBackwards")
-
-    # Module Containers
-    modeling = providers.Container(
-        ModelingContainer,
-        # modeling needs dataset_repository (interface only, wired later)
+    redis_url: str = Field(
+        default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0")
     )
-
-    inverse = providers.Container(
-        InverseContainer,
-        logger=logger,
-        # inverse needs dataset_repository (interface only, wired later)
-    )
-
-    dataset = providers.Container(
-        DatasetContainer,
-        logger=logger,
-        # dataset needs engine_repository (interface only, wired later)
-    )
-
-    evaluation = providers.Container(
-        EvaluationContainer,
-        logger=logger,
-        # evaluation needs engine_repository and data_repository
-        # (interfaces only, wired later)
+    debug: bool = Field(
+        default_factory=lambda: os.getenv("DEBUG", "true").lower() == "true"
     )
 
 
-async def start_backend(container: ModulesContainer):
-    """Starts any resources that require async initialization."""
-    # Note: dependency-injector doesn't have a built-in async start,
-    # but we can implement it here.
-    # container.logger().log_info("Backend Services Starting...")
-    pass
-
-
-async def stop_backend(container: ModulesContainer):
-    """Gracefully shuts down resources."""
-    # container.logger().log_info("Backend Services Shutting Down...")
-    pass
-
-
-def initialize_modules():
+class BackendStartUp:
     """
-    Wires cross-module dependencies using dependency-injector wiring features.
+    Handles backend-wide initialization, module discovery, and DI wiring.
+    Dependency Inversion: The caller (API or Worker) provides the BackendConfig.
     """
-    container = ModulesContainer()
 
-    # Wire Modeling dependencies
-    container.modeling.dataset_repository.override(container.dataset.repository)
+    def __init__(self, config: BackendConfig):
+        self.container = RootContainer()
+        self.container.config.from_dict(config.model_dump())
 
-    # Wire Inverse dependencies
-    container.inverse.dataset_repository.override(container.dataset.repository)
+        # Discover all API routers and tasks for recursive wiring
+        all_routers = discover_modules("src.api.routers.v1")
+        all_tasks = discover_modules("src.modules.evaluation.infrastructure")
+        all_wires = all_routers + [m for m in all_tasks if m.endswith(".tasks")]
 
-    # Wire Dataset dependencies
-    container.dataset.engine_repository.override(container.inverse.repository)
+        # Wire the RootContainer and all its composed containers
+        self.container.wire(modules=all_wires)
 
-    # Wire Evaluation dependencies
-    container.evaluation.engine_repository.override(container.inverse.repository)
-    container.evaluation.data_repository.override(container.dataset.repository)
+    async def start(self):
+        """Async infrastructure startup (e.g. connections)."""
+        redis_conn = self.container.redis_connection()
+        await redis_conn.connect()
 
-    return container
+    async def stop(self):
+        """Gracefully shuts down all module-level resources."""
+        redis_conn = self.container.redis_connection()
+        await redis_conn.close()
+        self.container.shutdown_resources()
 
-
-# Global container instance
-ModulesContainer = initialize_modules()
+    def wire_worker(self, ctx: dict):
+        """
+        Maps worker task identifiers to their required handlers in ARQ context.
+        """
+        ctx["run_diagnostics_service"] = (
+            self.container.evaluation.run_diagnostics_service()
+        )
+        ctx["task_manager"] = self.container.task_manager()

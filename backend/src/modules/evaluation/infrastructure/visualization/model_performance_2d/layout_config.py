@@ -5,11 +5,14 @@ Configuration and layout constants for the 2D visualizer.
 DIAGNOSTIC_EXPLANATIONS = [
     (
         0.75,
-        "<b>Model Surfaces</b>: Predicted decision surface (ghost scatter for probabilistic models) vs data points. <i>Goal</i>: Scatter cloud should cover data distribution.",
+        "<b>Model Surfaces</b>: Predicted decision surface (ghost scatter "
+        "for probabilistic models) vs data points. <i>Goal</i>: "
+        "Scatter cloud should cover data distribution.",
     ),
     (
         0.20,
-        "<b>Learning Curves</b>: Loss over epochs. <i>Goal</i>: Decrease and converge. Gap = Overfitting.",
+        "<b>Learning Curves</b>: Loss over epochs. <i>Goal</i>: Decrease "
+        "and converge. Gap = Overfitting.",
     ),
 ]
 

@@ -8,8 +8,8 @@ from ...modules.evaluation.application.check_engine_performance import (
     CheckModelPerformanceService,
 )
 from ...modules.evaluation.application.diagnose_engines import EngineCandidate
-from ...modules.evaluation.infrastructure.visualization.model_performance_2d.visualizer import (
-    ModelPerformance2DVisualizer,
+from ...modules.evaluation.infrastructure.visualization.model_performance_2d import (
+    visualizer as mp2d_visualizer,
 )
 from ...modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
     FileSystemInverseMappingEngineRepository,
@@ -21,7 +21,7 @@ def main() -> None:
     service = CheckModelPerformanceService(
         engine_repository=FileSystemInverseMappingEngineRepository(),
         data_repository=FileSystemDatasetRepository(),
-        visualizer=ModelPerformance2DVisualizer(),
+        visualizer=mp2d_visualizer.ModelPerformance2DVisualizer(),
     )
     params = CheckModelPerformanceParams(
         dataset_name="cocoex_f5",

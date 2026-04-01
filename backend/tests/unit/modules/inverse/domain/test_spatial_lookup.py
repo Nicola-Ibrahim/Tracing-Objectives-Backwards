@@ -1,8 +1,4 @@
-from unittest.mock import MagicMock
-
 import numpy as np
-from scipy.spatial import Delaunay
-from sklearn.neighbors import NearestNeighbors
 
 from src.modules.inverse.infrastructure.solvers.gbpi.gbpi_solver import (
     GBPIInverseSolver,
@@ -10,7 +6,7 @@ from src.modules.inverse.infrastructure.solvers.gbpi.gbpi_solver import (
 
 
 def test_gbpi_solver_initialization():
-    """Verify that GBPIInverseSolver correctly initializes its components during train()."""
+    """Verify that GBPIInverseSolver initializes its components during train()."""
     solver = GBPIInverseSolver()
     space_points = np.array([[0, 0], [1, 1], [0, 1]])
     # Decisions are what we want to predict (X in training)
@@ -26,7 +22,7 @@ def test_gbpi_solver_initialization():
 
 
 def test_locate_in_mesh_with_knn_fallback_logic():
-    """Verify that _locate_in_mesh and _get_nearest_neighbor work together for fallback."""
+    """Verify that _locate_in_mesh and _get_nearest_neighbor work together."""
     space_points = np.array([[0.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
     decisions = np.random.rand(3, 2)
 
@@ -45,7 +41,7 @@ def test_locate_in_mesh_with_knn_fallback_logic():
 
 
 def test_locate_inside_mesh_logic():
-    """Verify that _locate_in_mesh correctly identifies points inside the Delaunay mesh."""
+    """Verify _locate_in_mesh correctly identifies points inside the mesh."""
     space_points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
     decisions = np.random.rand(4, 2)
 

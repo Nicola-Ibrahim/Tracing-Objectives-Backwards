@@ -21,7 +21,7 @@ def create_combined_context_figure(
     1. Decision Space (Generated vs Context x1, x2)
     2. Objective Space (Target vs Context)
     """
-    # 0. Ensure inputs are numpy arrays (handles lists from serializable application results)
+    # 0. Ensure inputs are numpy arrays (handles lists from serializable results)
     original_objectives = np.asarray(original_objectives)
     target_objective = np.asarray(target_objective).flatten()
     candidate_objectives = np.asarray(candidate_objectives)

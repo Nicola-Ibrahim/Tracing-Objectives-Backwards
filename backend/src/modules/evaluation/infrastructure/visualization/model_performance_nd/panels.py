@@ -63,7 +63,9 @@ def add_points_overlay(
             mode="markers",
             name="Train Data",
             marker=dict(size=4, color="RoyalBlue", opacity=0.6),
-            hovertemplate="<b>Train</b><br>x_red: %{x:.4f}<br>y: %{y:.4f}<extra></extra>",
+            hovertemplate=(
+                "<b>Train</b><br>x_red: %{x:.4f}<br>y: %{y:.4f}<extra></extra>"
+            ),
         ),
         row=row,
         col=col,
@@ -78,7 +80,9 @@ def add_points_overlay(
                 mode="markers",
                 name="Test Data",
                 marker=dict(size=4, color="FireBrick", opacity=0.6, symbol="x"),
-                hovertemplate="<b>Test</b><br>x_red: %{x:.4f}<br>y: %{y:.4f}<extra></extra>",
+                hovertemplate=(
+                    "<b>Test</b><br>x_red: %{x:.4f}<br>y: %{y:.4f}<extra></extra>"
+                ),
             ),
             row=row,
             col=col,

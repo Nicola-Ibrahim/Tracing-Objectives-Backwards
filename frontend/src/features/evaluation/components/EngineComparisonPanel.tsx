@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { EngineListItem } from "../../inverse/types";
 import { listEnginesForDataset } from "../../inverse/api";
-import { DiagnoseRequest, EngineCandidate } from "../types";
+import { DiagnoseRequest } from "../types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Loader2, Plus, Info, X } from "lucide-react";
+import { Activity, Loader2, X } from "lucide-react";
 
 interface EngineComparisonPanelProps {
     datasets: string[];
@@ -19,18 +20,13 @@ interface EngineComparisonPanelProps {
 
 export function EngineComparisonPanel({ datasets, onDiagnose, isLoading }: EngineComparisonPanelProps) {
     const [selectedDataset, setSelectedDataset] = useState<string>("");
-    const [availableEngines, setAvailableEngines] = useState<EngineListItem[]>([]);
     const [selectedEngines, setSelectedEngines] = useState<EngineListItem[]>([]);
-    const [fetchingEngines, setFetchingEngines] = useState(false);
 
-    useEffect(() => {
-        if (selectedDataset) {
-            setFetchingEngines(true);
-            listEnginesForDataset(selectedDataset)
-                .then(setAvailableEngines)
-                .finally(() => setFetchingEngines(false));
-        }
-    }, [selectedDataset]);
+    const { data: availableEngines = [], isFetching: fetchingEngines } = useQuery({
+        queryKey: ["engines", selectedDataset],
+        queryFn: () => listEnginesForDataset(selectedDataset),
+        enabled: !!selectedDataset,
+    });
 
     const toggleEngine = (engine: EngineListItem) => {
         const exists = selectedEngines.find(e => e.solver_type === engine.solver_type && e.version === engine.version);

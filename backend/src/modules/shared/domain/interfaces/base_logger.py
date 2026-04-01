@@ -20,14 +20,16 @@ class BaseLogger(ABC):
 
     @abstractmethod
     def log_debug(self, message: str) -> None:
-        """Log a debug message. These messages are typically for debugging purposes
-        and may not be shown in production environments unless logging level is set to DEBUG."""
+        """Log a debug message.
+        These messages are typically for debugging purposes and may not be shown
+        in production environments unless logging level is set to DEBUG.
+        """
         pass
 
+    @abstractmethod
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
         """Log evaluation or training metrics.
-        This method is not abstract as some loggers might not support direct metric logging
-        or might handle it differently, allowing concrete classes to override or do nothing.
+        Concrete classes should implement this to handle metric logging.
         """
         pass
 

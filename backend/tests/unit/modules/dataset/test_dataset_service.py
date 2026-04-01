@@ -5,6 +5,7 @@ import pytest
 
 from src.modules.dataset.application.dataset_service import DatasetService
 from src.modules.dataset.domain.entities.dataset import Dataset
+from src.modules.dataset.domain.value_objects.metadata import DatasetMetadata
 
 
 @pytest.fixture
@@ -30,9 +31,6 @@ def mock_logger():
 @pytest.fixture
 def service(mock_repo, mock_engine_repo, mock_gen_factory, mock_logger):
     return DatasetService(mock_repo, mock_engine_repo, mock_gen_factory, mock_logger)
-
-
-from src.modules.dataset.domain.value_objects.metadata import DatasetMetadata
 
 
 def test_list_datasets_uses_persisted_metadata(service, mock_repo, mock_engine_repo):

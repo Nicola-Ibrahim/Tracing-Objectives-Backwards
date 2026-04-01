@@ -39,7 +39,8 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
     """
     File system implementation of BaseInverseMappingEngineRepository.
     Persists InverseMappingEngine as an opaque solver blob + structured transforms.
-    Supports human-readable versioning: contexts/<dataset>/<solver_type>/v<N>-<timestamp>/
+    Supports human-readable versioning:
+    contexts/<dataset>/<solver_type>/v<N>-<timestamp>/
     """
 
     def __init__(self, transformer_factory: TransformerFactory | None = None):
@@ -121,21 +122,24 @@ class FileSystemInverseMappingEngineRepository(BaseInverseMappingEngineRepositor
         solver_dir = self._get_solver_dir(dataset_name, solver_type)
         if not solver_dir.exists():
             raise FileNotFoundError(
-                f"No engines found for dataset '{dataset_name}' and solver '{solver_type}'"
+                f"No engines found for dataset '{dataset_name}' "
+                f"and solver '{solver_type}'"
             )
 
         if version is None:
             summaries = self.list_all(dataset_name, solver_type)
             if not summaries:
                 raise FileNotFoundError(
-                    f"No valid engines found for dataset '{dataset_name}' and solver '{solver_type}'"
+                    f"No valid engines found for dataset '{dataset_name}' "
+                    f"and solver '{solver_type}'"
                 )
             version = summaries[0]["version"]
 
         version_dir = self._find_version_dir(solver_dir, version)
         if not version_dir or not version_dir.exists():
             raise FileNotFoundError(
-                f"Engine version '{version}' for dataset '{dataset_name}' and solver '{solver_type}' not found."
+                f"Engine version '{version}' for dataset '{dataset_name}' "
+                f"and solver '{solver_type}' not found."
             )
 
         return self._load_from_dir(version_dir)

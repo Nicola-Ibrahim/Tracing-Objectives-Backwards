@@ -28,7 +28,10 @@ class RBFEstimatorParams(EstimatorParamsBase):
     epsilon: float | None = Field(
         None,
         ge=0,
-        description="Shape parameter that scales the input to the radial basis function. If None, it is estimated using the average distance between nodes.",
+        description=(
+            "Shape parameter that scales inputs to the RBF. If None, "
+            "it is estimated using the average distance between nodes."
+        ),
     )
 
     kernel: Literal[
@@ -98,9 +101,7 @@ class RBFEstimator(DeterministicEstimator):
         super().fit(X, y)
 
         if len(X) < 1:
-            raise ValueError(
-                "RBF Inverse Decision Mapper requires at least 1 data point for fitting."
-            )
+            raise ValueError("RBF Mapper requires at least 1 data point for fitting.")
 
         # Combine X and y to find unique rows
         combined_data = np.hstack((X, y))
@@ -112,7 +113,7 @@ class RBFEstimator(DeterministicEstimator):
         X_unique = X[unique_indices]
         y_unique = y[unique_indices]
 
-        # Check if a singular matrix might still be an issue with a small number of points
+        # Check if singular matrix might be issue with small number of points
         if len(X_unique) < 2 and self.kernel in [
             "thin_plate_spline",
             "cubic",

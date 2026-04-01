@@ -1,4 +1,3 @@
-from datetime import datetime
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -10,14 +9,18 @@ from src.modules.dataset.infrastructure.repositories.dataset_repository import (
 from src.modules.inverse.domain.entities.inverse_mapping_engine import (
     InverseMappingEngine,
 )
-from src.modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
-    FileSystemInverseMappingEngineRepository,
+from src.modules.inverse.domain.value_objects.transform_pipeline import (
+    TransformPipeline,
+)
+from src.modules.inverse.infrastructure.repositories import (
+    inverse_mapping_engine_repo,
 )
 from src.modules.inverse.infrastructure.solvers.gbpi.gbpi_solver import (
     GBPIInverseSolver,
 )
-from src.modules.inverse.domain.value_objects.transform_pipeline import (
-    TransformPipeline,
+
+FileSystemInverseMappingEngineRepository = (
+    inverse_mapping_engine_repo.FileSystemInverseMappingEngineRepository
 )
 
 

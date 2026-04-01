@@ -37,21 +37,23 @@ class GaussianProcessEstimatorParams(EstimatorParamsBase):
 
     alpha: float = Field(
         1e-10,
-        ge=0.0,  # Adds a validation constraint: value must be >= 0.0
-        description="""Value added to the diagonal of the kernel matrix for numerical stability.
-        Must be a non-negative float.""",
+        ge=0.0,
+        description="""Value added to the diagonal of the kernel matrix for 
+        numerical stability. Must be a non-negative float.""",
     )
 
     n_restarts_optimizer: int = Field(
         10,
-        ge=0,  # Adds a validation constraint: value must be >= 0
-        description="""Number of restarts of the optimizer to find the kernel's hyperparameters.
-        Setting to 0 performs no optimization. Must be a non-negative integer.""",
+        ge=0,
+        description="""Number of restarts of the optimizer to find the 
+        kernel's hyperparameters. Setting to 0 performs no optimization. 
+        Must be a non-negative integer.""",
     )
 
     random_state: int = Field(
         42,
-        description="""Seed for the random number generator to ensure reproducibility of the training process.""",
+        description="""Seed for the random number generator to ensure 
+        reproducibility of the training process.""",
     )
 
     class Config:
@@ -73,10 +75,10 @@ class GaussianProcessEstimator(DeterministicEstimator):
 
         Args:
             kernel (Kernel | str): The kernel to use for the GPR. Can be a string
-                                   ('RBF' or 'Matern') or a scikit-learn kernel object.
-                                   Matern is often a good default choice for real-world data.
-            alpha (float): Value added to the diagonal of the kernel matrix for numerical stability.
-            n_restarts_optimizer (int): Number of restarts of the optimizer for the kernel's hyperparameters.
+                                   ('RBF' or 'Matern') or a scikit-learn kernel.
+                                   Matern is a good default for real-world data.
+            alpha (float): Value added to the diagonal for numerical stability.
+            n_restarts_optimizer (int): Number of restarts of the optimizer.
             random_state (int): Seed for reproducibility.
         """
         kernel = params.kernel
@@ -103,7 +105,8 @@ class GaussianProcessEstimator(DeterministicEstimator):
             self.kernel = kernel
         else:
             raise TypeError(
-                "Kernel must be a string ('RBF', 'Matern') or a scikit-learn Kernel object."
+                "Kernel must be a string ('RBF', 'Matern') or "
+                "a scikit-learn Kernel object."
             )
 
     @property
@@ -126,7 +129,8 @@ class GaussianProcessEstimator(DeterministicEstimator):
         super().fit(X, y)
 
         # 2. Instantiate and fit the GPR model
-        # The GPR handles multi-output regression by fitting a separate model for each output dimension
+        # The GPR handles multi-output regression by fitting a separate model
+        # for each output dimension
         # when `y` has more than one column.
         self._model = GaussianProcessRegressor(
             kernel=self.kernel,
@@ -156,7 +160,8 @@ class GaussianProcessEstimator(DeterministicEstimator):
 
         if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Input must have {self._X_dim} dimensions, but got {X.shape[1]} dimensions."
+                f"Input must have {self._X_dim} dimensions, "
+                f"but got {X.shape[1]} dimensions."
             )
 
         # 2. Call the fitted GPR's predict method

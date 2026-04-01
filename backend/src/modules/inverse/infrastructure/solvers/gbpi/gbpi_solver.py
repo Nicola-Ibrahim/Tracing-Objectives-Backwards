@@ -19,9 +19,9 @@ from .sampling.incoherent import IncoherentSampling
 
 class GBPIInverseSolver(AbstractInverseMappingSolver):
     """
-    Concrete implementation of the Geometrically Bounded Probabilistic Inversion (GBPI) framework.
-    It explicitly owns its specific mathematical state and elegantly routes queries
-    to prevent multi-modal averaging (the Centroid Trap) and handle out-of-bounds targets.
+    Concrete implementation of the GBPI framework.
+    It owns its mathematical state and routes queries to prevent
+    multi-modal averaging (the Centroid Trap) and handle OOB targets.
     """
 
     def __init__(
@@ -34,9 +34,9 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         Initializes the GBPISolver.
 
         Args:
-            coherence_n_neighbors: How many local X-space neighbors to use when calculating D_max (tau).
-            trust_radius: The trust-region radius for the Gradient Descent optimization.
-            concentration_factor: The concentration factor for the Dirichlet distribution.
+            coherence_n_neighbors: Neighbors for local X-space D_max (tau).
+            trust_radius: Trust-region radius for Gradient Descent.
+            concentration_factor: Concentration for Dirichlet distribution.
         """
         self.coherence_n_neighbors = coherence_n_neighbors
         self.trust_radius = trust_radius
@@ -67,7 +67,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
     ) -> tuple[bool, list[float]]:
         """
         Enforces the coherence domain rule (D_max).
-        Checks if the X-space distance between the performance anchors is safe for interpolation.
+        Checks if the X-space distance between anchors is safe for interpolation.
 
         Args:
             vertices_indices: List of dataset indices representing the 3 anchor points.
@@ -98,10 +98,12 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
 
         Returns:
             is_inside: True if a bounding triangle is found.
-            vertices_indices: List of the 3 anchor indices (empty if outside).
-            weights: Barycentric weights determining the target's position (empty if outside).
+            vertices_indices: Anchor indices (empty if outside).
+            weights: Barycentric weights of target (empty if outside).
         """
-        simplex_idx = self.mesh.find_simplex(target)[0]
+        # find_simplex returns a single int for 1D, or an array for 2D
+        results = self.mesh.find_simplex(target)
+        simplex_idx = int(np.atleast_1d(results)[0])
 
         if simplex_idx != -1:
             # Target is INSIDE the convex hull
@@ -119,7 +121,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
 
     def _get_nearest_neighbor(self, target: np.ndarray) -> tuple[list[int], np.ndarray]:
         """
-        Uses the global Y-space KNN to find the single absolute closest point for extrapolation.
+        Uses global Y-space KNN to find the closest point for extrapolation.
         """
         _, indices = self.objective_knn.kneighbors(target)
         closest_vertex_idx = int(indices[0][0])
@@ -148,12 +150,12 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
 
         # --- Step 2: Route to the correct mathematical pathway ---
         if is_inside_mesh:
-            # The target is surrounded by data. Check if those data points are physically compatible.
+            # Target is surrounded. Check if points are physically compatible.
             is_coherent, anchor_distances = self._evaluate_coherence(vertices_indices)
 
             if is_coherent:
                 # PATHWAY A: Safe to interpolate.
-                # The anchors share an engineering strategy. Use Dirichlet to generate diverse options.
+                # Anchors share a strategy. Use Dirichlet for diverse options.
                 pathway = "coherent"
                 final_vertices_X = self.X[vertices_indices]
                 final_weights = weights
@@ -189,8 +191,8 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
                 )
         else:
             # PATHWAY B2: Out of Bounds (Extrapolation).
-            # The user asked for performance beyond the known dataset.
-            # Use global KNN to find the single best jumping-off point for Gradient Descent.
+            # Target is beyond the known dataset.
+            # Use global KNN to find a jumping-off point for Gradient Descent.
             pathway = "extrapolation"
 
             nn_indices, nn_weights = self._get_nearest_neighbor(target_y)
@@ -227,7 +229,7 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
         )
 
     def _train_forward_estimator(self, X: np.ndarray, y: np.ndarray):
-        """Trains the RBF surrogate to act as a fast, differentiable physical validator."""
+        """Trains RBF surrogate to act as a fast physical validator."""
         params = RBFEstimatorParams(n_neighbors=7, kernel="thin_plate_spline")
         estimator = RBFEstimator(params)
         estimator.fit(X, y)
@@ -236,11 +238,20 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
     def _calculate_coherence_threshold(self, X: np.ndarray):
         """
         KNN #1: The X-Space Physics Checker (Offline).
-        Calculates D_max (tau) based on the 95th percentile of local X-space distances.
+        Calculates D_max (tau) based on local X-space distances.
         """
-        nn = NearestNeighbors(n_neighbors=self.coherence_n_neighbors + 1)
+        n_samples = len(X)
+        if n_samples < 2:
+            self.tau = 0.0
+            return
+
+        # Cap neighbors by samples count to prevent sklearn ValueError
+        k = min(self.coherence_n_neighbors + 1, n_samples)
+        nn = NearestNeighbors(n_neighbors=k)
         nn.fit(X)
         distances, _ = nn.kneighbors(X)
+
+        # Use the furthest neighbor distance for tau calculation
         self.tau = float(np.percentile(distances[:, 1:], 95))
 
     def _build_mesh(self, y: np.ndarray):
@@ -250,8 +261,8 @@ class GBPIInverseSolver(AbstractInverseMappingSolver):
     def _build_y_knn(self, y: np.ndarray):
         """
         KNN #2: The Y-Space Extrapolation Router (Offline).
-        Builds the spatial index for fast O(log N) out-of-bounds nearest neighbor lookups.
-        Hardcoded to 1 neighbor because Gradient Descent requires a single base design.
+        Builds spatial index for fast out-of-bounds lookups.
+        Requires a single base design for Gradient Descent.
         """
         self.objective_knn = NearestNeighbors(n_neighbors=1)
         self.objective_knn.fit(y)

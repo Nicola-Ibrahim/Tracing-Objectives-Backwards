@@ -12,7 +12,7 @@ from .reduction import reduce_to_1d, transform_1d
 
 
 class ModelPerformanceNDVisualizer(BaseVisualizer):
-    """General case (not 2D→2D): row-1 1D fit + ribbon; rows 2–5 diagnostics."""
+    """General case (not 2D→2D): row-1 1D fit; rows 2–5 diagnostics."""
 
     def plot(self, data: dict) -> None:
         est = data["estimator"]
@@ -20,7 +20,8 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         Xte = np.asarray(data["X_test"]) if data.get("X_test") is not None else None
         yte = np.asarray(data["y_test"]) if data.get("y_test") is not None else None
         n_samples = int(data.get("n_samples", 200))
-        title = data.get("title", f"Model fit ({type(est).__name__})")
+        name = type(est).__name__
+        title = data.get("title", f"Model fit ({name})")
         loss_history = data["loss_history"]
 
         # Determine if we can plot 3D surfaces (input dim == 2)
@@ -78,9 +79,9 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             vertical_spacing=0.01,
             subplot_titles=subplot_titles_list,
             row_heights=row_heights,
-            column_titles=["Output Dimension 1", "Output Dimension 2"]
-            if is_2d_input
-            else None,
+            column_titles=(
+                ["Output Dimension 1", "Output Dimension 2"] if is_2d_input else None
+            ),
         )
 
         # Row 1: reduce, center+band, overlay
@@ -108,7 +109,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         fig.update_yaxes(title_text="Decision (normalized)", row=1, col=1)
 
         # --- GHOST 3D SCATTER (If Input is 2D) ---
-        # If the input space is 2D, we can visualize the full output distribution in 3D
+        # Visualize the full output distribution in 3D if input space is 2D
         if Xtr.shape[1] == 2:
             from ..vis_2d.panels import add_surfaces_2d
             # We reuse the 2D panel logic which now has the Ghost plot
@@ -123,10 +124,12 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             # We want to insert it. But changing the layout is invasive.
             # Let's see if we can fit it.
             # Actually, the user said "add this new scatter plot".
-            # If I use add_surfaces_2d, it expects to plot into (row, col=1) and (row, col=2).
+            # If I use add_surfaces_2d, it expects to plot into (row, col=1)
+            # and (row, col=2).
             # Row 2 is a spacer. Row 3 is Loss.
             # I should probably expand the figure to 6 rows?
-            # Or just overwrite Row 1 if it's 2D? No, Row 1 is the 1D reduction which is useful.
+            # Or just overwrite Row 1 if it's 2D? No, Row 1 is the 1D reduction
+            # which is useful.
 
             # Let's add it as a new row. But I need to change the make_subplots spec.
             # This is getting complicated for `vis_nd`.
@@ -138,8 +141,10 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             pass  # Placeholder, I will do this in a separate edit to `plot` method.
 
         # Row 3 (was 2) -> Now Row 3 or 5 depending on is_2d_input
-        # Row indices in make_subplots are 1-based and count spacers if they are in 'specs' list?
-        # No, make_subplots rows count the rows in the grid, including spacers if they are rows.
+        # Row indices in make_subplots are 1-based and count spacers if they
+        # are in 'specs' list?
+        # No, make_subplots rows count the rows in the grid, including
+        # spacers if they are rows.
         # My specs list has spacers as rows.
 
         # Row 1: 1D Fit (Index 1)
@@ -174,7 +179,8 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
         explanations = [
             (
                 0.80,
-                "<b>1D Fit</b>: Reduced 1D view of model fit with uncertainty bands (probabilistic models). <i>Goal</i>: Blue band should cover data trend.",
+                "<b>1D Fit</b>: Reduced 1D view with uncertainty bands. "
+                "<i>Goal</i>: Blue band should cover data trend.",
             ),
         ]
 
@@ -182,14 +188,16 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             explanations.append(
                 (
                     0.55,
-                    "<b>Ghost 3D Scatter</b>: Uncertainty visualization for 2D inputs. <i>Goal</i>: Ghost cloud should cover data distribution.",
+                    "<b>Ghost 3D Scatter</b>: Uncertainty for 2D inputs. "
+                    "<i>Goal</i>: Ghost cloud should cover data distribution.",
                 )
             )
 
         explanations.append(
             (
                 0.15,
-                "<b>Learning Curves</b>: Tracks loss over epochs. <i>Goal</i>: Both should decrease and converge. Large gap = Overfitting.",
+                "<b>Learning Curves</b>: Tracks loss over epochs. "
+                "<i>Goal</i>: Both should converge. Gap = Overfitting.",
             )
         )
         for y_pos, text in explanations:
@@ -210,7 +218,7 @@ class ModelPerformanceNDVisualizer(BaseVisualizer):
             )
 
         fig.update_layout(
-            title=title + " — probabilistic model visualization (normalized)",
+            title=f"{title} — probabilistic visualization (normalized)",
             template="plotly_white",
             height=1400 if is_2d_input else 1000,
             autosize=True,

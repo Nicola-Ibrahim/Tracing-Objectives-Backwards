@@ -55,7 +55,7 @@ export const listAllEngines = async (): Promise<EngineListItem[]> => {
 /**
  * Delete one or multiple engines, grouped by dataset for RESTful compliance.
  */
-export const deleteEngines = async (engines: { dataset_name: string; solver_type: string; version: number }[]): Promise<any> => {
+export const deleteEngines = async (engines: { dataset_name: string; solver_type: string; version: number }[]): Promise<unknown[]> => {
   // Group engines by dataset_name to use the new RESTful delete endpoint
   const grouped = engines.reduce((acc, engine) => {
     if (!acc[engine.dataset_name]) acc[engine.dataset_name] = [];

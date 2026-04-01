@@ -3,17 +3,16 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TransformerMetadata } from "../api";
 
 interface TransformationFormProps {
     metadata: TransformerMetadata;
-    params: Record<string, any>;
-    onChange: (params: Record<string, any>) => void;
+    params: Record<string, unknown>;
+    onChange: (params: Record<string, unknown>) => void;
 }
 
 export function TransformationForm({ metadata, params, onChange }: TransformationFormProps) {
-    const handleParamChange = (name: string, value: any) => {
+    const handleParamChange = (name: string, value: unknown) => {
         onChange({ ...params, [name]: value });
     };
 
@@ -39,7 +38,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                 id={name}
                                 type="number"
                                 step={type === "int" ? "1" : "0.1"}
-                                value={value ?? 0}
+                                value={(value as number) ?? 0}
                                 onChange={(e) => handleParamChange(name, parseFloat(e.target.value))}
                                 className="bg-background border-border text-foreground h-11 focus:ring-2 focus:ring-indigo-500/10 rounded-[1rem] transition-all"
                             />
@@ -50,7 +49,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                         type="number"
                                         value={Array.isArray(value) ? (value[0] ?? 0) : 0}
                                         onChange={(e) => {
-                                            const newVal = [...(Array.isArray(value) ? value : [0, 1])];
+                                            const newVal = [...(Array.isArray(value) ? (value as number[]) : [0, 1])];
                                             newVal[0] = parseFloat(e.target.value);
                                             handleParamChange(name, newVal);
                                         }}
@@ -63,7 +62,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                                         type="number"
                                         value={Array.isArray(value) ? (value[1] ?? 1) : 1}
                                         onChange={(e) => {
-                                            const newVal = [...(Array.isArray(value) ? value : [0, 1])];
+                                            const newVal = [...(Array.isArray(value) ? (value as number[]) : [0, 1])];
                                             newVal[1] = parseFloat(e.target.value);
                                             handleParamChange(name, newVal);
                                         }}
@@ -75,7 +74,7 @@ export function TransformationForm({ metadata, params, onChange }: Transformatio
                         ) : (
                             <Input
                                 id={name}
-                                value={value ?? ""}
+                                value={(value as string) ?? ""}
                                 onChange={(e) => handleParamChange(name, e.target.value)}
                                 className="bg-background border-border text-foreground h-11 rounded-[1rem] focus:ring-2 focus:ring-indigo-500/10 transition-all"
                             />

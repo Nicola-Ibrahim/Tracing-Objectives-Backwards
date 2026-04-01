@@ -57,7 +57,7 @@ class CompareInverseModelCandidatesService:
 
     def execute(self, params: CompareInverseModelCandidatesParams) -> dict[str, Any]:
         """
-        Coordinates the generation of decision candidates using multiple inverse engines.
+        Coordinates generating decision candidates using multiple inverse engines.
         """
         self._logger.log_info(
             f"Starting decision generation comparison on '{params.dataset_name}'."

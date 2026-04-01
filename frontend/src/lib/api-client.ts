@@ -1,31 +1,17 @@
 import axios from "axios";
 
 const isServer = typeof window === "undefined";
-const apiVersion = process.env.NEXT_PUBLIC_API_VERSION || "v1";
+const apiVersion = process.env.API_VERSION || "v1";
 
-const rawBaseURL = isServer 
-  ? (process.env.INTERNAL_API_URL || "http://localhost")
-  : (process.env.NEXT_PUBLIC_API_URL || "");
+const rawBaseURL = process.env.BACKEND_URL;
 
 // Ensure we have a clean base without trailing slashes
-const cleanBase = rawBaseURL.replace(/\/+$/, "");
+const cleanBase = rawBaseURL?.replace(/\/+$/, "") || "";
 
 // Construct the full versioned path
-// If rawBaseURL is "http://localhost", we want "http://localhost/api/v1"
-// If rawBaseURL is "/api", we want "/api/v1"
-// If rawBaseURL is empty, we want "/api/v1"
-let fullBaseURL: string;
-
-if (cleanBase.includes("/api/")) {
-    fullBaseURL = cleanBase;
-} else if (cleanBase.endsWith("/api")) {
-    fullBaseURL = `${cleanBase}/${apiVersion}`;
-} else {
-    // Covers empty string, "http://localhost", or custom domain roots
-    fullBaseURL = `${cleanBase}/api/${apiVersion}`;
-}
-
-fullBaseURL = fullBaseURL.replace(/\/+$/, "");
+// If rawBaseURL is undefined, we want "/v1"
+// If rawBaseURL is "http://localhost", we want "http://localhost/v1"
+const fullBaseURL = `${cleanBase}/${apiVersion}`.replace(/\/+$/, "");
 
 export const apiClient = axios.create({
   baseURL: fullBaseURL,
@@ -43,7 +29,7 @@ apiClient.interceptors.response.use(
     if (error.response?.data?.detail) {
       const detail = error.response.data.detail;
       if (typeof detail === 'object' && detail !== null && 'message' in detail) {
-        message = (detail as any).message;
+        message = (detail as Record<string, string>).message;
       } else if (typeof detail === 'string') {
         message = detail;
       }

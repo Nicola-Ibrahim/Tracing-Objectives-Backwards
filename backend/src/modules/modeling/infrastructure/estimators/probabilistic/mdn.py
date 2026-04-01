@@ -70,7 +70,7 @@ class MDNEstimatorParams(EstimatorParamsBase):
     )
     hidden_layers: list[int] = Field(
         [256, 256, 256],
-        description="List defining the number of units in each hidden layer of the MDN.",
+        description="Units in each hidden layer of the MDN.",
     )
     hidden_activation_fn_name: ActivationFunctionEnum = Field(
         ActivationFunctionEnum.RELU,
@@ -149,12 +149,15 @@ class MDN(nn.Module):
         input_dim: int,
         output_dim: int,
         num_mixtures: int = 5,
-        hidden_layers: list[int] = [64, 32],
+        hidden_layers: list[int] | None = None,
         hidden_activation_fn_name: ActivationFunctionEnum = ActivationFunctionEnum.RELU,
         pi_bias_init: Sequence[float] = None,
         mu_bias_init: Sequence[float] = None,
     ):
         super().__init__()
+
+        if hidden_layers is None:
+            hidden_layers = [64, 32]
 
         self.num_mixtures = int(num_mixtures)
         self.output_dim = int(output_dim)
@@ -240,22 +243,25 @@ class MDN(nn.Module):
 
         # Calculate mixing coefficients (pi) and apply softmax for normalization
         pi = self.fc_pi(h)  # [batch_size, num_mixtures]
-        pi = F.softmax(
-            pi, dim=-1
-        )  # turns real outputs into a valid discrete probability distribution (non-negative, sums to 1).
+        pi = F.softmax(pi, dim=-1)
+        # Turns real outputs into a valid discrete probability distribution
+        # (non-negative, sums to 1).
 
         # Calculate means (mu) and reshape to (batch_size, num_mixtures, output_dim)
         mu = self.fc_mu(h)  # [batch_size, num_mixtures * output_dim]
-        mu = mu.view(-1, self.num_mixtures, self.output_dim)  # can be a real number
+        # mu can be any real number
+        mu = mu.view(-1, self.num_mixtures, self.output_dim)
 
         # Calculate standard deviations (sigma) by exponentiating the output
         # Two problems:
-        # 1) exp(large_negative) => extremely small sigma (e.g. 1e-50) -> (y-mu)^2 / sigma^2 huge -> overflow/NaN
-        # 2) exp(large_positive) => huge sigma -> underflow/very flat Gaussian -> training might be unstable
+        # 1) exp(large_negative) => small sigma (e.g. 1e-50)
+        #    => (y-mu)^2 / sigma^2 huge => overflow/NaN
+        # 2) exp(large_positive) => huge sigma
+        #    => underflow/flat Gaussian => unstable training
         sigma = self.fc_sigma(h)  # [batch_size, num_mixtures * output_dim]
-        sigma = (
-            F.softplus(sigma) + 1e-2
-        )  # Enforce positive stddev so the Gaussian is well-defined and gradients behave predictably
+        # Enforce positive stddev so the Gaussian is well-defined
+        # and gradients behave predictably.
+        sigma = F.softplus(sigma) + 1e-2
         sigma = sigma.view(-1, self.num_mixtures, self.output_dim)
         return pi, mu, sigma
 
@@ -381,7 +387,8 @@ class MDNEstimator(ProbabilisticEstimator):
         ):
             raise ValueError(
                 "LogNormal selected but targets contain non-positive values. "
-                "Either transform targets to be positive or use a different distribution."
+                "Either transform targets to be positive "
+                "or use a different distribution."
             )
 
     def fit(

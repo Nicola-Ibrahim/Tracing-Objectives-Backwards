@@ -29,7 +29,11 @@ def add_data_scatter(
                 name="Train Data",
                 marker=dict(size=3, color="RoyalBlue", opacity=0.8),
                 showlegend=(col_idx == 1),
-                hovertemplate=f"<b>Train</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, col_idx)}: %{{z:.4f}}<extra></extra>",
+                hovertemplate=(
+                    f"<b>Train</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>"
+                    f"{_sym(input_symbol, 2)}: %{{y:.4f}}<br>"
+                    f"{_sym(output_symbol, col_idx)}: %{{z:.4f}}<extra></extra>"
+                ),
             ),
             row=row,
             col=col_idx,
@@ -49,7 +53,11 @@ def add_data_scatter(
                         size=3, color="FireBrick", opacity=0.8, symbol="diamond"
                     ),
                     showlegend=(col_idx == 1),
-                    hovertemplate=f"<b>Test</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>{_sym(input_symbol, 2)}: %{{y:.4f}}<br>{_sym(output_symbol, col_idx)}: %{{z:.4f}}<extra></extra>",
+                    hovertemplate=(
+                        f"<b>Test</b><br>{_sym(input_symbol, 1)}: %{{x:.4f}}<br>"
+                        f"{_sym(input_symbol, 2)}: %{{y:.4f}}<br>"
+                        f"{_sym(output_symbol, col_idx)}: %{{z:.4f}}<extra></extra>"
+                    ),
                 ),
                 row=row,
                 col=col_idx,

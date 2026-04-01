@@ -32,7 +32,7 @@ class MeanSquaredErrorValidationMetric(BaseValidationMetric):
 
         Args:
             y_true: A NumPy array of true (actual) values.
-            y_pred: A NumPy array of predicted values. Must have the same shape as y_true.
+            y_pred: Predicted values. Must have the same shape as y_true.
 
         Returns:
             The Mean Squared Error as a float.
@@ -68,7 +68,7 @@ class MeanAbsoluteErrorValidationMetric(BaseValidationMetric):
 
         Args:
             y_true: A NumPy array of true (actual) values.
-            y_pred: A NumPy array of predicted values. Must have the same shape as y_true.
+            y_pred: Predicted values. Must have the same shape as y_true.
 
         Returns:
             The Mean Absolute Error as a float.
@@ -105,7 +105,7 @@ class R2ScoreValidationMetric(BaseValidationMetric):
 
         Args:
             y_true: A NumPy array of true (actual) values.
-            y_pred: A NumPy array of predicted values. Must have the same shape as y_true.
+            y_pred: Predicted values. Must have the same shape as y_true.
 
         Returns:
             The R^2 Score as a float.

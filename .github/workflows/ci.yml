@@ -1,0 +1,212 @@
+name: 1. CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches-ignore: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ── Detect which parts of the monorepo actually changed ──────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
+  # ── Backend: lint + unit tests ───────────────────────────────────────────
+  backend-test:
+    needs: [ changes ]
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Run Lint
+        run: uv run poe lint
+
+      # - name: Run Tests
+      #   run: uv run poe test
+
+  # ── Frontend: lint + unit tests ──────────────────────────────────────────
+  frontend-test:
+    needs: [ changes ]
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Lint
+        run: pnpm lint
+
+      # - name: Run Tests
+      #   run: pnpm test --if-present
+
+  # ── Backend: production image smoke test (PR to main only) ───────────────
+  backend-smoke:
+    needs: [ backend-test ]
+    if: github.event_name == 'pull_request' && needs.backend-test.result == 'success'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Production Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: runner
+          push: false
+          load: true
+          tags: backend-ci:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate .env from all secrets
+        env:
+          SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          # Dynamically parse all GitHub Secrets into a KEY=VALUE .env file
+          # We exclude github_token to keep purely application secrets.
+          echo "$SECRETS_JSON" | jq -r 'to_entries | .[] | select(.key | test("github_token";"i") | not) | "\(.key)=\(.value)"' > .env
+          echo "✅ Generated .env file dynamically"
+          
+          ENV_VAL=$(grep "^ENV=" .env | cut -d= -f2-)
+          if [ -z "$ENV_VAL" ]; then
+            echo "❌ CRITICAL: 'ENV' secret is defined but has an empty value!"
+            exit 1
+          fi
+          echo "✅ Generated .env file dynamically and validated ENV value"
+
+      - name: Run & Verify Health
+        run: |
+          docker run -d \
+            --name backend-ci \
+            -p 8000:8000 \
+            --env-file .env \
+            backend-ci:latest
+
+          for i in {1..10}; do
+            if curl -sf http://localhost:8000/health; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Waiting... ($i/10)"
+            sleep 3
+          done
+          echo "❌ Health check timed out"
+          docker logs backend-ci
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f backend-ci 2>/dev/null || true
+
+  # ── Frontend: production image smoke test (PR to main only) ──────────────
+  frontend-smoke:
+    needs: [ frontend-test ]
+    if: github.event_name == 'pull_request' && needs.frontend-test.result == 'success'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Production Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          target: runner
+          push: false
+          load: true
+          tags: frontend-ci:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BACKEND_URL=${{ secrets.BACKEND_URL }}
+
+      - name: Run & Verify Health
+        run: |
+          docker run -d \
+            --name frontend-ci \
+            -p 3000:3000 \
+            frontend-ci:latest
+
+          for i in {1..10}; do
+            if curl -sf http://localhost:3000/api/health; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Waiting... ($i/10)"
+            sleep 3
+          done
+          echo "❌ Health check timed out"
+          docker logs frontend-ci
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f frontend-ci 2>/dev/null || true

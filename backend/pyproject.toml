@@ -34,6 +34,8 @@ dependencies = [
     "umap-learn>=0.5.9.post2",
     "wandb>=0.20.1",
     "dependency-injector>=4.48.3",
+    "redis>=5.0.0",
+    "arq>=0.25.0",
 ]
 
 
@@ -208,6 +210,7 @@ help = "CHECK: Run linting and formatting checks. Usage: poe check"
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+exclude = [".venv", ".git", "notebooks", "__pycache__", "dist"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"]
@@ -226,3 +229,11 @@ filterwarnings = [
     "ignore::pydantic.PydanticDeprecatedSince20",
     "ignore::DeprecationWarning:starlette.*",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }

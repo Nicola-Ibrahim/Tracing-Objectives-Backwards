@@ -52,7 +52,7 @@ class CVAEEstimatorParams(EstimatorParamsBase):
 
     type: Literal["cvae"] = Field(
         EstimatorTypeEnum.CVAE.value,
-        description="Type of the Conditional Variational Autoencoder interpolation method.",
+        description="Type of the Conditional Variational Autoencoder method.",
     )
     latent_dim: int = Field(
         2, gt=0, description="Dimensionality of the latent space in the CVAE."

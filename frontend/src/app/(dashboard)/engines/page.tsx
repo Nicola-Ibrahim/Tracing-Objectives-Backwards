@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { listAllEngines, deleteEngines, listEnginesForDataset, getEngineDetails } from "@/features/inverse/api";
+import { listAllEngines, deleteEngines, listEnginesForDataset } from "@/features/inverse/api";
+import { EngineListItem } from "@/features/inverse/types";
 import { getDatasets } from "@/features/dataset/api";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,15 +20,10 @@ import {
     Search,
     Trash2,
     AlertCircle,
-    Filter,
-    Database,
     Calendar,
     Layers,
     Loader2,
     ChevronRight,
-    CheckSquare,
-    Square,
-    Zap,
     Box,
     RefreshCcw,
     Info
@@ -51,12 +47,12 @@ import { EngineDetailsInspector } from "@/features/inverse/components/EngineDeta
 export default function EnginesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [datasetFilter, setDatasetFilter] = useState<string>("all");
-    const [selectedEngines, setSelectedEngines] = useState<any[]>([]);
-    const [engineToDelete, setEngineToDelete] = useState<any | null>(null);
+    const [selectedEngines, setSelectedEngines] = useState<EngineListItem[]>([]);
+    const [engineToDelete, setEngineToDelete] = useState<EngineListItem | null>(null);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [expandedDatasets, setExpandedDatasets] = useState<Record<string, boolean>>({});
-    const [inspectingEngine, setInspectingEngine] = useState<any | null>(null);
+    const [inspectingEngine, setInspectingEngine] = useState<EngineListItem | null>(null);
 
     const queryClient = useQueryClient();
     const { showToast } = useToast();
@@ -74,8 +70,8 @@ export default function EnginesPage() {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: (e: any) => deleteEngines([{
-            dataset_name: e.dataset_name,
+        mutationFn: (e: EngineListItem) => deleteEngines([{
+            dataset_name: e.dataset_name!,
             solver_type: e.solver_type,
             version: e.version
         }]),
@@ -84,14 +80,14 @@ export default function EnginesPage() {
             setEngineToDelete(null);
 
             // Check for API-level silent failures
-            const errors = Array.isArray(data) ? data.filter((r: any) => r.status === "error" || r.status === "not_found") : [];
+            const errors = Array.isArray(data) ? (data as { status: string }[]).filter((r) => r.status === "error" || r.status === "not_found") : [];
             if (errors.length > 0) {
                 showToast(`Some engines could not be deleted: ${errors[0].status}`, "error");
             } else {
                 showToast("Engine deleted successfully", "success");
             }
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             showToast(`Deletion failed: ${err.message}`, "error");
         }
     });
@@ -103,23 +99,23 @@ export default function EnginesPage() {
             setIsBulkDeleting(false);
 
             // Check for API-level silent failures
-            const errors = Array.isArray(data) ? data.filter((r: any) => r.status === "error" || r.status === "not_found") : [];
+            const errors = Array.isArray(data) ? (data as { status: string }[]).filter((r) => r.status === "error" || r.status === "not_found") : [];
             if (errors.length > 0) {
                 showToast(`Failed to delete ${errors.length} engines. The others were deleted.`, "error");
                 // Remove successful deletes from selection
-                const successful = Array.isArray(data) ? data.filter((r: any) => r.status === "deleted") : [];
-                setSelectedEngines(prev => prev.filter(p => !successful.some((s: any) => s.dataset_name === p.dataset_name && s.solver_type === p.solver_type && s.version === p.version)));
+                const successful = Array.isArray(data) ? (data as { status: string; dataset_name: string; solver_type: string; version: number }[]).filter((r) => r.status === "deleted") : [];
+                setSelectedEngines(prev => prev.filter(p => !successful.some((s) => s.dataset_name === p.dataset_name && s.solver_type === p.solver_type && s.version === p.version)));
             } else {
                 setSelectedEngines([]);
                 showToast("Engines deleted successfully", "success");
             }
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             showToast(`Bulk deletion failed: ${err.message}`, "error");
         }
     });
 
-    const toggleSelection = (engine: any) => {
+    const toggleSelection = (engine: EngineListItem) => {
         const id = `${engine.dataset_name}-${engine.solver_type}-${engine.version}`;
         setSelectedEngines(prev => {
             const exists = prev.some(e => `${e.dataset_name}-${e.solver_type}-${e.version}` === id);
@@ -128,15 +124,12 @@ export default function EnginesPage() {
                 : [...prev, {
                     dataset_name: engine.dataset_name,
                     solver_type: engine.solver_type,
-                    version: engine.version
-                }];
+                    version: engine.version,
+                    created_at: engine.created_at
+                } as EngineListItem];
         });
     };
 
-    const isSelected = (engine: any) => {
-        const id = `${engine.dataset_name}-${engine.solver_type}-${engine.version}`;
-        return selectedEngines.some(e => `${e.dataset_name}-${e.solver_type}-${e.version}` === id);
-    };
 
     const filteredEngines = engines.filter(e =>
         e.solver_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -145,7 +138,7 @@ export default function EnginesPage() {
 
     // Grouping logic: Dataset -> Solver Type -> Versions
     const groupedEngines = useMemo(() => {
-        const groups: Record<string, Record<string, any[]>> = {};
+        const groups: Record<string, Record<string, EngineListItem[]>> = {};
 
         filteredEngines.forEach(engine => {
             const ds = engine.dataset_name || "Unknown Dataset";
@@ -174,12 +167,13 @@ export default function EnginesPage() {
             setSelectedEngines(filteredEngines.map(e => ({
                 dataset_name: e.dataset_name,
                 solver_type: e.solver_type,
-                version: e.version
-            })));
+                version: e.version,
+                created_at: e.created_at
+            } as EngineListItem)));
         }
     };
 
-    const handleSelectGroup = (enginesInGroup: any[], isCurrentlyAllSelected: boolean) => {
+    const handleSelectGroup = (enginesInGroup: EngineListItem[], isCurrentlyAllSelected: boolean) => {
         if (isCurrentlyAllSelected) {
             // Deselect all in this group
             const groupIds = new Set(enginesInGroup.map(e => `${e.dataset_name}-${e.solver_type}-${e.version}`));
@@ -193,8 +187,9 @@ export default function EnginesPage() {
                     .map(e => ({
                         dataset_name: e.dataset_name,
                         solver_type: e.solver_type,
-                        version: e.version
-                    }));
+                        version: e.version,
+                        created_at: e.created_at
+                    } as EngineListItem));
                 return [...prev, ...newItems];
             });
         }
@@ -257,7 +252,7 @@ export default function EnginesPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-popover border-border text-popover-foreground rounded-[1rem]">
                                 <SelectItem value="all" className="font-bold">All Datasets</SelectItem>
-                                {datasets.map((d: any) => (
+                                {datasets.map((d) => (
                                     <SelectItem key={d.name} value={d.name} className="font-bold">{d.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -313,7 +308,7 @@ export default function EnginesPage() {
                             Purge Engine
                         </DialogTitle>
                         <DialogDescription className="text-muted-foreground font-medium italic">
-                            You are about to permanently delete <span className="font-bold text-foreground uppercase tracking-tight font-heading">{engineToDelete?.solver_type} <span className="font-mono text-sm">v{engineToDelete?.version}</span></span> from <span className="font-bold text-foreground italic">"{engineToDelete?.dataset_name}"</span>.
+                             You are about to permanently delete <span className="font-bold text-foreground uppercase tracking-tight font-heading">{engineToDelete?.solver_type} <span className="font-mono text-sm">v{engineToDelete?.version}</span></span> from <span className="font-bold text-foreground italic">&ldquo;{engineToDelete?.dataset_name}&rdquo;</span>.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="p-8 bg-card flex justify-end gap-3">
@@ -377,7 +372,7 @@ export default function EnginesPage() {
                             </div>
                             <h3 className="text-3xl font-bold text-foreground tracking-tight uppercase mb-4 font-heading">Registry Empty</h3>
                             <p className="text-muted-foreground/70 max-w-sm mx-auto font-medium italic leading-relaxed">
-                                You haven't registered any inverse engines yet. Initialize your first model in the construction pipeline.
+                                You haven&apos;t registered any inverse engines yet. Initialize your first model in the construction pipeline.
                             </p>
                         </CardContent>
                     </Card>
@@ -446,7 +441,7 @@ export default function EnginesPage() {
                                         exit={{ opacity: 0, height: 0 }}
                                         className="grid grid-cols-1 gap-10"
                                     >
-                                    {Object.entries(solverGroups as Record<string, any[]>).map(([solverType, versions]) => {
+                                    {Object.entries(solverGroups as Record<string, EngineListItem[]>).map(([solverType, versions]) => {
                                         const groupKey = `${datasetName}-${solverType}`;
                                         const isExpanded = expandedGroups[groupKey] !== false;
                                         const enginesInGroup = versions;
@@ -595,7 +590,7 @@ export default function EnginesPage() {
                             <div className="bg-muted p-10 rounded-[1rem] inline-block mb-8 border border-border/50">
                                 <Search className="h-12 w-12 text-muted-foreground/20" />
                             </div>
-                            <p className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-sm font-heading">No registry assets match "<span className="text-indigo-500">{searchQuery}</span>"</p>
+                            <p className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-sm font-heading">No registry assets match &ldquo;<span className="text-indigo-500">{searchQuery}</span>&rdquo;</p>
                         </div>
                     )}
                 </div>

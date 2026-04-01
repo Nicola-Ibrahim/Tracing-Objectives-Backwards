@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { CandidateGenerationResponse } from "../types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Target, Info, CheckCircle2, Network, Activity } from "lucide-react";
 import { BasePlot } from "@/components/ui/BasePlot";
@@ -16,7 +16,7 @@ interface CandidateManifoldChartProps {
 export function CandidateManifoldChart({ data, backgroundX, backgroundY }: CandidateManifoldChartProps) {
 
     const objectiveTraces = useMemo(() => {
-        const traces: any[] = [];
+        const traces: Record<string, unknown>[] = [];
 
         // 1. Background Population
         if (backgroundY) {
@@ -112,7 +112,7 @@ export function CandidateManifoldChart({ data, backgroundX, backgroundY }: Candi
     }, [data, backgroundY]);
 
     const decisionTraces = useMemo(() => {
-        const traces: any[] = [];
+        const traces: Record<string, unknown>[] = [];
 
         if (backgroundX) {
             traces.push({

@@ -106,7 +106,8 @@ class FileSystemDiagnosticRepository(BaseDiagnosticRepository):
 
         if not run_dir or not (run_dir / "evaluation.json").exists():
             raise FileNotFoundError(
-                f"Evaluation run {run_number} not found for {engine_type} v{engine_version}."
+                f"Evaluation run {run_number} not found for "
+                f"{engine_type} v{engine_version}."
             )
 
         data = self._json_handler.load(run_dir / "evaluation.json")

@@ -2,15 +2,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.api.v1.datasets.dependencies import (
-    get_dataset_repository,
-    get_engine_repository,
-)
 from src.modules.dataset.infrastructure.repositories.dataset_repository import (
     FileSystemDatasetRepository,
 )
-from src.modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
-    FileSystemInverseMappingEngineRepository,
+from src.modules.inverse.infrastructure.repositories import (
+    inverse_mapping_engine_repo,
+)
+
+FileSystemInverseMappingEngineRepository = (
+    inverse_mapping_engine_repo.FileSystemInverseMappingEngineRepository
 )
 
 
@@ -24,12 +24,6 @@ def test_data_dir(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def setup_test_env(test_data_dir, monkeypatch):
     """Globally patch repository classes to use the test data directory."""
-    from src.modules.dataset.infrastructure.repositories.dataset_repository import (
-        FileSystemDatasetRepository,
-    )
-    from src.modules.inverse.infrastructure.repositories.inverse_mapping_engine_repo import (
-        FileSystemInverseMappingEngineRepository,
-    )
 
     # Patch FileSystemDatasetRepository
     orig_ds_init = FileSystemDatasetRepository.__init__

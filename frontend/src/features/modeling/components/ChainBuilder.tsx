@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react";
+import React from "react";
+import { Plus, Trash2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { TransformationStep, TransformerMetadata } from "../api";
 import { TransformationForm } from "./TransformationForm";
 import {
@@ -13,7 +12,7 @@ import {
     DialogTitle,
     DialogHeader,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 
 interface ChainBuilderProps {
     title?: string;
@@ -30,7 +29,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
         const defaultParams = meta.parameters.reduce((acc, param) => {
             acc[param.name] = param.default;
             return acc;
-        }, {} as Record<string, any>);
+        }, {} as Record<string, unknown>);
 
         onChange([...chain, { type, params: defaultParams }]);
     };
@@ -41,7 +40,7 @@ export function ChainBuilder({ title, chain, transformers, onChange }: ChainBuil
         onChange(newChain);
     };
 
-    const updateStepParams = (index: number, params: Record<string, any>) => {
+    const updateStepParams = (index: number, params: Record<string, unknown>) => {
         const newChain = [...chain];
         newChain[index] = { ...newChain[index], params };
         onChange(newChain);

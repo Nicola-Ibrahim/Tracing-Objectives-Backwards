@@ -38,6 +38,11 @@ export interface DiagnoseResponse {
   warnings: string[];
 }
 
+export interface DiagnoseAsyncResponse {
+  task_id: string;
+  status: string;
+}
+
 export interface PerformanceRequest {
   dataset_name: string;
   engine: EngineCandidate;
@@ -48,5 +53,5 @@ export interface PerformanceResponse {
   dataset_name: string;
   solver_type: string;
   version: number;
-  insights: Record<string, any>;
+  insights: Record<string, unknown>;
 }

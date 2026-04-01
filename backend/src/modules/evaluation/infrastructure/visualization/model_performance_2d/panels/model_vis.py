@@ -54,7 +54,11 @@ def _add_ghost_trace(fig, row, col, x, y, z, input_symbol, output_symbol, out_id
             mode="markers",
             name=f"{_sym(output_symbol, out_idx)} Uncertainty",
             marker=dict(size=2, color=z, colorscale="Cividis", opacity=0.1),
-            hovertemplate=f"<b>{_sym(input_symbol, 1)}</b>: %{{x:.4f}}<br><b>{_sym(input_symbol, 2)}</b>: %{{y:.4f}}<br><b>{_sym(output_symbol, out_idx)}</b>: %{{z:.4f}}<extra></extra>",
+            hovertemplate=(
+                f"<b>{_sym(input_symbol, 1)}</b>: %{{x:.4f}}<br>"
+                f"<b>{_sym(input_symbol, 2)}</b>: %{{y:.4f}}<br>"
+                f"<b>{_sym(output_symbol, out_idx)}</b>: %{{z:.4f}}<extra></extra>"
+            ),
         ),
         row=row,
         col=col,

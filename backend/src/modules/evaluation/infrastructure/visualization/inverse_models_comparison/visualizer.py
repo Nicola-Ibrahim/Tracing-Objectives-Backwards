@@ -21,7 +21,7 @@ class InverseModelsComparisonVisualizer(BaseVisualizer):
 
     def plot(self, results: list[DiagnosticReport]) -> None:
         """
-        Generates and persists each diagnostic plot individually based on the data contract.
+        Generates and persists each diagnostic plot based on the data contract.
         """
         # 1. Prepare Data Containers
         calibration_data = {}

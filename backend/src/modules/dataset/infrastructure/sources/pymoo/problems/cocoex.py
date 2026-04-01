@@ -82,7 +82,8 @@ class COCOBiObjectiveProblem(Problem):
 
         if problem_name == "bbob-biobj" and not (1 <= function_indices <= 55):
             raise ValueError(
-                f"`function_indices` must be between 1 and 55 for suite '{problem_name}', got {function_indices}."
+                f"`function_indices` must be between 1 and 55 for suite "
+                f"'{problem_name}', got {function_indices}."
             )
 
         suite_options = f"dimensions:{dimensions} function_indices:{function_indices}"

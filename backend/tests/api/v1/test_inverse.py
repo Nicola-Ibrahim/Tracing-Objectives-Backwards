@@ -88,9 +88,7 @@ def test_bulk_engine_deletion_global(client):
     assert not any(e["version"] == engines_to_del[0]["version"] for e in resp.json())
 
 
-@pytest.mark.xfail(
-    reason="API returns HTTPException instead of raising, causing ResponseValidationError on error paths"
-)
+@pytest.mark.xfail(reason="API uses HTTPException directly, bypassing validation")
 def test_train_engine_dataset_not_found(client):
     payload = {
         "dataset_name": "unknown_ds",

@@ -5,14 +5,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layers, Database, ChevronRight, Wand2, Loader2, Info, Sparkles, Binary, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getDatasets, getDatasetDetails } from "@/features/dataset/api";
-import { getTransformers, getPreview, PreviewRequest, TransformationStep } from "@/features/modeling/api";
+import { getTransformers, getPreview, TransformationStep } from "@/features/modeling/api";
 import { TransformationPreviewChart } from "@/features/modeling/components/TransformationPreviewChart";
-import { Label } from "@/components/ui/label";
 
 import { ChainBuilder } from "@/features/modeling/components/ChainBuilder";
 
@@ -27,7 +25,7 @@ export default function TransformationPreviewerPage() {
         queryFn: getDatasets,
     });
 
-    const datasetDetails = useQuery({
+    useQuery({
         queryKey: ["dataset", selectedDataset],
         queryFn: () => getDatasetDetails(selectedDataset!),
         enabled: !!selectedDataset,

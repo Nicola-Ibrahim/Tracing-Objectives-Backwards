@@ -1,6 +1,6 @@
 from typing import Any, Type
 
-from ....shared.infrastructure.inspection import (
+from ....shared.infrastructure.discovery import (
     build_constructor_kwargs,
     extract_constructor_schema,
 )
@@ -19,14 +19,14 @@ class DataGeneratorFactory:
     ) -> BaseDataSource:
         """
         Creates a data source generator based on the type and parameters.
-        Validates and normalizes incoming params (supports flat namespaces for Pydantic args).
+        Validates incoming params (supports flat namespaces for Pydantic args).
         """
         # Convert string to Enum if needed
         if isinstance(generator_type, str):
             try:
                 generator_type = DatasetGeneratorRegistry(generator_type)
             except ValueError:
-                raise ValueError(f"Unknown generator type: {generator_type}")
+                raise ValueError(f"Unknown generator type: {generator_type}") from None
 
         generator_class = self._registry.get(generator_type)
         if not generator_class:

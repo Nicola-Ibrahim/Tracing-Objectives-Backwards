@@ -11,14 +11,19 @@ import {
     CardTitle,
     CardDescription,
 } from "@/components/ui/card";
-import { TrainEngineRequest, EngineListItem } from "@/features/inverse/types";
+import { TrainEngineRequest, TrainEngineResponse } from "@/features/inverse/types";
 import { TrainingHistoryChart } from "@/features/inverse/components/TrainingHistoryChart";
 import { useState } from "react";
 import { CheckCircle2, AlertCircle, Cpu, Zap, Activity, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+
 export default function TrainEnginePage() {
-    const [lastResult, setLastResult] = useState<any>(null);
+    const [lastResult, setLastResult] = useState<
+        | { success: true; data: TrainEngineResponse }
+        | { success: false; error: string }
+        | null
+    >(null);
 
     const { data: datasets, isLoading: datasetsLoading } = useQuery({
         queryKey: ["datasets"],
@@ -28,9 +33,9 @@ export default function TrainEnginePage() {
     const mutation = useMutation({
         mutationFn: (params: TrainEngineRequest) => trainEngine(params),
         onSuccess: (data) => {
-            setLastResult({ success: true, data });
+            setLastResult({ success: true, data: data as TrainEngineResponse });
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             setLastResult({ success: false, error: error.message });
         },
     });
@@ -137,10 +142,10 @@ export default function TrainEnginePage() {
                                         </div>
                                     </div>
 
-                                    {lastResult.data.training_history?.loss && (
+                                    {lastResult.data.training_history?.epochs && (
                                         <div className="mt-8">
                                             <TrainingHistoryChart 
-                                                history={lastResult.data.training_history.loss} 
+                                                history={lastResult.data.training_history} 
                                             />
                                         </div>
                                     )}

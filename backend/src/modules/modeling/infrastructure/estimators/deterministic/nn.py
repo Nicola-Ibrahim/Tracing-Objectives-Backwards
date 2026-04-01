@@ -14,11 +14,7 @@ from .....modeling.domain.value_objects.estimator_params import EstimatorParamsB
 
 
 class NeuralNetworkEstimatorParams(EstimatorParamsBase):
-    type: Literal["neural_network_nd"] = Field(
-        EstimatorTypeEnum.NEAREST_NEIGHBORS_ND.value,  # MIGHT BE BUG IN ORIGINAL CODE (was using NEAREST_NEIGHBORS_ND)? Reverting to original.
-        description="Type of the neural network interpolation method.",
-    )
-    # The original file actually used EstimatorTypeEnum.NEURAL_NETWORK_ND.value
+    # The original file used EstimatorTypeEnum.NEURAL_NETWORK_ND.value
     type: Literal["neural_network_nd"] = Field(
         EstimatorTypeEnum.NEURAL_NETWORK_ND.value,
         description="Type of the neural network interpolation method.",
@@ -123,7 +119,7 @@ class NNEstimator(DeterministicEstimator):
         """
         Fits the neural network decoder to learn the direct mapping from X to y.
         """
-        # Call the parent's fit to perform universal data validation and store dimensions.
+        # Call parent's fit for universal data validation and to store dimensions.
         super().fit(X, y)
 
         # Check if the decoder's input/output dimensions match the data.
@@ -132,9 +128,11 @@ class NNEstimator(DeterministicEstimator):
             or self.decoder.net[-1].out_features != self._y_dim
         ):
             raise ValueError(
-                f"Decoder dimensions do not match data. Decoder expects input={self.decoder.net[0].in_features}, output={self.decoder.net[-1].out_features}. "
-                f"Data has inputs={self._X_dim}, outputs={self._y_dim}."
-                "Please instantiate the Decoder with matching dimensions before fitting."
+                f"Decoder dimensions do not match data. Decoder expects "
+                f"input={self.decoder.net[0].in_features}, "
+                f"output={self.decoder.net[-1].out_features}. "
+                f"Data has inputs={self._X_dim}, outputs={self._y_dim}. "
+                "Please instantiate Decoder with matching dims before fitting."
             )
 
         # Train the decoder using the provided X and y
@@ -144,7 +142,7 @@ class NNEstimator(DeterministicEstimator):
 
     def predict(self, X: NDArray[np.float64]) -> NDArray[np.float64]:
         """
-        Predicts decision vectors for given input feature points using the trained network.
+        Predict decision vectors for given input points using trained network.
         """
         if self._X_dim is None:
             raise RuntimeError("Mapper has not been fitted yet. Call fit() first.")
@@ -154,7 +152,8 @@ class NNEstimator(DeterministicEstimator):
 
         if X.shape[1] != self._X_dim:
             raise ValueError(
-                f"Input must have {self._X_dim} dimensions, but got {X.shape[1]} dimensions."
+                f"Input must have {self._X_dim} dimensions, "
+                f"but got {X.shape[1]} dimensions."
             )
 
         return self.decoder.predict(X)

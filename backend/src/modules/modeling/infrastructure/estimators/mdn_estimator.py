@@ -52,7 +52,7 @@ def mdn_loss(pi, mu, sigma, y):
     m = torch.distributions.Normal(loc=mu, scale=sigma + 1e-6)
     log_prob = m.log_prob(y)  # (batch, n_mixtures, output_dim)
 
-    # Sum log probabilities across output dimensions (assuming independence within component)
+    # Sum log probs across output dims (assuming independence within component)
     log_prob = torch.sum(log_prob, dim=2)  # (batch, n_mixtures)
 
     # Weighted sum of probabilities across mixtures

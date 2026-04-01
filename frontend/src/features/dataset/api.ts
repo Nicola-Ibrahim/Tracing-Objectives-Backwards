@@ -28,13 +28,13 @@ export const getDatasets = async (): Promise<DatasetInfo[]> => {
 /**
  * Trigger generation of a new synthetic dataset.
  */
-export const generateDataset = async (params: DatasetGenerationRequest): Promise<any> => {
+export const generateDataset = async (params: DatasetGenerationRequest): Promise<unknown> => {
   return apiClient.post("/datasets", params);
 };
 
 /**
  * Delete one or multiple datasets.
  */
-export const deleteDatasets = async (datasetNames: string[]): Promise<any> => {
+export const deleteDatasets = async (datasetNames: string[]): Promise<unknown> => {
   return apiClient.delete("/datasets", { data: { dataset_names: datasetNames } });
 };

@@ -87,9 +87,7 @@ def test_dataset_engine_count_updates(client):
     assert ds_summary["trained_engines_count"] == 1
 
 
-@pytest.mark.xfail(
-    reason="API returns HTTPException instead of raising, causing ResponseValidationError on error paths"
-)
+@pytest.mark.xfail(reason="API uses HTTPException directly, bypassing validation")
 def test_get_dataset_details_not_found(client):
     resp = client.get("/api/v1/datasets/non_existent")
     assert resp.status_code == 404

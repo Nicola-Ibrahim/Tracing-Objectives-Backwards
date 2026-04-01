@@ -1,0 +1,65 @@
+name: 2. CD (Backend)
+
+on:
+  push:
+    tags:
+      - 'v*'              # only fires on git tag — never on branch merge
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}-backend
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4    # checks out the tagged commit, not main tip
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-                              # sha-a1b2c3d  — immutable
+            type=semver,pattern={{version}}                   # 1.2.0        — clean version
+            type=semver,pattern=v{{version}}                  # v1.2.0       — with prefix
+            type=raw,value=latest,enable={{is_default_branch}} # latest      — Render pulls this
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: runner
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [ build-and-push ]
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEPLOY_HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          [ -n "$DEPLOY_HOOK" ] || { echo "❌ DEPLOY_HOOK is empty — aborting"; exit 1; }
+          echo "🚀 Releasing ${{ github.ref_name }}..."
+          curl -fsSL "$DEPLOY_HOOK"
+          echo "✅ Done"

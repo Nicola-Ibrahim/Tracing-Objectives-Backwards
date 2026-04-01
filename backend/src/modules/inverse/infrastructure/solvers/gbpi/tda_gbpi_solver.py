@@ -37,11 +37,13 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
         Initializes the TDA-GBPISolver.
 
         Args:
-            coherence_n_neighbors: How many local X-space neighbors to use when determining the TDA linking radius (epsilon).
-            trust_radius: The trust-region radius for the gradient descent optimization.
-            concentration_factor: The concentration factor for the Dirichlet distribution.
-            hole_penalty_factor: The multiplier threshold. If the shortest topological path is
-                                 this many times longer than the straight line, a hole is detected.
+            coherence_n_neighbors: How many local X-space neighbors to use when
+                                   determining the TDA linking radius (epsilon).
+            trust_radius: Trust-region radius for gradient descent optimization.
+            concentration_factor: Concentration factor for the Dirichlet distribution.
+            hole_penalty_factor: The multiplier threshold. If the shortest
+                                 topological path is this many times longer than
+                                 the straight line, a hole is detected.
         """
         self.coherence_n_neighbors = coherence_n_neighbors
         self.trust_radius = trust_radius
@@ -94,8 +96,9 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
     ) -> tuple[bool, list[float]]:
         """
         Enforces TDA Coherence.
-        Checks if the straight Euclidean interpolation line cuts across a topological hole
-        by comparing it to the shortest geodesic path traveling safely on the Vietoris-Rips graph.
+        Checks if the straight Euclidean interpolation line cuts across a topological
+        hole by comparing it to the shortest geodesic path traveling safely on
+        the Vietoris-Rips graph.
         """
         triangle_vertices = self.X[vertices_indices]
 
@@ -115,7 +118,7 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
                 euclidean_dist = np.linalg.norm(self.X[idx_A] - self.X[idx_B])
                 anchor_distances.append(euclidean_dist)
 
-                # 2. Calculate the Topological Geodesic distance (the safe structural path)
+                # 2. Calculate the Topological Geodesic distance (safe structural path)
                 geodesic_dist = dijkstra(
                     csgraph=self.vr_graph,
                     directed=False,
@@ -159,7 +162,8 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
 
     def _get_nearest_neighbor(self, target: np.ndarray) -> tuple[list[int], np.ndarray]:
         """
-        Uses the global Y-space KNN to find the single absolute closest point for extrapolation.
+        Uses the global Y-space KNN to find the single absolute closest point
+        for extrapolation.
         """
         _, indices = self.objective_knn.kneighbors(target)
         closest_vertex_idx = int(indices[0][0])
@@ -263,7 +267,9 @@ class TDAGBPIInverseSolver(AbstractInverseMappingSolver):
         )
 
     def _train_forward_estimator(self, X: np.ndarray, y: np.ndarray):
-        """Trains the RBF surrogate to act as a fast, differentiable physical validator."""
+        """
+        Trains the RBF surrogate to act as a fast, differentiable physical validator.
+        """
         params = RBFEstimatorParams(n_neighbors=7, kernel="thin_plate_spline")
         estimator = RBFEstimator(params)
         estimator.fit(X, y)

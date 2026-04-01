@@ -54,7 +54,7 @@ This repository is optimized for deployment on **Cloudflare Pages**.
 1. Connect your GitHub repository to Cloudflare.
 2. Set the build command to `npm run build`.
 3. Set the output directory to `.next`.
-4. Configure environment variables like `NEXT_PUBLIC_API_URL` to point to your VPS-hosted backend.
+4. Configure environment variables like `BACKEND_URL` to point to your VPS-hosted backend.
 
 ---
 

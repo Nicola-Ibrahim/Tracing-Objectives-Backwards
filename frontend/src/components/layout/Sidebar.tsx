@@ -6,7 +6,6 @@ import {
     LineChart as LineChartIcon,
     LayoutDashboard,
     BrainCircuit,
-    Settings2,
     Trello,
     Cpu,
     Layers,
@@ -30,33 +29,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-const items = [
-    {
-        title: "Data Hub",
-        url: "/datasets",
-        icon: Database,
-    },
-    {
-        title: "Train Engine",
-        url: "/inverse/train",
-        icon: BrainCircuit,
-    },
-    {
-        title: "Generate Candidates",
-        url: "/inverse/generate",
-        icon: Trello,
-    },
-    {
-        title: "Inference Hub",
-        url: "/engines",
-        icon: Cpu,
-    },
-    {
-        title: "Evaluation",
-        url: "/evaluation",
-        icon: LineChartIcon,
-    },
-];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pathname = usePathname();

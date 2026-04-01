@@ -1,0 +1,105 @@
+# docker-compose.dev.yml
+#
+# LOCAL DEVELOPMENT ONLY.
+# Never used in CI or production.
+#
+# CI  → docker build + docker run (no compose)
+# Prod → Render pulls images directly from GHCR
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up --build
+
+services:
+  backend:
+    container_name: backend
+    hostname: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev                   # hot-reload, all deps
+    volumes:
+      - ./backend:/app:cached       # edits reflect instantly
+      - backend-storage:/app/storage
+    environment:
+      - PROJECT_NAME
+      - SECRET_KEY
+      - ENV
+      - DEBUG
+      - BACKEND_CORS_ORIGINS
+      - REDIS_URL
+      - LOG_LEVEL
+      - PYTHONASYNCIODEBUG
+      - PYTHONPATH
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-net
+
+  frontend:
+    container_name: frontend
+    hostname: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev                   # hot-reload, all deps
+    volumes:
+      - ./frontend:/app:cached
+      - /app/node_modules           # prevents host node_modules from
+                                    # shadowing the container's node_modules
+    environment:
+      - NEXT_PUBLIC_API_VERSION
+      - NODE_ENV
+      - BACKEND_URL
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-net
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data            # data survives docker compose down
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-net
+
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    volumes:
+      - ./infra/nginx/default.dev.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"                     # http://localhost → nginx → frontend or backend
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge                  # all services resolve each other by hostname
+
+volumes:
+  redis-data:                       # redis AOF logs survive restarts
+  backend-storage:                  # uploaded/generated files survive rebuilds

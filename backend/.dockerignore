@@ -1,17 +1,43 @@
-__pycache__
-*.py[cod]
-*$py.class
-.venv
-.env
-.pytest_cache
-.ruff_cache
-.agent
-.git
-.DS_Store
+# Keep the production image clean and secrets out of layers.
+
+# Secrets — never bake these into an image
+.env*
+
+# Python runtime artifacts
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test and lint artifacts
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+tests/
+
+# 
 data/
 models/
 diagnostics/
 reports/
-tests/
-Dockerfile
+
+# Dev tooling
+.git/
+.github/
+*.md
 .dockerignore
+Dockerfile
+
+
+# Editor
+.vscode/
+.idea/
+
+# 
+*.py[cod]
+*$py.class
+.agent
+.DS_Store
+

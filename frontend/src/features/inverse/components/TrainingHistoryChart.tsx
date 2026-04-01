@@ -1,13 +1,7 @@
 import React from 'react';
 import { BasePlot } from "@/components/ui/BasePlot";
 import { Activity } from "lucide-react";
-
-interface TrainingHistoryData {
-    epochs: number[];
-    train_loss: number[];
-    val_loss: number[];
-    [key: string]: any;
-}
+import { TrainingHistoryData } from "../types";
 
 interface TrainingHistoryChartProps {
     history: TrainingHistoryData;
@@ -24,7 +18,7 @@ export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
 
     const { epochs, train_loss, val_loss, ...extras } = history;
 
-    const traces: any[] = [
+    const traces: Record<string, unknown>[] = [
         {
             x: epochs,
             y: train_loss,
@@ -51,7 +45,7 @@ export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
     ];
 
     // Handle extra metrics like recon and kl for CVAE
-    if (extras.train_recon) {
+    if (extras.train_recon && Array.isArray(extras.train_recon)) {
         traces.push({
             x: epochs,
             y: extras.train_recon,
@@ -63,7 +57,7 @@ export const TrainingHistoryChart: React.FC<TrainingHistoryChartProps> = ({
         });
     }
 
-    if (extras.train_kl) {
+    if (extras.train_kl && Array.isArray(extras.train_kl)) {
         traces.push({
             x: epochs,
             y: extras.train_kl,

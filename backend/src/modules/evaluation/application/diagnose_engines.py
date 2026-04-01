@@ -1,7 +1,7 @@
-from typing import Literal
+import uuid
+from typing import Any, AsyncGenerator
 
 import numpy as np
-from pydantic import BaseModel, Field
 
 from ...dataset.domain.interfaces.base_repository import BaseDatasetRepository
 from ...inverse.domain.entities.inverse_mapping_engine import (
@@ -11,6 +11,9 @@ from ...inverse.domain.interfaces.base_inverse_mapping_engine_repository import 
     BaseInverseMappingEngineRepository,
 )
 from ...shared.domain.interfaces.base_logger import BaseLogger
+from ...shared.domain.interfaces.base_task_manager import (
+    BaseTaskManager,
+)
 from ...shared.result import Result
 from ..domain.aggregates.diagnostic_report import DiagnosticReport
 from ..domain.enums.engine_capability import EngineCapability
@@ -21,47 +24,16 @@ from ..domain.interfaces.base_diagnostic_repository import (
 from ..domain.services.decision_space_auditor import DecisionSpaceAuditor
 from ..domain.services.objective_space_auditor import ObjectiveSpaceAuditor
 from ..domain.value_objects.engine import Engine as EngineVO
-
-
-class EngineCandidate(BaseModel):
-    """
-    Identifies a specific inverse engine and version for evaluation.
-    This is an application-layer concern (part of the command).
-    """
-
-    solver_type: str = Field(..., examples=["GBPI"])
-    version: int | None = Field(
-        default=None,
-        description="Specific integer version number. If None, latest is used.",
-    )
-
-
-class RunDiagnosticsCommand(BaseModel):
-    """
-    Command for the full evaluation suite including
-    Objective-Space Accuracy and Decision-Space Reliability.
-    Supports comparing multiple inverse model candidates.
-    """
-
-    dataset_name: str = Field(..., examples=["cocoex_f5"])
-
-    inverse_engine_candidates: list[EngineCandidate] = Field(
-        ...,
-        description="List of engine candidates to compare.",
-    )
-
-    num_samples: int = Field(default=200, description="K candidates per target")
-    random_state: int = 42
-
-    scale_method: Literal["sd", "mad", "iqr"] = Field(
-        default="sd", description="sd | mad | iqr"
-    )
+from .diagnose_engines_command import (
+    EngineCandidate,
+    RunDiagnosticsCommand,
+)
 
 
 class RunDiagnosticsService:
     """
-    Orchestrator for the evaluation suite.
-    Computes diagnostics and persists them via the Diagnostic Repository.
+    Application service that orchestrates the diagnostic suite.
+    Can be run synchronously (execute) or asynchronously (execute_async).
     """
 
     @staticmethod
@@ -79,17 +51,60 @@ class RunDiagnosticsService:
         engine_repository: BaseInverseMappingEngineRepository,
         data_repository: BaseDatasetRepository,
         diagnostic_repository: BaseDiagnosticRepository,
+        task_manager: BaseTaskManager,
         logger: BaseLogger,
     ):
         self._engine_repository = engine_repository
         self._data_repo = data_repository
         self._diag_repo = diagnostic_repository
+        self._task_manager = task_manager
         self._logger = logger
 
-    def execute(self, command: RunDiagnosticsCommand) -> Result[list[DiagnosticReport]]:
+    async def execute_async(self, command: RunDiagnosticsCommand) -> str:
+        """
+        Orchestrates the asynchronous execution:
+        1. Generates a task_id.
+        2. Initializes status.
+        3. Enqueues the worker task.
+        """
+        task_id = str(uuid.uuid4())
+
+        await self._task_manager.set_status(
+            task_id, {"event": "queued", "status": "Task Queued", "progress": 0}
+        )
+
+        await self._task_manager.enqueue(
+            "run_diagnostics_task",
+            task_id=task_id,
+            command_data=command.model_dump(),
+        )
+
+        return task_id
+
+    async def stream_progress(self, task_id: str) -> AsyncGenerator[str, None]:
+        """
+        Progress stream delegated to the unified task manager.
+        """
+        async for chunk in self._task_manager.subscribe(task_id):
+            yield chunk
+
+    async def execute(
+        self,
+        command: RunDiagnosticsCommand,
+        task_id: str | None = None,
+    ) -> Result[list[DiagnosticReport]]:
+        """
+        Executes the diagnostic suite.
+        Optional task_id allows for async progress tracking via the injected publisher.
+        """
+
+        async def publish_safe(data: dict[str, Any]):
+            if task_id:
+                await self._task_manager.publish(task_id, data)
+
         try:
             self._logger.log_info(
-                f"Starting Diagnostic Compute for engines on dataset '{command.dataset_name}'"
+                f"Starting Diagnostic Compute for engines on '{command.dataset_name}'"
             )
 
             dataset = self._data_repo.load(command.dataset_name)
@@ -106,6 +121,10 @@ class RunDiagnosticsService:
                 engine_name = f"{engine_type} (v{version})"
                 self._logger.log_info(f"Diagnosing {engine_name}")
 
+                await publish_safe(
+                    {"status": f"Diagnosing {engine_name}", "progress": 0}
+                )
+
                 test_indices = dataset.test_indices
                 if len(test_indices) == 0:
                     self._logger.log_warning(
@@ -120,19 +139,33 @@ class RunDiagnosticsService:
                 y_test_norm = engine.transform_decision(y_test_raw)
 
                 n_test = len(X_test_norm)
-                all_candidates_X_norm = []
-                all_candidates_y_norm = []
 
-                for i in range(n_test):
-                    target_y_norm = X_test_norm[i]
+                # Check for batch support (Neural Solvers: MDN, CVAE, INN)
+                supports_batch = engine_type.upper() in ["MDN", "CVAE", "INN"]
+
+                if supports_batch:
+                    self._logger.log_info(f"Using batch generation for {engine_name}")
                     res = engine.solver.generate(
-                        target_y_norm, n_samples=command.num_samples
+                        X_test_norm, n_samples=command.num_samples
                     )
-                    all_candidates_X_norm.append(res.candidates_X)
-                    all_candidates_y_norm.append(res.candidates_y)
-
-                all_candidates_X_norm = np.stack(all_candidates_X_norm)
-                all_candidates_y_norm = np.stack(all_candidates_y_norm)
+                    all_candidates_X_norm = res.candidates_X.reshape(
+                        n_test, command.num_samples, -1
+                    )
+                    all_candidates_y_norm = res.candidates_y.reshape(
+                        n_test, command.num_samples, -1
+                    )
+                else:
+                    all_candidates_X_norm = []
+                    all_candidates_y_norm = []
+                    for i in range(n_test):
+                        target_y_norm = X_test_norm[i]
+                        res = engine.solver.generate(
+                            target_y_norm, n_samples=command.num_samples
+                        )
+                        all_candidates_X_norm.append(res.candidates_X)
+                        all_candidates_y_norm.append(res.candidates_y)
+                    all_candidates_X_norm = np.stack(all_candidates_X_norm)
+                    all_candidates_y_norm = np.stack(all_candidates_y_norm)
 
                 y_train_norm = engine.transform_objective(
                     dataset.y[dataset.train_indices]
@@ -172,9 +205,25 @@ class RunDiagnosticsService:
                 # self._diag_repo.save(report)
                 reports.append(report)
 
+            # Structured sentinel for completion
+            results_payload = {
+                "event": "done",
+                "status": "100% Complete",
+                "progress": 100,
+                "reports": [report.model_dump() for report in reports],
+            }
+            await publish_safe(results_payload)
             return Result.ok(reports)
 
         except FileNotFoundError as e:
+            await publish_safe(
+                {
+                    "event": "error",
+                    "status": "Error",
+                    "message": "Dataset or engine not found",
+                    "details": str(e),
+                }
+            )
             return Result.fail(
                 message="Dataset or engine not found",
                 details=str(e),
@@ -182,6 +231,14 @@ class RunDiagnosticsService:
             )
         except Exception as e:
             self._logger.log_error(f"Diagnostic failed: {str(e)}")
+            await publish_safe(
+                {
+                    "event": "error",
+                    "status": "Error",
+                    "message": "Internal error",
+                    "details": str(e),
+                }
+            )
             return Result.fail(
                 message="Diagnostic failed",
                 details=str(e),

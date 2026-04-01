@@ -7,8 +7,8 @@ from ...modules.evaluation.application.use_cases import (
 from ...modules.evaluation.infrastructure.repositories.diagnostic_repository import (
     FileSystemDiagnosticRepository,
 )
-from ...modules.evaluation.infrastructure.visualization.inverse_models_comparison.visualizer import (
-    InverseModelsComparisonVisualizer,
+from ...modules.evaluation.infrastructure.visualization import (
+    inverse_models_comparison as imc,
 )
 from ...modules.modeling.domain.enums.estimator_type import EstimatorTypeEnum
 from ...modules.shared.infrastructure.loggers.cmd_logger import CMDLogger
@@ -44,7 +44,7 @@ def cli():
 
     service = VisualizeInverseEstimatorDiagnosticService(
         diagnostic_repository=FileSystemDiagnosticRepository(),
-        visualizer=InverseModelsComparisonVisualizer(),
+        visualizer=imc.visualizer.InverseModelsComparisonVisualizer(),
         logger=logger,
     )
 
