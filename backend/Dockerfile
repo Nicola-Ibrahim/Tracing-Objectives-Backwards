@@ -20,7 +20,6 @@ FROM base AS deps
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    UV_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu" \
     PATH="/root/.local/bin:${PATH}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

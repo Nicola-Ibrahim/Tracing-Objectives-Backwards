@@ -120,20 +120,19 @@ jobs:
           load: true
           tags: backend-ci:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min
 
       - name: Create .env file from GitHub Secrets
         run: |
           cat << EOF > .env
           BACKEND_CORS_ORIGINS=${{ secrets.BACKEND_CORS_ORIGINS }}
-          BACKEND_URL=${{ secrets.BACKEND_URL }}
-          DEBUG=${{ secrets.DEBUG || 'False' }}
-          ENV=${{ secrets.ENV || 'testing' }}
-          LOG_LEVEL=${{ secrets.LOG_LEVEL || 'info' }}
+          DEBUG=${{ secrets.DEBUG }}
+          ENV=${{ secrets.ENV }}
+          LOG_LEVEL=${{ secrets.LOG_LEVEL}}
           PROJECT_NAME=${{ secrets.PROJECT_NAME }}
-          PYTHONASYNCIODEBUG=${{ secrets.PYTHONASYNCIODEBUG || '0' }}
-          PYTHONPATH=${{ secrets.PYTHONPATH || '.' }}
-          REDIS_URL=${{ secrets.REDIS_URL || 'redis://redis:6379/0' }}
+          PYTHONASYNCIODEBUG=${{ secrets.PYTHONASYNCIODEBUG}}
+          PYTHONPATH=${{ secrets.PYTHONPATH }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
           SECRET_KEY=${{ secrets.SECRET_KEY }}
           EOF
 
@@ -183,9 +182,9 @@ jobs:
           load: true
           tags: frontend-ci:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min
           build-args: |
-            BACKEND_URL=${{ secrets.BACKEND_URL || 'http://localhost:8000' }}
+            BACKEND_URL=${{ secrets.BACKEND_URL }}
 
       - name: Run & Verify Health
         run: |
