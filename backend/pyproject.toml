@@ -210,6 +210,7 @@ help = "CHECK: Run linting and formatting checks. Usage: poe check"
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+exclude = [".venv", ".git", "notebooks", "__pycache__", "dist"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"]
