@@ -15,7 +15,6 @@ env:
 
 jobs:
   # ── Detect which parts of the monorepo actually changed ──────────────────
-  # All other jobs key off these outputs so nothing runs unnecessarily.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -38,7 +37,6 @@ jobs:
               - '.github/workflows/1-ci.yml'
 
   # ── Backend: lint + unit tests ───────────────────────────────────────────
-  # Runs on every push to any branch. No Docker involved — fast feedback.
   backend-test:
     needs: [ changes ]
     if: needs.changes.outputs.backend == 'true'
@@ -68,7 +66,6 @@ jobs:
       #   run: uv run poe test
 
   # ── Frontend: lint + unit tests ──────────────────────────────────────────
-  # Runs on every push to any branch. No Docker involved — fast feedback.
   frontend-test:
     needs: [ changes ]
     if: needs.changes.outputs.frontend == 'true'
@@ -102,14 +99,9 @@ jobs:
       #   run: pnpm test --if-present
 
   # ── Backend: production image smoke test (PR to main only) ───────────────
-  # Builds the runner stage (not dev) — tests the exact image that ships.
-  # No Redis, no Nginx, no compose. Just: does the production image start
-  # and respond to a health check?
   backend-smoke:
     needs: [ backend-test ]
-    if: |
-      github.event_name == 'pull_request' &&
-      needs.backend-test.result == 'success'
+    if: github.event_name == 'pull_request' && needs.backend-test.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -122,24 +114,34 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./backend
-          target: runner            # test the real production image, not dev
-          push: false               # CD handles the push after merge
-          load: true                # load into local daemon so we can run it
+          target: runner
+          push: false
+          load: true
           tags: backend-ci:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Generate Environment File
-        # Full .env stored as a single secret — add/change vars in GitHub
-        # Settings without ever touching this workflow.
-        run: echo "${{ secrets.ENV_FILE_TESTING }}" > ./backend/.env
+      - name: Create .env file from GitHub Secrets
+        run: |
+          cat << EOF > .env
+          BACKEND_CORS_ORIGINS=${{ secrets.BACKEND_CORS_ORIGINS }}
+          BACKEND_URL=${{ secrets.BACKEND_URL }}
+          DEBUG=${{ secrets.DEBUG || 'False' }}
+          ENV=${{ secrets.ENV || 'testing' }}
+          LOG_LEVEL=${{ secrets.LOG_LEVEL || 'info' }}
+          PROJECT_NAME=${{ secrets.PROJECT_NAME }}
+          PYTHONASYNCIODEBUG=${{ secrets.PYTHONASYNCIODEBUG || '0' }}
+          PYTHONPATH=${{ secrets.PYTHONPATH || '.' }}
+          REDIS_URL=${{ secrets.REDIS_URL || 'redis://redis:6379/0' }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          EOF
 
       - name: Run & Verify Health
         run: |
           docker run -d \
             --name backend-ci \
             -p 8000:8000 \
-            --env-file ./backend/.env \
+            --env-file .env \
             backend-ci:latest
 
           for i in {1..10}; do
@@ -151,23 +153,17 @@ jobs:
             sleep 3
           done
           echo "❌ Health check timed out"
+          docker logs backend-ci
           exit 1
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs backend-ci
 
       - name: Cleanup
         if: always()
         run: docker rm -f backend-ci 2>/dev/null || true
 
   # ── Frontend: production image smoke test (PR to main only) ──────────────
-  # Same principle — build the runner stage, run it, hit the health endpoint.
   frontend-smoke:
     needs: [ frontend-test ]
-    if: |
-      github.event_name == 'pull_request' &&
-      needs.frontend-test.result == 'success'
+    if: github.event_name == 'pull_request' && needs.frontend-test.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -187,7 +183,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
+            BACKEND_URL=${{ secrets.BACKEND_URL || 'http://localhost:8000' }}
 
       - name: Run & Verify Health
         run: |
@@ -205,11 +202,8 @@ jobs:
             sleep 3
           done
           echo "❌ Health check timed out"
+          docker logs frontend-ci
           exit 1
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs frontend-ci
 
       - name: Cleanup
         if: always()
