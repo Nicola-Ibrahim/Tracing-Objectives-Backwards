@@ -20,8 +20,16 @@ services:
     volumes:
       - ./backend:/app:cached       # edits reflect instantly
       - backend-storage:/app/storage
-    env_file:
-      - ./backend/.env
+    environment:
+      - PROJECT_NAME
+      - SECRET_KEY
+      - ENV
+      - DEBUG
+      - BACKEND_CORS_ORIGINS
+      - REDIS_URL
+      - LOG_LEVEL
+      - PYTHONASYNCIODEBUG
+      - PYTHONPATH
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -44,8 +52,10 @@ services:
       - ./frontend:/app:cached
       - /app/node_modules           # prevents host node_modules from
                                     # shadowing the container's node_modules
-    env_file:
-      - ./frontend/.env
+    environment:
+      - NEXT_PUBLIC_API_VERSION
+      - NODE_ENV
+      - BACKEND_URL
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s

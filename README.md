@@ -34,12 +34,21 @@ The system is designed as a **modular domain monolith** using FastAPI.
 
 ### Prerequisites
 - [Docker](https://www.docker.com/) & [Compose](https://docs.docker.com/compose/)
+- [Doppler CLI](https://docs.doppler.com/docs/install-cli) (for environment management)
 - [uv](https://github.com/astral-sh/uv) (for local python development)
 
 ### Quick Start
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
+1. **Setup Doppler**:
+   ```bash
+   doppler login
+   doppler setup
+   ```
+
+2. **Run with Docker Compose**:
+   ```bash
+   doppler run -- docker compose -f docker-compose.dev.yml up --build
+   ```
+
 - **REST API**: `http://localhost:8000`
 - **Interactive Docs**: `http://localhost:8000/docs`
 

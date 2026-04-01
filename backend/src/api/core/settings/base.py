@@ -13,22 +13,21 @@ class BaseSettings(BaseModel):
     VERSION: str = "1.0.0"
 
     # Security
-    SECRET_KEY: str = Field(
-        default_factory=lambda: os.getenv("SECRET_KEY", "temporary-secret-key-for-dev")
-    )
+    SECRET_KEY: str = Field(default_factory=lambda: os.getenv("SECRET_KEY"))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
     # Environment
-    ENV: str = Field(default_factory=lambda: os.getenv("ENV", "development"))
+    ENV: str = Field(default_factory=lambda: os.getenv("ENV"))
     DEBUG: bool = Field(
-        default_factory=lambda: os.getenv("DEBUG", "true").lower() == "true"
+        default_factory=lambda: (os.getenv("DEBUG") or "false").lower() == "true"
     )
 
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = Field(
         default_factory=lambda: [
             origin.strip()
-            for origin in os.getenv("BACKEND_CORS_ORIGINS", "*").split(",")
+            for origin in (os.getenv("BACKEND_CORS_ORIGINS") or "").split(",")
+            if origin.strip()
         ]
     )
 
@@ -39,17 +38,7 @@ class BaseSettings(BaseModel):
     )
 
     # Operations
-    LOG_LEVEL: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
+    LOG_LEVEL: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL"))
 
     # Redis
-    REDIS_URL: str = Field(
-        default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    )
-
-    @property
-    def is_production(self) -> bool:
-        return self.ENV.lower() == "production"
-
-    @property
-    def is_testing(self) -> bool:
-        return self.ENV.lower() == "testing"
+    REDIS_URL: str = Field(default_factory=lambda: os.getenv("REDIS_URL"))
