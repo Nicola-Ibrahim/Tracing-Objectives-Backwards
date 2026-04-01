@@ -59,6 +59,7 @@ jobs:
     steps:
       - name: Trigger Render Deploy
         run: |
+          [ -n "$DEPLOY_HOOK" ] || { echo "❌ DEPLOY_HOOK is empty — aborting"; exit 1; }
           echo "🚀 Releasing ${{ github.ref_name }}..."
           curl -fsSL "$DEPLOY_HOOK"
           echo "✅ Done"
