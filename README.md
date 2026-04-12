@@ -30,27 +30,37 @@ The system is designed as a **modular domain monolith** using FastAPI.
 
 ---
 
-## 🚦 Getting Started (Local)
+## 🚦 Development Workflow
 
-### Prerequisites
-- [Docker](https://www.docker.com/) & [Compose](https://docs.docker.com/compose/)
-- [Doppler CLI](https://docs.doppler.com/docs/install-cli) (for environment management)
-- [uv](https://github.com/astral-sh/uv) (for local python development)
+To streamline development, we use three core automation scripts.
 
-### Quick Start
-1. **Setup Doppler**:
-   ```bash
-   doppler login
-   doppler setup
-   ```
+### 1. One-Time Setup
+Run this once when you first clone the repository or on a new machine. It installs all necessary tools (`uv`, `pnpm`, `doppler`, etc.) and ensures your path is configured.
+```bash
+python3 scripts/bootstrap.py
+```
 
-2. **Run with Docker Compose**:
-   ```bash
-   doppler run -- docker compose -f docker-compose.dev.yml up --build
-   ```
+### 2. Daily Start (The Morning Routine) ☕
+Run this every morning to get your environment ready. It syncs dependencies, boots containers, and automatically launches your dev servers in new terminal tabs.
+```bash
+python3 scripts/setup_dev.py
+```
 
-- **REST API**: `http://localhost:8000`
+### 3. Reset Environment
+Run this when you switch branches or if your local state is out of sync. It refreshes secrets from Doppler and flushes the Redis cache.
+```bash
+python3 scripts/init_env.py
+```
+
+---
+
+## 🛠️ Infrastructure Overview
+
+- **REST API**: `http://localhost:8000` (FastAPI)
+- **Frontend**: `http://localhost:3000` (Next.js)
 - **Interactive Docs**: `http://localhost:8000/docs`
+- **Secret Management**: Powered by [Doppler](https://www.doppler.com/)
+- **Process Orchestration**: Docker Compose (`redis`, `nginx`)
 
 ---
 
