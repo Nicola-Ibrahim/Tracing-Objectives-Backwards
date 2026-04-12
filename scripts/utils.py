@@ -18,6 +18,10 @@ RESET = "\033[0m"
 INDENT_STEP = "  "
 INDENT_OUTPUT = "      "
 
+# --- Global Settings ---
+# Automatically detect if the user wants to skip all confirmations
+SKIP_CONFIRM = "-y" in sys.argv or "--yes" in sys.argv
+
 def log_header(text):
     """Prints a bold, high-contrast block header with consistent padding."""
     width = 60
@@ -58,19 +62,48 @@ def is_tool_installed(name):
 
 
 def run_command(
-    command, description=None, cwd=None, interactive=False, exit_on_error=True
+    command, description=None, cwd=None, interactive=False, stream=False, confirm=False, exit_on_error=True
 ):
     """
-    Consolidated shell command runner with enhanced formatting and nested indentation.
+    Consolidated shell command runner with enhanced formatting, optional real-time streaming,
+    and granular step-by-step confirmation prompts.
     """
     if description:
+        # If confirmation is requested and not bypassed, ask before logging the step
+        if confirm and not SKIP_CONFIRM:
+            if not confirm_action(f"Run step: {description}?"):
+                print(f"{INDENT_OUTPUT}{DIM}Skipped by user.{RESET}")
+                return False
+        
         log_step(description)
 
     try:
         if interactive:
-            # Run without capturing output to allow interactivity
+            # Run without capturing output to allow interactivity (e.g. doppler login)
             result = subprocess.run(command, shell=True, cwd=cwd)
+            returncode = result.returncode
+        elif stream:
+            # Stream output in real-time using Popen
+            process = subprocess.Popen(
+                command, 
+                shell=True, 
+                cwd=cwd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            # Read line by line
+            for line in process.stdout:
+                if line.strip():
+                    print(f"{INDENT_OUTPUT}{DIM}{line.strip()}{RESET}")
+            
+            process.wait()
+            returncode = process.returncode
         else:
+            # Batch mode (wait for completion before showing output)
             result = subprocess.run(
                 command, shell=True, cwd=cwd, capture_output=True, text=True
             )
@@ -79,8 +112,15 @@ def run_command(
                 # Deeply indent output for better visual separation
                 indented_output = "\n".join([f"{INDENT_OUTPUT}{DIM}{line}{RESET}" for line in result.stdout.strip().split("\n")])
                 print(indented_output)
+            
+            if result.returncode != 0 and result.stderr:
+                log_error("Raw error output:")
+                error_lines = "\n".join([f"{INDENT_OUTPUT}{RED}{line}{RESET}" for line in result.stderr.strip().split("\n")])
+                print(error_lines)
+            
+            returncode = result.returncode
 
-        if result.returncode == 0:
+        if returncode == 0:
             if description:
                 log_success(f"Successfully finished: {description}")
             return True
@@ -88,13 +128,8 @@ def run_command(
             if description:
                 log_error(f"Failed to complete: {description}")
             
-            if not interactive and result.stderr:
-                log_error("Raw error output:")
-                error_lines = "\n".join([f"{INDENT_OUTPUT}{RED}{line}{RESET}" for line in result.stderr.strip().split("\n")])
-                print(error_lines)
-                
             if exit_on_error:
-                sys.exit(result.returncode)
+                sys.exit(returncode)
             return False
 
     except Exception as e:
@@ -121,3 +156,13 @@ def launch_terminal_tab(command, title, cwd):
         log_warning(
             f"Auto-launch unsupported on this OS. Please run: {command} in {cwd} manually."
         )
+
+
+def confirm_action(prompt):
+    """Asks the user for a Y/n confirmation with consistent styling. Returns True if confirmed."""
+    try:
+        response = input(f"\n{BOLD}{YELLOW}❓ {prompt} (y/N): {RESET}").strip().lower()
+        return response == 'y'
+    except KeyboardInterrupt:
+        print("\n")
+        sys.exit(0)
