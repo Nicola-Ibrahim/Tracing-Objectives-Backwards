@@ -15,12 +15,12 @@ from utils import (
 def check_installed_tools():
     """Verify if core developer tools are already available."""
     log_header("Checking Installed Tools")
-    
+
     tools_to_check = {
         "uv": "uv --version",
         "doppler": "doppler --version",
     }
-    
+
     missing_tools = []
     for tool in tools_to_check:
         if not is_tool_installed(tool):
@@ -31,7 +31,7 @@ def check_installed_tools():
 
     if not missing_tools:
         log_success("All core tools are ready to go.")
-    
+
     return missing_tools
 
 
@@ -83,7 +83,8 @@ def install_missing_tools(missing_tools):
                     )
                 else:
                     run_command(
-                        'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
+                        'powershell -ExecutionPolicy ByPass -c "'
+                        'irm https://astral.sh/uv/install.ps1 | iex"',
                         "Installing uv Python tool (PowerShell)",
                     )
 
@@ -94,16 +95,14 @@ def install_missing_tools(missing_tools):
                         "Installing Doppler secrets (winget)",
                     )
                 else:
-                    log_warning(
-                        "Manual installation suggested for Doppler on Windows."
-                    )
+                    log_warning("Manual installation suggested for Doppler on Windows.")
                     log_info("Visit: https://docs.doppler.com/docs/install-cli")
 
 
 def setup_identity():
     """Handle authentication with platform services (Doppler)."""
     log_header("Identity & Secrets")
-    
+
     if is_tool_installed("doppler"):
         # Check if already logged in
         auth_check = subprocess.run(["doppler", "me"], capture_output=True, text=True)
@@ -122,17 +121,18 @@ def main():
 
     # 1. Check for tools
     missing = check_installed_tools()
-    
+
     # 2. Install if needed
     install_missing_tools(missing)
-    
+
     # 3. Setup authentication
     setup_identity()
 
     log_header("Environment Setup Complete")
     log_success("Bootstrap finished successfully!")
     log_info(
-        "NEXT STEP: Run 'python3 scripts/setup_dev.py' to launch your daily development workspace."
+        "NEXT STEP: Run 'python3 scripts/setup_dev.py' to launch "
+        "your daily development workspace."
     )
 
 

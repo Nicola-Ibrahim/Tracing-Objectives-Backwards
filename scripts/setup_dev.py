@@ -16,7 +16,7 @@ def boot_infrastructure(root_dir: Path):
     """Launch all background services and application containers."""
     log_header("Infrastructure & App Services")
     log_info("Launching all background services and application containers.")
-    
+
     if is_tool_installed("docker"):
         # Launching everything defined in docker-compose.yml
         # Note: using doppler run -- to inject secrets at build and runtime

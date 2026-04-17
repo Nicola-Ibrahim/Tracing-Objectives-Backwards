@@ -77,8 +77,9 @@ def run_command(
     exit_on_error=True,
 ):
     """
-    Consolidated shell command runner with enhanced formatting, optional real-time streaming,
-    and granular step-by-step confirmation prompts.
+    Consolidated shell command runner with enhanced formatting,
+    optional real-time streaming, and granular step-by-step
+    confirmation prompts.
     """
     if description:
         # If confirmation is requested and not bypassed, ask before logging the step
@@ -176,12 +177,16 @@ def launch_terminal_tab(command, title, cwd):
         log_success(f"Service '{title}' launched in a new terminal tab.")
     else:
         log_warning(
-            f"Auto-launch unsupported on this OS. Please run: {command} in {cwd} manually."
+            f"Auto-launch unsupported on this OS. Please run: {command} "
+            f"in {cwd} manually."
         )
 
 
 def confirm_action(prompt):
-    """Asks the user for a Y/n confirmation with consistent styling. Returns True if confirmed."""
+    """
+    Asks the user for a Y/n confirmation with consistent styling.
+    Returns True if confirmed.
+    """
     try:
         response = input(f"\n{BOLD}{YELLOW}❓ {prompt} (y/N): {RESET}").strip().lower()
         return response == "y"

@@ -30,7 +30,11 @@ def cleanup_caches(root_dir: Path):
     """Remove temporary runtime artifacts and Python caches."""
     log_info("Removing temporary runtime artifacts and Python caches.")
 
-    cleanup_cmd = r'find . -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".ruff_cache" \) -exec rm -rf {} + 2>/dev/null || true'
+    cleanup_cmd = (
+        r'find . -type d \( -name "__pycache__" '
+        r'-o -name ".pytest_cache" -o -name ".ruff_cache" \) '
+        r"-exec rm -rf {} + 2>/dev/null || true"
+    )
     run_command(
         cleanup_cmd,
         description="Clearing Python & Linter caches",

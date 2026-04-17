@@ -19,7 +19,7 @@ def sync_secrets(root_dir: Path):
     """Synchronize local secrets with the latest values from Doppler."""
     log_header("Secret Management")
     log_info("Pulling latest environment variables (.env) from Doppler.")
-    
+
     if is_tool_installed("doppler"):
         # Check if logged in
         login_check = subprocess.run("doppler me", shell=True, capture_output=True)
@@ -42,7 +42,7 @@ def reset_infrastructure(root_dir: Path):
     """Ensure all background infrastructure is in a clean state."""
     log_header("Infrastructure Reset")
     log_info("Ensuring all background infrastructure is in a clean state.")
-    
+
     try:
         # Try via docker-compose first
         run_command(
@@ -96,7 +96,8 @@ def main():
     log_header("Initialization Complete")
     log_success("Your environment is now synchronized and clean.")
     log_info(
-        "Ready to work? Run 'python3 scripts/setup_dev.py' to launch your morning workspace."
+        "Ready to work? Run 'python3 scripts/setup_dev.py' to launch "
+        "your morning workspace."
     )
 
 
