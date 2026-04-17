@@ -1,4 +1,4 @@
-name: 2. CD (Backend)
+name: 2. CD
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE: ${{ github.repository }}-backend
+  IMAGE: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -42,7 +42,7 @@ jobs:
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
           target: runner
           push: true
           tags: ${{ steps.meta.outputs.tags }}

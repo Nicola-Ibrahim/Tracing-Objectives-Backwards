@@ -51,20 +51,10 @@ def main():
         run_command(
             "uv sync",
             description="Updating backend dependencies (uv)",
-            cwd=root_dir / "backend",
+            cwd=root_dir,
         )
     else:
         log_error("uv not found. Backend dependencies could not be synchronized.")
-
-    # 4. Frontend Dependencies
-    if is_tool_installed("pnpm"):
-        run_command(
-            "pnpm install",
-            description="Updating frontend dependencies (pnpm)",
-            cwd=root_dir / "frontend",
-        )
-    else:
-        log_error("pnpm not found. Frontend dependencies could not be synchronized.")
 
     log_header("Workspace Ready")
     log_success("All containers are running in the background.")

@@ -1,7 +1,15 @@
 import platform
 import subprocess
 
-from utils import log_header, log_step, log_success, log_info, log_error, log_warning, is_tool_installed, run_command
+from utils import (
+    is_tool_installed,
+    log_error,
+    log_header,
+    log_info,
+    log_success,
+    log_warning,
+    run_command,
+)
 
 
 def main():
@@ -11,7 +19,6 @@ def main():
     os_type = platform.system()
     tools_to_check = {
         "uv": "uv --version",
-        "pnpm": "pnpm --version",
         "doppler": "doppler --version",
     }
 
@@ -34,18 +41,11 @@ def main():
             has_brew = is_tool_installed("brew")
 
             for tool in missing_tools:
-                if tool == "pnpm":
+                if tool == "uv":
                     if os_type == "Darwin" and has_brew:
-                        run_command("brew install pnpm", "Installing pnpm package manager (Homebrew)")
-                    else:
                         run_command(
-                            "curl -fsSL https://get.pnpm.io/install.sh | sh",
-                            "Installing pnpm package manager (curl)",
+                            "brew install uv", "Installing uv Python tool (Homebrew)"
                         )
-
-                elif tool == "uv":
-                    if os_type == "Darwin" and has_brew:
-                        run_command("brew install uv", "Installing uv Python tool (Homebrew)")
                     else:
                         run_command(
                             "curl -fsSL https://astral.sh/uv/install.sh | sh",
@@ -59,7 +59,9 @@ def main():
                             "Installing Doppler CLI secret manager (Homebrew)",
                         )
                     else:
-                        log_error("Manual installation required for Doppler on this system.")
+                        log_error(
+                            "Manual installation required for Doppler on this system."
+                        )
                         log_info("Visit: https://docs.doppler.com/docs/install-cli")
 
         # Windows
@@ -67,18 +69,11 @@ def main():
             has_winget = is_tool_installed("winget")
 
             for tool in missing_tools:
-                if tool == "pnpm":
+                if tool == "uv":
                     if has_winget:
-                        run_command("winget install pnpm", "Installing pnpm package manager (winget)")
-                    else:
                         run_command(
-                            "curl -fsSL https://get.pnpm.io/install.sh | sh",
-                            "Installing pnpm package manager (curl)",
+                            "winget install uv", "Installing uv Python tool (winget)"
                         )
-
-                elif tool == "uv":
-                    if has_winget:
-                        run_command("winget install uv", "Installing uv Python tool (winget)")
                     else:
                         run_command(
                             'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
@@ -88,10 +83,13 @@ def main():
                 elif tool == "doppler":
                     if has_winget:
                         run_command(
-                            "winget install doppler", "Installing Doppler secrets (winget)"
+                            "winget install doppler",
+                            "Installing Doppler secrets (winget)",
                         )
                     else:
-                        log_warning("Manual installation suggested for Doppler on Windows.")
+                        log_warning(
+                            "Manual installation suggested for Doppler on Windows."
+                        )
                         log_info("Visit: https://docs.doppler.com/docs/install-cli")
 
     # Post-check: ensure symbols are in PATH (often requires shell restart, but we can try)
@@ -109,7 +107,9 @@ def main():
 
     log_header("Environment Setup Complete")
     log_success("Bootstrap finished successfully!")
-    log_info("NEXT STEP: Run 'python3 scripts/setup_dev.py' to launch your daily development workspace.")
+    log_info(
+        "NEXT STEP: Run 'python3 scripts/setup_dev.py' to launch your daily development workspace."
+    )
 
 
 if __name__ == "__main__":

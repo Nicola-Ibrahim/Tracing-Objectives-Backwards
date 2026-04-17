@@ -1,43 +1,42 @@
-# Keep the production image clean and secrets out of layers.
-
-# Secrets — never bake these into an image
+# ── Secrets ─────────────────────────────────────────────────────────────
+# Never bake these into an image
 .env*
+.doppler
 
-# Python runtime artifacts
+
+# ── Python & Development Artifacts ──────────────────────────────────────
 .venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Test and lint artifacts
 .pytest_cache/
 .ruff_cache/
-htmlcov/
 .coverage
-tests/
+htmlcov/
+.agent/
+.DS_Store
 
-# 
+
+# ── Data & Large Models (Use volume mounts instead) ─────────────────────
+# We ignore these to keep the production image size minimal
 data/
 models/
 diagnostics/
 reports/
+storage/
+notebooks/
+tests/
 
-# Dev tooling
+
+# ── CI & Git Metadata ──────────────────────────────────────────────────
 .git/
 .github/
 *.md
 .dockerignore
 Dockerfile
-
-
-# Editor
+docker-compose.yml
 .vscode/
 .idea/
 
-# 
-*.py[cod]
-*$py.class
-.agent
-.DS_Store
 

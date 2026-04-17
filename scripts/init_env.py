@@ -1,7 +1,17 @@
 import shutil
 import subprocess
 
-from utils import log_header, log_step, log_success, log_info, log_error, log_warning, get_root_dir, is_tool_installed, run_command, confirm_action, RESET, DIM
+from utils import (
+    get_root_dir,
+    is_tool_installed,
+    log_error,
+    log_header,
+    log_info,
+    log_step,
+    log_success,
+    log_warning,
+    run_command,
+)
 
 
 def main():
@@ -21,9 +31,9 @@ def main():
 
         # Pull secrets to .env
         run_command(
-            "doppler secrets download --format env --no-file > .env", 
+            "doppler secrets download --format env --no-file > .env",
             description="Downloading .env file (Doppler)",
-            cwd=root_dir
+            cwd=root_dir,
         )
         log_success("Secrets successfully synchronized.")
     else:
@@ -35,19 +45,19 @@ def main():
     try:
         # Try via docker-compose first
         run_command(
-            "docker compose exec -T redis redis-cli flushall", 
+            "docker compose exec -T redis redis-cli flushall",
             description="Flushing Redis cache (Docker)",
-            cwd=root_dir, 
-            exit_on_error=False
+            cwd=root_dir,
+            exit_on_error=False,
         )
     except Exception:
         log_warning("Could not flush Redis. It might not be running.")
 
     # 3. Storage Cleanup
-    storage_dir = root_dir / "backend" / "storage"
+    storage_dir = root_dir / "storage"
     log_header("Ephemeral Data Cleanup")
     log_info("Cleaning local backend storage (uploads, logs, temporary files).")
-    
+
     if storage_dir.exists():
         log_step(f"Scrubbing database and temporary files in {storage_dir}")
         try:
@@ -67,7 +77,9 @@ def main():
 
     log_header("Initialization Complete")
     log_success("Your environment is now synchronized and clean.")
-    log_info("Ready to work? Run 'python3 scripts/setup_dev.py' to launch your morning workspace.")
+    log_info(
+        "Ready to work? Run 'python3 scripts/setup_dev.py' to launch your morning workspace."
+    )
 
 
 if __name__ == "__main__":

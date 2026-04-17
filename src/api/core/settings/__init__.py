@@ -27,8 +27,7 @@ def get_settings() -> BaseSettings:
         return DevelopmentSettings()
 
     raise ValueError(
-        f"Invalid environment: '{env}'. "
-        "Must be 'production' or 'development'."
+        f"Invalid environment: '{env}'. Must be 'production' or 'development'."
     )
 
 

@@ -22,6 +22,7 @@ INDENT_OUTPUT = "      "
 # Automatically detect if the user wants to skip all confirmations
 SKIP_CONFIRM = "-y" in sys.argv or "--yes" in sys.argv
 
+
 def log_header(text):
     """Prints a bold, high-contrast block header with consistent padding."""
     width = 60
@@ -30,21 +31,26 @@ def log_header(text):
     print(f"{BOLD}{BLUE} {text.upper()}{RESET}")
     print(f"{BOLD}{BLUE}{border}{RESET}\n")
 
+
 def log_step(text):
     """Prints a structured action step with indentation."""
     print(f"{INDENT_STEP}{BOLD}{CYAN}➤ {text}...{RESET}")
+
 
 def log_success(text):
     """Prints a success message with indentation."""
     print(f"{INDENT_STEP}{BOLD}{GREEN}✔ {text}{RESET}")
 
+
 def log_error(text):
     """Prints an error message with indentation."""
     print(f"{INDENT_STEP}{BOLD}{RED}✖ ERROR: {text}{RESET}")
 
+
 def log_warning(text):
     """Prints a warning message with indentation."""
     print(f"{INDENT_STEP}{BOLD}{YELLOW}⚠  {text}{RESET}")
+
 
 def log_info(text):
     """Prints an informational message with dim styling and indentation."""
@@ -62,7 +68,13 @@ def is_tool_installed(name):
 
 
 def run_command(
-    command, description=None, cwd=None, interactive=False, stream=False, confirm=False, exit_on_error=True
+    command,
+    description=None,
+    cwd=None,
+    interactive=False,
+    stream=False,
+    confirm=False,
+    exit_on_error=True,
 ):
     """
     Consolidated shell command runner with enhanced formatting, optional real-time streaming,
@@ -74,7 +86,7 @@ def run_command(
             if not confirm_action(f"Run step: {description}?"):
                 print(f"{INDENT_OUTPUT}{DIM}Skipped by user.{RESET}")
                 return False
-        
+
         log_step(description)
 
     try:
@@ -85,21 +97,21 @@ def run_command(
         elif stream:
             # Stream output in real-time using Popen
             process = subprocess.Popen(
-                command, 
-                shell=True, 
-                cwd=cwd, 
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.STDOUT, 
+                command,
+                shell=True,
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
             )
-            
+
             # Read line by line
             for line in process.stdout:
                 if line.strip():
                     print(f"{INDENT_OUTPUT}{DIM}{line.strip()}{RESET}")
-            
+
             process.wait()
             returncode = process.returncode
         else:
@@ -110,14 +122,24 @@ def run_command(
             # Only print output if it's not empty
             if result.stdout and result.stdout.strip():
                 # Deeply indent output for better visual separation
-                indented_output = "\n".join([f"{INDENT_OUTPUT}{DIM}{line}{RESET}" for line in result.stdout.strip().split("\n")])
+                indented_output = "\n".join(
+                    [
+                        f"{INDENT_OUTPUT}{DIM}{line}{RESET}"
+                        for line in result.stdout.strip().split("\n")
+                    ]
+                )
                 print(indented_output)
-            
+
             if result.returncode != 0 and result.stderr:
                 log_error("Raw error output:")
-                error_lines = "\n".join([f"{INDENT_OUTPUT}{RED}{line}{RESET}" for line in result.stderr.strip().split("\n")])
+                error_lines = "\n".join(
+                    [
+                        f"{INDENT_OUTPUT}{RED}{line}{RESET}"
+                        for line in result.stderr.strip().split("\n")
+                    ]
+                )
                 print(error_lines)
-            
+
             returncode = result.returncode
 
         if returncode == 0:
@@ -127,7 +149,7 @@ def run_command(
         else:
             if description:
                 log_error(f"Failed to complete: {description}")
-            
+
             if exit_on_error:
                 sys.exit(returncode)
             return False
@@ -162,7 +184,7 @@ def confirm_action(prompt):
     """Asks the user for a Y/n confirmation with consistent styling. Returns True if confirmed."""
     try:
         response = input(f"\n{BOLD}{YELLOW}❓ {prompt} (y/N): {RESET}").strip().lower()
-        return response == 'y'
+        return response == "y"
     except KeyboardInterrupt:
         print("\n")
         sys.exit(0)
