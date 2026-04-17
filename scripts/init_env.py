@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+from pathlib import Path
 
 from utils import (
     get_root_dir,
@@ -14,14 +15,11 @@ from utils import (
 )
 
 
-def main():
-    log_header("Environment Initialization")
-    log_info("Synchronizing local environment state with global settings.")
-    root_dir = get_root_dir()
-
-    # 1. Secret Management (Doppler)
+def sync_secrets(root_dir: Path):
+    """Synchronize local secrets with the latest values from Doppler."""
     log_header("Secret Management")
     log_info("Pulling latest environment variables (.env) from Doppler.")
+    
     if is_tool_installed("doppler"):
         # Check if logged in
         login_check = subprocess.run("doppler me", shell=True, capture_output=True)
@@ -39,9 +37,12 @@ def main():
     else:
         log_error("Doppler CLI not found. Manual .env setup required.")
 
-    # 2. Redis Reset
+
+def reset_infrastructure(root_dir: Path):
+    """Ensure all background infrastructure is in a clean state."""
     log_header("Infrastructure Reset")
     log_info("Ensuring all background infrastructure is in a clean state.")
+    
     try:
         # Try via docker-compose first
         run_command(
@@ -53,7 +54,9 @@ def main():
     except Exception:
         log_warning("Could not flush Redis. It might not be running.")
 
-    # 3. Storage Cleanup
+
+def cleanup_storage(root_dir: Path):
+    """Scrub local backend storage (uploads, logs, temporary files)."""
     storage_dir = root_dir / "storage"
     log_header("Ephemeral Data Cleanup")
     log_info("Cleaning local backend storage (uploads, logs, temporary files).")
@@ -74,6 +77,21 @@ def main():
     else:
         storage_dir.mkdir(parents=True, exist_ok=True)
         log_success("Clean storage directory created.")
+
+
+def main():
+    log_header("Environment Initialization")
+    log_info("Synchronizing local environment state with global settings.")
+    root_dir = get_root_dir()
+
+    # 1. Secret Management
+    sync_secrets(root_dir)
+
+    # 2. Redis Reset
+    reset_infrastructure(root_dir)
+
+    # 3. Storage Cleanup
+    cleanup_storage(root_dir)
 
     log_header("Initialization Complete")
     log_success("Your environment is now synchronized and clean.")

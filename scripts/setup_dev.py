@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from utils import (
     get_root_dir,
     is_tool_installed,
@@ -10,13 +12,11 @@ from utils import (
 )
 
 
-def main():
-    log_header("Environment Initialization")
-    root_dir = get_root_dir()
-
-    # 1. Boot Infrastructure (Docker)
+def boot_infrastructure(root_dir: Path):
+    """Launch all background services and application containers."""
     log_header("Infrastructure & App Services")
     log_info("Launching all background services and application containers.")
+    
     if is_tool_installed("docker"):
         # Launching everything defined in docker-compose.yml
         # Note: using doppler run -- to inject secrets at build and runtime
@@ -33,20 +33,22 @@ def main():
     else:
         log_error("Docker daemon is not running. Application startup failed.")
 
-    # 2. Force Environment Sync
-    # Note: init_env already has its own headers/logs
-    # Now that Docker is up, init_env will be able to flush Redis successfully
+
+def sync_environment(root_dir: Path):
+    """Synchronize environment variables and clean state."""
+    # Note: init_env already has its own internal headers/logs
     run_command(
         "python3 scripts/init_env.py",
         description="Initializing environment variables",
         cwd=root_dir,
     )
 
-    # 3. Dependency Sync
+
+def sync_dependencies(root_dir: Path):
+    """Ensure that local packages are up to date with the latest changes."""
     log_header("Dependency Synchronization")
     log_info("Ensuring that local packages are up to date with the latest changes.")
 
-    # 3. Backend Dependencies
     if is_tool_installed("uv"):
         run_command(
             "uv sync",
@@ -55,6 +57,20 @@ def main():
         )
     else:
         log_error("uv not found. Backend dependencies could not be synchronized.")
+
+
+def main():
+    log_header("Development Setup")
+    root_dir = get_root_dir()
+
+    # 1. Boot Infrastructure
+    boot_infrastructure(root_dir)
+
+    # 2. Sync Environment
+    sync_environment(root_dir)
+
+    # 3. Sync Dependencies
+    sync_dependencies(root_dir)
 
     log_header("Workspace Ready")
     log_success("All containers are running in the background.")
