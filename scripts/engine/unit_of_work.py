@@ -5,11 +5,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .system import get_root_dir
 from .ui import Logger
 
 
-class JobSkipped(Exception):
-    """Internal exception to gracefully skip a job block."""
+class WorkSkipped(Exception):
+    """Internal exception to gracefully skip a unit of work block."""
 
     pass
 
@@ -36,7 +37,7 @@ class Command:
         self.logger = logger
         self.cmd = cmd
         self.description = description
-        self.cwd = cwd
+        self.cwd = cwd or get_root_dir()
         self.interactive = interactive
         self.stream = stream
         self.confirm = confirm
@@ -119,23 +120,22 @@ class Command:
             return False
 
 
-class Job:
+class UnitOfWork:
     """
     Acts as a 'Unit of Work' providing a visual and behavioral context.
+    Each UnitOfWork represents an atomic, isolated block of execution.
     """
 
     def __init__(
         self,
         title: str,
         info: str | None = None,
-        confirm: bool = False,
     ):
         self.title = title
         self.info = info
-        self.confirm = confirm
         self.logger = Logger()
 
-    def __enter__(self):
+    def __enter__(self) -> "UnitOfWork":
         # 1. Display Header
         self.logger.header(self.title)
 
@@ -143,15 +143,10 @@ class Job:
         if self.info:
             self.logger.info(self.info)
 
-        # 3. Handle Confirmation
-        if self.confirm:
-            if not self.logger.confirm(f"Run step: {self.title}?"):
-                self.logger.info_step("Skipped by user.")
-                raise JobSkipped()
-
+        # 3. Handle Confirmation logic has been moved to Command level
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is JobSkipped:
+        if exc_type is WorkSkipped:
             return True
         return False

@@ -15,9 +15,9 @@ _RESET = "\033[0m"
 
 # --- Formatting Constants ---
 _INDENT_BASE = 2
-_STEP_LEVEL = 2        # 4 spaces
-_OUTPUT_LEVEL = 5       # 10 spaces (for command outputs/sub-steps)
-_CONFIRM_LEVEL = 2      # 4 spaces
+_STEP_LEVEL = 2  # 4 spaces
+_OUTPUT_LEVEL = 5  # 10 spaces (for command outputs/sub-steps)
+_CONFIRM_LEVEL = 2  # 4 spaces
 
 
 def _get_indent(level: int) -> str:
@@ -48,21 +48,21 @@ class Logger:
         """Logs a boxed, high-contrast, centered block header."""
         width = 62
         text = text.upper()
-        
+
         # Calculate centering
         content_width = len(text)
         if content_width > width - 4:
-            text = text[:width - 7] + "..."
+            text = text[: width - 7] + "..."
             content_width = len(text)
-            
+
         padding_total = width - content_width - 2
         pad_left = padding_total // 2
         pad_right = padding_total - pad_left
-        
+
         top = f"┌{'─' * (width - 2)}┐"
         middle = f"│{' ' * pad_left}{text}{' ' * pad_right}│"
         bottom = f"└{'─' * (width - 2)}┘"
-        
+
         self._logger.info(f"\n\n{_MAGENTA}{top}")
         self._logger.info(middle)
         self._logger.info(f"{bottom}{_RESET}")
@@ -134,6 +134,3 @@ class Logger:
         except KeyboardInterrupt:
             self._logger.info("\n")
             sys.exit(0)
-
-
-

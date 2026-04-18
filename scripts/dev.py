@@ -1,15 +1,13 @@
 import argparse
-from pathlib import Path
 
-from .utils.env_secrets import sync_secrets
-from .utils.infrastructure import (
+from .engine.ui import Logger
+from .tasks.env_secrets import sync_secrets
+from .tasks.infrastructure import (
     boot_infrastructure,
     reset_infrastructure,
     shutdown_services,
 )
-from .utils.system import get_root_dir
-from .utils.ui import Logger
-from .utils.workspace import (
+from .tasks.workspace import (
     audit_storage,
     cleanup_caches,
     cleanup_storage,
@@ -18,28 +16,28 @@ from .utils.workspace import (
 )
 
 
-def handle_up(root_dir: Path, skip_confirm: bool = False) -> bool:
+def handle_up(skip_confirm: bool = False) -> bool:
     """Full environment synchronization and startup."""
     logger = Logger()
     logger.header("Development Workspace: UP")
 
     # 1. Sync Secrets
-    if not sync_secrets(root_dir, skip_confirm=skip_confirm):
+    if not sync_secrets(skip_confirm=skip_confirm):
         return False
 
     # 2. Sync Dependencies
-    if not sync_dependencies(root_dir, skip_confirm=skip_confirm):
+    if not sync_dependencies(skip_confirm=skip_confirm):
         return False
 
     # 3. Boot Infrastructure
-    if not boot_infrastructure(root_dir, skip_confirm=skip_confirm):
+    if not boot_infrastructure(skip_confirm=skip_confirm):
         return False
 
     # 4. Infrastructure Reset (Flush Redis)
-    reset_infrastructure(root_dir, skip_confirm=skip_confirm)
+    reset_infrastructure(skip_confirm=skip_confirm)
 
     # 5. Storage Cleanup
-    cleanup_storage(root_dir, skip_confirm=skip_confirm)
+    cleanup_storage(skip_confirm=skip_confirm)
 
     logger.header("Workspace Ready")
     logger.success("All containers are running and environment is clean.")
@@ -47,23 +45,23 @@ def handle_up(root_dir: Path, skip_confirm: bool = False) -> bool:
     return True
 
 
-def handle_down(root_dir: Path, skip_confirm: bool = False) -> bool:
+def handle_down(skip_confirm: bool = False) -> bool:
     """Graceful shutdown and session cleanup."""
     logger = Logger()
     logger.header("Development Workspace: DOWN")
 
     # 1. Shutdown Services (Confirm if not -y)
     # We proceed even if Docker fail so that we can still clean caches
-    shutdown_services(root_dir, confirm=True, skip_confirm=skip_confirm)
+    shutdown_services(skip_confirm=skip_confirm)
 
     # 2. Cleanup Caches
-    cleanup_caches(root_dir, confirm=True, skip_confirm=skip_confirm)
+    cleanup_caches(skip_confirm=skip_confirm)
 
     # 3. Audit Storage
-    audit_storage(root_dir, confirm=True, skip_confirm=skip_confirm)
+    audit_storage(skip_confirm=skip_confirm)
 
     # 4. Summarize Work
-    summarize_work(root_dir, confirm=True, skip_confirm=skip_confirm)
+    summarize_work(skip_confirm=skip_confirm)
 
     logger.header("Shutdown Complete")
     logger.success("All background services have been terminated (where possible).")
@@ -94,12 +92,11 @@ Examples:
     )
 
     args = parser.parse_args()
-    root_dir = get_root_dir()
 
     if args.action == "up":
-        handle_up(root_dir, skip_confirm=args.yes)
+        handle_up(skip_confirm=args.yes)
     elif args.action == "down":
-        handle_down(root_dir, skip_confirm=args.yes)
+        handle_down(skip_confirm=args.yes)
 
 
 if __name__ == "__main__":
