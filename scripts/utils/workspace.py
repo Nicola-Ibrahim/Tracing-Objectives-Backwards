@@ -1,10 +1,7 @@
 import shutil
 from pathlib import Path
 
-from .shell import (
-    is_tool_installed,
-    run_command,
-)
+from .shell import is_tool_installed, run_command
 from .ui import (
     log_error,
     log_header,
@@ -14,23 +11,30 @@ from .ui import (
 )
 
 
-def sync_dependencies(root_dir: Path, skip_confirm: bool = False):
+def sync_dependencies(root_dir: Path, skip_confirm: bool = False) -> bool:
     """Ensure that local packages are up to date with the latest changes."""
     log_header("Dependency Synchronization")
     log_info("Ensuring that local packages are up to date with the latest changes.")
 
-    if is_tool_installed("uv"):
-        run_command(
-            "uv sync",
-            description="Updating backend dependencies (uv)",
-            cwd=root_dir,
-            skip_confirm=skip_confirm,
-        )
-    else:
+    if not is_tool_installed("uv"):
         log_error("uv not found. Backend dependencies could not be synchronized.")
+        return False
+
+    success = run_command(
+        "uv sync",
+        description="Updating backend dependencies (uv)",
+        cwd=root_dir,
+        skip_confirm=skip_confirm,
+    )
+
+    if not success:
+        log_error("Dependency sync failed. Try running 'uv sync' manually.")
+        return False
+
+    return True
 
 
-def cleanup_storage(root_dir: Path, skip_confirm: bool = False):
+def cleanup_storage(root_dir: Path, skip_confirm: bool = False) -> None:
     """Scrub local backend storage (uploads, logs, temporary files)."""
     storage_dir = root_dir / "storage"
     log_header("Ephemeral Data Cleanup")
@@ -53,7 +57,9 @@ def cleanup_storage(root_dir: Path, skip_confirm: bool = False):
         log_success("Clean storage directory created.")
 
 
-def cleanup_caches(root_dir: Path, confirm: bool = False, skip_confirm: bool = False):
+def cleanup_caches(
+    root_dir: Path, confirm: bool = False, skip_confirm: bool = False
+) -> None:
     """Remove temporary runtime artifacts and Python caches."""
     log_header("Cache Cleanup")
     log_info("Removing temporary runtime artifacts and Python caches.")
@@ -72,7 +78,9 @@ def cleanup_caches(root_dir: Path, confirm: bool = False, skip_confirm: bool = F
     )
 
 
-def audit_storage(root_dir: Path, confirm: bool = False, skip_confirm: bool = False):
+def audit_storage(
+    root_dir: Path, confirm: bool = False, skip_confirm: bool = False
+) -> None:
     """Report on the disk space used by AI datasets and artifacts."""
     log_header("Storage Audit")
     storage_paths = []
@@ -95,7 +103,9 @@ def audit_storage(root_dir: Path, confirm: bool = False, skip_confirm: bool = Fa
         log_info("No local storage/data directories found to audit.")
 
 
-def summarize_work(root_dir: Path, confirm: bool = False, skip_confirm: bool = False):
+def summarize_work(
+    root_dir: Path, confirm: bool = False, skip_confirm: bool = False
+) -> None:
     """Provide a quick briefing on uncommitted changes."""
     log_header("Work Summary")
     if is_tool_installed("git"):

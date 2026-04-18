@@ -67,35 +67,30 @@ Each module is an isolated **Bounded Context** with its own Domain and Infrastru
 We use automated scripts to manage your local environment and secret synchronization.
 
 ### 1. One-Time Setup
-Installs all core tools (`uv`, `doppler`, etc.) and prepares your path.
+Installs all core tools (`uv`, `doppler`, etc.) and prepares your session.
 ```bash
-python3 scripts/bootstrap.py
+python3 -m scripts.bootstrap
 ```
 
 ### 2. Daily Start (The Morning Routine) ☕
-The automated orchestrator for your daily workspace. It performs the "heavy lifting" by:
-1. **Dependency Sync**: Ensuring your local `uv` environment is locked and updated.
-2. **Infrastructure Boot**: Launching the core service stack (`redis`, `nginx`) using **Docker Compose** in the background.
-3. **Environment Tabs**: Automatically launching your dev servers in individual terminal tabs for immediate visibility.
+The automated orchestrator for your daily workspace. It performs:
+1. **Secret Sync**: Pulling latest `.env` values from Doppler.
+2. **Dependency Sync**: Ensuring the `uv` environment is locked and updated.
+3. **Infrastructure Boot**: Launching the core stack (`redis`, `nginx`) via Docker Compose.
+4. **Cleanup & Reset**: Flushing Redis and cleaning local storage/caches.
 ```bash
-python3 scripts/setup_dev.py
+python3 -m scripts.dev up
 ```
 
 ### 3. The Shutdown Routine 🌙
-Run this to gracefully terminate your session. It stops services and cleans up temporary runtime artifacts.
+Run this to gracefully terminate your session. It stops containers, audits storage, and summarizes uncommitted work.
 ```bash
-# Standard shutdown
-python3 scripts/shutdown_dev.py
-
-# Deep clean (wipes Docker volumes and all build caches)
-python3 scripts/shutdown_dev.py --clean
+python3 -m scripts.dev down
 ```
 
-### 4. Reset & Sync
-If secrets change or your environment feels "stale," run this to refresh Doppler secrets and flush Redis.
-```bash
-python3 scripts/init_env.py
-```
+> [!TIP]
+> Use the `-y` flag to skip all confirmation prompts:
+> `python3 -m scripts.dev up -y`
 
 ---
 
@@ -110,13 +105,12 @@ python3 scripts/init_env.py
 - **Interactive Docs**: `http://localhost:8000/docs` (Swagger UI)
 - **Monitoring**: Redis and Nginx logs are accessible via the terminal tabs launched by `setup_dev.py`.
 
-### 🧪 Code Quality (Poe)
-We use `poethepoet` for standard maintenance:
-- `uv run poe check`: One-tap suite running lint, format, and tests.
-- `uv run poe test`: Execute the pytest-based suite.
-- `uv run poe test-cov`: Run tests with coverage reports.
-- `uv run poe lint`: Run code quality checks (Ruff).
-- `uv run poe format`: Auto-format code.
+### 🧪 Code Quality & Testing
+We use `pytest` and `ruff` for code quality:
+- **Run Tests**: `uv run pytest`
+- **Check Linting**: `uv run ruff check .`
+- **Auto-Formatting**: `uv run ruff format .`
+- **Full Suite**: `uv run ruff check . && uv run pytest`
 
 ---
 

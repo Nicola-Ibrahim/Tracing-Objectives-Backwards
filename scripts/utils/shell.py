@@ -30,15 +30,15 @@ def is_tool_installed(name):
 
 
 def run_command(
-    command,
-    description=None,
-    cwd=None,
-    interactive=False,
-    stream=False,
-    confirm=False,
-    skip_confirm=False,
-    exit_on_error=True,
-):
+    command: str,
+    description: str | None = None,
+    cwd: str | Path | None = None,
+    interactive: bool = False,
+    stream: bool = False,
+    confirm: bool = False,
+    skip_confirm: bool = False,
+    exit_on_error: bool = False,
+) -> bool:
     """
     Consolidated shell command runner with enhanced formatting,
     optional real-time streaming, and granular step-by-step

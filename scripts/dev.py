@@ -18,18 +18,21 @@ from .utils.workspace import (
 )
 
 
-def handle_up(root_dir: Path, skip_confirm: bool = False):
+def handle_up(root_dir: Path, skip_confirm: bool = False) -> bool:
     """Full environment synchronization and startup."""
     log_header("Development Workspace: UP")
 
     # 1. Sync Secrets
-    sync_secrets(root_dir, skip_confirm=skip_confirm)
+    if not sync_secrets(root_dir, skip_confirm=skip_confirm):
+        return False
 
     # 2. Sync Dependencies
-    sync_dependencies(root_dir, skip_confirm=skip_confirm)
+    if not sync_dependencies(root_dir, skip_confirm=skip_confirm):
+        return False
 
     # 3. Boot Infrastructure
-    boot_infrastructure(root_dir, skip_confirm=skip_confirm)
+    if not boot_infrastructure(root_dir, skip_confirm=skip_confirm):
+        return False
 
     # 4. Infrastructure Reset (Flush Redis)
     reset_infrastructure(root_dir, skip_confirm=skip_confirm)
@@ -40,13 +43,15 @@ def handle_up(root_dir: Path, skip_confirm: bool = False):
     log_header("Workspace Ready")
     log_success("All containers are running and environment is clean.")
     print("\nEnjoy your coding session! ☕\n")
+    return True
 
 
-def handle_down(root_dir: Path, skip_confirm: bool = False):
+def handle_down(root_dir: Path, skip_confirm: bool = False) -> bool:
     """Graceful shutdown and session cleanup."""
     log_header("Development Workspace: DOWN")
 
     # 1. Shutdown Services (Confirm if not -y)
+    # We proceed even if Docker fail so that we can still clean caches
     shutdown_services(root_dir, confirm=True, skip_confirm=skip_confirm)
 
     # 2. Cleanup Caches
@@ -59,8 +64,9 @@ def handle_down(root_dir: Path, skip_confirm: bool = False):
     summarize_work(root_dir, confirm=True, skip_confirm=skip_confirm)
 
     log_header("Shutdown Complete")
-    log_success("All background services have been terminated.")
+    log_success("All background services have been terminated (where possible).")
     print("\nSee you tomorrow! 🌙\n")
+    return True
 
 
 def main():

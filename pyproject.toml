@@ -62,7 +62,6 @@ shell = "fastapi dev src/api/main.py"
 help = "SERVE: Run the FastAPI web server. Usage: poe serve"
 
 [tool.poe.tasks.test]
-
 cmd = "pytest"
 help = "TEST: Run the test suite with best-practice flags. Usage: poe test"
 

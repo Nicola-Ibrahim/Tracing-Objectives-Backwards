@@ -15,7 +15,7 @@ INDENT_STEP = "  "
 INDENT_OUTPUT = "      "
 
 
-def log_header(text):
+def log_header(text: str) -> None:
     """Prints a bold, high-contrast block header with consistent padding."""
     width = 60
     border = "━" * width
@@ -24,32 +24,32 @@ def log_header(text):
     print(f"{BOLD}{BLUE}{border}{RESET}\n")
 
 
-def log_step(text):
+def log_step(text: str) -> None:
     """Prints a structured action step with indentation."""
     print(f"{INDENT_STEP}{BOLD}{CYAN}➤ {text}...{RESET}")
 
 
-def log_success(text):
+def log_success(text: str) -> None:
     """Prints a success message with indentation."""
     print(f"{INDENT_STEP}{BOLD}{GREEN}✔ {text}{RESET}")
 
 
-def log_error(text):
+def log_error(text: str) -> None:
     """Prints an error message with indentation."""
     print(f"{INDENT_STEP}{BOLD}{RED}✖ ERROR: {text}{RESET}")
 
 
-def log_warning(text):
+def log_warning(text: str) -> None:
     """Prints a warning message with indentation."""
     print(f"{INDENT_STEP}{BOLD}{YELLOW}⚠  {text}{RESET}")
 
 
-def log_info(text):
+def log_info(text: str) -> None:
     """Prints an informational message with dim styling and indentation."""
     print(f"{INDENT_STEP}{DIM}{CYAN}ℹ {text}{RESET}")
 
 
-def confirm_action(prompt, skip_confirm=False):
+def confirm_action(prompt: str, skip_confirm: bool = False) -> bool:
     """
     Asks the user for a Y/n confirmation with consistent styling.
     Returns True if confirmed or if skip_confirm is True.

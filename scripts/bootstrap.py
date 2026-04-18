@@ -13,7 +13,7 @@ from .utils.ui import (
 )
 
 
-def check_installed_tools():
+def check_installed_tools() -> list[str]:
     """Verify if core developer tools are already available."""
     log_header("Checking Installed Tools")
 
@@ -22,7 +22,7 @@ def check_installed_tools():
         "doppler": "doppler --version",
     }
 
-    missing_tools = []
+    missing_tools: list[str] = []
     for tool in tools_to_check:
         if not is_tool_installed(tool):
             log_warning(f"{tool} is NOT installed.")
@@ -36,7 +36,7 @@ def check_installed_tools():
     return missing_tools
 
 
-def install_missing_tools(missing_tools):
+def install_missing_tools(missing_tools: list[str]) -> None:
     """Orchestrate the installation of missing tools based on OS."""
     if not missing_tools:
         return
@@ -98,7 +98,8 @@ def install_missing_tools(missing_tools):
                     log_info("Visit: https://docs.doppler.com/docs/install-cli")
 
 
-def main():
+def main() -> bool:
+    """Entry point for the environment bootstrap process."""
     log_header("Environment Bootstrap")
     log_info("Ensuring all core developer tools are installed and configured.")
 
@@ -109,7 +110,9 @@ def main():
     install_missing_tools(missing)
 
     # 3. Setup authentication (passing skip_confirm as False for initial bootstrap)
-    setup_identity(skip_confirm=False)
+    if not setup_identity(skip_confirm=False):
+        log_error("Initial identity setup failed.")
+        return False
 
     log_header("Environment Setup Complete")
     log_success("Bootstrap finished successfully!")
@@ -117,6 +120,7 @@ def main():
         "NEXT STEP: Run 'python3 -m scripts.dev up' to launch "
         "your daily development workspace."
     )
+    return True
 
 
 if __name__ == "__main__":
