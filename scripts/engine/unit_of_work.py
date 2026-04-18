@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,7 @@ class Command:
 
     def __init__(
         self,
-        logger: Logger,
+        ctx: UnitOfWork | Logger,
         cmd: str | None = None,
         description: str | None = None,
         cwd: str | Path | None = None,
@@ -34,7 +35,14 @@ class Command:
         exit_on_error: bool = False,
         **options: Any,
     ):
-        self.logger = logger
+        # Context extraction
+        if isinstance(ctx, UnitOfWork):
+            self.logger = ctx.logger
+            self.uow = ctx
+        else:
+            self.logger = ctx
+            self.uow = None
+
         self.cmd = cmd
         self.description = description
         self.cwd = cwd or get_root_dir()
@@ -48,6 +56,10 @@ class Command:
 
         if self.cmd:
             self.success = self._execute()
+
+        # Register result with UnitOfWork if present
+        if self.uow:
+            self.uow.register_result(self)
 
     def _execute(self) -> bool:
         """Internal execution engine."""
@@ -134,8 +146,16 @@ class UnitOfWork:
         self.title = title
         self.info = info
         self.logger = Logger()
+        self.results: list[Command] = []
+        self._start_time: float | None = None
+
+    def register_result(self, cmd: Command) -> None:
+        """Capture the result of a command run within this unit."""
+        self.results.append(cmd)
 
     def __enter__(self) -> "UnitOfWork":
+        self._start_time = time.time()
+
         # 1. Display Header
         self.logger.header(self.title)
 
@@ -147,6 +167,24 @@ class UnitOfWork:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        duration = time.time() - self._start_time if self._start_time else 0
+
+        # Don't show summary if work was skipped
         if exc_type is WorkSkipped:
             return True
+
+        # Aggregate Result
+        if self.results:
+            success_count = sum(1 for r in self.results if r.success)
+            total_count = len(self.results)
+            all_ok = success_count == total_count
+
+            status_msg = f"{self.title} completed"
+            detail_msg = f"({success_count}/{total_count} actions, {duration:.1f}s)"
+
+            if all_ok:
+                self.logger.success(f"{status_msg} {detail_msg}")
+            else:
+                self.logger.error(f"{status_msg} with failures {detail_msg}")
+
         return False

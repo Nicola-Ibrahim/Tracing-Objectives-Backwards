@@ -1,4 +1,3 @@
-
 from ..engine.system import is_tool_installed
 from ..engine.unit_of_work import Command, UnitOfWork
 
@@ -22,7 +21,6 @@ def boot_infrastructure(skip_confirm: bool = False) -> bool:
     with UnitOfWork(
         "Infrastructure & App Services",
         info="Launching all background services and application containers.",
-        confirm=False,
     ) as work:
         if not is_tool_installed("docker"):
             work.logger.error("Docker CLI not found. Please install Docker Desktop.")
@@ -43,7 +41,7 @@ def boot_infrastructure(skip_confirm: bool = False) -> bool:
             work.logger.warning("Doppler not found. Using local environment only.")
 
         Command(
-            work.logger,
+            work,
             cmd=cmd,
             description="Booting all Docker containers",
             stream=True,
@@ -69,7 +67,7 @@ def shutdown_services(skip_confirm: bool = False) -> bool:
             return True
 
         Command(
-            work.logger,
+            work,
             cmd="docker compose down",
             description="Stopping all Docker containers",
             confirm=True,
@@ -83,7 +81,6 @@ def reset_infrastructure(skip_confirm: bool = False) -> bool:
     with UnitOfWork(
         "Infrastructure Reset",
         info="Ensuring all background infrastructure is in a clean state.",
-        confirm=False,
     ) as work:
         if not is_tool_installed("docker") or not _is_docker_daemon_running():
             work.logger.warning("Docker unavailable. Skipping infrastructure reset.")
@@ -92,7 +89,7 @@ def reset_infrastructure(skip_confirm: bool = False) -> bool:
         try:
             # Try via docker-compose first
             Command(
-                work.logger,
+                work,
                 cmd="docker compose exec -T redis redis-cli flushall",
                 description="Flushing Redis cache (Docker)",
                 confirm=True,

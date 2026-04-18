@@ -1,5 +1,4 @@
 import shutil
-from pathlib import Path
 
 from ..engine.system import get_root_dir, is_tool_installed
 from ..engine.unit_of_work import Command, UnitOfWork
@@ -18,7 +17,7 @@ def sync_dependencies(skip_confirm: bool = False) -> bool:
             return False
 
         cmd = Command(
-            work.logger,
+            work,
             cmd="uv sync",
             description="Updating backend dependencies (uv)",
             skip_confirm=skip_confirm,
@@ -72,7 +71,7 @@ def cleanup_caches(skip_confirm: bool = False) -> None:
             r"-exec rm -rf {} + 2>/dev/null || true"
         )
         Command(
-            work.logger,
+            work,
             cmd=cleanup_cmd,
             description="Clearing Python & Linter caches",
             confirm=True,
@@ -98,7 +97,7 @@ def audit_storage(skip_confirm: bool = False) -> None:
             )
             audit_cmd = f"du -sh {' '.join(storage_paths)}"
             Command(
-                work.logger,
+                work,
                 cmd=audit_cmd,
                 description="Auditing local storage size",
                 confirm=True,
@@ -118,7 +117,7 @@ def summarize_work(skip_confirm: bool = False) -> None:
                 "Checking for uncommitted changes before closing the session."
             )
             Command(
-                work.logger,
+                work,
                 cmd="git status -s",
                 description="Listing uncommitted files",
                 confirm=True,

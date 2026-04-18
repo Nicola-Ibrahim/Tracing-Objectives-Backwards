@@ -21,7 +21,7 @@ def setup_identity(skip_confirm: bool = False) -> bool:
 
         work.logger.info("Launching Doppler interactive login flow.")
         cmd = Command(
-            work.logger,
+            work,
             cmd="doppler login",
             description="Logging into Doppler CLI",
             interactive=True,
@@ -53,7 +53,7 @@ def sync_secrets(skip_confirm: bool = False) -> bool:
                 return False
 
         cmd = Command(
-            work.logger,
+            work,
             cmd="doppler secrets download --format env --no-file > .env",
             description="Downloading .env file (Doppler)",
             skip_confirm=skip_confirm,

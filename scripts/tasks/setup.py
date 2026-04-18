@@ -61,20 +61,20 @@ def _install_mac(work: UnitOfWork, tools: list[str]) -> None:
         if tool == "uv":
             if has_brew:
                 Command(
-                    work.logger,
+                    work,
                     cmd="brew install uv",
                     description="Installing uv (Homebrew)",
                 )
             else:
                 Command(
-                    work.logger,
+                    work,
                     cmd="curl -fsSL https://astral.sh/uv/install.sh | sh",
                     description="Installing uv (curl)",
                 )
         elif tool == "doppler":
             if has_brew:
                 Command(
-                    work.logger,
+                    work,
                     cmd="brew install dopplerhq/cli/doppler",
                     description="Installing Doppler CLI (Homebrew)",
                 )
@@ -88,7 +88,7 @@ def _install_linux(work: UnitOfWork, tools: list[str]) -> None:
     for tool in tools:
         if tool == "uv":
             Command(
-                work.logger,
+                work,
                 cmd="curl -fsSL https://astral.sh/uv/install.sh | sh",
                 description="Installing uv (curl)",
             )
@@ -105,13 +105,13 @@ def _install_windows(work: UnitOfWork, tools: list[str]) -> None:
         if tool == "uv":
             if has_winget:
                 Command(
-                    work.logger,
+                    work,
                     cmd="winget install uv",
                     description="Installing uv (winget)",
                 )
             else:
                 Command(
-                    work.logger,
+                    work,
                     cmd='powershell -ExecutionPolicy ByPass -c "'
                     'irm https://astral.sh/uv/install.ps1 | iex"',
                     description="Installing uv (PowerShell)",
@@ -119,7 +119,7 @@ def _install_windows(work: UnitOfWork, tools: list[str]) -> None:
         elif tool == "doppler":
             if has_winget:
                 Command(
-                    work.logger,
+                    work,
                     cmd="winget install doppler",
                     description="Installing Doppler CLI (winget)",
                 )
