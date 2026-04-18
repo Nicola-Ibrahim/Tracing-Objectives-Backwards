@@ -7,8 +7,8 @@ from .utils.infrastructure import (
     reset_infrastructure,
     shutdown_services,
 )
-from .utils.shell import get_root_dir
-from .utils.ui import logger
+from .utils.system import get_root_dir
+from .utils.ui import Logger
 from .utils.workspace import (
     audit_storage,
     cleanup_caches,
@@ -20,6 +20,7 @@ from .utils.workspace import (
 
 def handle_up(root_dir: Path, skip_confirm: bool = False) -> bool:
     """Full environment synchronization and startup."""
+    logger = Logger()
     logger.header("Development Workspace: UP")
 
     # 1. Sync Secrets
@@ -48,6 +49,7 @@ def handle_up(root_dir: Path, skip_confirm: bool = False) -> bool:
 
 def handle_down(root_dir: Path, skip_confirm: bool = False) -> bool:
     """Graceful shutdown and session cleanup."""
+    logger = Logger()
     logger.header("Development Workspace: DOWN")
 
     # 1. Shutdown Services (Confirm if not -y)

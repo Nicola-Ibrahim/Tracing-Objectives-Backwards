@@ -1,15 +1,16 @@
 import platform
 
 from .utils.env_secrets import setup_identity
-from .utils.shell import (
+from .utils.system import (
     is_tool_installed,
-    run_command,
 )
-from .utils.ui import logger
+from .utils.jobs import Job, Command
+from .utils.ui import Logger
 
 
 def check_installed_tools() -> list[str]:
     """Verify if core developer tools are already available."""
+    logger = Logger()
     logger.header("Checking Installed Tools")
 
     tools_to_check = {
@@ -37,66 +38,77 @@ def install_missing_tools(missing_tools: list[str]) -> None:
         return
 
     os_type = platform.system()
-    logger.header(f"Installing missing tools: {', '.join(missing_tools)}")
+    with Job(
+        f"Tool Installation: {', '.join(missing_tools)}",
+        info=f"Orchestrating the installation of missing tools for {os_type}.",
+    ) as job:
+        # Linux / macOS (Unix-like)
+        if os_type in ["Linux", "Darwin"]:
+            has_brew = is_tool_installed("brew")
 
-    # Linux / macOS (Unix-like)
-    if os_type in ["Linux", "Darwin"]:
-        has_brew = is_tool_installed("brew")
+            for tool in missing_tools:
+                if tool == "uv":
+                    if os_type == "Darwin" and has_brew:
+                        Command(
+                            job.logger,
+                            cmd="brew install uv",
+                            description="Installing uv Python tool (Homebrew)",
+                        )
+                    else:
+                        Command(
+                            job.logger,
+                            cmd="curl -fsSL https://astral.sh/uv/install.sh | sh",
+                            description="Installing uv Python tool (curl)",
+                        )
 
-        for tool in missing_tools:
-            if tool == "uv":
-                if os_type == "Darwin" and has_brew:
-                    run_command(
-                        "brew install uv", "Installing uv Python tool (Homebrew)"
-                    )
-                else:
-                    run_command(
-                        "curl -fsSL https://astral.sh/uv/install.sh | sh",
-                        "Installing uv Python tool (curl)",
-                    )
+                elif tool == "doppler":
+                    if os_type == "Darwin" and has_brew:
+                        Command(
+                            job.logger,
+                            cmd="brew install dopplerhq/cli/doppler",
+                            description="Installing Doppler CLI secret manager (Homebrew)",
+                        )
+                    else:
+                        job.logger.header("Manual Setup Required")
+                        job.logger.info("Visit: https://docs.doppler.com/docs/install-cli")
 
-            elif tool == "doppler":
-                if os_type == "Darwin" and has_brew:
-                    run_command(
-                        "brew install dopplerhq/cli/doppler",
-                        "Installing Doppler CLI secret manager (Homebrew)",
-                    )
-                else:
-                    logger.header("Manual Setup Required")
-                    logger.info("Visit: https://docs.doppler.com/docs/install-cli")
+        # Windows
+        elif os_type == "Windows":
+            has_winget = is_tool_installed("winget")
 
-    # Windows
-    elif os_type == "Windows":
-        has_winget = is_tool_installed("winget")
+            for tool in missing_tools:
+                if tool == "uv":
+                    if has_winget:
+                        Command(
+                            job.logger,
+                            cmd="winget install uv",
+                            description="Installing uv Python tool (winget)",
+                        )
+                    else:
+                        Command(
+                            job.logger,
+                            cmd='powershell -ExecutionPolicy ByPass -c "'
+                            'irm https://astral.sh/uv/install.ps1 | iex"',
+                            description="Installing uv Python tool (PowerShell)",
+                        )
 
-        for tool in missing_tools:
-            if tool == "uv":
-                if has_winget:
-                    run_command(
-                        "winget install uv", "Installing uv Python tool (winget)"
-                    )
-                else:
-                    run_command(
-                        'powershell -ExecutionPolicy ByPass -c "'
-                        'irm https://astral.sh/uv/install.ps1 | iex"',
-                        "Installing uv Python tool (PowerShell)",
-                    )
-
-            elif tool == "doppler":
-                if has_winget:
-                    run_command(
-                        "winget install doppler",
-                        "Installing Doppler secrets (winget)",
-                    )
-                else:
-                    logger.warning(
-                        "Manual installation suggested for Doppler on Windows."
-                    )
-                    logger.info("Visit: https://docs.doppler.com/docs/install-cli")
+                elif tool == "doppler":
+                    if has_winget:
+                        Command(
+                            job.logger,
+                            cmd="winget install doppler",
+                            description="Installing Doppler secrets (winget)",
+                        )
+                    else:
+                        job.logger.warning(
+                            "Manual installation suggested for Doppler on Windows."
+                        )
+                        job.logger.info("Visit: https://docs.doppler.com/docs/install-cli")
 
 
 def main() -> bool:
     """Entry point for the environment bootstrap process."""
+    logger = Logger()
     logger.header("Environment Bootstrap")
     logger.info("Ensuring all core developer tools are installed and configured.")
 

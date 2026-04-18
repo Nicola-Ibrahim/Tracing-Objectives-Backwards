@@ -136,5 +136,4 @@ class Logger:
             sys.exit(0)
 
 
-# singleton instance
-logger = Logger()
+

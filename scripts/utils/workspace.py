@@ -1,9 +1,8 @@
 import shutil
 from pathlib import Path
 
-from .shell import is_tool_installed, run_command
-from .ui import logger
-from .jobs import Job
+from .system import is_tool_installed
+from .jobs import Job, Command
 
 
 def sync_dependencies(root_dir: Path, skip_confirm: bool = False) -> bool:
@@ -11,20 +10,21 @@ def sync_dependencies(root_dir: Path, skip_confirm: bool = False) -> bool:
     with Job(
         "Dependency Synchronization",
         info="Ensuring that local packages are up to date with the latest changes.",
-    ):
+    ) as job:
         if not is_tool_installed("uv"):
-            logger.error("uv not found. Backend dependencies could not be synchronized.")
+            job.logger.error("uv not found. Backend dependencies could not be synchronized.")
             return False
 
-        success = run_command(
-            "uv sync",
+        cmd = Command(
+            job.logger,
+            cmd="uv sync",
             description="Updating backend dependencies (uv)",
             cwd=root_dir,
             skip_confirm=skip_confirm,
         )
 
-        if not success:
-            logger.error("Dependency sync failed. Try running 'uv sync' manually.")
+        if not cmd.success:
+            job.logger.error("Dependency sync failed. Try running 'uv sync' manually.")
             return False
 
     return True
@@ -37,7 +37,7 @@ def cleanup_storage(root_dir: Path, skip_confirm: bool = False) -> None:
         "Ephemeral Data Cleanup",
         info="Cleaning local backend storage (uploads, logs, temporary files).",
         confirm=False,
-    ):
+    ) as job:
         if storage_dir.exists():
             try:
                 for item in storage_dir.iterdir():
@@ -47,12 +47,12 @@ def cleanup_storage(root_dir: Path, skip_confirm: bool = False) -> None:
                         item.unlink()
                 # Ensure it stays as a directory
                 storage_dir.mkdir(exist_ok=True)
-                logger.success("Backend storage is now clean.")
+                job.logger.success("Backend storage is now clean.")
             except Exception as e:
-                logger.error(f"Failed to scrub storage: {str(e)}")
+                job.logger.error(f"Failed to scrub storage: {str(e)}")
         else:
             storage_dir.mkdir(parents=True, exist_ok=True)
-            logger.success("Clean storage directory created.")
+            job.logger.success("Clean storage directory created.")
 
 
 def cleanup_caches(
@@ -63,14 +63,15 @@ def cleanup_caches(
         "Cache Cleanup",
         info="Removing temporary runtime artifacts and Python caches.",
         confirm=confirm,
-    ):
+    ) as job:
         cleanup_cmd = (
             r'find . -type d \( -name "__pycache__" '
             r'-o -name ".pytest_cache" -o -name ".ruff_cache" \) '
             r"-exec rm -rf {} + 2>/dev/null || true"
         )
-        run_command(
-            cleanup_cmd,
+        Command(
+            job.logger,
+            cmd=cleanup_cmd,
             description="Clearing Python & Linter caches",
             cwd=root_dir,
             skip_confirm=skip_confirm,
@@ -84,7 +85,7 @@ def audit_storage(
     with Job(
         "Storage Audit",
         confirm=confirm,
-    ):
+    ) as job:
         storage_paths = []
         if (root_dir / "storage").exists():
             storage_paths.append("storage")
@@ -92,16 +93,17 @@ def audit_storage(
             storage_paths.append("data")
 
         if storage_paths:
-            logger.info("Calculating disk space used by AI datasets and artifacts.")
+            job.logger.info("Calculating disk space used by AI datasets and artifacts.")
             audit_cmd = f"du -sh {' '.join(storage_paths)}"
-            run_command(
-                audit_cmd,
+            Command(
+                job.logger,
+                cmd=audit_cmd,
                 description="Auditing local storage size",
                 cwd=root_dir,
                 skip_confirm=skip_confirm,
             )
         else:
-            logger.info("No local storage/data directories found to audit.")
+            job.logger.info("No local storage/data directories found to audit.")
 
 
 def summarize_work(
@@ -111,15 +113,16 @@ def summarize_work(
     with Job(
         "Work Summary",
         confirm=confirm,
-    ):
+    ) as job:
         if is_tool_installed("git"):
-            logger.info("Checking for uncommitted changes before closing the session.")
-            run_command(
-                "git status -s",
+            job.logger.info("Checking for uncommitted changes before closing the session.")
+            Command(
+                job.logger,
+                cmd="git status -s",
                 description="Listing uncommitted files",
                 cwd=root_dir,
                 skip_confirm=skip_confirm,
             )
-            logger.warning("Don't forget to commit your changes if you're done!")
+            job.logger.warning("Don't forget to commit your changes if you're done!")
         else:
-            logger.error("Git not found. Could not generate workspace summary.")
+            job.logger.error("Git not found. Could not generate workspace summary.")
