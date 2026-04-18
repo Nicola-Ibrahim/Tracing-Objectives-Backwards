@@ -2,22 +2,16 @@ import shutil
 from pathlib import Path
 
 from .shell import is_tool_installed, run_command
-from .ui import (
-    log_error,
-    log_header,
-    log_info,
-    log_success,
-    log_warning,
-)
+from .ui import logger
 
 
 def sync_dependencies(root_dir: Path, skip_confirm: bool = False) -> bool:
     """Ensure that local packages are up to date with the latest changes."""
-    log_header("Dependency Synchronization")
-    log_info("Ensuring that local packages are up to date with the latest changes.")
+    logger.header("Dependency Synchronization")
+    logger.info("Ensuring that local packages are up to date with the latest changes.")
 
     if not is_tool_installed("uv"):
-        log_error("uv not found. Backend dependencies could not be synchronized.")
+        logger.error("uv not found. Backend dependencies could not be synchronized.")
         return False
 
     success = run_command(
@@ -28,7 +22,7 @@ def sync_dependencies(root_dir: Path, skip_confirm: bool = False) -> bool:
     )
 
     if not success:
-        log_error("Dependency sync failed. Try running 'uv sync' manually.")
+        logger.error("Dependency sync failed. Try running 'uv sync' manually.")
         return False
 
     return True
@@ -37,8 +31,8 @@ def sync_dependencies(root_dir: Path, skip_confirm: bool = False) -> bool:
 def cleanup_storage(root_dir: Path, skip_confirm: bool = False) -> None:
     """Scrub local backend storage (uploads, logs, temporary files)."""
     storage_dir = root_dir / "storage"
-    log_header("Ephemeral Data Cleanup")
-    log_info("Cleaning local backend storage (uploads, logs, temporary files).")
+    logger.header("Ephemeral Data Cleanup")
+    logger.info("Cleaning local backend storage (uploads, logs, temporary files).")
 
     if storage_dir.exists():
         try:
@@ -49,20 +43,20 @@ def cleanup_storage(root_dir: Path, skip_confirm: bool = False) -> None:
                     item.unlink()
             # Ensure it stays as a directory
             storage_dir.mkdir(exist_ok=True)
-            log_success("Backend storage is now clean.")
+            logger.success("Backend storage is now clean.")
         except Exception as e:
-            log_error(f"Failed to scrub storage: {str(e)}")
+            logger.error(f"Failed to scrub storage: {str(e)}")
     else:
         storage_dir.mkdir(parents=True, exist_ok=True)
-        log_success("Clean storage directory created.")
+        logger.success("Clean storage directory created.")
 
 
 def cleanup_caches(
     root_dir: Path, confirm: bool = False, skip_confirm: bool = False
 ) -> None:
     """Remove temporary runtime artifacts and Python caches."""
-    log_header("Cache Cleanup")
-    log_info("Removing temporary runtime artifacts and Python caches.")
+    logger.header("Cache Cleanup")
+    logger.info("Removing temporary runtime artifacts and Python caches.")
 
     cleanup_cmd = (
         r'find . -type d \( -name "__pycache__" '
@@ -82,7 +76,7 @@ def audit_storage(
     root_dir: Path, confirm: bool = False, skip_confirm: bool = False
 ) -> None:
     """Report on the disk space used by AI datasets and artifacts."""
-    log_header("Storage Audit")
+    logger.header("Storage Audit")
     storage_paths = []
     if (root_dir / "storage").exists():
         storage_paths.append("storage")
@@ -90,7 +84,7 @@ def audit_storage(
         storage_paths.append("data")
 
     if storage_paths:
-        log_info("Calculating disk space used by AI datasets and artifacts.")
+        logger.info("Calculating disk space used by AI datasets and artifacts.")
         audit_cmd = f"du -sh {' '.join(storage_paths)}"
         run_command(
             audit_cmd,
@@ -100,16 +94,16 @@ def audit_storage(
             skip_confirm=skip_confirm,
         )
     else:
-        log_info("No local storage/data directories found to audit.")
+        logger.info("No local storage/data directories found to audit.")
 
 
 def summarize_work(
     root_dir: Path, confirm: bool = False, skip_confirm: bool = False
 ) -> None:
     """Provide a quick briefing on uncommitted changes."""
-    log_header("Work Summary")
+    logger.header("Work Summary")
     if is_tool_installed("git"):
-        log_info("Checking for uncommitted changes before closing the session.")
+        logger.info("Checking for uncommitted changes before closing the session.")
         run_command(
             "git status -s",
             description="Listing uncommitted files",
@@ -117,6 +111,6 @@ def summarize_work(
             confirm=confirm,
             skip_confirm=skip_confirm,
         )
-        log_warning("Don't forget to commit your changes if you're done!")
+        logger.warning("Don't forget to commit your changes if you're done!")
     else:
-        log_error("Git not found. Could not generate workspace summary.")
+        logger.error("Git not found. Could not generate workspace summary.")

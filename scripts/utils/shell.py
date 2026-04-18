@@ -1,20 +1,9 @@
-import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from .ui import (
-    DIM,
-    INDENT_OUTPUT,
-    RED,
-    RESET,
-    confirm_action,
-    log_error,
-    log_step,
-    log_success,
-    log_warning,
-)
+from .ui import logger
 
 
 def get_root_dir():
@@ -47,11 +36,11 @@ def run_command(
     if description:
         # If confirmation is requested, check skip_confirm or ask user
         if confirm and not skip_confirm:
-            if not confirm_action(f"Run step: {description}?"):
-                print(f"{INDENT_OUTPUT}{DIM}Skipped by user.{RESET}")
+            if not logger.confirm(f"Run step: {description}?"):
+                logger.info_step("Skipped by user.")
                 return False
 
-        log_step(description)
+        logger.step(description)
 
     try:
         if interactive:
@@ -73,7 +62,7 @@ def run_command(
 
             for line in process.stdout:
                 if line.strip():
-                    print(f"{INDENT_OUTPUT}{DIM}{line.strip()}{RESET}")
+                    logger.output(line)
 
             process.wait()
             returncode = process.returncode
@@ -83,33 +72,21 @@ def run_command(
                 command, shell=True, cwd=cwd, capture_output=True, text=True
             )
             if result.stdout and result.stdout.strip():
-                indented_output = "\n".join(
-                    [
-                        f"{INDENT_OUTPUT}{DIM}{line}{RESET}"
-                        for line in result.stdout.strip().split("\n")
-                    ]
-                )
-                print(indented_output)
+                logger.output(result.stdout)
 
             if result.returncode != 0 and result.stderr:
-                log_error("Raw error output:")
-                error_lines = "\n".join(
-                    [
-                        f"{INDENT_OUTPUT}{RED}{line}{RESET}"
-                        for line in result.stderr.strip().split("\n")
-                    ]
-                )
-                print(error_lines)
+                logger.error("Raw error output:")
+                logger.error_output(result.stderr)
 
             returncode = result.returncode
 
         if returncode == 0:
             if description:
-                log_success(f"Successfully finished: {description}")
+                logger.success(f"Successfully finished: {description}")
             return True
         else:
             if description:
-                log_error(f"Failed to complete: {description}")
+                logger.error(f"Failed to complete: {description}")
 
             if exit_on_error:
                 sys.exit(returncode)
@@ -117,26 +94,8 @@ def run_command(
 
     except Exception as e:
         if description:
-            log_error(f"Critical exception during: {description}")
-        print(f"{INDENT_OUTPUT}Exception: {str(e)}")
+            logger.error(f"Critical exception during: {description}")
+        logger.info_step(f"Exception: {str(e)}")
         if exit_on_error:
             sys.exit(1)
         return False
-
-
-def launch_terminal_tab(command, title, cwd):
-    """Launch a new terminal tab on macOS and run a command."""
-    if platform.system() == "Darwin":
-        applescript = f"""
-        tell application "Terminal"
-            activate
-            do script "cd {cwd} && {command}"
-        end tell
-        """
-        subprocess.run(["osascript", "-e", applescript])
-        log_success(f"Service '{title}' launched in a new terminal tab.")
-    else:
-        log_warning(
-            f"Auto-launch unsupported on this OS. Please run: {command} "
-            f"in {cwd} manually."
-        )
