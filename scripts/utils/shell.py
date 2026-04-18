@@ -28,6 +28,7 @@ def run_command(
     confirm: bool = False,
     skip_confirm: bool = False,
     exit_on_error: bool = False,
+    logger=logger,
 ) -> bool:
     """
     Consolidated shell command runner with enhanced formatting,
