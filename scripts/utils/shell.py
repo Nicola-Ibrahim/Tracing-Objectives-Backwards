@@ -4,62 +4,24 @@ import subprocess
 import sys
 from pathlib import Path
 
-# --- ANSI Color/Style Constants ---
-BOLD = "\033[1m"
-DIM = "\033[2m"
-BLUE = "\033[94m"
-CYAN = "\033[96m"
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-RED = "\033[91m"
-RESET = "\033[0m"
-
-# --- Formatting Constants ---
-INDENT_STEP = "  "
-INDENT_OUTPUT = "      "
-
-# --- Global Settings ---
-# Automatically detect if the user wants to skip all confirmations
-SKIP_CONFIRM = "-y" in sys.argv or "--yes" in sys.argv
-
-
-def log_header(text):
-    """Prints a bold, high-contrast block header with consistent padding."""
-    width = 60
-    border = "━" * width
-    print(f"\n{BOLD}{BLUE}{border}{RESET}")
-    print(f"{BOLD}{BLUE} {text.upper()}{RESET}")
-    print(f"{BOLD}{BLUE}{border}{RESET}\n")
-
-
-def log_step(text):
-    """Prints a structured action step with indentation."""
-    print(f"{INDENT_STEP}{BOLD}{CYAN}➤ {text}...{RESET}")
-
-
-def log_success(text):
-    """Prints a success message with indentation."""
-    print(f"{INDENT_STEP}{BOLD}{GREEN}✔ {text}{RESET}")
-
-
-def log_error(text):
-    """Prints an error message with indentation."""
-    print(f"{INDENT_STEP}{BOLD}{RED}✖ ERROR: {text}{RESET}")
-
-
-def log_warning(text):
-    """Prints a warning message with indentation."""
-    print(f"{INDENT_STEP}{BOLD}{YELLOW}⚠  {text}{RESET}")
-
-
-def log_info(text):
-    """Prints an informational message with dim styling and indentation."""
-    print(f"{INDENT_STEP}{DIM}{CYAN}ℹ {text}{RESET}")
+from .ui import (
+    DIM,
+    INDENT_OUTPUT,
+    RED,
+    RESET,
+    confirm_action,
+    log_error,
+    log_step,
+    log_success,
+    log_warning,
+)
 
 
 def get_root_dir():
     """Returns the absolute project root directory."""
-    return Path(__file__).parent.parent.absolute()
+    # Assuming the scripts directory is at the root or one level deep
+    # Current structure: project/scripts/lib/shell.py
+    return Path(__file__).parent.parent.parent.absolute()
 
 
 def is_tool_installed(name):
@@ -74,6 +36,7 @@ def run_command(
     interactive=False,
     stream=False,
     confirm=False,
+    skip_confirm=False,
     exit_on_error=True,
 ):
     """
@@ -82,8 +45,8 @@ def run_command(
     confirmation prompts.
     """
     if description:
-        # If confirmation is requested and not bypassed, ask before logging the step
-        if confirm and not SKIP_CONFIRM:
+        # If confirmation is requested, check skip_confirm or ask user
+        if confirm and not skip_confirm:
             if not confirm_action(f"Run step: {description}?"):
                 print(f"{INDENT_OUTPUT}{DIM}Skipped by user.{RESET}")
                 return False
@@ -92,11 +55,11 @@ def run_command(
 
     try:
         if interactive:
-            # Run without capturing output to allow interactivity (e.g. doppler login)
+            # Run without capturing output to allow interactivity
             result = subprocess.run(command, shell=True, cwd=cwd)
             returncode = result.returncode
         elif stream:
-            # Stream output in real-time using Popen
+            # Stream output in real-time
             process = subprocess.Popen(
                 command,
                 shell=True,
@@ -108,7 +71,6 @@ def run_command(
                 universal_newlines=True,
             )
 
-            # Read line by line
             for line in process.stdout:
                 if line.strip():
                     print(f"{INDENT_OUTPUT}{DIM}{line.strip()}{RESET}")
@@ -116,13 +78,11 @@ def run_command(
             process.wait()
             returncode = process.returncode
         else:
-            # Batch mode (wait for completion before showing output)
+            # Batch mode
             result = subprocess.run(
                 command, shell=True, cwd=cwd, capture_output=True, text=True
             )
-            # Only print output if it's not empty
             if result.stdout and result.stdout.strip():
-                # Deeply indent output for better visual separation
                 indented_output = "\n".join(
                     [
                         f"{INDENT_OUTPUT}{DIM}{line}{RESET}"
@@ -180,16 +140,3 @@ def launch_terminal_tab(command, title, cwd):
             f"Auto-launch unsupported on this OS. Please run: {command} "
             f"in {cwd} manually."
         )
-
-
-def confirm_action(prompt):
-    """
-    Asks the user for a Y/n confirmation with consistent styling.
-    Returns True if confirmed.
-    """
-    try:
-        response = input(f"\n{BOLD}{YELLOW}❓ {prompt} (y/N): {RESET}").strip().lower()
-        return response == "y"
-    except KeyboardInterrupt:
-        print("\n")
-        sys.exit(0)

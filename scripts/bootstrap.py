@@ -1,14 +1,15 @@
 import platform
-import subprocess
 
-from utils import (
+from .utils.env_secrets import setup_identity
+from .utils.shell import (
     is_tool_installed,
-    log_error,
+    run_command,
+)
+from .utils.ui import (
     log_header,
     log_info,
     log_success,
     log_warning,
-    run_command,
 )
 
 
@@ -66,9 +67,7 @@ def install_missing_tools(missing_tools):
                         "Installing Doppler CLI secret manager (Homebrew)",
                     )
                 else:
-                    log_error(
-                        "Manual installation required for Doppler on this system."
-                    )
+                    log_header("Manual Setup Required")
                     log_info("Visit: https://docs.doppler.com/docs/install-cli")
 
     # Windows
@@ -99,22 +98,6 @@ def install_missing_tools(missing_tools):
                     log_info("Visit: https://docs.doppler.com/docs/install-cli")
 
 
-def setup_identity():
-    """Handle authentication with platform services (Doppler)."""
-    log_header("Identity & Secrets")
-
-    if is_tool_installed("doppler"):
-        # Check if already logged in
-        auth_check = subprocess.run(["doppler", "me"], capture_output=True, text=True)
-        if auth_check.returncode == 0:
-            log_success("Already authenticated with Doppler CLI.")
-        else:
-            log_info("Launching Doppler interactive login flow.")
-            run_command("doppler login", "Logging into Doppler CLI", interactive=True)
-    else:
-        log_error("Skip Doppler login: Doppler CLI not found in PATH.")
-
-
 def main():
     log_header("Environment Bootstrap")
     log_info("Ensuring all core developer tools are installed and configured.")
@@ -125,13 +108,13 @@ def main():
     # 2. Install if needed
     install_missing_tools(missing)
 
-    # 3. Setup authentication
-    setup_identity()
+    # 3. Setup authentication (passing skip_confirm as False for initial bootstrap)
+    setup_identity(skip_confirm=False)
 
     log_header("Environment Setup Complete")
     log_success("Bootstrap finished successfully!")
     log_info(
-        "NEXT STEP: Run 'python3 scripts/setup_dev.py' to launch "
+        "NEXT STEP: Run 'python3 -m scripts.dev up' to launch "
         "your daily development workspace."
     )
 

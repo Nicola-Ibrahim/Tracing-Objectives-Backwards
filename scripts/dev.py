@@ -1,0 +1,98 @@
+import argparse
+from pathlib import Path
+
+from .utils.env_secrets import sync_secrets
+from .utils.infrastructure import (
+    boot_infrastructure,
+    reset_infrastructure,
+    shutdown_services,
+)
+from .utils.shell import get_root_dir
+from .utils.ui import log_header, log_success
+from .utils.workspace import (
+    audit_storage,
+    cleanup_caches,
+    cleanup_storage,
+    summarize_work,
+    sync_dependencies,
+)
+
+
+def handle_up(root_dir: Path, skip_confirm: bool = False):
+    """Full environment synchronization and startup."""
+    log_header("Development Workspace: UP")
+
+    # 1. Sync Secrets
+    sync_secrets(root_dir, skip_confirm=skip_confirm)
+
+    # 2. Sync Dependencies
+    sync_dependencies(root_dir, skip_confirm=skip_confirm)
+
+    # 3. Boot Infrastructure
+    boot_infrastructure(root_dir, skip_confirm=skip_confirm)
+
+    # 4. Infrastructure Reset (Flush Redis)
+    reset_infrastructure(root_dir, skip_confirm=skip_confirm)
+
+    # 5. Storage Cleanup
+    cleanup_storage(root_dir, skip_confirm=skip_confirm)
+
+    log_header("Workspace Ready")
+    log_success("All containers are running and environment is clean.")
+    print("\nEnjoy your coding session! ☕\n")
+
+
+def handle_down(root_dir: Path, skip_confirm: bool = False):
+    """Graceful shutdown and session cleanup."""
+    log_header("Development Workspace: DOWN")
+
+    # 1. Shutdown Services (Confirm if not -y)
+    shutdown_services(root_dir, confirm=True, skip_confirm=skip_confirm)
+
+    # 2. Cleanup Caches
+    cleanup_caches(root_dir, confirm=True, skip_confirm=skip_confirm)
+
+    # 3. Audit Storage
+    audit_storage(root_dir, confirm=True, skip_confirm=skip_confirm)
+
+    # 4. Summarize Work
+    summarize_work(root_dir, confirm=True, skip_confirm=skip_confirm)
+
+    log_header("Shutdown Complete")
+    log_success("All background services have been terminated.")
+    print("\nSee you tomorrow! 🌙\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Unified Development Environment Manager",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 -m scripts.dev up      # Start the environment
+  python3 -m scripts.dev down    # Stop and clean up
+  python3 -m scripts.dev up -y   # Start without confirmation prompts
+        """,
+    )
+
+    parser.add_argument(
+        "action",
+        choices=["up", "down"],
+        help="Action to perform: 'up' to start, 'down' to stop.",
+    )
+
+    parser.add_argument(
+        "-y", "--yes", action="store_true", help="Skip all confirmation prompts."
+    )
+
+    args = parser.parse_args()
+    root_dir = get_root_dir()
+
+    if args.action == "up":
+        handle_up(root_dir, skip_confirm=args.yes)
+    elif args.action == "down":
+        handle_down(root_dir, skip_confirm=args.yes)
+
+
+if __name__ == "__main__":
+    main()
