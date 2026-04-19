@@ -1,0 +1,42 @@
+# ── Secrets ─────────────────────────────────────────────────────────────
+# Never bake these into an image
+.env*
+.doppler
+
+
+# ── Python & Development Artifacts ──────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.agent/
+.DS_Store
+
+
+# ── Data & Large Models (Use volume mounts instead) ─────────────────────
+# We ignore these to keep the production image size minimal
+data/
+models/
+diagnostics/
+reports/
+storage/
+notebooks/
+tests/
+
+
+# ── CI & Git Metadata ──────────────────────────────────────────────────
+.git/
+.github/
+*.md
+.dockerignore
+Dockerfile
+docker-compose.yml
+.vscode/
+.idea/
+
+
