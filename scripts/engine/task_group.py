@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Self
 
-from .system import get_root_dir
+from .system import get_root_dir, is_tool_installed
 from .ui import Logger
 
 _UNSET = object()
@@ -33,6 +33,7 @@ class Task:
         confirm: bool = False,
         skip_confirm: bool | object = _UNSET,  # sentinel — detect explicit False
         exit_on_error: bool = False,
+        required_tools: list[str] | None = None,
     ):
         self.cmd = cmd
         self.description = description
@@ -41,6 +42,7 @@ class Task:
         self.stream = stream
         self.confirm = confirm
         self.exit_on_error = exit_on_error
+        self.required_tools = required_tools or []
         self.success = False
 
         # Resolve ambient group and inherit its logger + skip_confirm
@@ -58,6 +60,19 @@ class Task:
             self.skip_confirm = group.skip_confirm if group else False
         else:
             self.skip_confirm = bool(skip_confirm)
+
+        # Pre-flight Tool Validation (Execution Guard)
+        if self.required_tools:
+            missing = [t for t in self.required_tools if not is_tool_installed(t)]
+            if missing:
+                self.logger.error(
+                    f"Missing required tools: {', '.join(missing)}. "
+                    "This task cannot be executed."
+                )
+                self.success = False
+                if group:
+                    group.register_result(self)
+                return
 
         # Execute and register — always, because cmd is required
         self.success = self._execute()
@@ -143,7 +158,7 @@ class TaskGroup:
     _stack: list[Self] = []
 
     @classmethod
-    def _get_active(cls) -> "TaskGroup | None":
+    def _get_active(cls) -> Self | None:
         """Return the innermost active group, or None if outside any group."""
         return cls._stack[-1] if cls._stack else None
 
@@ -153,13 +168,12 @@ class TaskGroup:
         info: str | None = None,
         abort_on_failure: bool = False,
         skip_confirm: bool = False,
-        logger: Logger | None = None,  # injectable for testing
     ):
         self.title = title
         self.info = info
         self.abort_on_failure = abort_on_failure
         self.skip_confirm = skip_confirm
-        self.logger = logger or Logger()
+        self.logger = Logger()
         self.results: list[Task] = []
         self.aborted = False  # distinguishes abort vs partial failure
         self._start_time: float | None = None

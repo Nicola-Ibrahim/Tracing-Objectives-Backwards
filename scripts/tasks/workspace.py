@@ -1,61 +1,21 @@
-import shutil
-
-from ..engine.system import get_root_dir, is_tool_installed
+from ..engine.system import get_root_dir
 from ..engine.task_group import Task, TaskGroup
-from ..engine.ui import Logger
 
 
 def sync_dependencies(skip_confirm: bool = False) -> bool:
     """Ensure that local packages are up to date with the latest changes."""
-    if not is_tool_installed("uv"):
-        Logger().error("uv not found. Backend dependencies could not be synchronized.")
-        return False
-
     with TaskGroup(
         "Dependency Synchronization",
         info="Ensuring that local packages are up to date with the latest changes.",
     ):
-        task = Task(
+        Task(
             cmd="uv sync",
             description="Updating backend dependencies (uv)",
+            confirm=True,
             skip_confirm=skip_confirm,
+            required_tools=["uv"],
         )
-
-        if not task.success:
-            return False
-
-    return True
-
-
-def cleanup_storage(skip_confirm: bool = False) -> None:
-    """Scrub local backend storage (uploads, logs, temporary files)."""
-    storage_dir = get_root_dir() / "storage"
-
-    # If it doesn't exist, we'll just create it without a big box
-    if not storage_dir.exists():
-        storage_dir.mkdir(parents=True, exist_ok=True)
-        return
-
-    with TaskGroup(
-        "Ephemeral Data Cleanup",
-        info="Cleaning local backend storage (uploads, logs, temporary files).",
-    ) as group:
-        if not skip_confirm:
-            if not group.logger.confirm("Scrub all files in storage directory?"):
-                group.logger.info_step("Cleanup aborted by user.")
-                return
-
-        try:
-            for item in storage_dir.iterdir():
-                if item.is_dir():
-                    shutil.rmtree(item)
-                else:
-                    item.unlink()
-            # Ensure it stays as a directory
-            storage_dir.mkdir(exist_ok=True)
-            group.logger.success("Backend storage is now clean.")
-        except Exception as e:
-            group.logger.error(f"Failed to scrub storage: {str(e)}")
+        return True
 
 
 def cleanup_caches(skip_confirm: bool = False) -> None:
@@ -74,6 +34,7 @@ def cleanup_caches(skip_confirm: bool = False) -> None:
             description="Clearing Python & Linter caches",
             confirm=True,
             skip_confirm=skip_confirm,
+            required_tools=["find"],
         )
 
 
@@ -99,24 +60,41 @@ def audit_storage(skip_confirm: bool = False) -> None:
             description="Auditing local storage size",
             confirm=True,
             skip_confirm=skip_confirm,
+            required_tools=["du"],
+        )
+
+
+def cleanup_storage(skip_confirm: bool = False) -> None:
+    """Wipe temporary data folders to free up space (requires confirmation)."""
+    with TaskGroup(
+        "Storage Purge",
+        info="Wiping temporary data folders to free up space.",
+    ):
+        Task(
+            cmd="rm -rf storage/* data/tmp/*",
+            description="Purging temporary storage files",
+            confirm=True,
+            skip_confirm=skip_confirm,
         )
 
 
 def summarize_work(skip_confirm: bool = False) -> None:
-    """Provide a quick briefing on uncommitted changes."""
-    if not is_tool_installed("git"):
-        return
-
+    """Display a high-level summary of workspace changes (via git)."""
     with TaskGroup(
-        "Work Summary",
+        "Workspace Summary",
+        info="Displaying a high-level summary of workspace changes.",
     ) as group:
-        group.logger.info(
-            "Checking for uncommitted changes before closing the session."
-        )
-        Task(
+        # Standard summary using git status
+        task = Task(
             cmd="git status -s",
-            description="Listing uncommitted files",
-            confirm=True,
+            description="Retrieving git status summary",
             skip_confirm=skip_confirm,
+            required_tools=["git"],
         )
-        group.logger.warning("Don't forget to commit your changes if you're done!")
+
+        if task.success:
+            group.logger.info("The above files are currently modified or untracked.")
+        else:
+            group.logger.warning(
+                "Could not retrieve git status. Is it a git repository?"
+            )

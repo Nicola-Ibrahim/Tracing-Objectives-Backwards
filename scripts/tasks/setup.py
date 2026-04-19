@@ -63,17 +63,21 @@ def _install_mac(group: TaskGroup, tools: List[str]) -> None:
             Task(
                 cmd="brew install uv",
                 description="Installing uv (Homebrew)",
+                required_tools=["brew"],
             )
         else:
             Task(
                 cmd="curl -fsSL https://astral.sh/uv/install.sh | sh",
                 description="Installing uv (curl)",
+                required_tools=["curl"],
             )
+
     if "doppler" in tools:
         if has_brew:
             Task(
                 cmd="brew install dopplerhq/cli/doppler",
                 description="Installing Doppler CLI (Homebrew)",
+                required_tools=["brew"],
             )
         else:
             group.logger.header("Manual Setup Required")
@@ -86,6 +90,7 @@ def _install_linux(group: TaskGroup, tools: List[str]) -> None:
         Task(
             cmd="curl -fsSL https://astral.sh/uv/install.sh | sh",
             description="Installing uv (curl)",
+            required_tools=["curl"],
         )
     if "doppler" in tools:
         group.logger.header("Manual Setup Required (Linux)")
@@ -101,6 +106,7 @@ def _install_windows(group: TaskGroup, tools: List[str]) -> None:
             Task(
                 cmd="winget install uv",
                 description="Installing uv (winget)",
+                required_tools=["winget"],
             )
         else:
             Task(
@@ -108,11 +114,13 @@ def _install_windows(group: TaskGroup, tools: List[str]) -> None:
                 'irm https://astral.sh/uv/install.ps1 | iex"',
                 description="Installing uv (PowerShell)",
             )
+
     if "doppler" in tools:
         if has_winget:
             Task(
                 cmd="winget install doppler",
                 description="Installing Doppler CLI (winget)",
+                required_tools=["winget"],
             )
         else:
             group.logger.warning("Manual setup suggested for Doppler on Windows.")
