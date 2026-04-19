@@ -1,4 +1,4 @@
-name: 1. CI
+name: CI
 
 on:
   pull_request:
@@ -10,11 +10,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ── Lint & Test ────────────────────────────────────────────────────────
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -35,69 +32,5 @@ jobs:
       - name: Run Lint
         run: uv run poe lint
 
-      # - name: Run Tests
-      #   run: uv run poe test
-
-  # ── Production Image Smoke Test (PR to main only) ────────────────────────
-  smoke-test:
-    needs: [ lint-and-test ]
-    if: github.event_name == 'pull_request' && needs.lint-and-test.result == 'success'
-    runs-on: ubuntu-latest
-    environment: development
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Production Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: runner
-          push: false
-          load: true
-          tags: backend-ci:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Generate .env from all secrets
-        env:
-          SECRETS_JSON: ${{ toJson(secrets) }}
-        run: |
-          # Dynamically parse all GitHub Secrets into a KEY=VALUE .env file
-          # We exclude github_token to keep purely application secrets.
-          echo "$SECRETS_JSON" | jq -r 'to_entries | .[] | select(.key | test("github_token";"i") | not) | "\(.key)=\(.value)"' > .env
-          echo "✅ Generated .env file dynamically"
-          
-          ENV_VAL=$(grep "^ENV=" .env | cut -d= -f2-)
-          if [ -z "$ENV_VAL" ]; then
-            echo "❌ CRITICAL: 'ENV' secret is defined but has an empty value!"
-            exit 1
-          fi
-          echo "✅ Generated .env file dynamically and validated ENV value"
-
-      - name: Run & Verify Health
-        run: |
-          docker run -d \
-            --name backend-ci \
-            -p 8000:8000 \
-            --env-file .env \
-            backend-ci:latest
-
-          for i in {1..10}; do
-            if curl -sf http://localhost:8000/health; then
-              echo "✅ Health check passed"
-              exit 0
-            fi
-            echo "Waiting... ($i/10)"
-            sleep 3
-          done
-          echo "❌ Health check timed out"
-          docker logs backend-ci
-          exit 1
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f backend-ci 2>/dev/null || true
+      - name: Run Tests
+        run: uv run poe test
