@@ -73,7 +73,9 @@ def reset_infrastructure(skip_confirm: bool = False) -> bool:
         info="Ensuring all background infrastructure is in a clean state.",
     ) as group:
         if not _is_docker_daemon_running():
-            group.logger.warning("Docker is not available. Skipping infrastructure reset.")
+            group.logger.warning(
+                "Docker is not available. Skipping infrastructure reset."
+            )
             return True
 
         try:
