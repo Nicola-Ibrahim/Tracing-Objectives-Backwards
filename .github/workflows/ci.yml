@@ -12,27 +12,7 @@ concurrency:
 
 
 jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest
-    env:
-      ENV: development
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Install Python
-        run: uv python install 3.12
-
-      - name: Sync dependencies
-        run: uv sync --frozen
-
-      - name: Run Lint
-        run: uv run poe lint
-
-      - name: Run Tests
-        run: uv run poe test
+  ci:
+    uses: Nicola-Ibrahim/Tracing-Objectives-Backwards-Devops/.github/workflows/reusable-ci-python.yml@main
+    with:
+      python-version: '3.12'
