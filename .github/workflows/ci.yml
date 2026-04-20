@@ -16,3 +16,4 @@ jobs:
     uses: Nicola-Ibrahim/Tracing-Objectives-Backwards-Devops/.github/workflows/reusable-ci-python.yml@main
     with:
       python-version: '3.12'
+      environment: production
